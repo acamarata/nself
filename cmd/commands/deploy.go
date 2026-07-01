@@ -97,8 +97,21 @@ var deployLogsCmd = &cobra.Command{
 var deployHealthCmd = &cobra.Command{
 	Use:   "health [target]",
 	Short: "Run health checks against a target deployment",
-	Args:  cobra.MaximumNArgs(1),
-	RunE:  runDeployHealth,
+	Long: `Run health checks (nself doctor) against a target deployment.
+
+With no [target] (or [target]=local), runs doctor checks against the local
+docker daemon — unchanged from prior versions.
+
+With [target]=staging|prod (or --server <name>), resolves that target's
+primary server from .nself/control-plane.yaml (or NSELF_DEPLOY_HOST_<TARGET>)
+and runs the check over SSH on the remote host itself, instead of silently
+running local checks under a remote-sounding target name.
+
+Note: remote checks require the target host's own nself CLI to support
+'nself doctor' — an older remote CLI version returns a clear error naming
+the likely version-drift cause rather than a raw SSH failure.`,
+	Args: cobra.MaximumNArgs(1),
+	RunE: runDeployHealth,
 }
 
 var deployCheckAccessCmd = &cobra.Command{
@@ -881,27 +894,17 @@ func totalServers(inv *controlplane.Inventory) int {
 //
 // Missing files are silently skipped. The NSELF_DEPLOY_ENV env var is set
 // to the canonical target name so downstream helpers can introspect it.
+//
+// Gap #13 fix: this also sets ENV to the same canonical target name. ENV is
+// the variable config.Load (internal/config/loader.go) actually keys its own
+// file cascade on — before this fix, ENV was never set here, so the
+// subsequent 'nself build' subprocess (spawned by runDeploy via runCLISelf)
+// resolved config.Load's cascade against the default "dev" tier regardless
+// of which target this process just loaded, silently baking dev-tier values
+// (wrong POSTGRES_DB, wrong ports, etc.) into docker-compose.yml even for a
+// staging/prod deploy.
 func loadDeployEnvCascade(workdir, target string) {
-	var files []string
-	switch target {
-	case "local":
-		files = []string{
-			filepath.Join(workdir, ".env.dev"),
-			filepath.Join(workdir, ".env.local"),
-		}
-	case "staging":
-		files = []string{
-			filepath.Join(workdir, ".env.dev"),
-			filepath.Join(workdir, ".env.staging"),
-			filepath.Join(workdir, ".env.secrets"),
-		}
-	default: // "prod"
-		files = []string{
-			filepath.Join(workdir, ".env.dev"),
-			filepath.Join(workdir, ".env.prod"),
-			filepath.Join(workdir, ".env.secrets"),
-		}
-	}
+	files := deployEnvCascadeFiles(workdir, target)
 	for _, f := range files {
 		if _, err := os.Stat(f); err == nil {
 			// Overload merges into os.Environ — missing files already skipped above.
@@ -910,6 +913,35 @@ func loadDeployEnvCascade(workdir, target string) {
 	}
 	// Expose the resolved target so subprocesses and plugins can read it.
 	_ = os.Setenv("NSELF_DEPLOY_ENV", target)
+	// Gap #13: make config.Load's own cascade selection agree with the
+	// cascade we just loaded into this process's environment.
+	_ = os.Setenv("ENV", target)
+}
+
+// deployEnvCascadeFiles returns the ordered list of .env files that make up
+// target's cascade, matching config.Load's own cascade order (internal/config/loader.go)
+// so the set of files loaded here and the set config.Load merges in the
+// 'nself build' subprocess are identical.
+func deployEnvCascadeFiles(workdir, target string) []string {
+	switch target {
+	case "local":
+		return []string{
+			filepath.Join(workdir, ".env.dev"),
+			filepath.Join(workdir, ".env.local"),
+		}
+	case "staging":
+		return []string{
+			filepath.Join(workdir, ".env.dev"),
+			filepath.Join(workdir, ".env.staging"),
+			filepath.Join(workdir, ".env.secrets"),
+		}
+	default: // "prod"
+		return []string{
+			filepath.Join(workdir, ".env.dev"),
+			filepath.Join(workdir, ".env.prod"),
+			filepath.Join(workdir, ".env.secrets"),
+		}
+	}
 }
 
 // sshKeyPath returns the SSH key path from NSELF_DEPLOY_SSH_KEY env or the
@@ -949,6 +981,25 @@ func remoteDeployPush(ctx context.Context, workdir, host, target string, jsonOut
 		return fmt.Errorf("NSELF_DEPLOY_HOST_%s remote path contains unsafe characters (got %q): only [a-zA-Z0-9/_.-] allowed", strings.ToUpper(target), remotePath)
 	}
 
+	// Gap #13 fix: the file that used to be rsynced here (.env.<target> alone,
+	// e.g. .env.staging) is only ONE layer of the cascade that config.Load
+	// actually merged to produce the docker-compose.yml being pushed
+	// alongside it (.env.dev -> .env.<target> -> .env.secrets -> .env.local
+	// -> .env -> .env.ai). Pushing just one layer left the remote's env file
+	// mismatched with values baked into the compose file (wrong POSTGRES_DB,
+	// wrong ports, etc.) whenever an earlier/later layer set them.
+	//
+	// Write a merged snapshot containing every value config.Load resolved
+	// for this deploy, and push that as .env.<target> instead of the raw
+	// single-layer file. This keeps the remote filename convention the
+	// on-box CLI already expects, while guaranteeing its contents match
+	// docker-compose.yml byte-for-byte in provenance.
+	resolvedEnvPath, cleanupResolvedEnv, err := writeResolvedDeployEnv(workdir, target)
+	if err != nil {
+		return fmt.Errorf("preparing resolved .env for %s: %w", target, err)
+	}
+	defer cleanupResolvedEnv()
+
 	// rsync compose + env files to the remote.
 	// Agent forwarding is disabled via ForwardAgent=no in the -e ssh command —
 	// it is an ssh option and must never appear in rsync argv (breaks rsync 3.x).
@@ -956,17 +1007,29 @@ func remoteDeployPush(ctx context.Context, workdir, host, target string, jsonOut
 		"-az",
 		"-e", fmt.Sprintf("ssh -i %s -o StrictHostKeyChecking=accept-new -o ForwardAgent=no", sshKey),
 		"docker-compose.yml",
-		fmt.Sprintf(".env.%s", target),
+		resolvedEnvPath,
 		fmt.Sprintf("%s:%s/", sshTarget, remotePath),
 	}
 	if !jsonOut {
-		fmt.Printf("  [running] rsync compose + env to %s:%s\n", sshTarget, remotePath)
+		fmt.Printf("  [running] rsync compose + resolved env to %s:%s\n", sshTarget, remotePath)
 	}
 	rc := exec.CommandContext(ctx, "rsync", rsyncArgs...)
 	rc.Dir = workdir
 	rc.Env = os.Environ()
 	if out, err := rc.CombinedOutput(); err != nil {
 		return fmt.Errorf("rsync to %s failed: %w\n%s", sshTarget, err, strings.TrimSpace(string(out)))
+	}
+	// Rename the pushed snapshot to the expected .env.<target> name on the
+	// remote (rsync above pushes it under its resolvedEnvPath basename).
+	renameCmd := fmt.Sprintf("cd %s && mv %s .env.%s", remotePath, filepath.Base(resolvedEnvPath), target)
+	rn := exec.CommandContext(ctx, "ssh",
+		"-i", sshKey,
+		"-o", "StrictHostKeyChecking=accept-new",
+		"-o", "ForwardAgent=no",
+		sshTarget, renameCmd)
+	rn.Env = os.Environ()
+	if out, err := rn.CombinedOutput(); err != nil {
+		return fmt.Errorf("finalizing resolved .env on %s failed: %w\n%s", sshTarget, err, strings.TrimSpace(string(out)))
 	}
 
 	// Pull new images on the remote.
@@ -1267,43 +1330,39 @@ func runDeployHealth(cmd *cobra.Command, args []string) error {
 	jsonOut, _ := cmd.Flags().GetBool("json")
 
 	if serverFilter != "" {
-		// T06: Run doctor over SSH on the specified remote server.
-		inv, loadErr := controlplane.Load(workdir)
-		if loadErr != nil {
-			return fmt.Errorf("deploy health: load inventory: %w", loadErr)
+		return runDeployHealthOnServer(cmd, workdir, serverFilter, jsonOut)
+	}
+
+	// Gap #12: "nself deploy health <target>" (positional arg, no --server)
+	// previously ignored the target entirely and always ran local doctor —
+	// silently misleading for staging/prod. Resolve the target the same way
+	// runDeploy does and probe its primary server remotely when the target
+	// names a configured remote environment. "local" (or no target) keeps
+	// the original local-doctor behavior unchanged (back-compat).
+	if len(args) == 1 {
+		target, resolveErr := resolveTarget(args[0])
+		if resolveErr != nil {
+			return resolveErr
 		}
-		for _, env := range inv.Environments {
-			for _, srv := range env.Servers {
-				if srv.Name != serverFilter {
-					continue
-				}
-				if srv.Host == "" {
-					// Local: fall through to local doctor.
-					break
-				}
-				keyPath := os.Getenv(srv.SSHKeyRef)
-				remotePath := srv.RemotePath
-				if remotePath == "" {
-					remotePath = "/opt/nself"
-				}
-				// doctor-over-ssh: invoke 'nself doctor' on the remote host.
-				doctorCmd := fmt.Sprintf("cd %s && nself doctor", remotePath)
-				if jsonOut {
-					doctorCmd = fmt.Sprintf("cd %s && nself doctor --json", remotePath)
-				}
-				sshTarget := srv.Host
-				sc := exec.CommandContext(cmd.Context(), "ssh",
-					"-i", keyPath,
-					"-o", "BatchMode=yes",
-					"-o", "ForwardAgent=no",
-					"-o", "StrictHostKeyChecking=accept-new",
-					sshTarget, doctorCmd)
-				sc.Stdout = os.Stdout
-				sc.Stderr = os.Stderr
-				return sc.Run()
+		if target != "local" {
+			inv, loadErr := controlplane.Load(workdir)
+			if loadErr != nil {
+				return fmt.Errorf("deploy health: load inventory: %w", loadErr)
 			}
+			if env, ok := inv.Environments[target]; ok {
+				if srv, found := findDBTargetServer(env, ""); found && srv.Host != "" {
+					return runDeployHealthOnServer(cmd, workdir, srv.Name, jsonOut)
+				}
+			}
+			// No remote host configured for this target (e.g. only
+			// NSELF_DEPLOY_HOST_<TARGET> style legacy env vars, no inventory
+			// entry) — tell the user explicitly rather than silently running
+			// local checks against the wrong environment's name.
+			if host, ok := ResolveLegacyDeployHost(target); ok {
+				return runDeployHealthOverSSH(cmd, host, jsonOut)
+			}
+			return fmt.Errorf("deploy health: no server configured for target %q (set NSELF_DEPLOY_HOST_%s or add it to .nself/control-plane.yaml)", target, strings.ToUpper(target))
 		}
-		return fmt.Errorf("deploy health: --server %q not found in inventory", serverFilter)
 	}
 
 	return runCLISelf(cmd.Context(), workdir, "doctor")

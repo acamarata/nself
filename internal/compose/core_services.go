@@ -118,6 +118,23 @@ func (g *Generator) buildHasuraService() (ServiceConfig, error) {
 		"HASURA_GRAPHQL_UNAUTHORIZED_ROLE": "public",
 	}
 
+	// Gap #11: Hasura Actions/cron webhooks call back into the functions
+	// service to execute their handler code, but the generated Hasura env was
+	// missing ACTION_HANDLER_URL entirely — only the functions service itself
+	// received a matching endpoint (HASURA_GRAPHQL_ENDPOINT, in
+	// buildFunctionsService/coreEnvVars). Wire the same in-network base URL
+	// into Hasura's env so url_from_env-based Action/event-trigger handlers
+	// can resolve ACTION_HANDLER_URL. Only added when functions is actually
+	// enabled — Hasura's own action handler_webhook still works fine without
+	// it (Actions can also target absolute URLs directly).
+	if cfg.Functions.Enabled {
+		functionsPort := cfg.Functions.Port
+		if functionsPort == 0 {
+			functionsPort = 3008
+		}
+		env["ACTION_HANDLER_URL"] = fmt.Sprintf("http://functions:%d", functionsPort)
+	}
+
 	// Merge remote schema env vars
 	for k, v := range remoteSchemaEnvVars(cfg.RemoteSchemas) {
 		env[k] = v

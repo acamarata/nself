@@ -91,7 +91,7 @@ func TestCoreEnvVars_DatabaseURL(t *testing.T) {
 }
 
 // TestCoreEnvVars_HasuraEndpoint verifies that HASURA_GRAPHQL_ENDPOINT uses
-// the internal container address and the configured Hasura port.
+// the internal container address and Hasura's fixed container-internal port.
 func TestCoreEnvVars_HasuraEndpoint(t *testing.T) {
 	cfg := minimalConfigWithCS()
 	cfg.Hasura.Port = 8080
@@ -102,6 +102,24 @@ func TestCoreEnvVars_HasuraEndpoint(t *testing.T) {
 	want := "http://hasura:8080/v1/graphql"
 	if env["HASURA_GRAPHQL_ENDPOINT"] != want {
 		t.Errorf("HASURA_GRAPHQL_ENDPOINT = %q, want %q", env["HASURA_GRAPHQL_ENDPOINT"], want)
+	}
+}
+
+// TestCoreEnvVars_HasuraEndpoint_IgnoresHostPortOverride is the gap #7
+// regression test: HASURA_GRAPHQL_ENDPOINT must always target Hasura's fixed
+// container-internal port (8080), never cfg.Hasura.Port, which is the
+// HOST-mapped port and may be overridden (e.g. to 8181) to avoid a host port
+// collision without changing how in-network services reach Hasura.
+func TestCoreEnvVars_HasuraEndpoint_IgnoresHostPortOverride(t *testing.T) {
+	cfg := minimalConfigWithCS()
+	cfg.Hasura.Port = 8181 // host-mapped port override
+	cs := testCS()
+
+	env := coreEnvVars(cfg, cs)
+
+	want := "http://hasura:8080/v1/graphql"
+	if env["HASURA_GRAPHQL_ENDPOINT"] != want {
+		t.Errorf("HASURA_GRAPHQL_ENDPOINT = %q, want %q (must ignore HASURA_PORT host override)", env["HASURA_GRAPHQL_ENDPOINT"], want)
 	}
 }
 

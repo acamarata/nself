@@ -15,6 +15,7 @@ package config
 // SPORT:   cli/internal/config — decomposed from loader.go (T-E2-06).
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -73,6 +74,31 @@ func parseInternalRoutes() []InternalRoute {
 		routes = append(routes, route)
 	}
 	return routes
+}
+
+// parseHasuraJWTSecretJSON extracts the "key" and "type" fields from a
+// HASURA_GRAPHQL_JWT_SECRET JSON blob (the format Hasura itself expects:
+// {"type":"HS256","key":"..."}). Used by parseEnvToConfig (gap #4) so that a
+// previously-persisted secret (written to .env.secrets by
+// persistGeneratedSecrets) is read back into cfg.Hasura.JWTKey/JWTType instead
+// of being silently ignored and regenerated on the next build. Returns
+// ok=false when raw is empty or not valid JSON — callers must not treat that
+// as an error, just as "no value available from this source".
+func parseHasuraJWTSecretJSON(raw string) (key, typ string, ok bool) {
+	if raw == "" {
+		return "", "", false
+	}
+	var obj struct {
+		Type string `json:"type"`
+		Key  string `json:"key"`
+	}
+	if err := json.Unmarshal([]byte(raw), &obj); err != nil {
+		return "", "", false
+	}
+	if obj.Key == "" {
+		return "", "", false
+	}
+	return obj.Key, obj.Type, true
 }
 
 // parseExtensionList parses a comma-separated extension list string into a slice.

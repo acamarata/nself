@@ -1,7 +1,8 @@
 name: SDK Version Coherence
 
-# 03.T05 P98 W2 — nightly + manual check that all 4 SDK packages
-# (TypeScript, Python, Flutter, Go) match cli/.github/VERSION.
+# 03.T05 P98 W2 — nightly + manual check that all 3 SDK packages
+# (TypeScript, Python, Go) match cli/.github/VERSION.
+# Flutter SDK removed 2026-06-30 — migrating to RN/Tauri per ASI Policy 2.
 #
 # Fails when any SDK lags the master version OR is ahead of it.
 # Also runnable on workflow_dispatch for ad-hoc verification.
@@ -95,30 +96,6 @@ jobs:
             echo "PASS: nself-sdk@${PY_VER}"
           fi
 
-      - name: Check Flutter SDK (nself_sdk on pub.dev)
-        id: flutter
-        env:
-          MASTER_VER: ${{ steps.master.outputs.version }}
-        run: |
-          set +e
-          FLUTTER_VER=$(curl -sf "https://pub.dev/api/packages/nself_sdk" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('latest',{}).get('version',''))" 2>/dev/null)
-          if [ -z "${FLUTTER_VER}" ]; then
-            echo "status=warn" >> "$GITHUB_OUTPUT"
-            echo "detail=nself_sdk not found on pub.dev (not yet published)" >> "$GITHUB_OUTPUT"
-            echo "WARN: nself_sdk not found on pub.dev"
-            exit 0
-          fi
-          echo "Flutter SDK version: ${FLUTTER_VER}"
-          if [ "${FLUTTER_VER}" != "${MASTER_VER}" ]; then
-            echo "status=fail" >> "$GITHUB_OUTPUT"
-            echo "detail=nself_sdk@${FLUTTER_VER} != master ${MASTER_VER}" >> "$GITHUB_OUTPUT"
-            echo "FAIL: nself_sdk@${FLUTTER_VER} != ${MASTER_VER}"
-          else
-            echo "status=pass" >> "$GITHUB_OUTPUT"
-            echo "detail=nself_sdk@${FLUTTER_VER} matches master" >> "$GITHUB_OUTPUT"
-            echo "PASS: nself_sdk@${FLUTTER_VER}"
-          fi
-
       - name: Check Go SDK (github.com/nself-org/sdk on pkg.go.dev)
         id: go
         env:
@@ -150,8 +127,6 @@ jobs:
           TS_DETAIL: ${{ steps.ts.outputs.detail }}
           PY_STATUS: ${{ steps.py.outputs.status }}
           PY_DETAIL: ${{ steps.py.outputs.detail }}
-          FLUTTER_STATUS: ${{ steps.flutter.outputs.status }}
-          FLUTTER_DETAIL: ${{ steps.flutter.outputs.detail }}
           GO_STATUS: ${{ steps.go.outputs.status }}
           GO_DETAIL: ${{ steps.go.outputs.detail }}
         run: |
@@ -162,18 +137,16 @@ jobs:
           echo "|-----|--------|--------|" >> "$GITHUB_STEP_SUMMARY"
           echo "| TypeScript (@nself/sdk) | ${TS_STATUS} | ${TS_DETAIL} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Python (nself-sdk) | ${PY_STATUS} | ${PY_DETAIL} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Flutter (nself_sdk) | ${FLUTTER_STATUS} | ${FLUTTER_DETAIL} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Go (github.com/nself-org/sdk) | ${GO_STATUS} | ${GO_DETAIL} |" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Fail on any SDK version drift
         env:
           TS_STATUS: ${{ steps.ts.outputs.status }}
           PY_STATUS: ${{ steps.py.outputs.status }}
-          FLUTTER_STATUS: ${{ steps.flutter.outputs.status }}
           GO_STATUS: ${{ steps.go.outputs.status }}
         run: |
           FAILED=0
-          for STATUS in "${TS_STATUS}" "${PY_STATUS}" "${FLUTTER_STATUS}" "${GO_STATUS}"; do
+          for STATUS in "${TS_STATUS}" "${PY_STATUS}" "${GO_STATUS}"; do
             if [ "${STATUS}" = "fail" ]; then
               FAILED=1
             fi

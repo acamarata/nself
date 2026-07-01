@@ -331,6 +331,66 @@ func TestAuthAllowedRedirectURLs_ExtraURLs(t *testing.T) {
 	}
 }
 
+// ── Gap #11: ACTION_HANDLER_URL ─────────────────────────────────────────────
+
+// TestHasuraActionHandlerURL_FunctionsEnabled verifies that when the functions
+// service is enabled, Hasura's generated env includes ACTION_HANDLER_URL
+// pointing at the functions service on the internal Docker network, so Hasura
+// Actions/event triggers/cron triggers can call back into it.
+func TestHasuraActionHandlerURL_FunctionsEnabled(t *testing.T) {
+	cfg := minimalConfig()
+	cfg.Functions.Enabled = true
+	cfg.Functions.Port = 3001
+
+	g := NewGenerator(cfg)
+	svc, err := g.buildHasuraService()
+	if err != nil {
+		t.Fatalf("buildHasuraService() error: %v", err)
+	}
+
+	want := "http://functions:3001"
+	if got := svc.Environment["ACTION_HANDLER_URL"]; got != want {
+		t.Errorf("ACTION_HANDLER_URL = %q, want %q", got, want)
+	}
+}
+
+// TestHasuraActionHandlerURL_FunctionsDisabled verifies that ACTION_HANDLER_URL
+// is omitted entirely when the functions service is not enabled (backward
+// compatible — no functions container means no valid callback target).
+func TestHasuraActionHandlerURL_FunctionsDisabled(t *testing.T) {
+	cfg := minimalConfig()
+	cfg.Functions.Enabled = false
+
+	g := NewGenerator(cfg)
+	svc, err := g.buildHasuraService()
+	if err != nil {
+		t.Fatalf("buildHasuraService() error: %v", err)
+	}
+
+	if _, ok := svc.Environment["ACTION_HANDLER_URL"]; ok {
+		t.Errorf("ACTION_HANDLER_URL should not be set when functions is disabled, got %q", svc.Environment["ACTION_HANDLER_URL"])
+	}
+}
+
+// TestHasuraActionHandlerURL_DefaultPort verifies the fallback port (3008)
+// is used when FUNCTIONS_PORT is unset but functions is enabled.
+func TestHasuraActionHandlerURL_DefaultPort(t *testing.T) {
+	cfg := minimalConfig()
+	cfg.Functions.Enabled = true
+	cfg.Functions.Port = 0
+
+	g := NewGenerator(cfg)
+	svc, err := g.buildHasuraService()
+	if err != nil {
+		t.Fatalf("buildHasuraService() error: %v", err)
+	}
+
+	want := "http://functions:3008"
+	if got := svc.Environment["ACTION_HANDLER_URL"]; got != want {
+		t.Errorf("ACTION_HANDLER_URL = %q, want %q", got, want)
+	}
+}
+
 // TestAuthPGAliasVars verifies T06: AUTH_DB_* alias vars are injected into
 // the auth service environment so Nhost Auth can connect to PostgreSQL.
 func TestAuthPGAliasVars(t *testing.T) {
