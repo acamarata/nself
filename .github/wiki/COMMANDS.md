@@ -26,6 +26,7 @@
 | [[cmd-urls]] | Display all service URLs grouped by type with route conflict detection |
 | [[cmd-monitor]] | Monitoring stack management (Grafana dashboard upgrades) |
 | [[cmd-alerts]] | Manage Prometheus alert rules and silences |
+| [[cmd-sentry]] | Operate ɳSentry monitoring: monitors, incidents, status pages, alert channels (SaaS or self-hosted) |
 | [[cmd-watchdog]] | Self-healing container watchdog with circuit breaker |
 | [[cmd-dogfood]] | Production dogfood audit and reporting |
 

@@ -15,7 +15,7 @@
 **Commands**
 - [[Commands]], Overview
 - _Lifecycle:_ [[cmd-init]] · [[cmd-build]] · [[cmd-start]] · [[cmd-stop]] · [[cmd-restart]] · [[cmd-dev]]
-- _Monitoring:_ [[cmd-status]] · [[cmd-logs]] · [[cmd-health]] · [[cmd-urls]] · [[cmd-doctor]] · [[cmd-monitor]] · [[cmd-alerts]] · [[cmd-watchdog]] · [[cmd-dogfood]]
+- _Monitoring:_ [[cmd-status]] · [[cmd-logs]] · [[cmd-health]] · [[cmd-urls]] · [[cmd-doctor]] · [[cmd-monitor]] · [[cmd-alerts]] · [[cmd-sentry]] · [[cmd-watchdog]] · [[cmd-dogfood]]
 - _Data:_ [[cmd-db]] · [[cmd-backup]] · [[cmd-dr]] · [[cmd-queue]] · [[cmd-webhooks]]
 - _Config:_ [[cmd-config]] · [[cmd-service]] · [[cmd-env]] · [[cmd-promote]]
 - _Networking:_ [[cmd-ssl]] · [[cmd-trust]] · [[cmd-dns-setup]]

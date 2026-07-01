@@ -65,7 +65,7 @@ func init() {
 	f.String("domain", "", "Base domain (skips interactive domain selection, e.g. myapp.dev)")
 	f.String("profile", "", "Resource profile: 'tiny' for small VPS (Postgres+nginx only)")
 	f.Bool("no-pgvector", false, "Skip pgvector extension and RAG scaffold tables (sets PGVECTOR_ENABLED=false)")
-	f.String("preset", "", "Use a project-type preset: b2b-saas, mobile-backend, ai-assistant, community-forum, media-hosting, dev, nclaw-app")
+	f.String("preset", "", "Use a project-type preset: b2b-saas, mobile-backend, ai-assistant, community-forum, media-hosting, dev, sentry, nclaw-app")
 	f.Bool("list-presets", false, "List all available project presets and exit")
 	f.String("cs-template", "", "Scaffold a custom service at init time: specify language (go, node, python, rust, other)")
 
