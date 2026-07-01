@@ -179,16 +179,17 @@ func TestCheckOneSDK_NetworkError(t *testing.T) {
 	}
 }
 
-// TestCheckSDKVersions_Smoke ensures CheckSDKVersions returns exactly 4 results
-// and that all names start with "SDK-VERSION-01/".
-// In pre-publication state all 4 SDKs return warn (404); that is expected.
+// TestCheckSDKVersions_Smoke ensures CheckSDKVersions returns exactly 3 results
+// (go, py, ts — Flutter SDK removed 2026-06-30 per ASI Policy 2) and that all
+// names start with "SDK-VERSION-01/".
+// In pre-publication state all 3 SDKs return warn (404); that is expected.
 func TestCheckSDKVersions_Smoke(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	results := CheckSDKVersions(ctx)
-	if len(results) != 4 {
-		t.Fatalf("expected 4 CheckResults, got %d", len(results))
+	if len(results) != 3 {
+		t.Fatalf("expected 3 CheckResults, got %d", len(results))
 	}
 	for i, r := range results {
 		if r.Section != "sdk" {
