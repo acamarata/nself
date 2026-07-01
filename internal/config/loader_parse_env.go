@@ -70,6 +70,32 @@ func parseEnvToConfig() *Config {
 			cfg.Hasura.DevMode = alias == "true" || alias == "1" || alias == "yes"
 		}
 	}
+	// JWT-ALGO-01 / gap #4: populate cfg.Hasura.JWTKey/JWTType from whatever
+	// source already has the value, so a previously-generated (or user-supplied)
+	// key survives every rebuild — including --force — instead of ApplyDefaults
+	// generating a brand new one because HASURA_JWT_KEY specifically was unset.
+	// Priority (highest first): HASURA_JWT_KEY/HASURA_JWT_TYPE (already applied
+	// above) > HASURA_GRAPHQL_JWT_SECRET JSON (the full persisted secret written
+	// to .env.secrets by persistGeneratedSecrets) > AUTH_JWT_SECRET/AUTH_JWT_TYPE
+	// and AUTH_JWT_KEY (the real-world var names apps like ntask declare in
+	// their .env for the same underlying key material).
+	if cfg.Hasura.JWTKey == "" {
+		if key, typ, ok := parseHasuraJWTSecretJSON(os.Getenv("HASURA_GRAPHQL_JWT_SECRET")); ok {
+			cfg.Hasura.JWTKey = key
+			if cfg.Hasura.JWTType == "" {
+				cfg.Hasura.JWTType = typ
+			}
+		}
+	}
+	if cfg.Hasura.JWTKey == "" {
+		cfg.Hasura.JWTKey = os.Getenv("AUTH_JWT_SECRET")
+	}
+	if cfg.Hasura.JWTKey == "" {
+		cfg.Hasura.JWTKey = os.Getenv("AUTH_JWT_KEY")
+	}
+	if cfg.Hasura.JWTType == "" {
+		cfg.Hasura.JWTType = os.Getenv("AUTH_JWT_TYPE")
+	}
 
 	// ── Auth ─────────────────────────────────────────────────────────
 	cfg.Auth = AuthConfig{
@@ -127,14 +153,52 @@ func parseEnvToConfig() *Config {
 
 	// ── MinIO / Storage ──────────────────────────────────────────────
 	// Backward compat: STORAGE_ENABLED=true implies MINIO_ENABLED=true.
+	// Gap #8: also infer intent to enable storage when the user has explicitly
+	// set MinIO-specific credentials/config (MINIO_ROOT_USER/PASSWORD, their
+	// MINIO_ACCESS_KEY/MINIO_SECRET_KEY aliases, or S3_ACCESS_KEY/S3_SECRET_KEY)
+	// without also setting MINIO_ENABLED/STORAGE_ENABLED. This matches how apps
+	// like ntask declare a full MinIO credential surface in .env.example but
+	// never set the ENABLED toggle — the storage service must still generate.
+	_, minioEnabledSet := os.LookupEnv("MINIO_ENABLED")
+	_, storageEnabledSet := os.LookupEnv("STORAGE_ENABLED")
+	minioIntentVars := []string{
+		"MINIO_ROOT_USER", "MINIO_ROOT_PASSWORD",
+		"MINIO_ACCESS_KEY", "MINIO_SECRET_KEY",
+		"S3_ACCESS_KEY", "S3_SECRET_KEY",
+	}
+	hasMinioIntent := false
+	for _, k := range minioIntentVars {
+		if v, ok := os.LookupEnv(k); ok && v != "" {
+			hasMinioIntent = true
+			break
+		}
+	}
 	minioEnabled := getEnvBool("MINIO_ENABLED", false) || getEnvBool("STORAGE_ENABLED", false)
+	if !minioEnabled && !minioEnabledSet && !storageEnabledSet && hasMinioIntent {
+		minioEnabled = true
+	}
+
+	// MINIO_ACCESS_KEY/MINIO_SECRET_KEY alias to MINIO_ROOT_USER/MINIO_ROOT_PASSWORD
+	// (gap #2). The internal MinIO container always reads MINIO_ROOT_USER/
+	// MINIO_ROOT_PASSWORD; apps commonly document the S3-style ACCESS/SECRET
+	// key names instead. ROOT_* wins when both are set, for back-compat with
+	// anyone already using ROOT_* directly.
+	rootUser := os.Getenv("MINIO_ROOT_USER")
+	if rootUser == "" {
+		rootUser = os.Getenv("MINIO_ACCESS_KEY")
+	}
+	rootPassword := os.Getenv("MINIO_ROOT_PASSWORD")
+	if rootPassword == "" {
+		rootPassword = os.Getenv("MINIO_SECRET_KEY")
+	}
+
 	cfg.Minio = MinioConfig{
 		Enabled:        minioEnabled,
 		Version:        os.Getenv("MINIO_VERSION"),
 		Port:           getEnvInt("MINIO_PORT", 0),
 		ConsolePort:    getEnvInt("MINIO_CONSOLE_PORT", 0),
-		RootUser:       os.Getenv("MINIO_ROOT_USER"),
-		RootPassword:   os.Getenv("MINIO_ROOT_PASSWORD"),
+		RootUser:       rootUser,
+		RootPassword:   rootPassword,
 		DefaultBuckets: os.Getenv("MINIO_DEFAULT_BUCKETS"),
 		Region:         os.Getenv("MINIO_REGION"),
 		S3AccessKey:    os.Getenv("S3_ACCESS_KEY"),

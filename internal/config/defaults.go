@@ -141,6 +141,29 @@ func applyDefaultsHasuraCreds(cfg *Config) error {
 		cfg.Hasura.AdminSecret = secret
 		slog.Debug("default", "key", "HASURA_GRAPHQL_ADMIN_SECRET", "value", "[generated]")
 	}
+	// JWT-ALGO-01: the algorithm auth SIGNS tokens with and the algorithm Hasura
+	// VERIFIES them with must always match — see BuildJWTSecret and
+	// buildAuthService/buildHasuraService, which both derive AUTH_JWT_TYPE and
+	// HASURA_GRAPHQL_JWT_SECRET's "type" field from this single cfg.Hasura.JWTType
+	// value. Only honor an explicit user-supplied HASURA_JWT_TYPE/AUTH_JWT_TYPE.
+	// When unset, default to HS256: this codebase has no RSA keypair generator,
+	// so auto-generating cfg.Hasura.JWTKey as a plain random string and labeling
+	// it RS256 previously produced a key Hasura could never actually verify
+	// with, breaking all auth on a fresh install. HS256 uses the same random
+	// secret for both signing and verification, which is exactly what
+	// generateSecureRandom produces, so it is the only safe zero-config default.
+	if cfg.Hasura.JWTType == "" {
+		cfg.Hasura.JWTType = "HS256"
+		slog.Debug("default", "key", "HASURA_GRAPHQL_JWT_TYPE", "value", cfg.Hasura.JWTType)
+	} else if strings.EqualFold(cfg.Hasura.JWTType, "RS256") && cfg.Hasura.JWTKey == "" {
+		// The user asked for RS256 but supplied no key material (HASURA_JWT_KEY /
+		// AUTH_JWT_KEY). We cannot synthesize a valid RSA keypair, so generating a
+		// random string here would reproduce JWT-ALGO-01. Fail loudly instead of
+		// silently shipping broken auth.
+		return fmt.Errorf("HASURA_JWT_TYPE=RS256 requires HASURA_JWT_KEY to be set " +
+			"(an RSA public key/JWKS) — nSelf does not generate RSA keypairs automatically; " +
+			"set HASURA_JWT_TYPE=HS256 to use an auto-generated shared secret instead")
+	}
 	if cfg.Hasura.JWTKey == "" {
 		secret, err := generateSecureRandom(44)
 		if err != nil {
@@ -148,16 +171,6 @@ func applyDefaultsHasuraCreds(cfg *Config) error {
 		}
 		cfg.Hasura.JWTKey = secret
 		slog.Debug("default", "key", "HASURA_GRAPHQL_JWT_KEY", "value", "[generated]")
-	}
-	if cfg.Hasura.JWTType == "" {
-		// SEC-JWT-01: RS256 is the default for new installs (asymmetric — private key
-		// never leaves the auth service; public key shared with Hasura).
-		cfg.Hasura.JWTType = "RS256"
-		slog.Debug("default", "key", "HASURA_GRAPHQL_JWT_TYPE", "value", cfg.Hasura.JWTType)
-	} else if strings.EqualFold(cfg.Hasura.JWTType, "HS256") {
-		// SEC-JWT-01: HS256 uses a shared secret — forgeable if leaked. Upgrade to RS256.
-		slog.Warn("SEC-JWT-01: HASURA_JWT_TYPE=HS256 is deprecated and will be removed in v2.0. " +
-			"Migrate to RS256. See docs.nself.org/security/jwt-migration.")
 	}
 	return nil
 }
@@ -910,9 +923,14 @@ func applyDefaultsEmail(cfg *Config) {
 // BuildJWTSecret constructs the HASURA_GRAPHQL_JWT_SECRET JSON string.
 // If the environment variable HASURA_GRAPHQL_JWT_SECRET is already set,
 // it is returned directly. Otherwise the secret is constructed from
-// cfg.Hasura.JWTKey and cfg.Hasura.JWTType. In dev mode, a missing
-// JWTKey is auto-generated. In non-dev modes, an empty JWTKey produces
-// an empty string (the caller must validate).
+// cfg.Hasura.JWTKey and cfg.Hasura.JWTType, which are the single source of
+// truth also used by buildAuthService for AUTH_JWT_SECRET/AUTH_JWT_TYPE
+// (JWT-ALGO-01) — this guarantees Hasura verifies tokens with the exact
+// algorithm+key auth signed them with. A missing JWTKey is auto-generated
+// (matching ApplyDefaults' HS256-default behavior); an empty JWTType defaults
+// to HS256 for the same reason: no RSA keypair generator exists in this
+// codebase, so RS256 can only be produced correctly when the caller already
+// went through ApplyDefaults (which rejects RS256 without a supplied key).
 func BuildJWTSecret(cfg *Config) (string, error) {
 	// If the full JSON is already set in the environment, use it as-is.
 	if existing := os.Getenv("HASURA_GRAPHQL_JWT_SECRET"); existing != "" {
@@ -921,10 +939,7 @@ func BuildJWTSecret(cfg *Config) (string, error) {
 
 	jwtType := cfg.Hasura.JWTType
 	if jwtType == "" {
-		jwtType = "RS256" // SEC-JWT-01: RS256 is the new default
-	}
-	if strings.EqualFold(jwtType, "HS256") {
-		slog.Warn("SEC-JWT-01: HASURA_JWT_TYPE=HS256 is deprecated. Migrate to RS256. See docs.nself.org/security/jwt-migration.")
+		jwtType = "HS256" // JWT-ALGO-01: HS256 is the safe zero-config default
 	}
 
 	jwtKey := cfg.Hasura.JWTKey
