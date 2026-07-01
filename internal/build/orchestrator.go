@@ -387,6 +387,21 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 		}
 	}
 
+	// ── Step 9.8: Refresh hasura/config.yaml from the resolved cascade ──
+	// Only touches projects that already use the Hasura CLI project layout
+	// (a hasura/ directory present) so repos that don't run hasura-cli by
+	// hand are unaffected (T-gap-10, backward compatible).
+	if info, statErr := os.Stat(filepath.Join(workdir, "hasura")); statErr == nil && info.IsDir() {
+		n, err := WriteHasuraCLIConfig(workdir, cfg)
+		if err != nil {
+			return nil, fmt.Errorf("writing hasura/config.yaml: %w", err)
+		}
+		filesGenerated += n
+		if opts.Verbose && n > 0 {
+			slog.Info("generated hasura/config.yaml", "endpoint", fmt.Sprintf("http://localhost:%d", cfg.Hasura.Port))
+		}
+	}
+
 	// ── Step 10: Write .env.computed ────────────────────────────────
 	pluginEnvVars := ComputePluginEnvVars(workdir, pluginDir)
 	computedPath := filepath.Join(workdir, ".env.computed")
