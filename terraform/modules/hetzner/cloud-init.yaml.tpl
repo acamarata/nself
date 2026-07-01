@@ -123,6 +123,21 @@ runcmd:
   - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
   - systemctl enable --now docker
 
+  # -- GitHub CLI (gh) -------------------------------------------------------
+  # Self-hosted GitHub Actions runners rely on `gh` (GitHub-hosted runners ship
+  # it). nself-org/cli release.yml uses `gh api` for the Homebrew lockstep gate;
+  # a missing gh failed that gate on nself-sentry (2026-07-01). Install via the
+  # official apt repo so every provisioned box has it.
+  - curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /etc/apt/keyrings/githubcli-archive-keyring.gpg
+  - chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+  - |
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] \
+      https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list
+  - apt-get update -qq
+  - apt-get install -y gh
+
   # -- Swap (2 GB) -----------------------------------------------------------
   - |
     if [ ! -f /swapfile ]; then
