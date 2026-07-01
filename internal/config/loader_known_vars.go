@@ -23,6 +23,8 @@ var knownEnvVars = []string{
 	"PROJECT_DESCRIPTION",
 	"ADMIN_EMAIL",
 	"DB_ENV_SEEDS",
+	// APP_NAME: opt-in subdomain prefix for multi-app nginx routing (gap #5).
+	"APP_NAME",
 	// DOMAIN/ACME_EMAIL are the Traefik/staging-prod convention some app repos
 	// use alongside (or instead of) BASE_DOMAIN — see ntask backend/.env.example.
 	// Not read by the CLI loader directly; listed to suppress false warnings.

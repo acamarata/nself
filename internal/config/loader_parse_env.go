@@ -33,6 +33,9 @@ func parseEnvToConfig() *Config {
 	cfg.ProjectDescription = os.Getenv("PROJECT_DESCRIPTION")
 	cfg.AdminEmail = os.Getenv("ADMIN_EMAIL")
 	cfg.DBEnvSeeds = getEnvBool("DB_ENV_SEEDS", true)
+	// APP_NAME: opt-in subdomain prefix (gap #5). Empty by default, preserving
+	// the bare "api.{BASE_DOMAIN}" scheme for existing single-app deployments.
+	cfg.AppName = os.Getenv("APP_NAME")
 
 	// ── PostgreSQL ───────────────────────────────────────────────────
 	cfg.Postgres = PostgresConfig{

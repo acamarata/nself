@@ -116,6 +116,19 @@ type routeEntry struct {
 	data     ServiceRouteData
 }
 
+// appPrefixedRoute returns route prefixed with the configured APP_NAME
+// (gap #5), producing e.g. "api.task" instead of "api" so the resulting
+// server_name is "api.task.{BASE_DOMAIN}". When APP_NAME is unset (the
+// default), route is returned unchanged, preserving the bare
+// "api.{BASE_DOMAIN}" scheme every existing single-app deployment
+// (ummat, unity) already relies on.
+func (g *Generator) appPrefixedRoute(route string) string {
+	if g.cfg.AppName == "" {
+		return route
+	}
+	return route + "." + g.cfg.AppName
+}
+
 // coreRoutes returns routes for always-present services: hasura, auth, storage, storage-console.
 func (g *Generator) coreRoutes(baseDomain, sslDir string) []routeEntry {
 	var entries []routeEntry
@@ -125,16 +138,23 @@ func (g *Generator) coreRoutes(baseDomain, sslDir string) []routeEntry {
 	if hasuraRoute == "" {
 		hasuraRoute = "api"
 	}
-	hasuraPort := g.cfg.Hasura.Port
-	if hasuraPort == 0 {
-		hasuraPort = 8080
-	}
+	hasuraRoute = g.appPrefixedRoute(hasuraRoute)
+	// Gap #7: the nginx upstream must always target the container-internal
+	// listen port (hasuraContainerPort, always 8080 — see buildHasuraService in
+	// internal/compose/core_services.go), never cfg.Hasura.Port. cfg.Hasura.Port
+	// is the HOST-exposed port ("127.0.0.1:<port>:8080" in the compose Ports
+	// mapping) and is meant for reaching Hasura from outside Docker. nginx and
+	// Hasura share the same Docker network, so the upstream must use the
+	// in-network port regardless of what host port the operator chose (e.g.
+	// HASURA_PORT=8181 to avoid a host port collision must NOT change the
+	// upstream, or nginx proxies to a port Hasura isn't listening on inside
+	// the container).
 	entries = append(entries, routeEntry{
 		filename: "hasura.conf",
 		data: ServiceRouteData{
 			Route:       hasuraRoute,
 			BaseDomain:  baseDomain,
-			Upstream:    fmt.Sprintf("hasura:%d", hasuraPort),
+			Upstream:    fmt.Sprintf("hasura:%d", hasuraContainerPort),
 			SSLDir:      sslDir,
 			RateZone:    "graphql_api",
 			Burst:       20,
@@ -149,6 +169,7 @@ func (g *Generator) coreRoutes(baseDomain, sslDir string) []routeEntry {
 	if authRoute == "" {
 		authRoute = "auth"
 	}
+	authRoute = g.appPrefixedRoute(authRoute)
 	authPort := g.cfg.Auth.Port
 	if authPort == 0 {
 		authPort = 4000
@@ -173,6 +194,7 @@ func (g *Generator) coreRoutes(baseDomain, sslDir string) []routeEntry {
 		if storageRoute == "" {
 			storageRoute = "storage"
 		}
+		storageRoute = g.appPrefixedRoute(storageRoute)
 		entries = append(entries, routeEntry{
 			filename: "storage.conf",
 			data: ServiceRouteData{
@@ -192,6 +214,7 @@ func (g *Generator) coreRoutes(baseDomain, sslDir string) []routeEntry {
 		if consoleRoute == "" {
 			consoleRoute = "storage-console"
 		}
+		consoleRoute = g.appPrefixedRoute(consoleRoute)
 		entries = append(entries, routeEntry{
 			filename: "storage-console.conf",
 			data: ServiceRouteData{
@@ -517,3 +540,12 @@ func minioConsolePort(cfg *config.Config) int {
 	}
 	return 9001
 }
+
+// hasuraContainerPort is the port the Hasura GraphQL engine always listens on
+// INSIDE its container, regardless of what host port it is mapped to via
+// HASURA_PORT/cfg.Hasura.Port. nginx and Hasura share the same Docker network,
+// so every in-network upstream (nginx, functions, admin, custom services) must
+// address Hasura at this fixed port — never the host-mapped port (gap #7).
+// See buildHasuraService in internal/compose/core_services.go, which maps
+// "127.0.0.1:<cfg.Hasura.Port>:8080" — the "8080" here is this constant.
+const hasuraContainerPort = 8080

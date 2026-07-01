@@ -19,8 +19,13 @@ func coreEnvVars(cfg *config.Config, svc config.CustomService) map[string]string
 		"POSTGRES_DB":                 cfg.Postgres.DB,
 		"POSTGRES_USER":               cfg.Postgres.User,
 		"POSTGRES_PASSWORD":           cfg.Postgres.Password,
-		"DATABASE_URL":                cfg.DatabaseURL(),
-		"HASURA_GRAPHQL_ENDPOINT":     fmt.Sprintf("http://hasura:%d/v1/graphql", cfg.Hasura.Port),
+		"DATABASE_URL": cfg.DatabaseURL(),
+		// Gap #7: Hasura always listens on 8080 INSIDE its container regardless
+		// of the host-mapped cfg.Hasura.Port (compose maps
+		// "127.0.0.1:<Hasura.Port>:8080" — see buildHasuraService). Custom
+		// services reach Hasura over the same Docker network, so this must be
+		// the fixed container port, not the host-exposed one.
+		"HASURA_GRAPHQL_ENDPOINT":     "http://hasura:8080/v1/graphql",
 		"HASURA_GRAPHQL_ADMIN_SECRET": cfg.Hasura.AdminSecret,
 		"AUTH_SERVER_URL":             fmt.Sprintf("http://auth:%d", cfg.Auth.Port),
 		"AUTH_CLIENT_URL":             cfg.Auth.ClientURL,
