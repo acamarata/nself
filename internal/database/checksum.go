@@ -140,19 +140,27 @@ func appliedMigrationsOps(ctx context.Context, cfg *config.Config) (map[string]M
 // VerifyChecksums compares on-disk migration checksums against stored values.
 // Returns a list of mismatches (empty means all good).
 func VerifyChecksums(ctx context.Context, cfg *config.Config, plugin string) ([]ChecksumMismatch, error) {
+	if err := ensureSchemaVersions(ctx, cfg); err != nil {
+		return nil, fmt.Errorf("ensure schema_versions: %w", err)
+	}
 	if err := ensureMigrationsTable(ctx, cfg); err != nil {
 		return nil, fmt.Errorf("ensure migrations table: %w", err)
-	}
-
-	applied, err := appliedMigrationsOps(ctx, cfg)
-	if err != nil {
-		return nil, fmt.Errorf("query applied migrations: %w", err)
 	}
 
 	dir := migrationsDir(cfg, plugin)
 	files, err := scanMigrations(dir)
 	if err != nil {
 		return nil, err
+	}
+
+	// Upgrade prefix-style ids first so lookups by the new unique id resolve.
+	if err := upgradeLedger(ctx, cfg, files); err != nil {
+		return nil, fmt.Errorf("upgrade migration ledger: %w", err)
+	}
+
+	applied, err := appliedMigrationsOps(ctx, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("query applied migrations: %w", err)
 	}
 
 	var mismatches []ChecksumMismatch
@@ -228,17 +236,23 @@ func ResetChecksum(ctx context.Context, cfg *config.Config, migrationID string) 
 	return fmt.Errorf("migration %s not found on disk", migrationID)
 }
 
-// extractMigrationID extracts the YYYYMMDDHHMMSS portion from a migration filename.
+// extractMigrationID derives the unique nself_ops.migrations id for a
+// migration file.
+//
+// Flat layout:   "20260701_add_users.sql"        -> "20260701_add_users"
+// Nested layout: "20260701_add_users/up.sql"     -> "20260701_add_users"
+//
+// WHY full name, not the timestamp prefix: the old implementation truncated
+// at the first underscore, so two migrations sharing a date-derived version
+// (e.g. 20260701_add_users.sql and 20260701_add_orders.sql) collided on the
+// ledger PRIMARY KEY and the second row was silently dropped by
+// ON CONFLICT (id) DO NOTHING (Unity PCI, "ledger outlives DDL" family).
+// The full name keeps same-day migrations distinct. Existing ledgers with
+// prefix-style ids are upgraded in place by upgradeLedger.
 func extractMigrationID(path string) string {
-	base := strings.TrimSuffix(strings.TrimSuffix(filepath.Base(path), ".sql"), ".down")
-	// For flat layout: YYYYMMDDHHMMSS_name.sql -> YYYYMMDDHHMMSS
-	// For nested layout: YYYYMMDDHHMMSS_name/up.sql -> parent dir name
 	if filepath.Base(path) == "up.sql" {
-		base = filepath.Base(filepath.Dir(path))
+		return filepath.Base(filepath.Dir(path))
 	}
-	parts := strings.SplitN(base, "_", 2)
-	if len(parts) > 0 {
-		return parts[0]
-	}
-	return base
+	base := strings.TrimSuffix(filepath.Base(path), ".sql")
+	return strings.TrimSuffix(base, ".down")
 }
