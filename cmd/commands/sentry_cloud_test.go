@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -121,7 +122,9 @@ func TestSentryLogin_PersistsCredentials0600(t *testing.T) {
 	if err != nil {
 		t.Fatalf("credentials not written: %v", err)
 	}
-	if info.Mode().Perm() != 0o600 {
+	// Unix permission bits don't map onto NTFS ACLs — Windows reports
+	// 0666/0444 — so the 0600 assertion only holds on POSIX systems.
+	if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
 		t.Errorf("credentials mode = %v, want 0600", info.Mode().Perm())
 	}
 	creds, err := sentryapi.ReadCredentials()
