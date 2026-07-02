@@ -61,9 +61,15 @@ var dbMigrateUpCmd = &cobra.Command{
 Pass --env staging|prod (with NSELF_DEPLOY_HOST_<ENV> set, or an entry in
 .nself/control-plane.yaml) to run this against a deployed target instead of
 the local docker daemon: the command re-invokes 'nself db migrate up' on the
-remote host over SSH. Note: this requires the remote host's nself CLI
-version to support 'db migrate up' — an older remote CLI returns a clear
-error naming the version-drift cause rather than a raw SSH failure.`,
+remote host over SSH, cd'ing into NSELF_REMOTE_PATH_<ENV> (default
+/opt/nself) first.
+
+Before running the remote command, the CLI proactively verifies the remote
+host's nself version matches the local one (running 'nself --version' over
+the same SSH connection). An older or newer remote CLI errors clearly,
+naming both versions and the host, instead of silently trusting output from
+a version-mismatched binary or failing with a raw SSH error. Pass
+--allow-version-drift to skip this check and run anyway.`,
 	RunE: runDBMigrateUp,
 }
 

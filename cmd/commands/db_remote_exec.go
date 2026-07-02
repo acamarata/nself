@@ -20,7 +20,12 @@ import (
 // runSSHCaptured runs `ssh <sshArgs...>` and returns combined stdout+stderr
 // plus any error from the process itself (non-zero exit, ssh connection
 // failure, etc.).
-func runSSHCaptured(ctx context.Context, sshArgs []string) (string, error) {
+//
+// This is a package-level var (rather than a plain func) so tests can stub
+// remote SSH execution entirely — save the original, assign a closure,
+// defer restoring it — without spinning up a real ssh process or fixture
+// host. See TestCheckRemoteVersionDrift_* in db_remote_test.go.
+var runSSHCaptured = func(ctx context.Context, sshArgs []string) (string, error) {
 	sc := exec.CommandContext(ctx, "ssh", sshArgs...)
 	out, err := sc.CombinedOutput()
 	return strings.TrimSpace(string(out)), err

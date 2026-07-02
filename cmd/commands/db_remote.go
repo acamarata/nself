@@ -42,6 +42,7 @@ const dbRemoteEnvFlag = "env"
 func addDBRemoteFlags(cmd *cobra.Command) {
 	cmd.Flags().String(dbRemoteEnvFlag, "", "Target environment: local|staging|prod (default: local). Requires NSELF_DEPLOY_HOST_<ENV> or .nself/control-plane.yaml")
 	cmd.Flags().String("server", "", "Run against a specific server name from control-plane inventory (overrides --env's default server selection)")
+	cmd.Flags().Bool("allow-version-drift", false, "skip the local/remote nself version match check for remote --env targets")
 }
 
 // dbRemoteTarget is the resolved destination for a db/hasura command.
@@ -63,6 +64,10 @@ type dbRemoteTarget struct {
 	// RemotePath is the absolute path to the nSelf project on the remote
 	// host, used to `cd` before invoking the remote nself binary.
 	RemotePath string
+
+	// AllowVersionDrift, when true, skips checkRemoteVersionDrift's
+	// pre-flight local/remote nself version match check (--allow-version-drift).
+	AllowVersionDrift bool
 }
 
 // resolveDBRemoteTarget reads --env/--server from cmd and resolves them to a
@@ -173,9 +178,14 @@ func findDBTargetServer(env controlplane.Environment, serverFlag string) (contro
 // here, ssh/bash reports "command not found" or cobra reports "unknown
 // command" — wrapRemoteVersionDriftError turns that into an explicit,
 // actionable message instead of a raw stack trace or bare exit status.
+//
+// Before running the real remote command, this also runs a proactive
+// checkRemoteVersionDrift probe (unless rt.AllowVersionDrift is set) — a
+// mismatched remote CLI can run a subcommand "successfully" while printing
+// untrustworthy output (see checkRemoteVersionDrift's doc comment), which
+// wrapRemoteVersionDriftError's after-the-fact "command not found" sniffing
+// cannot catch.
 func runRemoteNselfCommand(ctx context.Context, rt dbRemoteTarget, args ...string) error {
-	remoteCmd := fmt.Sprintf("cd %s && nself %s", shellQuoteArg(rt.RemotePath), strings.Join(shellQuoteArgs(args), " "))
-
 	keyPath := rt.KeyPath
 	if keyPath == "" {
 		keyPath = defaultSSHKeyPath()
@@ -186,8 +196,16 @@ func runRemoteNselfCommand(ctx context.Context, rt dbRemoteTarget, args ...strin
 		"-o", "BatchMode=yes",
 		"-o", "ForwardAgent=no",
 		"-o", "StrictHostKeyChecking=accept-new",
-		rt.SSHTarget, remoteCmd,
 	}
+
+	if !rt.AllowVersionDrift {
+		if driftErr := checkRemoteVersionDrift(ctx, rt, sshArgs, joinRemoteArgs(args)); driftErr != nil {
+			return driftErr
+		}
+	}
+
+	remoteCmd := fmt.Sprintf("cd %s && nself %s", shellQuoteArg(rt.RemotePath), strings.Join(shellQuoteArgs(args), " "))
+	sshArgs = append(sshArgs, rt.SSHTarget, remoteCmd)
 
 	out, err := runSSHCaptured(ctx, sshArgs)
 	if out != "" {
@@ -248,8 +266,12 @@ func dispatchRemoteIfNeeded(cmd *cobra.Command, remoteArgs ...string) (handled b
 		return false, nil
 	}
 
+	if allowDrift, _ := cmd.Flags().GetBool("allow-version-drift"); allowDrift {
+		target.AllowVersionDrift = true
+	}
+
 	if !cmd.Flags().Changed("json") {
-		fmt.Fprintf(cmd.OutOrStdout(), "Running 'nself %s' on %s (env=%s)...\n", strings.Join(remoteArgs, " "), target.SSHTarget, target.EnvName)
+		fmt.Fprintf(cmd.OutOrStdout(), "Running 'nself %s' on %s:%s (env=%s)...\n", strings.Join(remoteArgs, " "), target.SSHTarget, target.RemotePath, target.EnvName)
 	}
 
 	return true, runRemoteNselfCommand(cmd.Context(), target, remoteArgs...)
