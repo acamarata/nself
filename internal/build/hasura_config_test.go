@@ -3,6 +3,7 @@ package build
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -79,7 +80,9 @@ func TestWriteHasuraCLIConfig_WritesFileWithRestrictivePerms(t *testing.T) {
 	if statErr != nil {
 		t.Fatalf("expected hasura/config.yaml to exist: %v", statErr)
 	}
-	if perm := info.Mode().Perm(); perm != 0o600 {
+	// Unix permission bits don't map onto NTFS ACLs — Windows reports
+	// 0666/0444 — so the 0600 assertion only holds on POSIX systems.
+	if perm := info.Mode().Perm(); runtime.GOOS != "windows" && perm != 0o600 {
 		t.Errorf("expected 0600 permissions (file contains admin_secret), got %o", perm)
 	}
 }
