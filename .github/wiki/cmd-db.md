@@ -41,6 +41,7 @@ The `hasura` subgroup controls Hasura metadata, useful for applying tracked tabl
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--plugin` | `""` | Migrate a specific plugin schema (for `migrate` subcommands) |
+| `--migration-dir` | auto-detect | Directory of `.sql` migrations (for `migrate up` and `migrate status`). Auto-detect order: `hasura/migrations/default`, `hasura/migrations`, `migrations`, `postgres/migrations` |
 | `--force`, `-f` | false | Skip confirmation prompt (for `reset`) |
 | `--yes` | false | Skip confirmation prompt (for `drop`, `reset`, `restore`) |
 | `--overwrite` | false | Allow overwriting existing data (for `restore`) |
@@ -61,6 +62,9 @@ nself db migrate down
 
 # Check migration status
 nself db migrate status
+
+# Check status for a non-standard migrations layout
+nself db migrate status --migration-dir postgres/migrations
 
 # Create a new migration file
 nself db migrate create add_users_table

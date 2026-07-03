@@ -3,7 +3,24 @@
 All notable changes to the ɳSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
-## [Unreleased] — v1.2.0
+## [1.2.1] — 2026-07-03
+
+### Fixed
+
+- **Migration ledger PK collision (Unity HIGH PCI)** — nested Hasura layouts (`hasura/migrations/default/<name>/up.sql`) keyed the applied-migration ledger by `filepath.Base(file)`, collapsing every nested migration to the literal name `up.sql`. The first one recorded; every later one was silently skipped while reporting as applied (this produced the ummat `is_up`/`np_uptime_summary` ghost). Migration identity now derives from `migrationKey()` (parent directory name for nested layouts, filename for flat), `extractMigrationID` no longer truncates at the first `_` (same-day migrations no longer collide), ledger writes use `ON CONFLICT DO UPDATE` instead of `DO NOTHING` (a conflict can never silently drop a migration), and `upgradeLedger()` rewrites legacy ledger rows in place on already-deployed boxes. (#163)
+- **Atomic dual-table ledger recording** — non-transactional migrations (`CREATE INDEX CONCURRENTLY`, `ALTER TYPE ADD VALUE`) now record to `np_common.schema_versions` and `nself_ops.migrations` inside one transaction, so a failure on either INSERT leaves no orphan row. `nself db migrate down` deletes from BOTH ledgers inside the down transaction (previously `nself_ops.migrations` kept a stale row). `nself db migrate apply` errors on checksum mismatch when a previously-applied file was modified. (#141)
+- **Scaffold template error propagation** — plugin scaffold template failures now return wrapped errors instead of panicking; generated service templates exit cleanly instead of `os.Exit(1)` mid-defer. (#141)
+- **clean-root SDK gate** — expects 3 SDK modules (go, py, ts) after the Flutter SDK removal (#159); Windows CI perm-bit assertions POSIX-gated. (#164)
+- **Version scripts** — `bump-version.sh` / `check-version-lockstep.sh` no longer expect the removed `sdk/flutter/pubspec.yaml` (10 lockstep files + optional homebrew).
+
+### Added
+
+- **`nself db migrate status --migration-dir <dir>`** — status for non-standard migration layouts (parity with `migrate up`; forwarded on `--env` remote dispatch). Repos like ntask (`postgres/migrations`) no longer report "No migrations found". (#166)
+- **`postgres/migrations/` auto-detect** — 4th candidate in migration directory detection. (#166)
+- **Remote CLI version-drift pre-flight** — `db --env staging|prod` commands verify the remote binary version matches local before running, failing with a clear message naming both versions (pass `--allow-version-drift` to override). (#162)
+- **`.github/wiki/database-migrations.md`** — internal reference for the dual-table ledger, atomicity guarantees, and layout auto-detection. (#141, #166)
+
+## [1.2.0] — 2026-07-01
 
 ### Changed
 
