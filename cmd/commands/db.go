@@ -525,6 +525,9 @@ func init() {
 	dbMigrateUpCmd.Flags().Bool("dry-run", false, "List pending migrations without applying them")
 	// --migration-dir flag on migrate up (G-008)
 	dbMigrateUpCmd.Flags().String("migration-dir", "", "Apply all .sql files in this directory in lexicographic order (skips already-applied)")
+	// --migration-dir flag on migrate status (G-008): repos with non-standard
+	// layouts (e.g. ntask postgres/migrations) otherwise report "No migrations found"
+	dbMigrateStatusCmd.Flags().String("migration-dir", "", "Report status for migrations in this directory instead of the auto-detected one")
 	// --env/--server: remote targeting (gap #9) — default local, opt-in remote.
 	addDBRemoteFlags(dbMigrateUpCmd)
 	addDBRemoteFlags(dbMigrateStatusCmd)
@@ -689,7 +692,18 @@ func runDBMigrateDown(cmd *cobra.Command, _ []string) error {
 }
 
 func runDBMigrateStatus(cmd *cobra.Command, _ []string) error {
-	if handled, err := dispatchRemoteIfNeeded(cmd, "db", "migrate", "status"); handled {
+	migrationDir := ""
+	if f := cmd.Flags().Lookup("migration-dir"); f != nil {
+		migrationDir = f.Value.String()
+	}
+
+	// Forward --migration-dir to the remote CLI: the pre-flight version-drift
+	// check (#162) guarantees the remote binary understands the flag.
+	remoteArgs := []string{"db", "migrate", "status"}
+	if migrationDir != "" {
+		remoteArgs = append(remoteArgs, "--migration-dir", migrationDir)
+	}
+	if handled, err := dispatchRemoteIfNeeded(cmd, remoteArgs...); handled {
 		return err
 	}
 
@@ -697,7 +711,7 @@ func runDBMigrateStatus(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	statuses, err := database.MigrateStatus(cmd.Context(), cfg)
+	statuses, err := database.MigrateStatus(cmd.Context(), cfg, migrationDir)
 	if err != nil {
 		return fmt.Errorf("migrate status: %w", err)
 	}

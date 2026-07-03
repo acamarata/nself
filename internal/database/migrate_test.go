@@ -448,3 +448,32 @@ func TestIsNonTransactional_AddAttributeIsTransactional(t *testing.T) {
 		t.Errorf("ALTER TYPE ... ADD ATTRIBUTE should be transactional, isNonTransactional returned %v", got)
 	}
 }
+
+// TestMigrationsDir_PostgresLayout: only postgres/migrations/ exists (ntask
+// repo layout) → it is auto-detected as the 4th candidate (G-008).
+func TestMigrationsDir_PostgresLayout(t *testing.T) {
+	tmp := t.TempDir()
+	mkdirAll(t, tmp, "postgres/migrations")
+	withCwd(t, tmp)
+
+	cfg := &config.Config{}
+	got := migrationsDir(cfg, "")
+	if got != "postgres/migrations" {
+		t.Errorf("expected postgres/migrations, got %q", got)
+	}
+}
+
+// TestMigrationsDir_LegacyBeatsPostgres: candidate order is preserved —
+// migrations/ (3rd) wins over postgres/migrations (4th) when both exist.
+func TestMigrationsDir_LegacyBeatsPostgres(t *testing.T) {
+	tmp := t.TempDir()
+	mkdirAll(t, tmp, "migrations")
+	mkdirAll(t, tmp, "postgres/migrations")
+	withCwd(t, tmp)
+
+	cfg := &config.Config{}
+	got := migrationsDir(cfg, "")
+	if got != "migrations" {
+		t.Errorf("expected migrations to win over postgres/migrations, got %q", got)
+	}
+}

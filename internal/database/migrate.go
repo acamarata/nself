@@ -182,6 +182,7 @@ func ensureSchemaVersions(ctx context.Context, cfg *config.Config) error {
 //  1. hasura/migrations/default/ (standard Hasura layout)
 //  2. hasura/migrations/         (flat Hasura layout)
 //  3. migrations/                (legacy fallback)
+//  4. postgres/migrations/       (repo-local layout, e.g. ntask)
 //
 // If none exist on disk, it returns "hasura/migrations/default/" so error
 // messages point the user at the canonical location.
@@ -199,6 +200,7 @@ func migrationsDir(cfg *config.Config, plugin string) string {
 		"hasura/migrations/default",
 		"hasura/migrations",
 		"migrations",
+		"postgres/migrations",
 	}
 	for _, c := range candidates {
 		if _, err := os.Stat(c); err == nil {
@@ -805,7 +807,12 @@ func ApplyDir(ctx context.Context, cfg *config.Config, dirPath string) (int, err
 // MigrateStatus returns the status of all known migrations (applied and pending).
 // It merges on-disk migration files with the schema_versions table, so orphaned
 // migrations (applied but no longer on disk) are also reported.
-func MigrateStatus(ctx context.Context, cfg *config.Config) ([]MigrationStatus, error) {
+//
+// dir overrides the auto-detected migrations directory (the --migration-dir
+// companion to MigrateUpDir, G-008): repos with non-standard layouts, e.g.
+// ntask's postgres/migrations, would otherwise report "No migrations found".
+// Pass "" to auto-detect via migrationsDir.
+func MigrateStatus(ctx context.Context, cfg *config.Config, dir string) ([]MigrationStatus, error) {
 	if err := ensureSchemaVersions(ctx, cfg); err != nil {
 		return nil, fmt.Errorf("ensure schema_versions: %w", err)
 	}
@@ -813,7 +820,10 @@ func MigrateStatus(ctx context.Context, cfg *config.Config) ([]MigrationStatus, 
 		return nil, fmt.Errorf("ensure migrations table: %w", err)
 	}
 
-	files, err := scanMigrations(migrationsDir(cfg, ""))
+	if dir == "" {
+		dir = migrationsDir(cfg, "")
+	}
+	files, err := scanMigrations(dir)
 	if err != nil {
 		return nil, err
 	}
