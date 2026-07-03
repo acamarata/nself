@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/nself-org/cli/internal/controlplane"
+	"github.com/nself-org/cli/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -346,5 +347,231 @@ func TestResolveDBRemoteTarget_ProjectRootIsRespected(t *testing.T) {
 	}
 	if target.SSHTarget != "deploy@example.com" {
 		t.Errorf("expected resolution from project root inventory, got SSHTarget=%q", target.SSHTarget)
+	}
+}
+
+// ── checkRemoteVersionDrift / runRemoteNselfCommand pre-flight (gap #16) ──
+
+// withStubbedSSH replaces runSSHCaptured with fn for the duration of the
+// test, restoring the original on cleanup. Callers that need to assert call
+// counts/args should close over their own state inside fn.
+func withStubbedSSH(t *testing.T, fn func(ctx context.Context, sshArgs []string) (string, error)) {
+	t.Helper()
+	orig := runSSHCaptured
+	runSSHCaptured = fn
+	t.Cleanup(func() { runSSHCaptured = orig })
+}
+
+// withLocalVersion overrides version.Version for the duration of the test,
+// restoring the original on cleanup (mirrors internal/version/version_test.go's
+// TestVersion_Overridable pattern).
+func withLocalVersion(t *testing.T, v string) {
+	t.Helper()
+	orig := version.Version
+	version.Version = v
+	t.Cleanup(func() { version.Version = orig })
+}
+
+// TestRunRemoteNselfCommand_VersionDriftBlocksRealCommand verifies that a
+// mismatched remote nself version (1.0.9) against local (1.2.0) produces an
+// error naming both versions and the host, and that the real subcommand is
+// never executed after drift is detected (call count stays at 1 — the
+// version probe — not 2).
+func TestRunRemoteNselfCommand_VersionDriftBlocksRealCommand(t *testing.T) {
+	withLocalVersion(t, "1.2.0")
+
+	calls := 0
+	withStubbedSSH(t, func(ctx context.Context, sshArgs []string) (string, error) {
+		calls++
+		return "nself version 1.0.9", nil
+	})
+
+	rt := dbRemoteTarget{SSHTarget: "deploy@staging.example.com", EnvName: "staging", RemotePath: "/opt/nself"}
+	err := runRemoteNselfCommand(context.Background(), rt, "db", "migrate", "status")
+	if err == nil {
+		t.Fatal("expected a version-drift error")
+	}
+	if !strings.Contains(err.Error(), "1.2.0") || !strings.Contains(err.Error(), "1.0.9") {
+		t.Errorf("expected error to contain both versions, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "deploy@staging.example.com") {
+		t.Errorf("expected error to name the host, got: %v", err)
+	}
+	if calls != 1 {
+		t.Errorf("expected exactly 1 SSH call (the probe only, real command must not run), got %d", calls)
+	}
+}
+
+// TestRunRemoteNselfCommand_MatchingVersionRunsRealCommand verifies that a
+// matching remote/local version lets the probe pass and the real subcommand
+// execute, with the expected remote cd+nself invocation string.
+func TestRunRemoteNselfCommand_MatchingVersionRunsRealCommand(t *testing.T) {
+	withLocalVersion(t, "1.2.0")
+
+	calls := 0
+	var secondCallArgs []string
+	withStubbedSSH(t, func(ctx context.Context, sshArgs []string) (string, error) {
+		calls++
+		if calls == 1 {
+			return "nself version 1.2.0", nil
+		}
+		secondCallArgs = sshArgs
+		return "up to date", nil
+	})
+
+	rt := dbRemoteTarget{SSHTarget: "deploy@staging.example.com", EnvName: "staging", RemotePath: "/opt/nself"}
+	err := runRemoteNselfCommand(context.Background(), rt, "db", "migrate", "status")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if calls != 2 {
+		t.Fatalf("expected 2 SSH calls (probe + real command), got %d", calls)
+	}
+	joined := strings.Join(secondCallArgs, " ")
+	if !strings.Contains(joined, "cd '/opt/nself' && nself 'db' 'migrate' 'status'") {
+		t.Errorf("expected second call's remote command to cd into RemotePath and run the subcommand, got: %q", joined)
+	}
+}
+
+// TestRunRemoteNselfCommand_ANSINoiseParsedCorrectly verifies that an
+// old bash-era remote's ANSI-escaped banner ("nself v0.9.9" mixed with
+// escape codes) is still correctly parsed as 0.9.9 and compared against a
+// different local version, producing a drift error.
+func TestRunRemoteNselfCommand_ANSINoiseParsedCorrectly(t *testing.T) {
+	withLocalVersion(t, "1.2.0")
+
+	withStubbedSSH(t, func(ctx context.Context, sshArgs []string) (string, error) {
+		return "\x1b[32mnself v0.9.9\x1b[0m (build unknown)", nil
+	})
+
+	rt := dbRemoteTarget{SSHTarget: "deploy@old.example.com", EnvName: "staging", RemotePath: "/opt/nself"}
+	err := runRemoteNselfCommand(context.Background(), rt, "db", "migrate", "status")
+	if err == nil {
+		t.Fatal("expected a version-drift error")
+	}
+	if !strings.Contains(err.Error(), "0.9.9") {
+		t.Errorf("expected the ANSI-noisy remote version 0.9.9 to be parsed out, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "1.2.0") {
+		t.Errorf("expected local version 1.2.0 in error, got: %v", err)
+	}
+}
+
+// TestRunRemoteNselfCommand_ProbeFailureNamesHost verifies that a failed
+// probe SSH call (e.g. "command not found"-style output, or a connection
+// error) surfaces a clear error naming the host rather than a raw/opaque
+// exec error.
+func TestRunRemoteNselfCommand_ProbeFailureNamesHost(t *testing.T) {
+	withLocalVersion(t, "1.2.0")
+
+	withStubbedSSH(t, func(ctx context.Context, sshArgs []string) (string, error) {
+		return "bash: nself: command not found", os.ErrDeadlineExceeded
+	})
+
+	rt := dbRemoteTarget{SSHTarget: "deploy@broken.example.com", EnvName: "staging", RemotePath: "/opt/nself"}
+	err := runRemoteNselfCommand(context.Background(), rt, "db", "migrate", "status")
+	if err == nil {
+		t.Fatal("expected an error when the version probe itself fails")
+	}
+	if !strings.Contains(err.Error(), "deploy@broken.example.com") {
+		t.Errorf("expected error to clearly name the host, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "staging") {
+		t.Errorf("expected error to name the env, got: %v", err)
+	}
+}
+
+// TestRunRemoteNselfCommand_AllowVersionDriftSkipsProbe verifies that
+// AllowVersionDrift=true skips the version probe entirely (no SSH call for
+// it) and goes straight to the real remote command.
+func TestRunRemoteNselfCommand_AllowVersionDriftSkipsProbe(t *testing.T) {
+	withLocalVersion(t, "1.2.0")
+
+	calls := 0
+	withStubbedSSH(t, func(ctx context.Context, sshArgs []string) (string, error) {
+		calls++
+		return "ok", nil
+	})
+
+	rt := dbRemoteTarget{SSHTarget: "deploy@staging.example.com", EnvName: "staging", RemotePath: "/opt/nself", AllowVersionDrift: true}
+	err := runRemoteNselfCommand(context.Background(), rt, "db", "migrate", "status")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if calls != 1 {
+		t.Errorf("expected exactly 1 SSH call (the real command, no probe) when AllowVersionDrift=true, got %d", calls)
+	}
+}
+
+// TestRunRemoteNselfCommand_DevLocalVersionSkipsProbe verifies that an
+// unparseable local version (e.g. "dev" builds) skips the version check
+// silently — no probe call — and runs the command directly.
+func TestRunRemoteNselfCommand_DevLocalVersionSkipsProbe(t *testing.T) {
+	withLocalVersion(t, "dev")
+
+	calls := 0
+	withStubbedSSH(t, func(ctx context.Context, sshArgs []string) (string, error) {
+		calls++
+		return "ok", nil
+	})
+
+	rt := dbRemoteTarget{SSHTarget: "deploy@staging.example.com", EnvName: "staging", RemotePath: "/opt/nself"}
+	err := runRemoteNselfCommand(context.Background(), rt, "db", "migrate", "status")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if calls != 1 {
+		t.Errorf("expected exactly 1 SSH call (the real command, no probe) for unparseable local version, got %d", calls)
+	}
+}
+
+// TestDispatchRemoteIfNeeded_AllowVersionDriftFlagPropagates verifies that
+// --allow-version-drift set on cmd propagates into the resolved
+// dbRemoteTarget.AllowVersionDrift, so runRemoteNselfCommand actually skips
+// the probe end-to-end through dispatchRemoteIfNeeded.
+func TestDispatchRemoteIfNeeded_AllowVersionDriftFlagPropagates(t *testing.T) {
+	withLocalVersion(t, "1.2.0")
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	inv := &controlplane.Inventory{
+		SchemaVersion: 1,
+		Project:       "test",
+		Environments: map[string]controlplane.Environment{
+			"staging": {
+				Name:    "staging",
+				Kind:    "remote",
+				Servers: []controlplane.Server{{Name: "staging-app", Host: "deploy@staging.example.com", RemotePath: "/opt/nself", Primary: true}},
+			},
+		},
+	}
+	if err := controlplane.Write(dir, inv); err != nil {
+		t.Fatalf("write inventory: %v", err)
+	}
+
+	calls := 0
+	withStubbedSSH(t, func(ctx context.Context, sshArgs []string) (string, error) {
+		calls++
+		return "ok", nil
+	})
+
+	cmd := newDBRemoteTestCmd()
+	if err := cmd.Flags().Set("env", "staging"); err != nil {
+		t.Fatalf("set --env: %v", err)
+	}
+	if err := cmd.Flags().Set("allow-version-drift", "true"); err != nil {
+		t.Fatalf("set --allow-version-drift: %v", err)
+	}
+
+	handled, err := dispatchRemoteIfNeeded(cmd, "db", "migrate", "status")
+	if !handled {
+		t.Fatal("expected handled=true for a remote target")
+	}
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if calls != 1 {
+		t.Errorf("expected exactly 1 SSH call (no probe) with --allow-version-drift, got %d", calls)
 	}
 }
