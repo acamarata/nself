@@ -3,6 +3,12 @@
 All notable changes to the ɳSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
+## [1.2.3] — 2026-07-03
+
+### Added
+
+- **`sentry` bundle install alias** — `nself bundle install sentry` now resolves to the canonical `ɳSentry` bundle. The alias is a fallback lookup only; `nself bundle list` and shell completions continue to show the canonical `nsentry` slug. (#171)
+
 ## [1.2.2] — 2026-07-03
 
 ### Fixed
