@@ -460,12 +460,12 @@ func TestRejectInlineSecret(t *testing.T) {
 		value    string
 		wantErr  bool
 	}{
-		{"--key-ref", "NSELF_SSH_KEY_STAGING", false},         // valid env-var name
-		{"--key-ref", "/home/ubuntu/.ssh/id_ed25519", true},   // file path rejected
-		{"--key-ref", "ssh-ed25519 AAAA...", true},            // inline key rejected
+		{"--key-ref", "NSELF_SSH_KEY_STAGING", false},              // valid env-var name
+		{"--key-ref", "/home/ubuntu/.ssh/id_ed25519", true},        // file path rejected
+		{"--key-ref", "ssh-ed25519 AAAA...", true},                 // inline key rejected
 		{"--key-ref", "-----BEGIN OPENSSH PRIVATE KEY-----", true}, // PEM rejected
-		{"--host", "ubuntu@staging.example.com", false},       // valid host
-		{"--host", "ubuntu@staging.example.com\ninjected", true}, // multi-line rejected
+		{"--host", "ubuntu@staging.example.com", false},            // valid host
+		{"--host", "ubuntu@staging.example.com\ninjected", true},   // multi-line rejected
 	}
 
 	for _, c := range cases {

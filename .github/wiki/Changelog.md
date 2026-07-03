@@ -3,6 +3,14 @@
 All notable changes to the ɳSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
+## [1.2.4] — 2026-07-03
+
+### Fixed
+
+- **License signature verification enabled in released binaries (CRITICAL)** — the release workflow read the `NSELF_LICENSE_PUBKEY_HEX` secret to embed the Ed25519 license-verification key at build time, but the secret was never set in the repository, so every published binary shipped as a "dev build" with license signature verification disabled and printed a dev-build warning from `nself version`. The secret is now configured; binaries from this release on verify license signatures.
+- **`bundle info sentry` alias miss** — the `sentry` → `nsentry` alias added in 1.2.3 resolved for `bundle install` and `bundle remove` but not `bundle info`, which used a separate command-layer lookup. `bundle info sentry` now resolves to ɳSentry; listings and error hints still show only the canonical `nsentry` slug.
+- **gofmt drift** — three files merged unformatted; formatted so the CI gofmt gate stays green.
+
 ## [1.2.3] — 2026-07-03
 
 ### Added

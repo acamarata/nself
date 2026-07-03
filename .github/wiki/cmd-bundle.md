@@ -31,6 +31,8 @@ The six current bundles are:
 
 Bundle membership is authoritative at SPORT F06. Use `nself bundle list` for the live, CLI-computed list.
 
+`nself bundle install sentry` is a slug alias for `nsentry` (added v1.2.3): it resolves to the same ɳSentry bundle but never appears in `nself bundle list` or shell completions — those always show the canonical `nsentry` slug.
+
 ## Subcommands
 
 | Subcommand | Description |
@@ -84,6 +86,11 @@ nself bundle info nclaw
 ```bash
 # Install ɳClaw (requires nclaw or nself-plus license)
 nself bundle install nclaw
+```
+
+```bash
+# `sentry` is a slug alias for `nsentry` (v1.2.3+) — both install the same bundle
+nself bundle install sentry
 ```
 
 ```bash

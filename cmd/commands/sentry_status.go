@@ -27,9 +27,9 @@ import (
 
 // statusPageResponse is the normalized shape returned by the status JSON endpoint.
 type statusPageResponse struct {
-	SiteName      string              `json:"site_name"`
-	OverallStatus string              `json:"overall_status"`
-	Components    []statusComponent   `json:"components"`
+	SiteName      string            `json:"site_name"`
+	OverallStatus string            `json:"overall_status"`
+	Components    []statusComponent `json:"components"`
 }
 
 // statusComponent represents a single monitored component.
@@ -42,11 +42,11 @@ type statusComponent struct {
 
 // statusJSONOut is the normalized JSON output shape for --json mode.
 type statusJSONOut struct {
-	Overall     string            `json:"overall"`
-	Total       int               `json:"total"`
-	Operational int               `json:"operational"`
-	Degraded    int               `json:"degraded"`
-	Down        []string          `json:"down"`
+	Overall     string             `json:"overall"`
+	Total       int                `json:"total"`
+	Operational int                `json:"operational"`
+	Degraded    int                `json:"degraded"`
+	Down        []string           `json:"down"`
 	Components  []compactComponent `json:"components"`
 }
 
@@ -96,7 +96,9 @@ func init() {
 // runSentryStatus implements 'nself sentry status'.
 //
 // Purpose:  GET the status JSON endpoint, parse component health, display
-//   human or JSON output, and exit non-zero on any outage/unreachable state.
+//
+//	human or JSON output, and exit non-zero on any outage/unreachable state.
+//
 // Inputs:   --url, --token, --json, --timeout flags (cmd).
 // Outputs:  Human table to stdout, or normalized JSON when --json; errors to stderr.
 func runSentryStatus(cmd *cobra.Command, _ []string) error {

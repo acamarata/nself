@@ -147,6 +147,32 @@ func TestBundleInfo_NSelfPlus(t *testing.T) {
 	}
 }
 
+func TestBundleInfo_SentryAliasResolvesToNSentry(t *testing.T) {
+	out, err := captureStdout(t, func() error {
+		return runBundleInfo(&cobra.Command{}, []string{"sentry"})
+	})
+	if err != nil {
+		t.Fatalf("bundle info sentry (alias) returned error: %v", err)
+	}
+	for _, want := range []string{"ɳSentry", "$0.99"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("bundle info sentry output missing %q\nfull:\n%s", want, out)
+		}
+	}
+}
+
+func TestBundleInfo_SentryAliasCaseAndSpaceInsensitive(t *testing.T) {
+	out, err := captureStdout(t, func() error {
+		return runBundleInfo(&cobra.Command{}, []string{"  SENTRY "})
+	})
+	if err != nil {
+		t.Fatalf("bundle info '  SENTRY ' (alias) returned error: %v", err)
+	}
+	if !strings.Contains(out, "ɳSentry") {
+		t.Errorf("bundle info '  SENTRY ' output missing ɳSentry name\nfull:\n%s", out)
+	}
+}
+
 func TestBundleInfo_UnknownBundle(t *testing.T) {
 	_, err := captureStdout(t, func() error {
 		return runBundleInfo(&cobra.Command{}, []string{"bogus-bundle-xyz"})
