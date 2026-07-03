@@ -9,19 +9,18 @@
 # --homebrew      Phase 2: update homebrew formula after GitHub release exists.
 #                 Without this flag, the formula is skipped and a reminder printed.
 #
-# Files updated (11 + 1 optional homebrew):
+# Files updated (10 + 1 optional homebrew) — Flutter SDK removed 2026-06-30 (#159):
 #   1.  cli/.github/VERSION
 #   2.  cli/internal/version/version.go       Version string = "x.y.z" (type-annotated)
 #   3.  cli/sdk/go/doc.go                     const Version = "x.y.z"
 #   4.  cli/sdk/ts/package.json               "version": "x.y.z"   (via jq)
 #   5.  cli/sdk/py/pyproject.toml             version = "x.y.z" under [project]
-#   6.  cli/sdk/flutter/pubspec.yaml          version: x.y.z
-#   7.  admin/package.json                    "version": "x.y.z"   (via jq)
-#   8.  admin/src/lib/cli-version.ts          CLI_VERSION = 'x.y.z'
-#   9.  admin/Dockerfile                      ARG NSELF_VERSION=x.y.z
-#   10. admin/Dockerfile                      ENV ADMIN_VERSION=x.y.z
-#   11. admin/Dockerfile                      LABEL org.opencontainers.image.version="x.y.z"
-# +12. homebrew-nself/Formula/nself.rb       url/sha256/version (--homebrew only)
+#   6.  admin/package.json                    "version": "x.y.z"   (via jq)
+#   7.  admin/src/lib/cli-version.ts          CLI_VERSION = 'x.y.z'
+#   8.  admin/Dockerfile                      ARG NSELF_VERSION=x.y.z
+#   9.  admin/Dockerfile                      ENV ADMIN_VERSION=x.y.z
+#   10. admin/Dockerfile                      LABEL org.opencontainers.image.version="x.y.z"
+# +11. homebrew-nself/Formula/nself.rb       url/sha256/version (--homebrew only)
 #
 # Exit codes:
 #   0 — success (all changes applied, or all already at target in idempotent run)
@@ -100,7 +99,7 @@ VERSION_GO="${REPO_ROOT}/internal/version/version.go"
 SDK_GO="${REPO_ROOT}/sdk/go/doc.go"
 SDK_TS="${REPO_ROOT}/sdk/ts/package.json"
 SDK_PY="${REPO_ROOT}/sdk/py/pyproject.toml"
-SDK_FLUTTER="${REPO_ROOT}/sdk/flutter/pubspec.yaml"
+# SDK_FLUTTER removed 2026-06-30 (#159, ASI Policy 2)
 ADMIN_PKG="${NSELF_ROOT}/admin/package.json"
 ADMIN_CLIVER="${NSELF_ROOT}/admin/src/lib/cli-version.ts"
 ADMIN_DOCKERFILE="${NSELF_ROOT}/admin/Dockerfile"
@@ -278,27 +277,7 @@ update_sdk_py_pyproject() {
   update_toml_version "${SDK_PY}" project
 }
 
-# pubspec.yaml shape: `version: 2.0.0` (may have +build_number suffix in Flutter apps)
-update_sdk_flutter_pubspec() {
-  local f="${SDK_FLUTTER}"
-  if [ ! -f "${f}" ]; then
-    printf 'ERROR: Missing file: %s\n' "${f}" >&2; exit 1
-  fi
-  local old
-  old="$(extract_semver "${f}" '^version:[[:space:]]')"
-  if [ -z "${old}" ]; then
-    printf 'ERROR: %s has no matching "version:" line\n' "${f}" >&2
-    exit 1
-  fi
-  if [ "${old}" = "${NEW_VERSION}" ]; then
-    printf '  SKIP  %s  (already %s)\n' "${f}" "${NEW_VERSION}"
-    return
-  fi
-  # Match optional +build_number suffix and preserve it
-  sed "s/^version:[[:space:]][[:space:]]*[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/version: ${NEW_VERSION}/" "${f}" \
-    | atomic_write "${f}"
-  report "${f}" "${old}" "${NEW_VERSION}"
-}
+# Flutter SDK removed 2026-06-30 (#159, ASI Policy 2) — pubspec updater retired.
 
 update_admin_pkg() {
   update_json_version "${ADMIN_PKG}"
@@ -409,14 +388,13 @@ if [ "${HOMEBREW}" = "true" ]; then
   exit 0
 fi
 
-printf 'Phase 1 — updating 11 lockstep files (Homebrew deferred to phase 2)\n\n'
+printf 'Phase 1 — updating 10 lockstep files (Homebrew deferred to phase 2)\n\n'
 
 update_version_file
 update_version_go
 update_sdk_go_doc
 update_sdk_ts_pkg
 update_sdk_py_pyproject
-update_sdk_flutter_pubspec
 update_admin_pkg
 update_admin_cliver
 update_admin_dockerfile

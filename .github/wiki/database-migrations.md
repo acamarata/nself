@@ -44,6 +44,17 @@ Both `DELETE` statements execute inside the same transaction as the down DDL. Ei
 2. If the checksums match, the migration is skipped with `(skipped=true, nil)`.
 3. If the checksums differ, the function returns an error — the file was modified after it was applied and manual intervention is required.
 
+## Layout auto-detection
+
+`migrate up` and `migrate status` scan the first existing directory from:
+
+1. `hasura/migrations/default/` (standard Hasura layout)
+2. `hasura/migrations/` (flat Hasura layout)
+3. `migrations/` (legacy)
+4. `postgres/migrations/` (repo-local layout, e.g. ntask)
+
+Both subcommands accept `--migration-dir <dir>` to override auto-detection. On remote targets (`--env staging|prod`) the flag is forwarded to the remote CLI; the pre-flight version-drift check guarantees the remote binary understands it.
+
 ## Migration file naming
 
 | Pattern | Meaning |
