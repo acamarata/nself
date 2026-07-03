@@ -627,6 +627,11 @@ func runStart(cmd *cobra.Command, _ []string) error {
 			}
 		}
 
+		// Remove stale hash-prefixed rename-leftover containers (interrupted
+		// recreates) so they cannot hold ports or shadow the clean
+		// <project>_<service> names (e.g. b6d7..._ntask_hasura, gap #21).
+		_ = docker.RunPreStartCleanup(ctx, cfg.ProjectName)
+
 		// Clean start: remove all containers first.
 		if opts.cleanStart {
 			sp := ui.NewSpinner("Removing existing containers...")
