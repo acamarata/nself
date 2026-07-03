@@ -3,6 +3,7 @@ package build
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -60,6 +61,11 @@ type BuildResult struct {
 	// discovered during build. Empty when no plugins with compose files
 	// are installed.
 	PluginComposeFiles []string
+	// MissingPlugins lists plugins declared in nself.yaml that could not be
+	// wired into the generated stack (not installed, not auto-installable,
+	// and not satisfied by a core service). Non-empty means the generated
+	// stack does NOT match the declared manifest.
+	MissingPlugins []string
 	// CAInstalled is true when the mkcert CA is trusted by the OS.
 	CAInstalled bool
 	// CAManualCmd is non-empty when the user must manually trust the CA.
@@ -242,6 +248,20 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 		filesGenerated++
 	}
 
+	// ── Step 7.05: Resolve declared plugins (nself.yaml) ────────────
+	// Declared plugins (nself.yaml plugins:/bundle:/bundles: blocks) are
+	// resolved BEFORE plugin nginx routes, the np_plugins seed, and compose
+	// discovery — auto-installing any that are missing — so that a manifest
+	// declaration alone is sufficient to wire a plugin into the stack.
+	// Declared plugins that cannot be wired are reported loudly (build
+	// warning + BuildResult.MissingPlugins), never silently dropped.
+	pluginDir := DefaultPluginDir()
+	missingPlugins := ResolveDeclaredPlugins(context.Background(), cfg, workdir, pluginDir, expectedCoreServices(cfg))
+	for _, p := range missingPlugins {
+		slog.Warn("declared plugin is NOT wired into the generated stack — install it or remove it from nself.yaml",
+			"plugin", p, "fix", fmt.Sprintf("nself plugin install %s", p))
+	}
+
 	// ── Step 7.1: Inject plugin nginx routes ────────────────────────
 	pluginRoutes, err := InjectPluginNginxRoutes(workdir, "", cfg)
 	if err != nil {
@@ -313,7 +333,6 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 	filesGenerated++
 
 	// ── Step 9.5: Discover plugin compose files ────────────────────
-	pluginDir := DefaultPluginDir()
 	pluginComposeFiles, err := DiscoverPluginComposeFiles(workdir, pluginDir)
 	if err != nil {
 		return nil, fmt.Errorf("discovering plugin compose files: %w", err)
@@ -487,6 +506,7 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 		Duration:           time.Since(start),
 		FilesGenerated:     filesGenerated,
 		PluginComposeFiles: pluginComposeFiles,
+		MissingPlugins:     missingPlugins,
 		CAInstalled:        sslResult.CAInstalled,
 		CAManualCmd:        sslResult.CAManualCmd,
 		HostsAdded:         sslResult.HostsAdded,
