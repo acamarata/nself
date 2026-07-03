@@ -22,6 +22,13 @@ type Bundle struct {
 	Plugins     []string
 }
 
+// bundleSlugAliases maps informal/marketing slugs to their canonical bundle
+// slug for user-facing lookups (info). Kept in sync with
+// internal/bundle.bundleAliases; aliases never appear in listings.
+var bundleSlugAliases = map[string]string{
+	"sentry": "nsentry",
+}
+
 // canonicalBundles is the authoritative bundle membership map (mirrors F06-BUNDLE-INVENTORY.md).
 // Keys are the system names used as CLI arguments.
 var canonicalBundles = map[string]Bundle{
@@ -263,6 +270,12 @@ Examples:
 
 func runBundleInfo(cmd *cobra.Command, args []string) error {
 	key := strings.ToLower(strings.TrimSpace(args[0]))
+	// Resolve informal slug aliases (e.g. "sentry" -> "nsentry") the same way
+	// internal/bundle.Get does, so info/install/remove behave consistently.
+	// Aliases never appear in listings or error hints.
+	if canonical, ok := bundleSlugAliases[key]; ok {
+		key = canonical
+	}
 	b, ok := canonicalBundles[key]
 	if !ok {
 		// Collect valid names for the error hint.
