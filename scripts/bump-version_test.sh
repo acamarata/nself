@@ -11,6 +11,7 @@
 #   7. pubspec.yaml (YAML — `version: X.Y.Z`)
 #   8. cli-version.ts (TS const)
 #   9. Dockerfile (three lines: ARG, ENV, LABEL)
+#   10. Formula/nself.rb (dual-arch darwin: version + per-arch sha256 from checksums.txt)
 #
 # Run: bash scripts/bump-version_test.sh
 # Exit 0 = all pass, 1 = any failure.
@@ -247,6 +248,104 @@ EOF
   fi
 }
 
+# Shape: Homebrew formula — dual-arch darwin blocks. Mirrors update_homebrew_formula:
+# extract per-arch sha256 from a checksums.txt fixture, then rewrite the version
+# line + both sha256 lines keyed by on_arm/on_intel block. URLs interpolate
+# #{version} and must NOT change.
+test_homebrew_formula() {
+  local f="${TMP_BASE}/nself.rb"
+  cat > "${f}" <<'EOF'
+class Nself < Formula
+  desc "Self-hosted backend CLI"
+  homepage "https://nself.org"
+  version "1.2.1"
+  license "MIT"
+
+  on_macos do
+    on_arm do
+      url "https://github.com/nself-org/cli/releases/download/v#{version}/nself-#{version}-darwin-arm64.tar.gz"
+      sha256 "f0f69a7ec6291f85b4fdb1d7ea13fe0e9ba3e8e077aa979f599f33acdd685ac5"
+    end
+
+    on_intel do
+      url "https://github.com/nself-org/cli/releases/download/v#{version}/nself-#{version}-darwin-amd64.tar.gz"
+      sha256 "2586e1d5aa1583212f4eedfa91b3e20fccb4dafb717264221b22c61fc3d6066b"
+    end
+  end
+
+  def install
+    bin.install "nself"
+  end
+end
+EOF
+
+  # checksums.txt fixture in release format: `<sha256>  <asset>` (sorted by name,
+  # so amd64 precedes arm64 — extraction must key on filename, not line order).
+  local sha_arm_want="beefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeef"
+  local sha_amd_want="cafecafecafecafecafecafecafecafecafecafecafecafecafecafecafecafe"
+  local checksums="${TMP_BASE}/checksums.txt"
+  cat > "${checksums}" <<EOF
+${sha_amd_want}  nself-${NEW}-darwin-amd64.tar.gz
+${sha_arm_want}  nself-${NEW}-darwin-arm64.tar.gz
+1111111111111111111111111111111111111111111111111111111111111111  nself-${NEW}-linux-amd64.tar.gz
+2222222222222222222222222222222222222222222222222222222222222222  nself-${NEW}-linux-arm64.tar.gz
+EOF
+
+  # Extraction (mirrors the script's checksums.txt parse)
+  local sha_arm sha_amd
+  sha_arm="$(awk -v a="nself-${NEW}-darwin-arm64.tar.gz" '$2 == a { print $1; exit }' "${checksums}")"
+  sha_amd="$(awk -v a="nself-${NEW}-darwin-amd64.tar.gz" '$2 == a { print $1; exit }' "${checksums}")"
+  if [ "${sha_arm}" = "${sha_arm_want}" ] && [ "${sha_amd}" = "${sha_amd_want}" ]; then
+    ok "checksums.txt per-arch extraction (keyed by filename)"
+  else
+    bad "checksums.txt extraction" "arm=${sha_arm} amd=${sha_amd}"
+  fi
+
+  # Transform (mirrors the script's formula rewrite)
+  awk -v newv="${NEW}" -v arm="${sha_arm}" -v amd="${sha_amd}" '
+    /^[[:space:]]*version[[:space:]]*"[0-9]+\.[0-9]+\.[0-9]+"/ {
+      sub(/"[0-9]+\.[0-9]+\.[0-9]+"/, "\"" newv "\"")
+    }
+    /^[[:space:]]*on_arm do/        { block = "arm" }
+    /^[[:space:]]*on_intel do/      { block = "intel" }
+    /^[[:space:]]*end[[:space:]]*$/ { block = "" }
+    block == "arm"   && /^[[:space:]]*sha256[[:space:]]*"/ { sub(/"[0-9a-f]*"/, "\"" arm "\"") }
+    block == "intel" && /^[[:space:]]*sha256[[:space:]]*"/ { sub(/"[0-9a-f]*"/, "\"" amd "\"") }
+    { print }
+  ' "${f}" > "${f}.new"
+  mv "${f}.new" "${f}"
+
+  if grep -q "^  version \"${NEW}\"" "${f}"; then
+    ok "formula version line"
+  else
+    bad "formula version line" "got: $(grep 'version "' "${f}" | head -1)"
+  fi
+
+  # Each block must carry ITS OWN sha (the old single-sha sed clobbered both)
+  local got_arm got_amd
+  got_arm="$(awk '/on_arm do/{b=1} b && /sha256/{sub(/^[^"]*"/,""); sub(/".*$/,""); print; exit}' "${f}")"
+  got_amd="$(awk '/on_intel do/{b=1} b && /sha256/{sub(/^[^"]*"/,""); sub(/".*$/,""); print; exit}' "${f}")"
+  if [ "${got_arm}" = "${sha_arm_want}" ]; then
+    ok "formula on_arm sha256 (from checksums.txt)"
+  else
+    bad "formula on_arm sha256" "got: ${got_arm}"
+  fi
+  if [ "${got_amd}" = "${sha_amd_want}" ]; then
+    ok "formula on_intel sha256 (distinct from arm)"
+  else
+    bad "formula on_intel sha256" "got: ${got_amd}"
+  fi
+
+  # URLs interpolate #{version} and must remain untouched
+  local url_count
+  url_count="$(grep -c 'releases/download/v#{version}/nself-#{version}-darwin-' "${f}")"
+  if [ "${url_count}" = "2" ]; then
+    ok "formula urls preserved (#{version} interpolation)"
+  else
+    bad "formula urls" "expected 2 interpolated urls, found ${url_count}"
+  fi
+}
+
 # Integration smoke: run the actual bump-version.sh --dry-run and assert
 # it covers all 11 known lockstep files without errors.
 test_dry_run_smoke() {
@@ -285,6 +384,7 @@ test_cargo_toml
 test_pubspec_yaml
 test_cli_version_ts
 test_dockerfile
+test_homebrew_formula
 test_dry_run_smoke
 
 printf '\n%d passed, %d failed\n' "${PASS}" "${FAIL}"
