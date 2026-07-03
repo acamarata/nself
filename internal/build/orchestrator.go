@@ -3,6 +3,7 @@ package build
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -60,6 +61,11 @@ type BuildResult struct {
 	// discovered during build. Empty when no plugins with compose files
 	// are installed.
 	PluginComposeFiles []string
+	// MissingPlugins lists plugins declared in nself.yaml that could not be
+	// wired into the generated stack (not installed, not auto-installable,
+	// and not satisfied by a core service). Non-empty means the generated
+	// stack does NOT match the declared manifest.
+	MissingPlugins []string
 	// CAInstalled is true when the mkcert CA is trusted by the OS.
 	CAInstalled bool
 	// CAManualCmd is non-empty when the user must manually trust the CA.
@@ -242,6 +248,20 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 		filesGenerated++
 	}
 
+	// ── Step 7.05: Resolve declared plugins (nself.yaml) ────────────
+	// Declared plugins (nself.yaml plugins:/bundle:/bundles: blocks) are
+	// resolved BEFORE plugin nginx routes, the np_plugins seed, and compose
+	// discovery — auto-installing any that are missing — so that a manifest
+	// declaration alone is sufficient to wire a plugin into the stack.
+	// Declared plugins that cannot be wired are reported loudly (build
+	// warning + BuildResult.MissingPlugins), never silently dropped.
+	pluginDir := DefaultPluginDir()
+	missingPlugins := ResolveDeclaredPlugins(context.Background(), cfg, workdir, pluginDir, expectedCoreServices(cfg))
+	for _, p := range missingPlugins {
+		slog.Warn("declared plugin is NOT wired into the generated stack — install it or remove it from nself.yaml",
+			"plugin", p, "fix", fmt.Sprintf("nself plugin install %s", p))
+	}
+
 	// ── Step 7.1: Inject plugin nginx routes ────────────────────────
 	pluginRoutes, err := InjectPluginNginxRoutes(workdir, "", cfg)
 	if err != nil {
@@ -302,6 +322,18 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 		}
 	}
 
+	// ── Step 8.7: Template secrets out of the generated YAML ────────
+	// Literal passwords/keys become ${VAR} references resolved at
+	// container-start time from .nself/compose.env (written in Step 10 and
+	// passed via --env-file by start/stop/restart). Secrets never land in
+	// the generated docker-compose.yml (ASI generated-file-secret rule).
+	secretMap := SecretEnvMap(cfg)
+	composeYAML = TemplateSecrets(composeYAML, secretMap)
+	for _, leak := range LiteralSecretLeaks(composeYAML, secretMap) {
+		slog.Warn("secret value still appears literally in docker-compose.yml — do not commit this file",
+			"var", leak)
+	}
+
 	// ── Step 9: Write docker-compose.yml with 0600 permissions ──────
 	// Prepend the GENERATED marker so pre-commit hooks, auditors, and humans
 	// can unambiguously detect a hand-edited compose file (S32-T12).
@@ -313,7 +345,6 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 	filesGenerated++
 
 	// ── Step 9.5: Discover plugin compose files ────────────────────
-	pluginDir := DefaultPluginDir()
 	pluginComposeFiles, err := DiscoverPluginComposeFiles(workdir, pluginDir)
 	if err != nil {
 		return nil, fmt.Errorf("discovering plugin compose files: %w", err)
@@ -411,6 +442,15 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 	}
 	filesGenerated++
 
+	// ── Step 10.1: Write .nself/compose.env (0600) ──────────────────
+	// Resolves every ${VAR} reference the secret-templating pass (Step 8.7)
+	// emitted, plus plugin fragment vars (DOCKER_NETWORK, NSELF_PLUGIN_DIR,
+	// PLUGIN_*_INTERNAL_URL). Passed to docker compose via --env-file.
+	if err := WriteComposeEnv(workdir, cfg, secretMap, pluginEnvVars); err != nil {
+		return nil, fmt.Errorf("writing %s: %w", composeEnvFile, err)
+	}
+	filesGenerated++
+
 	// ── Step 11: Save build version to .nself/build-version ─────────
 	versionPath := filepath.Join(workdir, buildVersionFile)
 	if err := os.WriteFile(versionPath, []byte(version.GetVersion()), 0644); err != nil {
@@ -487,6 +527,7 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 		Duration:           time.Since(start),
 		FilesGenerated:     filesGenerated,
 		PluginComposeFiles: pluginComposeFiles,
+		MissingPlugins:     missingPlugins,
 		CAInstalled:        sslResult.CAInstalled,
 		CAManualCmd:        sslResult.CAManualCmd,
 		HostsAdded:         sslResult.HostsAdded,

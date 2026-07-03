@@ -106,6 +106,7 @@ func runRestart(cmd *cobra.Command, args []string) error {
 	}
 
 	comp := docker.NewCompose(composeFiles...)
+	comp.EnvFiles = build.ComposeEnvFiles(workdir)
 	ctx := cmd.Context()
 	services := args
 

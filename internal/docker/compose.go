@@ -23,6 +23,13 @@ type Compose struct {
 	// Order matters: first file is the base, subsequent files extend/override.
 	// If empty, no -f flags are added and Docker uses its default discovery.
 	ComposeFiles []string
+
+	// EnvFiles lists env file paths passed as --env-file flags for ${VAR}
+	// interpolation (secrets are env-templated out of the generated compose
+	// YAML — see internal/build secret templating). Order matters: later
+	// files win on conflict. If empty, Docker Compose falls back to its
+	// default .env discovery.
+	EnvFiles []string
 }
 
 // NewCompose returns a Compose instance configured with the given compose files.
@@ -46,6 +53,9 @@ func (c *Compose) buildBaseArgs() []string {
 	args := []string{"compose"}
 	for _, f := range c.ComposeFiles {
 		args = append(args, "-f", f)
+	}
+	for _, e := range c.EnvFiles {
+		args = append(args, "--env-file", e)
 	}
 	return args
 }

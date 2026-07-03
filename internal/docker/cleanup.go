@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -45,6 +46,55 @@ func cleanupZombieContainers(ctx context.Context, projectName string) error {
 	return nil
 }
 
+// renamedLeftoverRE matches Docker Compose's rename-during-recreate name:
+// when a service with a fixed container_name is recreated, Compose renames
+// the old container to "<hex-id>_<original-name>" before creating the new
+// one. If the recreate fails or is interrupted, the hash-prefixed container
+// survives (e.g. b6d7b59a1c78_ntask_hasura) and shadows the clean
+// <app>_<service> name that Makefiles and docs rely on (ntask gap #21).
+var renamedLeftoverRE = regexp.MustCompile(`^[0-9a-f]{8,}_`)
+
+// isRenamedComposeLeftover reports whether a container name is a stale
+// Compose rename-leftover for the given project: a hex-id prefix followed by
+// a name that belongs to the project ("<hex>_<project>_...").
+func isRenamedComposeLeftover(name, projectName string) bool {
+	m := renamedLeftoverRE.FindString(name)
+	if m == "" {
+		return false
+	}
+	rest := name[len(m):]
+	return strings.HasPrefix(rest, projectName+"_")
+}
+
+// cleanupRenamedLeftovers removes stale hash-prefixed rename-leftover
+// containers for the project so the clean <project>_<service> container
+// names are always the ones running. Best-effort: individual failures are
+// skipped.
+func cleanupRenamedLeftovers(ctx context.Context, projectName string) error {
+	cmd := exec.CommandContext(ctx, "docker", "ps", "-a", "--format", "{{.Names}}")
+	out, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("docker ps -a: %w", err)
+	}
+	for _, name := range parseLines(string(out)) {
+		if !isRenamedComposeLeftover(name, projectName) {
+			continue
+		}
+		slog.Info("removing stale renamed container leftover", "container", name)
+		if err := forceRemoveContainer(ctx, name); err != nil {
+			continue
+		}
+	}
+	return nil
+}
+
+// RunPreStartCleanup removes stale artifacts that would break `docker compose
+// up`: hash-prefixed rename-leftover containers (which hold ports and shadow
+// clean container names). Run before compose up.
+func RunPreStartCleanup(ctx context.Context, projectName string) error {
+	return cleanupRenamedLeftovers(ctx, projectName)
+}
+
 // RunPostStartCleanup runs the full post-startup cleanup sequence:
 //  1. Init container cleanup, repeated 3 times with 500ms delays (handles race conditions
 //     where containers are still being marked as exited).
@@ -69,6 +119,13 @@ func RunPostStartCleanup(ctx context.Context, projectName string) error {
 	if err := cleanupZombieContainers(ctx, projectName); err != nil {
 		// Non-fatal: best effort.
 		slog.Debug("cleanup zombie containers (non-fatal)", "project", projectName, "err", err)
+	}
+
+	// Clean up hash-prefixed rename-leftovers from interrupted recreates so
+	// the clean <project>_<service> names are the surviving containers.
+	if err := cleanupRenamedLeftovers(ctx, projectName); err != nil {
+		// Non-fatal: best effort.
+		slog.Debug("cleanup renamed leftovers (non-fatal)", "project", projectName, "err", err)
 	}
 
 	return nil

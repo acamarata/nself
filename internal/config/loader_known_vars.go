@@ -562,4 +562,21 @@ var knownEnvVars = []string{
 	// App-level observability DSN (e.g. Sentry backend project). Not read by
 	// the CLI loader — apps wire this into their own error reporting.
 	"SENTRY_DSN_BACKEND",
+
+	// App-owned vars commonly present in real app .env files (read by the
+	// app's own code / Node runtime / dev scripts, not by the CLI loader).
+	// Listed to suppress false "unknown env var" warnings (ntask dogfood
+	// gap #19). Project-specific vars beyond these belong in ENV_ALLOWLIST.
+	"NODE_ENV",
+	"JWT_SECRET",
+	"SSL_AUTO_TRUST",
+	"COOKIE_SECRET",
+	"ENABLE_DEBUG",
+	"LOG_LEVEL",
+	"NSELF_PROJECT_NAME",
+
+	// ENV_ALLOWLIST itself: comma-separated var names (or prefixes ending
+	// in *) that warnUnknownEnvVars treats as app-owned and never warns
+	// about. Example: ENV_ALLOWLIST=MY_APP_TOKEN,FEATURE_*
+	"ENV_ALLOWLIST",
 }
