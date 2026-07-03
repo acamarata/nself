@@ -458,6 +458,8 @@ func appliedMigrations(ctx context.Context, cfg *config.Config) (map[string]time
 
 // isNonTransactional checks if a migration SQL contains statements that cannot
 // run inside a transaction (e.g., CREATE INDEX CONCURRENTLY).
+// Note: ALTER TYPE ... ADD VALUE requires non-transactional execution in PostgreSQL 16;
+// other ALTER TYPE forms (RENAME, DROP ATTRIBUTE, ADD ATTRIBUTE) are fully transactional.
 func isNonTransactional(sql string) bool {
 	upper := strings.ToUpper(sql)
 	if strings.Contains(upper, "CREATE INDEX CONCURRENTLY") ||
@@ -563,8 +565,9 @@ func MigrateUp(ctx context.Context, cfg *config.Config, plugin string) (int, err
 			if err := pipeSQLToContainer(ctx, cfg, sqlContent); err != nil {
 				return count, fmt.Errorf("migration %s: %w: %v", name, errs.ErrMigrationFailed, err)
 			}
-			// Record separately (these succeed independently).
-			recordSQL := legacyRecord + "\n" + opsRecord
+			// Record both tables atomically in a separate transaction so that
+			// a failure on either INSERT leaves no orphan row in the other table.
+			recordSQL := "BEGIN;\n" + legacyRecord + "\n" + opsRecord + "\nCOMMIT;\n"
 			if err := pipeSQLToContainer(ctx, cfg, recordSQL); err != nil {
 				return count, fmt.Errorf("record migration %s: %w", name, err)
 			}
@@ -630,8 +633,13 @@ func MigrateDown(ctx context.Context, cfg *config.Config) error {
 
 	remove := fmt.Sprintf("DELETE FROM np_common.schema_versions WHERE name = '%s';",
 		strings.ReplaceAll(name, "'", "''"))
+	removeOps := fmt.Sprintf("DELETE FROM nself_ops.migrations WHERE name = '%s';",
+		strings.ReplaceAll(name, "'", "''"))
 
-	txSQL := "BEGIN;\n" + string(data) + "\n" + remove + "\nCOMMIT;\n"
+	// Both deletes run inside the same transaction as the down SQL so that
+	// np_common.schema_versions and nself_ops.migrations are always in sync:
+	// either both rows are removed or neither is (rollback on failure).
+	txSQL := "BEGIN;\n" + string(data) + "\n" + remove + "\n" + removeOps + "\nCOMMIT;\n"
 
 	if err := pipeSQLToContainer(ctx, cfg, txSQL); err != nil {
 		return fmt.Errorf("revert %s: %w: %v", name, errs.ErrMigrationFailed, err)
@@ -707,7 +715,19 @@ func ApplyFile(ctx context.Context, cfg *config.Config, filePath string) (skippe
 		return false, fmt.Errorf("check applied migrations: %w", err)
 	}
 	if _, ok := applied[name]; ok {
-		// Already applied — warn and skip (do not error).
+		// Already applied — verify checksum matches to detect file modifications.
+		db := cfg.Postgres.DB
+		if db == "" {
+			db = "nself"
+		}
+		storedChecksum, queryErr := querySQL(ctx, cfg, db, "SELECT checksum FROM nself_ops.migrations WHERE name = '"+strings.ReplaceAll(name, "'", "''")+"'")
+		if queryErr == nil && storedChecksum != "" {
+			storedChecksum = strings.TrimSpace(storedChecksum)
+			if storedChecksum != checksum {
+				return false, fmt.Errorf("migration %s: checksum mismatch (stored %s, file %s) — file was modified after apply; manual intervention required", name, storedChecksum, checksum)
+			}
+		}
+		// Already applied with matching checksum — skip without error.
 		return true, nil
 	}
 
@@ -728,7 +748,9 @@ func ApplyFile(ctx context.Context, cfg *config.Config, filePath string) (skippe
 		if err := pipeSQLToContainer(ctx, cfg, sqlContent); err != nil {
 			return false, fmt.Errorf("migration %s: %w: %v", name, errs.ErrMigrationFailed, err)
 		}
-		recordSQL := legacyRecord + "\n" + opsRecord
+		// Record both tables atomically in a separate transaction so that
+		// a failure on either INSERT leaves no orphan row in the other table.
+		recordSQL := "BEGIN;\n" + legacyRecord + "\n" + opsRecord + "\nCOMMIT;\n"
 		if err := pipeSQLToContainer(ctx, cfg, recordSQL); err != nil {
 			return false, fmt.Errorf("record migration %s: %w", name, err)
 		}

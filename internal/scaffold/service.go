@@ -272,6 +272,13 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %%v\n", err)
+		return
+	}
+}
+
+func run() error {
 	port := os.Getenv("%s_PORT")
 	if port == "" {
 		port = "%d"
@@ -279,10 +286,8 @@ func main() {
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "ok")
 	})
-	log.Printf("%s listening on :%%s\n", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatal(err)
-	}
+	fmt.Println("%s listening on :" + port)
+	return http.ListenAndServe(":"+port, nil)
 }
 `, upperName, port, name), 0644},
 			fileSpec{"Dockerfile", fmt.Sprintf(`FROM golang:1.23-alpine AS build
