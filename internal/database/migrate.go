@@ -25,11 +25,6 @@ import (
 // names with embedded quotes, semicolons, or control characters.
 var migrationNameRegex = regexp.MustCompile(`^[a-zA-Z0-9._-]{1,255}$`)
 
-// alterTypeAddValueRegex matches ALTER TYPE ... ADD VALUE statements.
-// This specifically targets enum type extensions, which require non-transactional execution.
-// Other ALTER TYPE forms (RENAME, DROP ATTRIBUTE, ADD ATTRIBUTE) are transactional.
-var alterTypeAddValueRegex = regexp.MustCompile(`(?i)ALTER\s+TYPE\s+\S+\s+ADD\s+VALUE`)
-
 // validateMigrationName fails closed on migration filenames that could
 // escape a SQL string literal even after escapeSQL doubling.
 func validateMigrationName(name string) error {
