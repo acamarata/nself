@@ -108,13 +108,28 @@ var DisplayOrder = []string{
 	"nclaw", "nchat", "nfamily", "ntv", "clawde", "nsentry", "ntask", "nself-plus",
 }
 
+// bundleAliases maps informal/marketing slugs to their canonical bundle slug.
+// Aliases are resolved only as a fallback in Get() after the canonical lookup
+// misses — they never appear in Names() or DisplayOrder, so listings and
+// completions stay canonical-only.
+var bundleAliases = map[string]string{
+	"sentry": "nsentry",
+}
+
 // Get returns the Bundle for the given slug. The slug is case-insensitive and
-// trimmed. Returns ok=false when the slug is unknown; callers can call Names()
-// to render a useful error hint.
+// trimmed. Falls back to bundleAliases when there is no canonical match.
+// Returns ok=false when the slug is unknown; callers can call Names() to
+// render a useful error hint.
 func Get(slug string) (Bundle, bool) {
 	key := strings.ToLower(strings.TrimSpace(slug))
-	b, ok := canonicalBundles[key]
-	return b, ok
+	if b, ok := canonicalBundles[key]; ok {
+		return b, ok
+	}
+	if canonical, ok := bundleAliases[key]; ok {
+		b, ok := canonicalBundles[canonical]
+		return b, ok
+	}
+	return Bundle{}, false
 }
 
 // Names returns every known bundle slug sorted alphabetically. Useful for
