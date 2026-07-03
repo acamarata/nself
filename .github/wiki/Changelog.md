@@ -3,6 +3,16 @@
 All notable changes to the ɳSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
+## [1.2.2] — 2026-07-03
+
+### Fixed
+
+- **Declared plugins silently dropped (CRITICAL)** — `nself build` ignored the project's `nself.yaml` manifest entirely: plugins declared under `plugins:` (flat or `free:`/`pro:` tiers) or via `bundle:`/`bundles:` never materialized as containers because the only injection path was discovery over the plugin install dir. The build now parses the manifest, expands bundles through the canonical bundle catalog, best-effort auto-installs missing plugins (60s per-plugin timeout; disable with `NSELF_AUTO_INSTALL_PLUGINS=false`), and reports any plugin it cannot wire with a per-plugin warning, a `BuildResult.MissingPlugins` entry, and a printed `nself plugin install ...` fix command. A declared plugin is never silently dropped. Core services (`auth`, `storage`) satisfy their declared names. `NSELF_PLUGIN_DIR` overrides the plugin directory for hermetic CI and per-project plugin sets. (#168)
+- **Literal secrets in generated docker-compose.yml (HIGH)** — `nself build` baked literal secret values (Postgres password, Hasura admin secret, JWT blobs, MinIO root credentials, SMTP password) into the generated compose file, so editing `.env` post-build was a silent no-op and committing the generated file leaked credentials. Secrets are now emitted as `${VAR}` references; interpolation values are written to `.nself/compose.env` (mode 0600) and passed to docker compose via `--env-file` by start/stop/restart/health. Legacy projects without `compose.env` keep default `.env` discovery. A safety-net scan warns if any known secret value still appears literally. (#168)
+- **False "unknown env var" warnings** — app-owned vars (`NODE_ENV`, `JWT_SECRET`, `SSL_AUTO_TRUST`, `COOKIE_SECRET`, `ENABLE_DEBUG`, `LOG_LEVEL`, `NSELF_PROJECT_NAME`) are now known; new `ENV_ALLOWLIST` accepts comma-separated exact names or `PREFIX_*` patterns for project-specific passthrough vars. (#168)
+- **Unreachable ready URLs from `nself start`** — with a default local domain, `nself start` printed `*.local.nself.org` URLs that 502 without DNS setup. It now prints direct `http://localhost:<port>` endpoints (GraphQL, Hasura console, Auth, Storage, Mail UI, Admin) plus a `nself dns-setup` hint for the domain routes; custom domains keep nginx-routed URLs. (#168)
+- **Hash-prefixed leftover containers** — interrupted `docker compose` recreates leave the old container renamed with a hex-id prefix (e.g. `b6d7b59a1c78_myapp_hasura`) that holds ports and shadows the clean `<project>_<service>` name. Start now removes rename-leftovers before and after `compose up`. (#168)
+
 ## [1.2.1] — 2026-07-03
 
 ### Fixed
