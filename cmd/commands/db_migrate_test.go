@@ -224,3 +224,36 @@ func TestDBMigrateApply_ExistingFile_ReachesConfigLoad(t *testing.T) {
 		t.Errorf("file guard failed for a file that exists: %v", err)
 	}
 }
+
+// newMigrateStatusCmd mirrors dbMigrateStatusCmd's flag setup for unit tests
+// exercising --migration-dir on `db migrate status` (G-008) without a live
+// nSelf project.
+func newMigrateStatusCmd() *cobra.Command {
+	cmd := &cobra.Command{Use: "status", RunE: runDBMigrateStatus}
+	cmd.Flags().String("migration-dir", "", "Report status for migrations in this directory instead of the auto-detected one")
+	cmd.SetContext(context.Background())
+	return cmd
+}
+
+// TestDBMigrateStatusCmd_HasMigrationDirFlag verifies the real wired command
+// registers --migration-dir, so non-standard layouts (ntask postgres/migrations)
+// can be inspected instead of reporting "No migrations found" (G-008).
+func TestDBMigrateStatusCmd_HasMigrationDirFlag(t *testing.T) {
+	if dbMigrateStatusCmd.Flags().Lookup("migration-dir") == nil {
+		t.Fatal("dbMigrateStatusCmd is missing the --migration-dir flag")
+	}
+}
+
+// TestDBMigrateStatus_MigrationDirFlag_MissingDir verifies that a non-existent
+// --migration-dir surfaces an error rather than silently falling back to the
+// auto-detected directory.
+func TestDBMigrateStatus_MigrationDirFlag_MissingDir(t *testing.T) {
+	cmd := newMigrateStatusCmd()
+	if err := cmd.Flags().Set("migration-dir", "/nonexistent/path/does-not-exist-99999"); err != nil {
+		t.Fatalf("setting --migration-dir flag: %v", err)
+	}
+	err := runDBMigrateStatus(cmd, nil)
+	if err == nil {
+		t.Fatal("expected an error for non-existent --migration-dir, got nil")
+	}
+}
