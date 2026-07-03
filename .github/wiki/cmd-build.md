@@ -33,6 +33,44 @@ By default, `nself build` is smart-cached: it compares `.env` modification time 
 | `--no-monorepo` | false | Disable automatic monorepo backend detection |
 | `--help`, `-h` | — | Show help |
 
+## Declared plugins (nself.yaml)
+
+Since v1.2.2, `nself build` reads the project manifest (`nself.yaml` or `nself.yml`) and guarantees every declared plugin is wired into the generated stack. Two declaration shapes are accepted:
+
+```yaml
+# flat list
+plugins:
+  - cron
+  - notify
+
+# tiered map, plus bundle expansion
+bundle: nsentry
+plugins:
+  free: [cron, notify]
+  pro: [ai-gateway]
+```
+
+`bundle:` and `bundles:` expand through the canonical bundle catalog. For each declared plugin the build checks the plugin install directory, then core-service aliases (`auth`, `storage`), then attempts a best-effort auto-install from the registry (60 second timeout per plugin). Any plugin that still cannot be wired is reported with a per-plugin warning and a printed `nself plugin install ...` fix command. A declared plugin is never silently dropped.
+
+| Env var | Default | Effect |
+|---------|---------|--------|
+| `NSELF_AUTO_INSTALL_PLUGINS` | `true` | Set `false` to disable auto-install (offline builds, hermetic CI) |
+| `NSELF_PLUGIN_DIR` | `~/.nself/plugins` | Override the plugin install directory (per-project plugin sets, CI) |
+
+Projects without a manifest keep the install-then-discover flow unchanged.
+
+## Secret templating
+
+Since v1.2.2, generated `docker-compose.yml` files contain no literal secret values. Secrets (Postgres password, Hasura admin secret, JWT configuration, MinIO credentials, SMTP password) are emitted as `${VAR}` references. The interpolation values are written to `.nself/compose.env` with mode 0600, and `nself start`/`stop`/`restart` pass it to docker compose via `--env-file`. Editing a secret in `.env` and re-running `nself build` updates the running stack on next start. Projects built before v1.2.2 keep default `.env` discovery until rebuilt.
+
+## Unknown env var warnings
+
+`nself build` warns on unrecognized variables in the `.env` cascade. Common app-owned variables (`NODE_ENV`, `JWT_SECRET`, `LOG_LEVEL`, `COOKIE_SECRET`, `SSL_AUTO_TRUST`, `ENABLE_DEBUG`, `NSELF_PROJECT_NAME`) are recognized and never warn. For project-specific variables, set `ENV_ALLOWLIST` to a comma-separated list of exact names or prefix patterns ending in `*`:
+
+```bash
+ENV_ALLOWLIST=MY_APP_TOKEN,FEATURE_*
+```
+
 ## Redis auto-enable
 
 `nself build` automatically includes a Redis service in `docker-compose.yml` when any installed plugin requires it, even if `REDIS_ENABLED` is not set in `.env`.
