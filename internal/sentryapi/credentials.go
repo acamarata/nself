@@ -35,11 +35,23 @@ type Credentials struct {
 
 // credentialsPath returns ~/.nself/sentry.json (honors HOME for tests).
 func credentialsPath() (string, error) {
-	home, err := os.UserHomeDir()
+	home, err := resolveHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("resolve home dir: %w", err)
 	}
 	return filepath.Join(home, ".nself", "sentry.json"), nil
+}
+
+// resolveHomeDir prefers an explicit $HOME override (test isolation, power
+// users) before falling back to os.UserHomeDir. This matters on Windows:
+// os.UserHomeDir ignores $HOME there and reads %USERPROFILE% instead, so a
+// test-set HOME silently had no effect and credentials were read/written to
+// the real user profile instead of the isolated temp dir.
+func resolveHomeDir() (string, error) {
+	if h := os.Getenv("HOME"); h != "" {
+		return h, nil
+	}
+	return os.UserHomeDir()
 }
 
 // ReadCredentials loads the stored credentials, or ErrNotLoggedIn.
