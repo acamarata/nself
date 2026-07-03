@@ -322,6 +322,18 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 		}
 	}
 
+	// ── Step 8.7: Template secrets out of the generated YAML ────────
+	// Literal passwords/keys become ${VAR} references resolved at
+	// container-start time from .nself/compose.env (written in Step 10 and
+	// passed via --env-file by start/stop/restart). Secrets never land in
+	// the generated docker-compose.yml (ASI generated-file-secret rule).
+	secretMap := SecretEnvMap(cfg)
+	composeYAML = TemplateSecrets(composeYAML, secretMap)
+	for _, leak := range LiteralSecretLeaks(composeYAML, secretMap) {
+		slog.Warn("secret value still appears literally in docker-compose.yml — do not commit this file",
+			"var", leak)
+	}
+
 	// ── Step 9: Write docker-compose.yml with 0600 permissions ──────
 	// Prepend the GENERATED marker so pre-commit hooks, auditors, and humans
 	// can unambiguously detect a hand-edited compose file (S32-T12).
@@ -427,6 +439,15 @@ func Build(workdir string, opts BuildOptions) (*BuildResult, error) {
 	computedContent := buildEnvComputed(cfg, pluginEnvVars)
 	if err := os.WriteFile(computedPath, []byte(computedContent), 0600); err != nil {
 		return nil, fmt.Errorf("writing .env.computed: %w", err)
+	}
+	filesGenerated++
+
+	// ── Step 10.1: Write .nself/compose.env (0600) ──────────────────
+	// Resolves every ${VAR} reference the secret-templating pass (Step 8.7)
+	// emitted, plus plugin fragment vars (DOCKER_NETWORK, NSELF_PLUGIN_DIR,
+	// PLUGIN_*_INTERNAL_URL). Passed to docker compose via --env-file.
+	if err := WriteComposeEnv(workdir, cfg, secretMap, pluginEnvVars); err != nil {
+		return nil, fmt.Errorf("writing %s: %w", composeEnvFile, err)
 	}
 	filesGenerated++
 

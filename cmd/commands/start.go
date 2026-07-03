@@ -547,6 +547,7 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	ui.Step(currentStep, totalSteps, "Starting PostgreSQL")
 
 	compose := docker.NewCompose(composeFiles...)
+	compose.EnvFiles = build.ComposeEnvFiles(projectDir)
 
 	// ── Embedded PG path (--embedded-pg / NSELF_EMBEDDED_PG=true) ───
 	// When embedded PG is requested, boot pglite via wasmtime instead of
