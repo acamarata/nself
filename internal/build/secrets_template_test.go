@@ -8,6 +8,7 @@ package build
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -144,7 +145,9 @@ func TestWriteComposeEnv_ContentAndPermissions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if perm := info.Mode().Perm(); perm != 0o600 {
+	// Windows os.Chmod cannot represent POSIX owner-only bits (NTFS ACLs, not
+	// mode bits) — same exception as internal/build/hasura_config_test.go.
+	if perm := info.Mode().Perm(); runtime.GOOS != "windows" && perm != 0o600 {
 		t.Errorf("compose.env permissions = %o, want 0600", perm)
 	}
 
