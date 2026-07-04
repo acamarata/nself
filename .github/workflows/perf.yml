@@ -134,7 +134,7 @@ jobs:
       - name: Check for size-grow-approved override label
         id: label_check
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           result-encoding: string
           script: |
@@ -152,7 +152,7 @@ jobs:
         # NOT fail the whole check since the actual limits already passed.
         if: github.event_name == 'pull_request'
         continue-on-error: true
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const sizeMB        = '${{ steps.size_check.outputs.size_mb }}';

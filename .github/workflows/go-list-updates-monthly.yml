@@ -90,7 +90,7 @@ jobs:
 
       - name: Open or update tracking issue
         if: steps.scan.outputs.direct != '0' || steps.scan.outputs.indirect != '0'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           DIRECT: ${{ steps.scan.outputs.direct }}
           INDIRECT: ${{ steps.scan.outputs.indirect }}
