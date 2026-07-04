@@ -42,16 +42,18 @@ func TestChecksumBytes_Deterministic(t *testing.T) {
 	}
 }
 
-// TestExtractMigrationID_FlatLayout verifies YYYYMMDDHHMMSS_name.sql parsing.
+// TestExtractMigrationID_FlatLayout verifies flat-layout id derivation.
+// The id is the FULL name minus ".sql" — not just the timestamp prefix, which
+// collided for migrations sharing a date-derived version (ledger PK bug).
 func TestExtractMigrationID_FlatLayout(t *testing.T) {
 	cases := []struct {
 		path string
 		want string
 	}{
-		{"migrations/20260101000000_create_users.sql", "20260101000000"},
-		{"migrations/20251231235959_add_index.sql", "20251231235959"},
-		{"migrations/20260115120000_init.sql", "20260115120000"},
-		{"/absolute/path/20260501083000_plugin_schema.sql", "20260501083000"},
+		{"migrations/20260101000000_create_users.sql", "20260101000000_create_users"},
+		{"migrations/20251231235959_add_index.sql", "20251231235959_add_index"},
+		{"migrations/20260115120000_init.sql", "20260115120000_init"},
+		{"/absolute/path/20260501083000_plugin_schema.sql", "20260501083000_plugin_schema"},
 	}
 	for _, tc := range cases {
 		got := extractMigrationID(tc.path)
@@ -61,14 +63,15 @@ func TestExtractMigrationID_FlatLayout(t *testing.T) {
 	}
 }
 
-// TestExtractMigrationID_NestedLayout verifies YYYYMMDDHHMMSS_name/up.sql parsing.
+// TestExtractMigrationID_NestedLayout verifies nested-layout id derivation:
+// the parent directory name in full (unique per migration).
 func TestExtractMigrationID_NestedLayout(t *testing.T) {
 	cases := []struct {
 		path string
 		want string
 	}{
-		{"migrations/20260101000000_create_users/up.sql", "20260101000000"},
-		{"migrations/20260515090000_add_column/up.sql", "20260515090000"},
+		{"migrations/20260101000000_create_users/up.sql", "20260101000000_create_users"},
+		{"migrations/20260515090000_add_column/up.sql", "20260515090000_add_column"},
 	}
 	for _, tc := range cases {
 		got := extractMigrationID(tc.path)

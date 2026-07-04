@@ -547,6 +547,7 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	ui.Step(currentStep, totalSteps, "Starting PostgreSQL")
 
 	compose := docker.NewCompose(composeFiles...)
+	compose.EnvFiles = build.ComposeEnvFiles(projectDir)
 
 	// ── Embedded PG path (--embedded-pg / NSELF_EMBEDDED_PG=true) ───
 	// When embedded PG is requested, boot pglite via wasmtime instead of
@@ -625,6 +626,11 @@ func runStart(cmd *cobra.Command, _ []string) error {
 				}
 			}
 		}
+
+		// Remove stale hash-prefixed rename-leftover containers (interrupted
+		// recreates) so they cannot hold ports or shadow the clean
+		// <project>_<service> names (e.g. b6d7..._ntask_hasura, gap #21).
+		_ = docker.RunPreStartCleanup(ctx, cfg.ProjectName)
 
 		// Clean start: remove all containers first.
 		if opts.cleanStart {
@@ -805,36 +811,10 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	// ── Display URLs ─────────────────────────────────────────────────
 	ui.Separator()
 
-	domain := cfg.BaseDomain
-	if domain == "" {
-		domain = "localhost"
-	}
-
-	scheme := "https"
-	if cfg.Env == "dev" {
-		scheme = "http"
-	}
-	urls := []string{
-		fmt.Sprintf("API:      %s://%s", scheme, domain),
-		fmt.Sprintf("Hasura:   %s://%s/v1/graphql", scheme, domain),
-		fmt.Sprintf("Console:  %s://%s/console", scheme, domain),
-		fmt.Sprintf("Auth:     %s://%s/v1/auth", scheme, domain),
-	}
-
-	if cfg.Minio.Enabled {
-		urls = append(urls, fmt.Sprintf("Storage:  %s://%s/v1/storage", scheme, domain))
-	}
-	if cfg.Mailpit.Enabled {
-		urls = append(urls, fmt.Sprintf("Mail UI:  %s://%s/mailpit", scheme, domain))
-	}
-	if cfg.Monitoring.GrafanaEnabled {
-		urls = append(urls, fmt.Sprintf("Grafana:  %s://%s/grafana", scheme, domain))
-	}
-	if cfg.Admin.Enabled {
-		urls = append(urls, "Admin:    http://localhost:3021")
-	}
-
-	ui.SummaryBox("nSelf Stack Running", urls)
+	// URL list: localhost:<port> endpoints for default local domains
+	// (local.nself.org needs DNS/hosts setup and 502s on a fresh machine),
+	// nginx-routed domain URLs for custom domains. See start_urls.go.
+	ui.SummaryBox("nSelf Stack Running", stackURLs(cfg))
 
 	if opts.debug {
 		ui.Section("Debug Info")

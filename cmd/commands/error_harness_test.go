@@ -501,6 +501,12 @@ var errorHarnessCases = []errorHarnessCase{
 	{"ops", []string{"ops", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"ops", []string{"ops", "unknownsub_xyz"}, "(c) unknown sub"},
 
+	// ── sentry ─────────────────────────────────────────────────────────────
+	// sentry root returns cmd.Help() (nil) — soft case (no project required).
+	{"sentry", []string{"sentry"}, "(a) shows help (no project required)"},
+	{"sentry", []string{"sentry", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"sentry", []string{"sentry", "unknownsub_xyz"}, "(c) unknown sub"},
+
 	// ── sentry-server ──────────────────────────────────────────────────────
 	// sentry-server root returns cmd.Help() (nil) — soft case (no project required).
 	{"sentry-server", []string{"sentry-server"}, "(a) shows help (no project required)"},

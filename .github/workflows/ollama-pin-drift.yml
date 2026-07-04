@@ -76,7 +76,7 @@ jobs:
 
       - name: Open issue on drift
         if: steps.compare.outputs.match == 'false'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           PINNED_SHA: ${{ steps.pinned.outputs.sha }}
           LIVE_SHA: ${{ steps.live.outputs.sha }}

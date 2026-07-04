@@ -85,6 +85,20 @@ var initPresets = map[string]initPreset{
 			"Install free plugins as needed: nself plugin install <name>",
 		},
 	},
+	"sentry": {
+		Name:             "sentry",
+		Description:      "Local-first ɳSentry observability stack: uptime, status pages, incidents, alerts, errors, RUM",
+		SuggestedPlugins: []string{"uptime-monitor", "status-page", "incident-mgmt", "alert-router", "slo-tracker", "synthetic-monitor", "rum", "errors", "cron-monitor", "oncall", "crash", "anomaly", "audit"},
+		EnabledServices:  []string{"redis"},
+		Notes: []string{
+			"Install the ɳSentry bundle: nself plugin install uptime-monitor status-page incident-mgmt alert-router",
+			"Bundle plugins need a license key (nself license activate) — audit is free (Security-Always-Free)",
+			"Plugin migrations seed a dev tenant + dev API key: nsk_dev_local_0000000000000000 (local only, never valid in cloud)",
+			"Point the CLI at the local API: export NSELF_SENTRY_API_URL=http://localhost:3848",
+			"Log in with the dev key: nself sentry login --api-url http://localhost:3848 --api-key nsk_dev_local_0000000000000000",
+			"Now the full cloud CLI works offline: nself sentry monitors add --url https://example.com",
+		},
+	},
 	"nclaw-app": {
 		Name:             "nclaw-app",
 		Description:      "Pre-configured backend for ɳClaw: AI memory, multi-model routing, email, and OAuth",
@@ -106,7 +120,7 @@ func listInitPresets() {
 	fmt.Println()
 
 	tbl := ui.NewTable("Preset", "Description", "Suggested plugins")
-	for _, name := range []string{"b2b-saas", "mobile-backend", "ai-assistant", "community-forum", "media-hosting", "dev", "nclaw-app"} {
+	for _, name := range []string{"b2b-saas", "mobile-backend", "ai-assistant", "community-forum", "media-hosting", "dev", "sentry", "nclaw-app"} {
 		p := initPresets[name]
 		plugins := "(none)"
 		if len(p.SuggestedPlugins) > 0 {

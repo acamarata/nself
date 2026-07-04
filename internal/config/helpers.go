@@ -123,6 +123,12 @@ var userDefinedPrefixes = []string{
 //
 // When a loaded key is within edit-distance 2 of a known var, the warning
 // includes a "did_you_mean" field with the closest match.
+//
+// App-owned vars the schema cannot know about are declared via
+// ENV_ALLOWLIST in any .env file: a comma-separated list of exact names or
+// prefixes ending in "*" (e.g. ENV_ALLOWLIST=MY_APP_TOKEN,FEATURE_*).
+// Allowlisted vars never warn — the documented mechanism for app-owned /
+// passthrough env vars (ntask dogfood gap #19).
 func warnUnknownEnvVars(loaded map[string]string, known []string) {
 	// Build O(1) lookup for known vars.
 	knownSet := make(map[string]bool, len(known))
@@ -130,9 +136,16 @@ func warnUnknownEnvVars(loaded map[string]string, known []string) {
 		knownSet[k] = true
 	}
 
+	allowNames, allowPrefixes := parseEnvAllowlist(loaded["ENV_ALLOWLIST"])
+
 	for k := range loaded {
 		// Skip vars that are in the known set.
 		if knownSet[k] {
+			continue
+		}
+
+		// Skip vars the user allowlisted via ENV_ALLOWLIST.
+		if envVarAllowlisted(k, allowNames, allowPrefixes) {
 			continue
 		}
 
@@ -161,6 +174,40 @@ func warnUnknownEnvVars(loaded map[string]string, known []string) {
 			)
 		}
 	}
+}
+
+// parseEnvAllowlist splits an ENV_ALLOWLIST value ("A,B_*, C") into exact
+// names and prefix patterns (entries ending in "*"). Empty entries are
+// dropped; matching is case-sensitive like every other env var comparison.
+func parseEnvAllowlist(raw string) (names map[string]bool, prefixes []string) {
+	names = make(map[string]bool)
+	for _, entry := range strings.Split(raw, ",") {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		if strings.HasSuffix(entry, "*") {
+			if pfx := strings.TrimSuffix(entry, "*"); pfx != "" {
+				prefixes = append(prefixes, pfx)
+			}
+			continue
+		}
+		names[entry] = true
+	}
+	return names, prefixes
+}
+
+// envVarAllowlisted reports whether key matches an ENV_ALLOWLIST entry.
+func envVarAllowlisted(key string, names map[string]bool, prefixes []string) bool {
+	if names[key] {
+		return true
+	}
+	for _, pfx := range prefixes {
+		if strings.HasPrefix(key, pfx) {
+			return true
+		}
+	}
+	return false
 }
 
 // closestKnownVar returns the known var with the smallest Levenshtein distance

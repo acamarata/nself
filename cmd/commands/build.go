@@ -199,6 +199,14 @@ func runBuild(cmd *cobra.Command, args []string) error {
 			ui.Warn(fmt.Sprintf("Add CA manually: %s", result.CAManualCmd))
 		}
 
+		// Declared plugins that could not be wired — never silent (nself.yaml).
+		if len(result.MissingPlugins) > 0 {
+			ui.Warn(fmt.Sprintf("%d declared plugin(s) NOT wired into the stack: %s",
+				len(result.MissingPlugins), strings.Join(result.MissingPlugins, ", ")))
+			ui.Warn(fmt.Sprintf("Fix: nself plugin install %s (or remove them from nself.yaml)",
+				strings.Join(result.MissingPlugins, " ")))
+		}
+
 		// /etc/hosts status line.
 		if result.HostsAdded > 0 {
 			ui.Success(fmt.Sprintf("Added %d domain(s) to /etc/hosts", result.HostsAdded))

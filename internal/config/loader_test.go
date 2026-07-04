@@ -147,6 +147,12 @@ func TestApplyDefaults_CoreDefaults(t *testing.T) {
 	if cfg.Env != "dev" {
 		t.Errorf("Env = %q, want %q", cfg.Env, "dev")
 	}
+	// Gap #5: AppName must default to empty (bare nginx subdomain scheme) —
+	// ApplyDefaults deliberately never fills it in, so existing single-app
+	// deployments (ummat, unity) that never set APP_NAME are unaffected.
+	if cfg.AppName != "" {
+		t.Errorf("AppName = %q, want empty (opt-in only, no default)", cfg.AppName)
+	}
 }
 
 // TestApplyDefaults_PostgresDefaults verifies that the postgres service gets

@@ -3,6 +3,8 @@ package nginx
 import (
 	"strings"
 	"testing"
+
+	"github.com/nself-org/cli/internal/config"
 )
 
 // TestConflictErrorNamesBothPlugins is the S01.T02 regression test.
@@ -59,4 +61,92 @@ func TestConflictErrorNamesBothPlugins_NoPluginNames(t *testing.T) {
 	}
 
 	t.Logf("fallback conflict message: %s", details[0])
+}
+
+// ── Gap #7: Hasura nginx upstream must use the container-internal port ──────
+
+// TestHasuraUpstream_UsesContainerPort verifies that the generated Hasura
+// upstream always targets the fixed container-internal port (8080), never
+// cfg.Hasura.Port — which is the HOST-mapped port and may be set to any value
+// (e.g. 8181) to avoid a host port collision without affecting how nginx
+// reaches Hasura over the Docker network.
+func TestHasuraUpstream_UsesContainerPort(t *testing.T) {
+	cfg := &config.Config{BaseDomain: "example.com"}
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
+	// Simulate a host-mapped port override — must NOT change the upstream.
+	cfg.Hasura.Port = 8181
+
+	g := &Generator{cfg: cfg}
+	entries := g.coreRoutes(cfg.BaseDomain, "example-com")
+
+	var hasuraEntry *routeEntry
+	for i := range entries {
+		if entries[i].filename == "hasura.conf" {
+			hasuraEntry = &entries[i]
+		}
+	}
+	if hasuraEntry == nil {
+		t.Fatal("expected a hasura.conf route entry")
+	}
+	if hasuraEntry.data.Upstream != "hasura:8080" {
+		t.Errorf("expected Hasura upstream 'hasura:8080' regardless of HASURA_PORT override, got %q", hasuraEntry.data.Upstream)
+	}
+}
+
+// ── Gap #5: app-prefixed subdomains ──────────────────────────────────────────
+
+// TestCoreRoutes_NoAppName_BareScheme verifies the default (APP_NAME unset)
+// scheme is unchanged: "api"/"auth", never prefixed. This is the backward
+// compatibility guarantee for existing single-app deployments (ummat, unity).
+func TestCoreRoutes_NoAppName_BareScheme(t *testing.T) {
+	cfg := &config.Config{BaseDomain: "example.com"}
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
+	if cfg.AppName != "" {
+		t.Fatalf("expected AppName to default to empty, got %q", cfg.AppName)
+	}
+
+	g := &Generator{cfg: cfg}
+	entries := g.coreRoutes(cfg.BaseDomain, "example-com")
+
+	routesByFile := make(map[string]string)
+	for _, e := range entries {
+		routesByFile[e.filename] = e.data.Route
+	}
+	if routesByFile["hasura.conf"] != "api" {
+		t.Errorf("expected bare route 'api' when AppName unset, got %q", routesByFile["hasura.conf"])
+	}
+	if routesByFile["auth.conf"] != "auth" {
+		t.Errorf("expected bare route 'auth' when AppName unset, got %q", routesByFile["auth.conf"])
+	}
+}
+
+// TestCoreRoutes_AppName_PrefixesSubdomains verifies that setting APP_NAME
+// produces app-prefixed routes ("api.task", "auth.task") so the final
+// server_name is "api.task.{BASE_DOMAIN}" instead of "api.{BASE_DOMAIN}".
+func TestCoreRoutes_AppName_PrefixesSubdomains(t *testing.T) {
+	cfg := &config.Config{BaseDomain: "staging.nself.org", AppName: "task"}
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
+
+	g := &Generator{cfg: cfg}
+	entries := g.coreRoutes(cfg.BaseDomain, "staging-nself-org")
+
+	routesByFile := make(map[string]string)
+	for _, e := range entries {
+		routesByFile[e.filename] = e.data.Route
+	}
+	if routesByFile["hasura.conf"] != "api.task" {
+		t.Errorf("expected app-prefixed route 'api.task', got %q", routesByFile["hasura.conf"])
+	}
+	if routesByFile["auth.conf"] != "auth.task" {
+		t.Errorf("expected app-prefixed route 'auth.task', got %q", routesByFile["auth.conf"])
+	}
 }

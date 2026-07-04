@@ -30,7 +30,14 @@ http {
     ssl_session_tickets off;
     ssl_stapling on;
     ssl_stapling_verify on;
-    resolver 8.8.8.8 1.1.1.1 valid=300s;
+    # Docker's embedded DNS (127.0.0.11) resolves container names on the
+    # user-defined bridge network. valid=10s keeps the cache short so a
+    # recreated container (new IP) is picked up on the next request instead
+    # of causing 502s until a manual `nginx -s reload`. Only takes effect
+    # for proxy_pass targets expressed via an nginx variable (see
+    # service.conf.tmpl LazyResolve) — static `upstream {}` blocks resolve
+    # once at load time regardless of this directive.
+    resolver 127.0.0.11 valid=10s ipv6=off;
     resolver_timeout 5s;
 
     gzip on;

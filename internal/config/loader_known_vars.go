@@ -23,6 +23,15 @@ var knownEnvVars = []string{
 	"PROJECT_DESCRIPTION",
 	"ADMIN_EMAIL",
 	"DB_ENV_SEEDS",
+	// APP_NAME: opt-in subdomain prefix for multi-app nginx routing (gap #5).
+	"APP_NAME",
+	// DOMAIN/ACME_EMAIL are the Traefik/staging-prod convention some app repos
+	// use alongside (or instead of) BASE_DOMAIN — see ntask backend/.env.example.
+	// Not read by the CLI loader directly; listed to suppress false warnings.
+	"DOMAIN",
+	"ACME_EMAIL",
+	// App-level demo/seed toggle (read by app seed scripts, not the CLI loader).
+	"DEMO_SEED",
 
 	// PostgreSQL
 	"POSTGRES_VERSION",
@@ -39,6 +48,10 @@ var knownEnvVars = []string{
 	// Hasura
 	"HASURA_VERSION",
 	"HASURA_GRAPHQL_ADMIN_SECRET",
+	// HASURA_ADMIN_SECRET is a commonly-used alias for HASURA_GRAPHQL_ADMIN_SECRET
+	// seen in real app .env files (e.g. ntask/backend/.env.example). The loader
+	// does not read it directly today; listed here to suppress false warnings.
+	"HASURA_ADMIN_SECRET",
 	"HASURA_JWT_KEY",
 	"HASURA_JWT_TYPE",
 	"HASURA_GRAPHQL_ENABLE_CONSOLE",
@@ -51,6 +64,19 @@ var knownEnvVars = []string{
 	"HASURA_MEM_LIMIT",
 	"HASURA_CPU_LIMIT",
 	"HASURA_GRAPHQL_LOG_LEVEL",
+	// Real-world Hasura tuning vars declared by apps (not yet read by the
+	// loader as typed fields, but legitimate Hasura engine config surface).
+	"HASURA_GRAPHQL_ENABLE_TELEMETRY",
+	"HASURA_GRAPHQL_ENABLE_ALLOWLIST",
+	"HASURA_GRAPHQL_UNAUTHORIZED_ROLE",
+	"HASURA_GRAPHQL_NODE_LIMIT",
+	"HASURA_GRAPHQL_DEPTH_LIMIT",
+	"HASURA_GRAPHQL_BATCH_SIZE",
+	"HASURA_GRAPHQL_LIVE_QUERIES_MULTIPLEXED_BATCH_SIZE",
+	"HASURA_GRAPHQL_LIVE_QUERIES_MULTIPLEXED_REFETCH_INTERVAL",
+	// Hasura Actions/cron webhook callback base URL (gap #11: wired into the
+	// generated Hasura service env so Actions can call back into `functions`).
+	"ACTION_HANDLER_URL",
 
 	// Auth
 	"AUTH_VERSION",
@@ -71,6 +97,30 @@ var knownEnvVars = []string{
 	"AUTH_RATE_LIMIT",
 	"AUTH_WEBAUTHN_ENABLED",
 	"AUTH_LOG_LEVEL",
+	// Auth-mode toggle (bundled vs external shared auth — see AUTH_MODE doctrine
+	// in app .env files) and the shared-auth vars used in external mode.
+	"AUTH_MODE",
+	"SHARED_AUTH_JWT_SECRET",
+	"SHARED_AUTH_SERVER_URL",
+	// hasura-auth container feature flags declared by real app .env files.
+	"AUTH_ANONYMOUS_USERS_ENABLED",
+	"AUTH_DISABLE_NEW_USERS",
+	"AUTH_EMAIL_PASSWORDLESS_ENABLED",
+	"AUTH_REQUIRE_EMAIL_VERIFICATION",
+	"AUTH_EMAIL_TEMPLATE_FETCH_URL",
+	"AUTH_GRAVATAR_ENABLED",
+	"AUTH_LOCALE_DEFAULT",
+	// hasura-auth internal URL (used by app functions to call the auth admin API).
+	"HASURA_AUTH_URL",
+	// hasura-auth SMTP vars (distinct prefix from AUTH_SMTP_* — hasura-auth
+	// reads these directly; the CLI passes them through unmodified).
+	"HASURA_AUTH_SMTP_HOST",
+	"HASURA_AUTH_SMTP_PORT",
+	"HASURA_AUTH_SMTP_USER",
+	"HASURA_AUTH_SMTP_PASS",
+	"HASURA_AUTH_SMTP_SENDER",
+	"HASURA_AUTH_SMTP_SECURE",
+	"HASURA_AUTH_EMAIL_SIGNIN_EMAIL_VERIFIED_REQUIRED",
 
 	// Nginx
 	"NGINX_VERSION",
@@ -80,6 +130,18 @@ var knownEnvVars = []string{
 	"NGINX_SSL_PORT",
 	"NGINX_CLIENT_MAX_BODY_SIZE",
 	"NGINX_BIND_IP",
+	// Per-zone rate limit overrides — read by parseEnvToConfig into
+	// NginxConfig.RateLimitAPI/RateLimitAuth/RateLimitAI but were missing from
+	// this schema list (pre-existing gap, fixed alongside gap #1).
+	"RATE_LIMIT_API_RPS",
+	"RATE_LIMIT_AUTH_RPS",
+	"RATE_LIMIT_AI_RPS",
+	// RPM-suffixed variants seen in real app .env files (e.g. ntask). Not read
+	// by the CLI loader (the RPS vars above are canonical); listed to suppress
+	// false warnings.
+	"RATE_LIMIT_AUTH_RPM",
+	"RATE_LIMIT_GRAPHQL_RPM",
+	"RATE_LIMIT_UPLOADS_RPM",
 
 	// SSL
 	"SSL_MODE",
@@ -101,14 +163,31 @@ var knownEnvVars = []string{
 	"MINIO_CONSOLE_PORT",
 	"MINIO_ROOT_USER",
 	"MINIO_ROOT_PASSWORD",
+	// MINIO_ACCESS_KEY/MINIO_SECRET_KEY are documented aliases for
+	// MINIO_ROOT_USER/MINIO_ROOT_PASSWORD (gap #2). The loader aliases them in
+	// parseEnvToConfig when the ROOT_* vars are not already set.
+	"MINIO_ACCESS_KEY",
+	"MINIO_SECRET_KEY",
 	"MINIO_DEFAULT_BUCKETS",
 	"MINIO_REGION",
 	"S3_ACCESS_KEY",
 	"S3_SECRET_KEY",
 	"S3_BUCKET",
+	// MINIO_BUCKET is an app-level alias for S3_BUCKET seen in real .env files;
+	// not read by the CLI loader (apps use it directly), listed to suppress
+	// false warnings.
+	"MINIO_BUCKET",
+	// MINIO_ENDPOINT/MINIO_ENDPOINT_PUBLIC are app-level MinIO endpoint URLs
+	// (internal Docker network + public presigned-URL host). Compose-computed
+	// equivalents exist as S3_ENDPOINT; these are read directly by apps.
+	"MINIO_ENDPOINT",
+	"MINIO_ENDPOINT_PUBLIC",
 	"STORAGE_VERSION",
 	"STORAGE_ROUTE",
 	"STORAGE_CONSOLE_ROUTE",
+	// STORAGE_PUBLIC_URL is the externally-reachable storage URL apps use for
+	// generating download links; STORAGE_PORT is already compose-computed below.
+	"STORAGE_PUBLIC_URL",
 	"MINIO_MEMORY",
 	"MINIO_CPU",
 
@@ -122,6 +201,10 @@ var knownEnvVars = []string{
 	"MAIL_ROUTE",
 	"MAILPIT_UI_USER",
 	"MAILPIT_UI_PASSWORD",
+	// Mailhog — legacy predecessor to Mailpit, still referenced by older app
+	// .env files (e.g. ntask). Not read by the CLI loader.
+	"MAILHOG_SMTP_PORT",
+	"MAILHOG_UI_PORT",
 
 	// Functions
 	"FUNCTIONS_ENABLED",
@@ -218,6 +301,9 @@ var knownEnvVars = []string{
 	"SMTP_USER",
 	"SMTP_PASS",
 	"SMTP_SECURE",
+	// SMTP_SENDER is the "From" address companion to SMTP_* above, used
+	// directly by app mailers (distinct from the CLI's EMAIL_FROM field).
+	"SMTP_SENDER",
 
 	// Backup
 	"BACKUP_ENABLED",
@@ -239,11 +325,20 @@ var knownEnvVars = []string{
 	"BACKUP_S3_SECRET_ACCESS_KEY",
 	"BACKUP_S3_REGION",
 	"BACKUP_S3_ENDPOINT",
+	// App-level backup credential/target aliases seen in real .env files
+	// (e.g. ntask). Not read by the CLI loader (app backup scripts use them).
+	"BACKUP_ACCESS_KEY",
+	"BACKUP_SECRET_KEY",
+	"BACKUP_S3_BUCKET",
+	"BACKUP_S3_PREFIX",
 
 	// Disaster Recovery
 	"DR_SECONDARY_REGION",
 	"DR_STANDBY_HOST",
 	"DR_DRILL_SCHEDULE",
+	// DR_DATABASE_URL is the standby/replica connection string used by app-level
+	// DR tooling; not read by the CLI loader.
+	"DR_DATABASE_URL",
 
 	// Plugin Pro
 	"NOTIFY_INTERNAL_SECRET",
@@ -297,9 +392,14 @@ var knownEnvVars = []string{
 	// The CLI loader does not read these; they are listed here only to suppress
 	// false "unknown env var" warnings from WarnUnknownEnvVars.
 	// Auth service (nHost auth container) — passed through compose template.
+	// NOTE: AUTH_JWT_SECRET and AUTH_JWT_KEY ARE read directly by
+	// parseEnvToConfig (gap #4 fix) as fallback sources for cfg.Hasura.JWTKey,
+	// so a user-declared value survives every rebuild instead of being
+	// silently ignored and regenerated.
 	"AUTH_HOST",
 	"AUTH_SERVER_URL",
 	"AUTH_JWT_SECRET",
+	"AUTH_JWT_KEY",
 	"AUTH_REFRESH_TOKEN_SECRET",
 	"AUTH_ACCESS_TOKEN_EXPIRY",
 	"AUTH_REFRESH_TOKEN_EXPIRY",
@@ -450,4 +550,33 @@ var knownEnvVars = []string{
 	"NOTION_OAUTH_CLIENT_ID",
 	"NOTION_OAUTH_CLIENT_SECRET",
 	// Total: 5 Tier-1 + 16 Tier-2 = 21 OAuth providers (full Zernio parity)
+
+	// App-level push notification credentials (mobile/RN apps talking directly
+	// to APNs/FCM, distinct from the notify plugin's VAPID web-push keys above).
+	// Not read by the CLI loader — listed to suppress false warnings.
+	"APNS_KEY_ID",
+	"APNS_KEY_PATH",
+	"APNS_TEAM_ID",
+	"FCM_SERVER_KEY",
+
+	// App-level observability DSN (e.g. Sentry backend project). Not read by
+	// the CLI loader — apps wire this into their own error reporting.
+	"SENTRY_DSN_BACKEND",
+
+	// App-owned vars commonly present in real app .env files (read by the
+	// app's own code / Node runtime / dev scripts, not by the CLI loader).
+	// Listed to suppress false "unknown env var" warnings (ntask dogfood
+	// gap #19). Project-specific vars beyond these belong in ENV_ALLOWLIST.
+	"NODE_ENV",
+	"JWT_SECRET",
+	"SSL_AUTO_TRUST",
+	"COOKIE_SECRET",
+	"ENABLE_DEBUG",
+	"LOG_LEVEL",
+	"NSELF_PROJECT_NAME",
+
+	// ENV_ALLOWLIST itself: comma-separated var names (or prefixes ending
+	// in *) that warnUnknownEnvVars treats as app-owned and never warns
+	// about. Example: ENV_ALLOWLIST=MY_APP_TOKEN,FEATURE_*
+	"ENV_ALLOWLIST",
 }

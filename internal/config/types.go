@@ -12,6 +12,14 @@ type Config struct {
 	ProjectDescription string `env:"PROJECT_DESCRIPTION"`
 	AdminEmail         string `env:"ADMIN_EMAIL"`
 	DBEnvSeeds         bool   `env:"DB_ENV_SEEDS"`
+	// AppName is an OPTIONAL app-prefix used to namespace generated core
+	// nginx subdomains (gap #5): when set, routes render as
+	// "api.{AppName}.{BASE_DOMAIN}" / "auth.{AppName}.{BASE_DOMAIN}" instead
+	// of the bare "api.{BASE_DOMAIN}" / "auth.{BASE_DOMAIN}" scheme. Deliberately
+	// distinct from PROJECT_NAME (which is always set, for container/network
+	// naming) so existing single-app deployments (ummat, unity) that only set
+	// PROJECT_NAME are unaffected — AppName defaults to "" (bare scheme).
+	AppName string `env:"APP_NAME"`
 
 	// PostgreSQL
 	Postgres PostgresConfig

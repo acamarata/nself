@@ -108,6 +108,9 @@ func TestReadRevocationCache_NonNotExistError(t *testing.T) {
 // returns a non-NotExist error on its *children* — actually the easiest
 // approach is to make the v1 directory inaccessible.
 func TestMigrateLicenseFromV1_V1StatNonNotExist(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("path-through-file stat behaves differently on Windows")
+	}
 	home := t.TempDir()
 
 	// Create the v1 directory (.nself) as a file — Stat(".nself/license.json")

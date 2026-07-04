@@ -95,6 +95,7 @@ func runStop(cmd *cobra.Command, args []string) error {
 	}
 
 	compose := docker.NewCompose(composeFiles...)
+	compose.EnvFiles = build.ComposeEnvFiles(workdir)
 
 	// Check running containers. If the query fails (e.g. docker compose ps
 	// exits non-zero on certain Debian/Docker combinations even when containers

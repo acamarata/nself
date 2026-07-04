@@ -182,6 +182,7 @@ func ensureSchemaVersions(ctx context.Context, cfg *config.Config) error {
 //  1. hasura/migrations/default/ (standard Hasura layout)
 //  2. hasura/migrations/         (flat Hasura layout)
 //  3. migrations/                (legacy fallback)
+//  4. postgres/migrations/       (repo-local layout, e.g. ntask)
 //
 // If none exist on disk, it returns "hasura/migrations/default/" so error
 // messages point the user at the canonical location.
@@ -199,6 +200,7 @@ func migrationsDir(cfg *config.Config, plugin string) string {
 		"hasura/migrations/default",
 		"hasura/migrations",
 		"migrations",
+		"postgres/migrations",
 	}
 	for _, c := range candidates {
 		if _, err := os.Stat(c); err == nil {
@@ -237,10 +239,190 @@ func scanMigrations(dir string) ([]string, error) {
 		}
 	}
 
+	// Sort by ledger key, not raw basename: in the nested Hasura layout every
+	// basename is "up.sql", which made the old basename sort a no-op and left
+	// the apply order undefined. The key (parent dir name / filename) carries
+	// the version prefix, so this yields the intended version ordering.
 	sort.Slice(files, func(i, j int) bool {
-		return filepath.Base(files[i]) < filepath.Base(files[j])
+		return migrationKey(files[i]) < migrationKey(files[j])
 	})
 	return files, nil
+}
+
+// migrationKey returns the unique ledger identity for a migration file.
+// This is the value recorded in np_common.schema_versions.name and used to
+// decide whether a migration has already been applied.
+//
+// Flat layout:   "hasura/migrations/20260701_add_users.sql" -> "20260701_add_users.sql"
+// Nested layout: "hasura/migrations/default/20260701_add_users/up.sql" -> "20260701_add_users"
+//
+// WHY: the old code used filepath.Base(path) for both layouts, which collapsed
+// every nested migration to the literal name "up.sql". Since schema_versions
+// keys on name, the first nested migration recorded "up.sql" and every later
+// migration was silently skipped while reporting as applied (ledger PK
+// collision, Unity PCI). The parent directory name is the migration's identity
+// in the Hasura layout and is unique within the migrations directory.
+func migrationKey(path string) string {
+	if filepath.Base(path) == "up.sql" {
+		return filepath.Base(filepath.Dir(path))
+	}
+	return filepath.Base(path)
+}
+
+// pendingMigrationFiles returns the subset of files whose ledger key is not in
+// the applied set, preserving input order. Pure function: unit-tested against
+// the same-day / nested collision regressions.
+func pendingMigrationFiles(files []string, applied map[string]time.Time) []string {
+	var pending []string
+	for _, f := range files {
+		if _, ok := applied[migrationKey(f)]; !ok {
+			pending = append(pending, f)
+		}
+	}
+	return pending
+}
+
+// migrationRecordSQL builds the two ledger INSERT statements for a migration.
+//
+// Legacy ledger (np_common.schema_versions): plain INSERT. Keys are unique per
+// migration now, so a conflict means the ledger and the gate disagree — that
+// must ERROR the transaction, never silently no-op.
+//
+// Ops ledger (nself_ops.migrations): ON CONFLICT (id) DO UPDATE. IDs are unique
+// per migration (full filename / dir name, not the date prefix), so a conflict
+// can only be the SAME migration being re-recorded (e.g. forced re-run) —
+// updating checksum/applied_at is "apply" semantics. The old
+// ON CONFLICT (id) DO NOTHING paired with a date-prefix id silently dropped
+// the ledger row of the second migration on the same day.
+func migrationRecordSQL(migrationID, name, checksum string) (legacy string, ops string) {
+	legacy = fmt.Sprintf("INSERT INTO np_common.schema_versions (name) VALUES ('%s');",
+		strings.ReplaceAll(name, "'", "''"))
+	ops = fmt.Sprintf(
+		"INSERT INTO nself_ops.migrations (id, name, checksum) VALUES ('%s', '%s', '%s') "+
+			"ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, checksum = EXCLUDED.checksum, applied_at = now(), rolled_back_at = NULL;",
+		strings.ReplaceAll(migrationID, "'", "''"),
+		strings.ReplaceAll(name, "'", "''"),
+		checksum,
+	)
+	return legacy, ops
+}
+
+// legacyOpsIDBackfillSQL upgrades pre-existing nself_ops.migrations rows whose
+// id was the old date/timestamp prefix (extractMigrationID used to truncate at
+// the first underscore) to the new unique id (full name minus ".sql").
+// Idempotent: the `id <>` guard makes re-runs a no-op; the NOT EXISTS guard
+// avoids PK conflicts if a new-style row already exists. Rows named 'up.sql'
+// (legacy nested layout) are handled separately by legacyNestedRenameSQL.
+const legacyOpsIDBackfillSQL = `UPDATE nself_ops.migrations m
+SET id = left(m.name, length(m.name) - 4)
+WHERE m.name LIKE '%.sql'
+  AND m.name <> 'up.sql'
+  AND m.id <> left(m.name, length(m.name) - 4)
+  AND NOT EXISTS (
+    SELECT 1 FROM nself_ops.migrations m2
+    WHERE m2.id = left(m.name, length(m.name) - 4)
+  );`
+
+// legacyNestedRenameSQL rewrites the single legacy nested-layout ledger row
+// (name = 'up.sql') to the resolved migration key. Idempotent: after the first
+// run no 'up.sql' rows remain, so every statement is a no-op. The trailing
+// DELETEs clean up only when the target key already exists (never loses the
+// applied fact — the UPDATE runs first).
+func legacyNestedRenameSQL(key string) string {
+	k := strings.ReplaceAll(key, "'", "''")
+	return fmt.Sprintf(`BEGIN;
+UPDATE np_common.schema_versions SET name = '%s' WHERE name = 'up.sql' AND NOT EXISTS (SELECT 1 FROM np_common.schema_versions sv2 WHERE sv2.name = '%s');
+DELETE FROM np_common.schema_versions WHERE name = 'up.sql';
+UPDATE nself_ops.migrations SET id = '%s', name = '%s' WHERE name = 'up.sql' AND NOT EXISTS (SELECT 1 FROM nself_ops.migrations m2 WHERE m2.id = '%s');
+DELETE FROM nself_ops.migrations WHERE name = 'up.sql';
+COMMIT;
+`, k, k, k, k, k)
+}
+
+// resolveLegacyNestedKey decides which on-disk nested migration a legacy
+// 'up.sql' ledger row belongs to. opsIDs are the old prefix-style ids of
+// nself_ops.migrations rows named 'up.sql' (recorded in the same transaction
+// as the legacy row, so they identify the directory that actually ran).
+// Falls back to the first nested migration in sorted order — under the old
+// code only the lexicographically first nested migration could ever have been
+// applied (all later ones were skipped by the name collision).
+// Returns "" when no nested migrations exist on disk.
+func resolveLegacyNestedKey(files []string, opsIDs []string) string {
+	var nested []string
+	for _, f := range files {
+		if filepath.Base(f) == "up.sql" {
+			nested = append(nested, migrationKey(f))
+		}
+	}
+	if len(nested) == 0 {
+		return ""
+	}
+	sort.Strings(nested)
+
+	for _, id := range opsIDs {
+		var matches []string
+		for _, k := range nested {
+			if k == id || strings.SplitN(k, "_", 2)[0] == id {
+				matches = append(matches, k)
+			}
+		}
+		if len(matches) == 1 {
+			return matches[0]
+		}
+	}
+	return nested[0]
+}
+
+// upgradeLedger migrates legacy ledger rows (written before the unique-key
+// scheme) in place so already-deployed boxes upgrade cleanly without
+// re-running applied migrations:
+//  1. nself_ops.migrations rows keyed by the old date prefix get their id
+//     rewritten to the full unique id (SQL-side, idempotent).
+//  2. The legacy nested-layout 'up.sql' row in both ledgers is renamed to the
+//     directory-derived key of the migration that actually ran.
+//
+// Must be called after ensureSchemaVersions + ensureMigrationsTable.
+func upgradeLedger(ctx context.Context, cfg *config.Config, files []string) error {
+	if err := pipeSQLToContainer(ctx, cfg, legacyOpsIDBackfillSQL); err != nil {
+		return fmt.Errorf("ledger id backfill: %w", err)
+	}
+
+	db := cfg.Postgres.DB
+	if db == "" {
+		db = "nself"
+	}
+
+	out, err := querySQL(ctx, cfg, db, "SELECT count(*) FROM np_common.schema_versions WHERE name = 'up.sql'")
+	if err != nil {
+		return fmt.Errorf("ledger legacy row check: %w", err)
+	}
+	if strings.TrimSpace(out) == "0" || strings.TrimSpace(out) == "" {
+		return nil
+	}
+
+	opsOut, err := querySQL(ctx, cfg, db, "SELECT id FROM nself_ops.migrations WHERE name = 'up.sql' ORDER BY id")
+	if err != nil {
+		return fmt.Errorf("ledger legacy ops rows: %w", err)
+	}
+	var opsIDs []string
+	for _, line := range strings.Split(opsOut, "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			opsIDs = append(opsIDs, line)
+		}
+	}
+
+	key := resolveLegacyNestedKey(files, opsIDs)
+	if key == "" {
+		// No nested migrations on disk: nothing the row could collide with.
+		return nil
+	}
+	if err := validateMigrationName(key); err != nil {
+		return fmt.Errorf("ledger upgrade key: %w", err)
+	}
+	if err := pipeSQLToContainer(ctx, cfg, legacyNestedRenameSQL(key)); err != nil {
+		return fmt.Errorf("ledger legacy row rename: %w", err)
+	}
+	return nil
 }
 
 // appliedMigrations returns the set of migration names already recorded.
@@ -278,6 +460,8 @@ func appliedMigrations(ctx context.Context, cfg *config.Config) (map[string]time
 
 // isNonTransactional checks if a migration SQL contains statements that cannot
 // run inside a transaction (e.g., CREATE INDEX CONCURRENTLY).
+// Note: ALTER TYPE ... ADD VALUE requires non-transactional execution in PostgreSQL 16;
+// other ALTER TYPE forms (RENAME, DROP ATTRIBUTE, ADD ATTRIBUTE) are fully transactional.
 func isNonTransactional(sql string) bool {
 	upper := strings.ToUpper(sql)
 	if strings.Contains(upper, "CREATE INDEX CONCURRENTLY") ||
@@ -340,19 +524,23 @@ func MigrateUp(ctx context.Context, cfg *config.Config, plugin string) (int, err
 		return 0, nil
 	}
 
+	// Upgrade legacy ledger rows (prefix ids / nested 'up.sql' collision)
+	// before computing the applied set, so old boxes neither re-run applied
+	// migrations nor keep skipping never-applied ones.
+	if err := upgradeLedger(ctx, cfg, files); err != nil {
+		return 0, fmt.Errorf("upgrade migration ledger: %w", err)
+	}
+
 	applied, err := appliedMigrations(ctx, cfg)
 	if err != nil {
 		return 0, fmt.Errorf("check applied migrations: %w", err)
 	}
 
 	count := 0
-	for _, f := range files {
-		name := filepath.Base(f)
+	for _, f := range pendingMigrationFiles(files, applied) {
+		name := migrationKey(f)
 		if err := validateMigrationName(name); err != nil {
 			return count, err
-		}
-		if _, ok := applied[name]; ok {
-			continue
 		}
 
 		data, readErr := os.ReadFile(f)
@@ -370,17 +558,7 @@ func MigrateUp(ctx context.Context, cfg *config.Config, plugin string) (int, err
 			return count, fmt.Errorf("migration id from %s: %w", name, err)
 		}
 
-		// Record in legacy schema_versions for backward compat.
-		legacyRecord := fmt.Sprintf("INSERT INTO np_common.schema_versions (name) VALUES ('%s');",
-			strings.ReplaceAll(name, "'", "''"))
-
-		// Record in nself_ops.migrations with checksum.
-		opsRecord := fmt.Sprintf(
-			"INSERT INTO nself_ops.migrations (id, name, checksum) VALUES ('%s', '%s', '%s') ON CONFLICT (id) DO NOTHING;",
-			strings.ReplaceAll(migrationID, "'", "''"),
-			strings.ReplaceAll(name, "'", "''"),
-			checksum,
-		)
+		legacyRecord, opsRecord := migrationRecordSQL(migrationID, name, checksum)
 
 		sqlContent := string(data)
 
@@ -389,8 +567,9 @@ func MigrateUp(ctx context.Context, cfg *config.Config, plugin string) (int, err
 			if err := pipeSQLToContainer(ctx, cfg, sqlContent); err != nil {
 				return count, fmt.Errorf("migration %s: %w: %v", name, errs.ErrMigrationFailed, err)
 			}
-			// Record separately (these succeed independently).
-			recordSQL := legacyRecord + "\n" + opsRecord
+			// Record both tables atomically in a separate transaction so that
+			// a failure on either INSERT leaves no orphan row in the other table.
+			recordSQL := "BEGIN;\n" + legacyRecord + "\n" + opsRecord + "\nCOMMIT;\n"
 			if err := pipeSQLToContainer(ctx, cfg, recordSQL); err != nil {
 				return count, fmt.Errorf("record migration %s: %w", name, err)
 			}
@@ -439,9 +618,15 @@ func MigrateDown(ctx context.Context, cfg *config.Config) error {
 		return fmt.Errorf("migration name from schema_versions: %w", err)
 	}
 
-	// Derive the down file path: foo.sql -> foo.down.sql
-	downName := strings.TrimSuffix(name, ".sql") + ".down.sql"
-	downPath := filepath.Join(migrationsDir(cfg, ""), downName)
+	// Derive the down file path from the ledger key:
+	//   flat   "foo.sql"          -> <dir>/foo.down.sql
+	//   nested "20260701_foo"     -> <dir>/20260701_foo/down.sql
+	var downPath string
+	if strings.HasSuffix(name, ".sql") {
+		downPath = filepath.Join(migrationsDir(cfg, ""), strings.TrimSuffix(name, ".sql")+".down.sql")
+	} else {
+		downPath = filepath.Join(migrationsDir(cfg, ""), name, "down.sql")
+	}
 
 	data, readErr := os.ReadFile(downPath)
 	if readErr != nil {
@@ -450,8 +635,13 @@ func MigrateDown(ctx context.Context, cfg *config.Config) error {
 
 	remove := fmt.Sprintf("DELETE FROM np_common.schema_versions WHERE name = '%s';",
 		strings.ReplaceAll(name, "'", "''"))
+	removeOps := fmt.Sprintf("DELETE FROM nself_ops.migrations WHERE name = '%s';",
+		strings.ReplaceAll(name, "'", "''"))
 
-	txSQL := "BEGIN;\n" + string(data) + "\n" + remove + "\nCOMMIT;\n"
+	// Both deletes run inside the same transaction as the down SQL so that
+	// np_common.schema_versions and nself_ops.migrations are always in sync:
+	// either both rows are removed or neither is (rollback on failure).
+	txSQL := "BEGIN;\n" + string(data) + "\n" + remove + "\n" + removeOps + "\nCOMMIT;\n"
 
 	if err := pipeSQLToContainer(ctx, cfg, txSQL); err != nil {
 		return fmt.Errorf("revert %s: %w: %v", name, errs.ErrMigrationFailed, err)
@@ -464,21 +654,24 @@ func PendingMigrations(ctx context.Context, cfg *config.Config, plugin string) (
 	if err := ensureSchemaVersions(ctx, cfg); err != nil {
 		return nil, fmt.Errorf("ensure schema_versions: %w", err)
 	}
+	if err := ensureMigrationsTable(ctx, cfg); err != nil {
+		return nil, fmt.Errorf("ensure migrations table: %w", err)
+	}
 	dir := migrationsDir(cfg, plugin)
 	files, err := scanMigrations(dir)
 	if err != nil {
 		return nil, err
+	}
+	if err := upgradeLedger(ctx, cfg, files); err != nil {
+		return nil, fmt.Errorf("upgrade migration ledger: %w", err)
 	}
 	applied, err := appliedMigrations(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("check applied migrations: %w", err)
 	}
 	var pending []string
-	for _, f := range files {
-		name := filepath.Base(f)
-		if _, ok := applied[name]; !ok {
-			pending = append(pending, name)
-		}
+	for _, f := range pendingMigrationFiles(files, applied) {
+		pending = append(pending, migrationKey(f))
 	}
 	return pending, nil
 }
@@ -524,27 +717,32 @@ func ApplyFile(ctx context.Context, cfg *config.Config, filePath string) (skippe
 		return false, fmt.Errorf("check applied migrations: %w", err)
 	}
 	if _, ok := applied[name]; ok {
-		// Already applied — warn and skip (do not error).
+		// Already applied — verify checksum matches to detect file modifications.
+		db := cfg.Postgres.DB
+		if db == "" {
+			db = "nself"
+		}
+		storedChecksum, queryErr := querySQL(ctx, cfg, db, "SELECT checksum FROM nself_ops.migrations WHERE name = '"+strings.ReplaceAll(name, "'", "''")+"'")
+		if queryErr == nil && storedChecksum != "" {
+			storedChecksum = strings.TrimSpace(storedChecksum)
+			if storedChecksum != checksum {
+				return false, fmt.Errorf("migration %s: checksum mismatch (stored %s, file %s) — file was modified after apply; manual intervention required", name, storedChecksum, checksum)
+			}
+		}
+		// Already applied with matching checksum — skip without error.
 		return true, nil
 	}
 
 	migrationID := extractMigrationID(filePath)
 	if migrationID == "" {
-		// Fall back to the full filename as ID when no timestamp prefix is found.
+		// Fall back to the full filename as ID when nothing could be derived.
 		migrationID = name
 	}
 	if err := validateMigrationName(migrationID); err != nil {
 		return false, fmt.Errorf("migration id from %s: %w", name, err)
 	}
 
-	legacyRecord := fmt.Sprintf("INSERT INTO np_common.schema_versions (name) VALUES ('%s');",
-		strings.ReplaceAll(name, "'", "''"))
-	opsRecord := fmt.Sprintf(
-		"INSERT INTO nself_ops.migrations (id, name, checksum) VALUES ('%s', '%s', '%s') ON CONFLICT (id) DO NOTHING;",
-		strings.ReplaceAll(migrationID, "'", "''"),
-		strings.ReplaceAll(name, "'", "''"),
-		checksum,
-	)
+	legacyRecord, opsRecord := migrationRecordSQL(migrationID, name, checksum)
 
 	sqlContent := string(data)
 
@@ -552,7 +750,9 @@ func ApplyFile(ctx context.Context, cfg *config.Config, filePath string) (skippe
 		if err := pipeSQLToContainer(ctx, cfg, sqlContent); err != nil {
 			return false, fmt.Errorf("migration %s: %w: %v", name, errs.ErrMigrationFailed, err)
 		}
-		recordSQL := legacyRecord + "\n" + opsRecord
+		// Record both tables atomically in a separate transaction so that
+		// a failure on either INSERT leaves no orphan row in the other table.
+		recordSQL := "BEGIN;\n" + legacyRecord + "\n" + opsRecord + "\nCOMMIT;\n"
 		if err := pipeSQLToContainer(ctx, cfg, recordSQL); err != nil {
 			return false, fmt.Errorf("record migration %s: %w", name, err)
 		}
@@ -607,14 +807,29 @@ func ApplyDir(ctx context.Context, cfg *config.Config, dirPath string) (int, err
 // MigrateStatus returns the status of all known migrations (applied and pending).
 // It merges on-disk migration files with the schema_versions table, so orphaned
 // migrations (applied but no longer on disk) are also reported.
-func MigrateStatus(ctx context.Context, cfg *config.Config) ([]MigrationStatus, error) {
+//
+// dir overrides the auto-detected migrations directory (the --migration-dir
+// companion to MigrateUpDir, G-008): repos with non-standard layouts, e.g.
+// ntask's postgres/migrations, would otherwise report "No migrations found".
+// Pass "" to auto-detect via migrationsDir.
+func MigrateStatus(ctx context.Context, cfg *config.Config, dir string) ([]MigrationStatus, error) {
 	if err := ensureSchemaVersions(ctx, cfg); err != nil {
 		return nil, fmt.Errorf("ensure schema_versions: %w", err)
 	}
+	if err := ensureMigrationsTable(ctx, cfg); err != nil {
+		return nil, fmt.Errorf("ensure migrations table: %w", err)
+	}
 
-	files, err := scanMigrations(migrationsDir(cfg, ""))
+	if dir == "" {
+		dir = migrationsDir(cfg, "")
+	}
+	files, err := scanMigrations(dir)
 	if err != nil {
 		return nil, err
+	}
+
+	if err := upgradeLedger(ctx, cfg, files); err != nil {
+		return nil, fmt.Errorf("upgrade migration ledger: %w", err)
 	}
 
 	applied, err := appliedMigrations(ctx, cfg)
@@ -626,7 +841,7 @@ func MigrateStatus(ctx context.Context, cfg *config.Config) ([]MigrationStatus, 
 	onDisk := make(map[string]bool)
 
 	for _, f := range files {
-		name := filepath.Base(f)
+		name := migrationKey(f)
 		onDisk[name] = true
 		ts, ok := applied[name]
 		statuses = append(statuses, MigrationStatus{

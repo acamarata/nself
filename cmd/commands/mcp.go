@@ -47,6 +47,14 @@ Available tools:
   nself_run_migration     Apply a SQL migration (confirmation-gated)
   nself_tail_logs         Tail docker logs for a service
   nself_doctor            Run nself doctor --deep
+  sentry_monitors_list    List ɳSentry uptime monitors
+  sentry_monitors_add     Create an ɳSentry uptime monitor
+  sentry_incidents_list   List ɳSentry incidents (filter by status)
+  sentry_incidents_ack    Acknowledge an incident
+  sentry_status           Public status page summary
+
+Sentry tools authenticate via NSELF_SENTRY_API_KEY or ~/.nself/sentry.json
+(run 'nself sentry login'); NSELF_SENTRY_API_URL targets a self-hosted bundle.
 
 Claude Code config (.claude/settings.json):
   "mcpServers": {
@@ -108,8 +116,11 @@ func runMCPServe(cmd *cobra.Command, args []string) error {
 	}
 }
 
-// registerMCPTools attaches all 6 nSelf MCP tools to the server.
+// registerMCPTools attaches all nSelf MCP tools to the server
+// (6 infrastructure tools here + 5 ɳSentry tools in mcp_sentry.go).
 func registerMCPTools(s *server.MCPServer) {
+	registerSentryMCPTools(s)
+
 	s.AddTool(
 		mcp.NewTool("nself_list_plugins",
 			mcp.WithDescription("List the nSelf plugin catalog: installed and available plugins"),

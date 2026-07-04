@@ -3,7 +3,48 @@
 All notable changes to the ɳSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
-## [Unreleased] — v1.2.0
+## [1.2.4] — 2026-07-03
+
+### Fixed
+
+- **License signature verification enabled in released binaries (CRITICAL)** — the release workflow read the `NSELF_LICENSE_PUBKEY_HEX` secret to embed the Ed25519 license-verification key at build time, but the secret was never set in the repository, so every published binary shipped as a "dev build" with license signature verification disabled and printed a dev-build warning from `nself version`. The secret is now configured; binaries from this release on verify license signatures.
+- **`bundle info sentry` alias miss** — the `sentry` → `nsentry` alias added in 1.2.3 resolved for `bundle install` and `bundle remove` but not `bundle info`, which used a separate command-layer lookup. `bundle info sentry` now resolves to ɳSentry; listings and error hints still show only the canonical `nsentry` slug.
+- **gofmt drift** — three files merged unformatted; formatted so the CI gofmt gate stays green.
+
+## [1.2.3] — 2026-07-03
+
+### Added
+
+- **`sentry` bundle install alias** — `nself bundle install sentry` now resolves to the canonical `ɳSentry` bundle. The alias is a fallback lookup only; `nself bundle list` and shell completions continue to show the canonical `nsentry` slug. (#171)
+
+## [1.2.2] — 2026-07-03
+
+### Fixed
+
+- **Declared plugins silently dropped (CRITICAL)** — `nself build` ignored the project's `nself.yaml` manifest entirely: plugins declared under `plugins:` (flat or `free:`/`pro:` tiers) or via `bundle:`/`bundles:` never materialized as containers because the only injection path was discovery over the plugin install dir. The build now parses the manifest, expands bundles through the canonical bundle catalog, best-effort auto-installs missing plugins (60s per-plugin timeout; disable with `NSELF_AUTO_INSTALL_PLUGINS=false`), and reports any plugin it cannot wire with a per-plugin warning, a `BuildResult.MissingPlugins` entry, and a printed `nself plugin install ...` fix command. A declared plugin is never silently dropped. Core services (`auth`, `storage`) satisfy their declared names. `NSELF_PLUGIN_DIR` overrides the plugin directory for hermetic CI and per-project plugin sets. (#168)
+- **Literal secrets in generated docker-compose.yml (HIGH)** — `nself build` baked literal secret values (Postgres password, Hasura admin secret, JWT blobs, MinIO root credentials, SMTP password) into the generated compose file, so editing `.env` post-build was a silent no-op and committing the generated file leaked credentials. Secrets are now emitted as `${VAR}` references; interpolation values are written to `.nself/compose.env` (mode 0600) and passed to docker compose via `--env-file` by start/stop/restart/health. Legacy projects without `compose.env` keep default `.env` discovery. A safety-net scan warns if any known secret value still appears literally. (#168)
+- **False "unknown env var" warnings** — app-owned vars (`NODE_ENV`, `JWT_SECRET`, `SSL_AUTO_TRUST`, `COOKIE_SECRET`, `ENABLE_DEBUG`, `LOG_LEVEL`, `NSELF_PROJECT_NAME`) are now known; new `ENV_ALLOWLIST` accepts comma-separated exact names or `PREFIX_*` patterns for project-specific passthrough vars. (#168)
+- **Unreachable ready URLs from `nself start`** — with a default local domain, `nself start` printed `*.local.nself.org` URLs that 502 without DNS setup. It now prints direct `http://localhost:<port>` endpoints (GraphQL, Hasura console, Auth, Storage, Mail UI, Admin) plus a `nself dns-setup` hint for the domain routes; custom domains keep nginx-routed URLs. (#168)
+- **Hash-prefixed leftover containers** — interrupted `docker compose` recreates leave the old container renamed with a hex-id prefix (e.g. `b6d7b59a1c78_myapp_hasura`) that holds ports and shadows the clean `<project>_<service>` name. Start now removes rename-leftovers before and after `compose up`. (#168)
+
+## [1.2.1] — 2026-07-03
+
+### Fixed
+
+- **Migration ledger PK collision (Unity HIGH PCI)** — nested Hasura layouts (`hasura/migrations/default/<name>/up.sql`) keyed the applied-migration ledger by `filepath.Base(file)`, collapsing every nested migration to the literal name `up.sql`. The first one recorded; every later one was silently skipped while reporting as applied (this produced the ummat `is_up`/`np_uptime_summary` ghost). Migration identity now derives from `migrationKey()` (parent directory name for nested layouts, filename for flat), `extractMigrationID` no longer truncates at the first `_` (same-day migrations no longer collide), ledger writes use `ON CONFLICT DO UPDATE` instead of `DO NOTHING` (a conflict can never silently drop a migration), and `upgradeLedger()` rewrites legacy ledger rows in place on already-deployed boxes. (#163)
+- **Atomic dual-table ledger recording** — non-transactional migrations (`CREATE INDEX CONCURRENTLY`, `ALTER TYPE ADD VALUE`) now record to `np_common.schema_versions` and `nself_ops.migrations` inside one transaction, so a failure on either INSERT leaves no orphan row. `nself db migrate down` deletes from BOTH ledgers inside the down transaction (previously `nself_ops.migrations` kept a stale row). `nself db migrate apply` errors on checksum mismatch when a previously-applied file was modified. (#141)
+- **Scaffold template error propagation** — plugin scaffold template failures now return wrapped errors instead of panicking; generated service templates exit cleanly instead of `os.Exit(1)` mid-defer. (#141)
+- **clean-root SDK gate** — expects 3 SDK modules (go, py, ts) after the Flutter SDK removal (#159); Windows CI perm-bit assertions POSIX-gated. (#164)
+- **Version scripts** — `bump-version.sh` / `check-version-lockstep.sh` no longer expect the removed `sdk/flutter/pubspec.yaml` (10 lockstep files + optional homebrew).
+
+### Added
+
+- **`nself db migrate status --migration-dir <dir>`** — status for non-standard migration layouts (parity with `migrate up`; forwarded on `--env` remote dispatch). Repos like ntask (`postgres/migrations`) no longer report "No migrations found". (#166)
+- **`postgres/migrations/` auto-detect** — 4th candidate in migration directory detection. (#166)
+- **Remote CLI version-drift pre-flight** — `db --env staging|prod` commands verify the remote binary version matches local before running, failing with a clear message naming both versions (pass `--allow-version-drift` to override). (#162)
+- **`.github/wiki/database-migrations.md`** — internal reference for the dual-table ledger, atomicity guarantees, and layout auto-detection. (#141, #166)
+
+## [1.2.0] — 2026-07-01
 
 ### Changed
 

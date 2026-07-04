@@ -93,6 +93,7 @@ func buildComposeHealthMap(ctx context.Context, workdir string) map[string]strin
 	}
 
 	comp := docker.NewCompose(composeFiles...)
+	comp.EnvFiles = build.ComposeEnvFiles(workdir)
 	infos, err := comp.ComposePs(ctx, workdir)
 	if err != nil {
 		return make(map[string]string)

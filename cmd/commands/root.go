@@ -175,6 +175,9 @@ func init() {
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main().
 func Execute() error {
+	// Product-alias shim: 'nsentry <args>' (symlinked binary) ≡ 'nself sentry <args>'.
+	normalizeInvokedBinary()
+
 	// Route cobra error/usage output to stderr so structured output stays clean.
 	RootCmd.SetErr(os.Stderr)
 

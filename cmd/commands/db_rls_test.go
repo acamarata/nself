@@ -40,12 +40,12 @@ func TestValidateIdentifier_Invalid(t *testing.T) {
 	t.Parallel()
 
 	invalid := []string{
-		"",             // empty
-		"table;drop",   // semicolon injection
-		"has space",    // space
-		"has-hyphen",   // hyphen is not an ident char
-		"has'quote",    // single quote
-		"has\"quote",   // double quote
+		"",           // empty
+		"table;drop", // semicolon injection
+		"has space",  // space
+		"has-hyphen", // hyphen is not an ident char
+		"has'quote",  // single quote
+		"has\"quote", // double quote
 	}
 	for _, id := range invalid {
 		id := id
@@ -90,4 +90,3 @@ func TestDBRLSAuditCmd_HasRunE(t *testing.T) {
 		t.Error("dbRLSAuditCmd.RunE is nil — command must use RunE, not Run")
 	}
 }
-

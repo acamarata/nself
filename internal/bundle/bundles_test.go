@@ -16,6 +16,8 @@ func TestGet_KnownBundles(t *testing.T) {
 		{"  nchat  ", true, "ɳChat", true},
 		{"nself-plus", true, "ɳSelf+", false}, // meta, not installable
 		{"ntask", true, "ɳTask", false},       // free, not installable as a unit
+		{"sentry", true, "ɳSentry", true},     // alias -> nsentry
+		{"SENTRY ", true, "ɳSentry", true},    // alias case-insensitive + trimmed
 		{"bogus", false, "", false},
 	}
 	for _, tc := range cases {
@@ -56,6 +58,18 @@ func TestNames_SortedAndComplete(t *testing.T) {
 	for _, r := range required {
 		if !have[r] {
 			t.Errorf("Names() missing required bundle %q", r)
+		}
+	}
+	// Aliases must never leak into Names()
+	if have["sentry"] {
+		t.Errorf("Names() must not include alias %q", "sentry")
+	}
+}
+
+func TestAliases_NotInDisplayOrder(t *testing.T) {
+	for _, slug := range DisplayOrder {
+		if slug == "sentry" {
+			t.Errorf("DisplayOrder must not include alias %q", "sentry")
 		}
 	}
 }

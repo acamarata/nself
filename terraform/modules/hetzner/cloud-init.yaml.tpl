@@ -25,6 +25,14 @@ packages:
   - gnupg
   - lsb-release
   - sudo
+  # build-essential (make + gcc) + zip/unzip: required by self-hosted GitHub Actions
+  # runners for `make dist` at release time (Go cross-build + Windows .zip packaging).
+  # Absent from the base Ubuntu image; a missing `make` then a missing `zip` broke
+  # nself-org/cli release.yml on nself-sentry (2026-07-01). Installing them here means
+  # every provisioned box (app + sentry/runner) has them from first boot.
+  - build-essential
+  - zip
+  - unzip
 
 package_update: true
 package_upgrade: true
@@ -114,6 +122,21 @@ runcmd:
   - apt-get update -qq
   - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
   - systemctl enable --now docker
+
+  # -- GitHub CLI (gh) -------------------------------------------------------
+  # Self-hosted GitHub Actions runners rely on `gh` (GitHub-hosted runners ship
+  # it). nself-org/cli release.yml uses `gh api` for the Homebrew lockstep gate;
+  # a missing gh failed that gate on nself-sentry (2026-07-01). Install via the
+  # official apt repo so every provisioned box has it.
+  - curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /etc/apt/keyrings/githubcli-archive-keyring.gpg
+  - chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+  - |
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] \
+      https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list
+  - apt-get update -qq
+  - apt-get install -y gh
 
   # -- Swap (2 GB) -----------------------------------------------------------
   - |

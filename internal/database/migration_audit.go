@@ -40,6 +40,10 @@ func AuditMigrations(ctx context.Context, cfg *config.Config) ([]MigrationAuditR
 		return nil, fmt.Errorf("scan migrations: %w", err)
 	}
 
+	if err := upgradeLedger(ctx, cfg, files); err != nil {
+		return nil, fmt.Errorf("upgrade migration ledger: %w", err)
+	}
+
 	applied, err := appliedMigrations(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("check applied migrations: %w", err)
@@ -54,7 +58,7 @@ func AuditMigrations(ctx context.Context, cfg *config.Config) ([]MigrationAuditR
 	var results []MigrationAuditResult
 
 	for _, f := range files {
-		name := filepath.Base(f)
+		name := migrationKey(f)
 		migID := extractMigrationID(f)
 
 		result := MigrationAuditResult{

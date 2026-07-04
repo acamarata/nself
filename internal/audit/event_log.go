@@ -19,7 +19,12 @@ import (
 
 // auditLogPath returns the path to the security audit log file.
 // Normally ~/.nself/audit.log; falls back to /tmp/.nself/audit.log.
+// Checks the HOME env var first so tests can override the path on all platforms
+// (os.UserHomeDir on Windows reads USERPROFILE/HOMEDRIVE+HOMEPATH, not HOME).
 func auditLogPath() string {
+	if h := os.Getenv("HOME"); h != "" {
+		return filepath.Join(h, ".nself", "audit.log")
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return filepath.Join("/tmp", ".nself", "audit.log")

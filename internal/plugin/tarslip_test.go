@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -90,6 +91,9 @@ func TestExtractTarGz_HappyPath(t *testing.T) {
 // TestExtractTarGz_AbsolutePath ensures an archive containing an absolute
 // path entry is rejected (tar slip prevention).
 func TestExtractTarGz_AbsolutePath(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix-style absolute path /etc/crontab is not absolute on Windows")
+	}
 	var buf bytes.Buffer
 	gw := gzip.NewWriter(&buf)
 	tw := tar.NewWriter(gw)

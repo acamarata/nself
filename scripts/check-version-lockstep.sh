@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
 # check-version-lockstep.sh
 #
-# Verifies all 12 lockstep version files carry the same version string.
+# Verifies all lockstep version files carry the same version string.
 # Per nSelf PPI Hard Rule: CLI and Admin ship identical version numbers.
-# Extended from 2-file check to 12-file check in P98 S98-02.
+# Extended from 2-file check in P98 S98-02; Flutter SDK entry retired
+# 2026-06-30 (#159, ASI Policy 2).
 #
-# Lockstep files (11 in this repo or adjacent repos + 1 optional homebrew):
+# Lockstep files (10 in this repo or adjacent repos + 1 optional homebrew):
 #   1.  cli/internal/version/version.go    (Go constant)
 #   2.  cli/.github/VERSION                (plain text)
 #   3.  cli/sdk/go/doc.go                  (Go const)
 #   4.  cli/sdk/ts/package.json            (JSON version field)
 #   5.  cli/sdk/py/pyproject.toml          (TOML version field)
-#   6.  cli/sdk/flutter/pubspec.yaml       (YAML version field)
-#   7.  admin/package.json                 (JSON version field)
-#   8.  admin/src/lib/cli-version.ts       (TS constant)
-#   9.  admin/Dockerfile                   (ARG NSELF_VERSION)
-#   10. admin/Dockerfile                   (ENV ADMIN_VERSION)
-#   11. admin/Dockerfile                   (LABEL image.version)
-#   12. homebrew-nself/Formula/nself.rb    (optional — warn only; separate repo)
+#   6.  admin/package.json                 (JSON version field)
+#   7.  admin/src/lib/cli-version.ts       (TS constant)
+#   8.  admin/Dockerfile                   (ARG NSELF_VERSION)
+#   9.  admin/Dockerfile                   (ENV ADMIN_VERSION)
+#   10. admin/Dockerfile                   (LABEL image.version)
+#   11. homebrew-nself/Formula/nself.rb    (optional — warn only; separate repo)
 #
 # Usage:
 #   bash scripts/check-version-lockstep.sh [--skip-homebrew] [--quiet]
@@ -155,8 +155,8 @@ else
   log_err "cli/.github/VERSION" "(missing)" "${REFERENCE_VERSION:-?}"
 fi
 
-# 3-6. SDK files — WARN-ONLY (independent lifecycle from CLI per P102 W18 strategic decision)
-#       SDKs under cli/sdk/{go,ts,py,flutter} ship at their own semver cadence
+# 3-5. SDK files — WARN-ONLY (independent lifecycle from CLI per P102 W18 strategic decision)
+#       SDKs under cli/sdk/{go,ts,py} ship at their own semver cadence
 #       (currently v2.0.0). They are NOT lockstep-bound to CLI version. A mismatch
 #       logs a WARN, never blocks release. See PPI § SDK lifecycle.
 
@@ -194,15 +194,8 @@ else
   log_warn "cli/sdk/py/pyproject.toml" "(missing)"
 fi
 
-# 6. cli/sdk/flutter/pubspec.yaml (warn-only)
-FILE6="${CLI_ROOT}/sdk/flutter/pubspec.yaml"
-if [ -f "${FILE6}" ]; then
-  V6=$(grep -E '^version:' "${FILE6}" \
-        | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-  check_version "cli/sdk/flutter/pubspec.yaml" "${V6}" 0
-else
-  log_warn "cli/sdk/flutter/pubspec.yaml" "(missing)"
-fi
+# 6. cli/sdk/flutter/pubspec.yaml — RETIRED. Flutter SDK removed 2026-06-30
+#    (#159, ASI Policy 2); no check, no warning.
 
 # 7. admin/package.json
 if [ -n "${ADMIN_ROOT}" ] && [ -f "${ADMIN_ROOT}/package.json" ]; then
