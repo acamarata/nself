@@ -232,10 +232,23 @@ func checkNginxSyntax(nginxConfDir string, result *PostValidateResult) {
 	// nginx -t writes its output to stderr by convention.
 	cmd := exec.CommandContext(ctx, nginxBin, "-t", "-c", nginxConf)
 	out, err := cmd.CombinedOutput()
+
+	// nginx -t validates config SYNTAX and then attempts runtime probes
+	// (e.g. opening the pid file from the `pid` directive). When run as a
+	// non-root user without a writable pid path — the norm in CI and most
+	// local `nself build` runs — nginx prints "syntax is ok" and then exits
+	// non-zero with "[emerg] open() /var/run/nginx.pid failed (Permission
+	// denied)". That is a runtime-permission artifact, not a config-syntax
+	// error, so we gate on the syntax verdict in the output rather than the
+	// exit code alone: if nginx reports the syntax OK, the check passes.
+	outStr := string(out)
+	if strings.Contains(outStr, "syntax is ok") {
+		return
+	}
 	if err != nil {
 		result.NginxValid = false
 		result.Errors = append(result.Errors,
-			fmt.Sprintf("nginx syntax check failed: %v\n%s", err, strings.TrimSpace(string(out))))
+			fmt.Sprintf("nginx syntax check failed: %v\n%s", err, strings.TrimSpace(outStr)))
 		return
 	}
 
