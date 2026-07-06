@@ -194,3 +194,48 @@ func contains(s, substr string) bool {
 			return false
 		}())
 }
+
+// TestCheckNginxSyntax_PidPermissionNotSyntaxError verifies that when nginx -t
+// reports the config syntax is OK but then exits non-zero because it cannot open
+// the pid file (the norm for non-root `nself build` runs and CI), the check
+// passes rather than reporting a false "syntax check failed". Regression for the
+// golden-path E2E step-4 failure (2026-07-06).
+func TestCheckNginxSyntax_PidPermissionNotSyntaxError(t *testing.T) {
+	dir := t.TempDir()
+
+	// Generated layout: <dir>/nginx.conf + <dir>/nginx/sites/ (caller passes sites/).
+	if err := os.WriteFile(filepath.Join(dir, "nginx.conf"), []byte("events{}\nhttp{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	sitesDir := filepath.Join(dir, "nginx", "sites")
+	if err := os.MkdirAll(sitesDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// findNginxConf looks one level up from sites/, so place nginx.conf at nginx/.
+	if err := os.WriteFile(filepath.Join(dir, "nginx", "nginx.conf"), []byte("events{}\nhttp{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Fake nginx binary: prints the real-world message to stderr and exits 1,
+	// exactly like `nginx -t` as a non-root user without a writable pid path.
+	binDir := t.TempDir()
+	fake := "#!/bin/sh\n" +
+		"echo 'nginx: the configuration file ... syntax is ok' 1>&2\n" +
+		"echo 'nginx: [emerg] open() \"/var/run/nginx.pid\" failed (13: Permission denied)' 1>&2\n" +
+		"exit 1\n"
+	fakePath := filepath.Join(binDir, "nginx")
+	if err := os.WriteFile(fakePath, []byte(fake), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	result := &PostValidateResult{NginxValid: true}
+	checkNginxSyntax(sitesDir, result)
+
+	if !result.NginxValid {
+		t.Errorf("expected NginxValid=true (syntax is ok despite pid-file exit 1), got false")
+	}
+	if len(result.Errors) != 0 {
+		t.Errorf("expected no errors when syntax is ok, got: %v", result.Errors)
+	}
+}
