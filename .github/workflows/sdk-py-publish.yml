@@ -80,19 +80,13 @@ jobs:
           cd sdk/py
           pip install --upgrade pip build twine
           python -m build
-      - name: Publish to PyPI (OIDC, retry up to 3x)
-        # Use the official action for first attempt (handles OIDC token exchange).
-        # Falls through to twine retry loop only on transient failure.
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: sdk/py/dist/
-          skip-existing: true
-      - name: Retry publish if action failed (bounded, exponential backoff)
-        if: failure()
+      - name: Publish to PyPI (token, retry up to 3x)
         # This job only runs when PYPI_API_TOKEN is present (needs.check-secret
-        # gate), so the retry authenticates with that token. OIDC-only setups
-        # never reach this step. Without TWINE_PASSWORD the retry could not
-        # authenticate under either documented auth option.
+        # gate), so twine-with-token is the primary and only method. The OIDC
+        # trusted-publisher action was removed: it is not configured on PyPI
+        # (owner/repo/workflow trusted publisher), so it failed the job even
+        # though the token upload succeeded. skip-existing makes re-runs of an
+        # already-published version a no-op success.
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
