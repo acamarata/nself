@@ -38,6 +38,9 @@ jobs:
       DOCKER_HOST: tcp://localhost:2375
       DOCKER_TLS_VERIFY: ''
       GOLDEN_PATH_SKIP_CLEANUP: '0'
+      # Skip the ollama auto-download during `nself start` — a full-stack smoke
+      # must not pull multi-GB AI models in CI (that's what destabilized step 5).
+      AI_AUTO_INSTALL: 'false'
       GOLDEN_PATH_DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
 
     steps:

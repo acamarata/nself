@@ -55,6 +55,9 @@ RESET_C='\033[0m'
 
 # ── Config ────────────────────────────────────────────────────────────────────
 DRY_RUN="${GOLDEN_PATH_DRY_RUN:-0}"
+# nself start auto-installs ollama when AI_AUTO_INSTALL is unset/true; the
+# golden-path validates the stack lifecycle, not a multi-GB AI model download.
+export AI_AUTO_INSTALL="${AI_AUTO_INSTALL:-false}"
 SKIP_CLEANUP="${GOLDEN_PATH_SKIP_CLEANUP:-0}"
 REPORT_FILE="/tmp/golden-path-report.json"
 
