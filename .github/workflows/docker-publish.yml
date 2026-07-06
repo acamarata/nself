@@ -94,7 +94,7 @@ jobs:
 
       - name: Build and push (amd64 + arm64, versioned tag)
         if: steps.preflight.outputs.proceed == 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -110,7 +110,7 @@ jobs:
 
       - name: Tag as latest
         if: steps.preflight.outputs.proceed == 'true' && steps.version.outputs.latest == 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
