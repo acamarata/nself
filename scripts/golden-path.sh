@@ -320,7 +320,7 @@ run_step 4 "nself build" \
 
 # ── Step 5: nself start ───────────────────────────────────────────────────────
 run_step 5 "nself start" \
-  bash -c "cd ${PROJECT_DIR} && nself start --detach"
+  bash -c "cd ${PROJECT_DIR} && nself start"
 [ "${STEP_STATUS[5]}" = "fail" ] && { write_report; exit 1; }
 
 # ── Step 6: Wait for services healthy ────────────────────────────────────────
@@ -363,7 +363,7 @@ run_step 10 "nself license set <owner-key>" \
 
 # ── Step 11: nself admin start ───────────────────────────────────────────────
 run_step 11 "nself admin start" \
-  bash -c "cd ${PROJECT_DIR} && nself admin start --detach"
+  bash -c "cd ${PROJECT_DIR} && nself admin start"
 [ "${STEP_STATUS[11]}" = "fail" ] && { write_report; exit 1; }
 
 # ── Step 12: curl localhost:3021/api/health → 200 ────────────────────────────
