@@ -1,6 +1,6 @@
 {
   "name": "@nself/sdk",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "TypeScript consumer SDK for nSelf — query GraphQL, manage plugins, auth, and admin from any TS/JS app.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -24,7 +24,12 @@
     "url": "https://github.com/nself-org/cli.git",
     "directory": "sdk/ts-sdk"
   },
-  "keywords": ["nself", "sdk", "graphql", "self-hosted"],
+  "keywords": [
+    "nself",
+    "sdk",
+    "graphql",
+    "self-hosted"
+  ],
   "engines": {
     "node": ">=18"
   },
@@ -38,6 +43,8 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
-    "roots": ["<rootDir>/src"]
+    "roots": [
+      "<rootDir>/src"
+    ]
   }
 }
