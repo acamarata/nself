@@ -199,6 +199,7 @@ func TestSecurityHeadersConstant(t *testing.T) {
 		"X-XSS-Protection",
 		"Referrer-Policy",
 		"Permissions-Policy",
+		"Strict-Transport-Security",
 		"server_tokens off",
 	}
 	for _, e := range expected {
