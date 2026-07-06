@@ -53,7 +53,7 @@ jobs:
 
       - name: Checkout (for pci-send)
         if: ${{ steps.app-check.outputs.skip == 'false' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           token: ${{ steps.app-token.outputs.token }}
 
