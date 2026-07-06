@@ -302,11 +302,11 @@ else
   WORK_DIR="$(mktemp -d /tmp/nself-golden-path-XXXXXX)"
 fi
 
-run_step 2 "mkdir test-project && cd" \
-  bash -c "mkdir -p ${WORK_DIR}/test-project"
+run_step 2 "mkdir testproject && cd" \
+  bash -c "mkdir -p ${WORK_DIR}/testproject"
 [ "${STEP_STATUS[2]}" = "fail" ] && { write_report; exit 1; }
 
-PROJECT_DIR="${WORK_DIR}/test-project"
+PROJECT_DIR="${WORK_DIR}/testproject"
 
 # ── Step 3: nself init ────────────────────────────────────────────────────────
 run_step 3 "nself init --preset b2b-saas" \
