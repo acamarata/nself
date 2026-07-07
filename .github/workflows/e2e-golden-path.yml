@@ -19,24 +19,21 @@ concurrency:
 jobs:
   golden-path:
     name: 13-step golden path smoke
-    runs-on: ubuntu-latest
+    # Self-hosted (nself-sentry box): ubuntu-latest's docker-24-dind service
+    # cannot run the real multi-container `nself start` compose stack — a
+    # single container (postgres) comes up fine, but `docker compose up` for
+    # the full stack fails after ~50s with a generic "exit status 1" (nested
+    # DinD networking/storage-driver limitation, not an nself bug — verified
+    # 2026-07-07 on run 28823997500: steps 1-4 pass, step 5 dies specifically
+    # at "Starting remaining services"). The self-hosted runner has real host
+    # docker (verified working as the actions-runner user), so the compose
+    # stack runs the same way it would on a real dev machine.
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 30
     permissions:
       contents: write
 
-    services:
-      # Docker-in-Docker so nself start can spin up containers
-      docker:
-        image: docker:24-dind
-        options: --privileged
-        env:
-          DOCKER_TLS_CERTDIR: ''
-        ports:
-          - 2375:2375
-
     env:
-      DOCKER_HOST: tcp://localhost:2375
-      DOCKER_TLS_VERIFY: ''
       GOLDEN_PATH_SKIP_CLEANUP: '0'
       # Skip the ollama auto-download during `nself start` — a full-stack smoke
       # must not pull multi-GB AI models in CI (that's what destabilized step 5).
@@ -55,11 +52,13 @@ jobs:
 
       - name: Install Homebrew (Linux)
         run: |
-          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          if ! command -v brew >/dev/null 2>&1; then
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          fi
           echo "/home/linuxbrew/.linuxbrew/bin" >> "${GITHUB_PATH}"
           echo "/home/linuxbrew/.linuxbrew/sbin" >> "${GITHUB_PATH}"
 
-      - name: Wait for Docker daemon
+      - name: Verify Docker daemon
         run: |
           for i in $(seq 1 15); do
             docker info >/dev/null 2>&1 && echo "Docker ready" && break
@@ -72,6 +71,25 @@ jobs:
         env:
           NSELF_PLUGIN_LICENSE_KEY_OWNER: ${{ secrets.NSELF_PLUGIN_LICENSE_KEY_OWNER }}
         run: bash scripts/golden-path.sh
+
+      - name: Clean up docker state (self-hosted runner is shared)
+        if: always()
+        run: |
+          nself stop --force 2>/dev/null || true
+          nself admin stop 2>/dev/null || true
+          # Belt-and-suspenders: golden-path.sh's own trap already does this,
+          # but a hard failure inside the script (e.g. bash -e abort) could
+          # skip its cleanup trap. Prune anything left behind by this run's
+          # test projects so state never leaks into the next job on this
+          # shared self-hosted runner.
+          for d in /tmp/nself-golden-path-*; do
+            [ -d "$d" ] || continue
+            (cd "$d"/testproject 2>/dev/null && docker compose down -v --remove-orphans 2>/dev/null) || true
+          done
+          docker container prune -f 2>/dev/null || true
+          docker volume prune -f 2>/dev/null || true
+          docker network prune -f 2>/dev/null || true
+          rm -rf /tmp/nself-golden-path-* /tmp/golden-path-diag-step*.txt /tmp/golden-path-claw-health.json /tmp/golden-path-ai-health.json 2>/dev/null || true
 
       - name: Upload JSON report
         if: always()
