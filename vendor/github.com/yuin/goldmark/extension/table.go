@@ -125,12 +125,16 @@ func isTableDelim(bs []byte) bool {
 	if w, _ := util.IndentWidth(bs, 0); w > 3 {
 		return false
 	}
+	allSep := true
 	for _, b := range bs {
+		if b != '-' {
+			allSep = false
+		}
 		if !(util.IsSpace(b) || b == '-' || b == '|' || b == ':') {
 			return false
 		}
 	}
-	return true
+	return !allSep
 }
 
 var tableDelimLeft = regexp.MustCompile(`^\s*\:\-+\s*$`)
@@ -502,7 +506,12 @@ func (r *TableHTMLRenderer) renderTableCell(
 				v, ok := n.AttributeString("style")
 				var cob util.CopyOnWriteBuffer
 				if ok {
-					cob = util.NewCopyOnWriteBuffer(v.([]byte))
+					switch v := v.(type) {
+					case []byte:
+						cob = util.NewCopyOnWriteBuffer(v)
+					case string:
+						cob = util.NewCopyOnWriteBuffer([]byte(v))
+					}
 					cob.AppendByte(';')
 				}
 				style := fmt.Sprintf("text-align:%s", n.Alignment.String())
