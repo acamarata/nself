@@ -28,7 +28,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────
   extract-version:
     name: Extract release version
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.ver.outputs.version }}
       tag: ${{ steps.ver.outputs.tag }}
@@ -49,7 +49,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────
   build-dryrun:
     name: Build dry-run (all platforms)
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     needs: extract-version
     env:
       CGO_ENABLED: 0
@@ -98,7 +98,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────
   version-lockstep:
     name: Version lockstep check (CLI ↔ Admin)
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     needs: extract-version
     steps:
       - name: Checkout CLI repo
@@ -126,7 +126,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────
   homebrew-lockstep-dryrun:
     name: Homebrew formula lockstep (dry-run)
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     needs: extract-version
     steps:
       - name: Check formula version
@@ -168,7 +168,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────
   sbom-dryrun:
     name: SBOM generation dry-run
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     needs: extract-version
     steps:
       - name: Checkout
@@ -195,7 +195,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────
   dryrun-gate:
     name: Dry-run gate (all checks passed)
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     needs: [build-dryrun, version-lockstep, homebrew-lockstep-dryrun, sbom-dryrun]
     steps:
       - name: Gate passed

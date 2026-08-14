@@ -19,16 +19,17 @@ concurrency:
 jobs:
   golden-path:
     name: 13-step golden path smoke
-    # Self-hosted (nself-sentry box): ubuntu-latest's docker-24-dind service
-    # cannot run the real multi-container `nself start` compose stack — a
-    # single container (postgres) comes up fine, but `docker compose up` for
-    # the full stack fails after ~50s with a generic "exit status 1" (nested
-    # DinD networking/storage-driver limitation, not an nself bug — verified
-    # 2026-07-07 on run 28823997500: steps 1-4 pass, step 5 dies specifically
-    # at "Starting remaining services"). The self-hosted runner has real host
-    # docker (verified working as the actions-runner user), so the compose
-    # stack runs the same way it would on a real dev machine.
-    runs-on: [self-hosted, Linux, X64]
+    # Moved back to GitHub-hosted ubuntu-latest 2026-08-14: cli is a PUBLIC
+    # repo, so hosted runners are free/unlimited and this job must not depend
+    # on a single self-hosted box. The 2026-07-07 failure recorded against the
+    # self-hosted runner (run 28823997500) predates this change; ubuntu-latest
+    # ships a real host Docker daemon (not a docker:dind service container),
+    # so the multi-container `nself start` compose stack is expected to work
+    # the same way it does on a real dev machine. Watch this job after the
+    # cutover — if it still fails at "Starting remaining services", that is a
+    # genuine ubuntu-latest Docker limitation to investigate, not the old
+    # self-hosted-specific issue.
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: write
@@ -72,7 +73,7 @@ jobs:
           NSELF_PLUGIN_LICENSE_KEY_OWNER: ${{ secrets.NSELF_PLUGIN_LICENSE_KEY_OWNER }}
         run: bash scripts/golden-path.sh
 
-      - name: Clean up docker state (self-hosted runner is shared)
+      - name: Clean up docker state
         if: always()
         run: |
           nself stop --force 2>/dev/null || true
@@ -80,8 +81,9 @@ jobs:
           # Belt-and-suspenders: golden-path.sh's own trap already does this,
           # but a hard failure inside the script (e.g. bash -e abort) could
           # skip its cleanup trap. Prune anything left behind by this run's
-          # test projects so state never leaks into the next job on this
-          # shared self-hosted runner.
+          # test projects within the job. GitHub-hosted ubuntu-latest VMs are
+          # single-use and torn down after the job, but this keeps the step
+          # correct if the workflow is ever pointed at a reused runner again.
           for d in /tmp/nself-golden-path-*; do
             [ -d "$d" ] || continue
             (cd "$d"/testproject 2>/dev/null && docker compose down -v --remove-orphans 2>/dev/null) || true
