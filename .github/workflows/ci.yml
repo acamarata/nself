@@ -26,7 +26,7 @@ jobs:
         os:
           - ubuntu-latest
           - ubuntu-24.04-arm   # linux/arm64 — first execution test before ship
-          - macos-13           # macOS Intel (darwin/amd64)
+          - macos-15-intel     # macOS Intel (darwin/amd64) — macos-13 retired Dec 2025
           - macos-14           # Apple Silicon (darwin/arm64)
           - windows-2022       # Windows — pure-Go only; Docker tests skipped
         include:
