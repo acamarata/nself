@@ -2,11 +2,15 @@ module github.com/nself-org/cli
 
 go 1.26
 
-// toolchain go1.26.4 — required to patch GO-2026-5039 (net/textproto error
-// escaping) and GO-2026-5037 (crypto/x509 hostname parsing), plus the earlier
-// GO-2026-4971 / GO-2026-4918 stdlib fixes. Upgrade the host Go toolchain when
-// rebuilding release artifacts.
-toolchain go1.26.4
+// toolchain go1.26.6 — required to patch GO-2026-6218 (net/url quadratic
+// resolvePath), GO-2026-6091 (html/template JS regexp context), GO-2026-6090
+// (crypto/tls post-handshake message limit), GO-2026-6089 (net/http H2C
+// ReadHeaderTimeout), GO-2026-6088 (encoding/xml recursion depth),
+// GO-2026-5972 (encoding/asn1 recursion depth), GO-2026-5856 (crypto/tls ECH
+// privacy leak), and GO-2026-5026 (net/http idna Punycode), plus the earlier
+// GO-2026-5039 / GO-2026-5037 / GO-2026-4971 / GO-2026-4918 stdlib fixes.
+// Upgrade the host Go toolchain when rebuilding release artifacts.
+toolchain go1.26.6
 
 require (
 	github.com/bytecodealliance/wasmtime-go/v25 v25.0.0
@@ -64,7 +68,7 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
-	github.com/yuin/goldmark v1.7.13 // indirect
+	github.com/yuin/goldmark v1.7.17 // indirect
 	github.com/yuin/goldmark-emoji v1.0.6 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.44.0 // indirect
@@ -73,9 +77,9 @@ require (
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/text v0.39.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
-	google.golang.org/grpc v1.81.1 // indirect
+	google.golang.org/grpc v1.82.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
