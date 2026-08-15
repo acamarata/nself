@@ -47,7 +47,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Preflight: proceed only when the SDK dir exists AND the npm token is
       # present. NPM_TOKEN is read via step env (the valid place to reference
