@@ -73,5 +73,14 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-          gh pr merge --auto --squash "$PR_URL"
+          set -uo pipefail
+          # `--auto` requires the repository-level "Allow auto-merge" setting,
+          # which GitHub does not offer for PRIVATE repos on this plan (the API
+          # silently keeps allow_auto_merge=false). Degrade gracefully there:
+          # the PR stays approved for a human to merge, and this job does NOT go
+          # red - a tooling limitation must not manufacture a failing check.
+          if gh pr merge --auto --squash "$PR_URL"; then
+            echo "::notice::Auto-merge queued - GitHub will merge once required checks pass."
+          else
+            echo "::warning::Could not enable auto-merge (repo-level auto-merge is unavailable on this plan). PR is approved and ready for a manual merge."
+          fi
