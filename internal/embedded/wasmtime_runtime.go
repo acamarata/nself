@@ -131,9 +131,33 @@ func (r *EmbeddedPGRuntime) boot(ctx context.Context) error {
 	// Attempt to deserialize a cached compiled module for fast cold-start.
 	// Falls back to compiling from the WASM binary if the cached version is
 	// absent or incompatible.
-	module, err := r.loadOrCompileModule()
-	if err != nil {
-		return fmt.Errorf("embedded/runtime: load module: %w", err)
+	// loadOrCompileModule is CPU-bound and uninterruptible: on a cold cache it
+	// runs a full wasmtime compile of the pglite Postgres WASM, which can take
+	// minutes on small CI runners. Run it under the caller's context so a boot
+	// that exceeds the deadline returns a clear error instead of blocking past
+	// every timeout and taking the whole process down with a test panic.
+	type modResult struct {
+		mod *wasmtime.Module
+		err error
+	}
+	modCh := make(chan modResult, 1)
+	go func() {
+		m, err := r.loadOrCompileModule()
+		modCh <- modResult{mod: m, err: err}
+	}()
+
+	var module *wasmtime.Module
+	select {
+	case <-ctx.Done():
+		// The compile goroutine is left to finish and populate the on-disk
+		// compiled cache, so a subsequent boot can reuse it rather than
+		// repeating the work.
+		return fmt.Errorf("embedded/runtime: timed out compiling pglite WASM (cold compile still running in background, its cache will speed up the next boot): %w", ctx.Err())
+	case res := <-modCh:
+		if res.err != nil {
+			return fmt.Errorf("embedded/runtime: load module: %w", res.err)
+		}
+		module = res.mod
 	}
 	r.module = module
 
@@ -172,6 +196,9 @@ func (r *EmbeddedPGRuntime) boot(ctx context.Context) error {
 
 	store.SetWasi(wasiCfg)
 
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("embedded/runtime: context expired before instantiate: %w", err)
+	}
 	instance, err := linker.Instantiate(store, module)
 	if err != nil {
 		return fmt.Errorf("embedded/runtime: instantiate: %w", err)

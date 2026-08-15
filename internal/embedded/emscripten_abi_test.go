@@ -288,20 +288,20 @@ func TestDefineEmscriptenABI_WasmInstantiation(t *testing.T) {
 		0x01, 0x00, 0x00, 0x00, // version: 1
 
 		// Type section (id=1): 3 types
-		0x01,       // section id
-		0x0b,       // section size
-		0x03,       // count = 3
+		0x01,                   // section id
+		0x0b,                   // section size
+		0x03,                   // count = 3
 		0x60, 0x01, 0x7f, 0x00, // type 0: (i32) -> ()   [exit]
 		0x60, 0x00, 0x01, 0x7c, // type 1: () -> (f64)   [emscripten_get_now]
-		0x60, 0x00, 0x00,       // type 2: () -> ()      [noop]
+		0x60, 0x00, 0x00, // type 2: () -> ()      [noop]
 
 		// Import section (id=2): 4 imports
-		0x02,                                                                          // section id
-		0x2c,                                                                          // section size
-		0x04,                                                                          // count = 4
-		0x03, 'e', 'n', 'v', 0x06, 'm', 'e', 'm', 'o', 'r', 'y', 0x02, 0x00, 0x01,  // memory min=1
+		0x02,                                                                      // section id
+		0x2c,                                                                      // section size
+		0x04,                                                                      // count = 4
+		0x03, 'e', 'n', 'v', 0x06, 'm', 'e', 'm', 'o', 'r', 'y', 0x02, 0x00, 0x01, // memory min=1
 		0x03, 'e', 'n', 'v', 0x0d, '_', '_', 'm', 'e', 'm', 'o', 'r', 'y', '_', 'b', 'a', 's', 'e', 0x03, 0x7f, 0x00, // global i32 immutable
-		0x03, 'e', 'n', 'v', 0x04, 'e', 'x', 'i', 't', 0x00, 0x00,                   // func type 0
+		0x03, 'e', 'n', 'v', 0x04, 'e', 'x', 'i', 't', 0x00, 0x00, // func type 0
 		0x03, 'e', 'n', 'v', 0x13, 'e', 'm', 's', 'c', 'r', 'i', 'p', 't', 'e', 'n', '_', 'g', 'e', 't', '_', 'n', 'o', 'w', 0x00, 0x01, // func type 1
 
 		// Function section (id=3): 1 local function
@@ -311,10 +311,10 @@ func TestDefineEmscriptenABI_WasmInstantiation(t *testing.T) {
 		0x02, // type index 2 (noop)
 
 		// Export section (id=7): export "noop"
-		0x07,                                         // section id
-		0x08,                                         // section size
-		0x01,                                         // count = 1
-		0x04, 'n', 'o', 'o', 'p', 0x00, 0x04,        // func index 4 (2 imported funcs + local 0) — wait, imported funcs are 0,1; local is 2
+		0x07,                                 // section id
+		0x08,                                 // section size
+		0x01,                                 // count = 1
+		0x04, 'n', 'o', 'o', 'p', 0x00, 0x04, // func index 4 (2 imported funcs + local 0) — wait, imported funcs are 0,1; local is 2
 
 		// Code section (id=10): 1 function body
 		0x0a, // section id

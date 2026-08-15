@@ -55,7 +55,7 @@ jobs:
   embedded-pg-integration:
     name: Integration — pglite boot (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 45
     # Only run on push to main or when explicitly triggered; skip on PRs from
     # forks (no write access to cache).
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
@@ -160,5 +160,5 @@ jobs:
           CGO_ENABLED: 1
           INTEGRATION: 1
         run: |
-          go test -mod=vendor -tags integration -count=1 -timeout 120s \
+          go test -mod=vendor -tags integration -count=1 -timeout 1200s \
             -v ./internal/embedded/...
