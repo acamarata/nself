@@ -160,5 +160,5 @@ jobs:
           CGO_ENABLED: 1
           INTEGRATION: 1
         run: |
-          go test -mod=vendor -tags integration -count=1 -timeout 120s \
+          go test -mod=vendor -tags integration -count=1 -timeout 300s \
             -v ./internal/embedded/...

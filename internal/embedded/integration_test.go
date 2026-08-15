@@ -53,7 +53,11 @@ func TestEmbeddedPGBootCycle(t *testing.T) {
 	wasmPath := requireWasmPath(t)
 	runtimeDir := shortIntegTempDir(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	// Cold-boot of the WASM Postgres runtime under wasmtime is slow on CI
+	// hardware (2-core hosted runners); 90s was tight enough that the boot hit
+	// the deadline before the first query. This budget covers boot + query with
+	// headroom; it is a liveness bound, not a perf assertion.
+	ctx, cancel := context.WithTimeout(context.Background(), 240*time.Second)
 	defer cancel()
 
 	rt, err := NewEmbeddedPGRuntime(runtimeDir, wasmPath)
