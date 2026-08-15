@@ -1,0 +1,77 @@
+name: Dependabot Auto-Merge (patch security updates)
+
+# Auto-merges Dependabot PRs that are BOTH:
+#   1. patch-level (version-update:semver-patch), and
+#   2. a security update (Dependabot reports a GHSA advisory id)
+#
+# Everything else - minor, major, or non-security patch bumps - is left for a
+# human. Rationale: five repos hit the same "audit gate red from a freshly
+# published advisory" failure in a single day (Aug 2026); patch security updates
+# are the class that is both urgent and low-risk enough to land unattended.
+#
+# SAFETY PROPERTIES
+#   * Uses `gh pr merge --auto`, which does NOT merge immediately. GitHub queues
+#     the merge and completes it only once all REQUIRED status checks pass. A red
+#     build blocks it exactly as it would a human PR.
+#   * Branch protection is never bypassed - no admin override is used anywhere.
+#   * Deliberately does NOT check out the pull request's code. `pull_request_target`
+#     runs with repository write scope, so checking out and executing untrusted PR
+#     code here would be a privilege-escalation hole. This job only reads metadata
+#     and calls the GitHub API.
+
+on: pull_request_target
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: Auto-merge patch security updates
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Decide eligibility
+        id: gate
+        env:
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+          GHSA: ${{ steps.meta.outputs.ghsa-id }}
+          DEPS: ${{ steps.meta.outputs.dependency-names }}
+        run: |
+          set -euo pipefail
+          echo "update-type:  ${UPDATE_TYPE:-<none>}"
+          echo "ghsa-id:      ${GHSA:-<none>}"
+          echo "dependencies: ${DEPS:-<none>}"
+          if [ "${UPDATE_TYPE:-}" = "version-update:semver-patch" ] && [ -n "${GHSA:-}" ]; then
+            echo "eligible=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Eligible - patch-level security update ${GHSA} for ${DEPS}"
+          else
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Not auto-merging - needs patch-level AND a security advisory"
+          fi
+
+      - name: Approve
+        if: steps.gate.outputs.eligible == 'true'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GHSA: ${{ steps.meta.outputs.ghsa-id }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh pr review --approve "$PR_URL" \
+            --body "Auto-approved - patch-level security update ${GHSA}. Merge still waits on all required checks."
+
+      - name: Enable auto-merge (waits for required checks)
+        if: steps.gate.outputs.eligible == 'true'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh pr merge --auto --squash "$PR_URL"
