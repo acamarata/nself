@@ -53,11 +53,12 @@ func TestEmbeddedPGBootCycle(t *testing.T) {
 	wasmPath := requireWasmPath(t)
 	runtimeDir := shortIntegTempDir(t)
 
-	// Cold-boot of the WASM Postgres runtime under wasmtime is slow on CI
-	// hardware (2-core hosted runners); 90s was tight enough that the boot hit
-	// the deadline before the first query. This budget covers boot + query with
-	// headroom; it is a liveness bound, not a perf assertion.
-	ctx, cancel := context.WithTimeout(context.Background(), 240*time.Second)
+	// On a cold cache this does a full wasmtime compile of the pglite Postgres
+	// WASM before Postgres even starts, which is CPU-bound and takes minutes on
+	// 2-core CI runners. The compiled module is then cached on disk (and by the
+	// workflow's cache step), so only the first run pays this. Liveness bound,
+	// not a perf assertion.
+	ctx, cancel := context.WithTimeout(context.Background(), 900*time.Second)
 	defer cancel()
 
 	rt, err := NewEmbeddedPGRuntime(runtimeDir, wasmPath)
