@@ -298,14 +298,22 @@ func scanFile(root, relPath string) ([]Finding, error) {
 		for i, re := range bannedRegex {
 			if m := re.FindStringSubmatchIndex(line); m != nil {
 				word := bannedWords[i]
+				// Only claim auto-fixability when the rewrite is actually safe;
+				// adjectives need a human. Keeping these in sync stops the
+				// summary's auto-fixable count from overstating what --fix does.
+				_, fixable := safeReplacement(word)
+				msg := fmt.Sprintf("banned word %q (F15 brand spec)", word)
+				if !fixable {
+					msg += " — rewrite the phrase by hand (no safe automatic fix)"
+				}
 				findings = append(findings, Finding{
 					Category: "banned_word",
 					Severity: "medium",
 					File:     relPath,
 					Line:     lineNum,
 					Match:    word,
-					Message:  fmt.Sprintf("banned word %q (F15 brand spec)", word),
-					AutoFix:  true,
+					Message:  msg,
+					AutoFix:  fixable,
 				})
 			}
 		}
@@ -453,7 +461,10 @@ func ApplyAutoFix(root string, report *DocReport) ([]string, error) {
 		orig := string(data)
 		updated := orig
 		for _, f := range fs {
-			replacement := safeReplacement(f.Match)
+			replacement, safe := safeReplacement(f.Match)
+			if !safe {
+				continue
+			}
 			updated = replaceWholeWord(updated, f.Match, replacement)
 		}
 		if updated == orig {
@@ -468,17 +479,32 @@ func ApplyAutoFix(root string, report *DocReport) ([]string, error) {
 	return modified, nil
 }
 
-// safeReplacement returns the neutral replacement for a banned word.
-// The CLI treats deletion as safer than substitution to avoid tone drift;
-// the result is a single space so sentence structure stays intact.
-func safeReplacement(word string) string {
+// safeReplacement returns the neutral replacement for a banned word and
+// whether an automatic rewrite is safe at all.
+//
+// Deletion is only safe for words that are grammatically optional in place:
+// conjunctive filler ("moreover, X" -> "X"). It is NOT safe for the adjectives
+// and set phrases in bannedWords, because they modify a following noun —
+// deleting the word alone leaves broken prose and, in Markdown, broken markup:
+//
+//	"Comprehensive guide for migrations"  -> " guide for migrations"
+//	"Wiki documentation is comprehensive" -> "Wiki documentation is "
+//	"**Comprehensive backup strategies**" -> "** backup strategies**"  (no longer bold)
+//	"The most powerful way to query"      -> "The most way to query"
+//
+// Those need a phrase-level rewrite with capitalization repair, which the
+// scanner has no sentence model for. They stay advisory: still reported as
+// findings so a human fixes them, never auto-rewritten. See the 2026-08-16
+// nself-org/plugins#34 review, which caught 48 wiki files being mangled this
+// way before merge.
+func safeReplacement(word string) (string, bool) {
 	switch strings.ToLower(word) {
 	case "moreover", "furthermore", "additionally":
-		return "" // drop conjunctive filler
+		return "", true // conjunctive filler: grammatically optional, safe to drop
 	case "leverage":
-		return "use"
+		return "use", true // direct verb-for-verb substitution
 	}
-	return ""
+	return "", false // adjectives and set phrases: report only
 }
 
 // replaceWholeWord replaces occurrences of word in src, honoring
