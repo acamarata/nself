@@ -70,12 +70,18 @@ jobs:
             ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
             if curl -fsSL "https://github.com/nself-org/cli/releases/download/v${LATEST}/nself-${LATEST}-${OS}-${ARCH}.tar.gz" \
               | tar -xz -C /tmp --strip-components=1; then
-              # release tarballs nest a nself-<ver>-<os>-<arch>/ dir — strip it
-              sudo mv /tmp/nself /usr/local/bin/nself
+              # release tarballs nest a nself-<ver>-<os>-<arch>/ dir — strip it.
+              # Install to a user-writable path instead of /usr/local/bin: avoids
+              # depending on passwordless sudo, which self-hosted runners correctly
+              # don't grant by default (see nself-org/web#93).
+              mkdir -p "$HOME/.local/bin"
+              mv /tmp/nself "$HOME/.local/bin/nself"
+              echo "$HOME/.local/bin" >> "$GITHUB_PATH"
             else
               echo "::warning::nself release download/extract failed — audit tool unavailable, skipping"
             fi
           fi
+          export PATH="$HOME/.local/bin:$PATH"
           nself --version || true
 
       - name: Run doc audit
