@@ -56,8 +56,14 @@ func TestRunDocs_BannedWord(t *testing.T) {
 	for _, f := range r.Findings {
 		if f.Category == "banned_word" && f.Match == "powerful" {
 			found = true
-			if !f.AutoFix {
-				t.Errorf("expected banned_word to be auto-fixable")
+			// Reported, but deliberately NOT auto-fixable. Deleting the
+			// adjective is only sometimes grammatical — "a powerful tool" ->
+			// "a tool" reads fine, but "the most powerful way" -> "the most
+			// way" does not — and a line scanner cannot tell the two apart.
+			// Since --fix writes public docs through an auto-opened PR, the
+			// safe default is to report and let a human rewrite the phrase.
+			if f.AutoFix {
+				t.Errorf("adjective %q must be advisory-only, not auto-fixed", f.Match)
 			}
 		}
 	}
@@ -162,11 +168,82 @@ func TestApplyAutoFix_LeverageToUse(t *testing.T) {
 }
 
 func TestReplaceWholeWord_DropsFiller(t *testing.T) {
-	got := replaceWholeWord("Moreover, we ship.", "moreover", safeReplacement("moreover"))
+	repl, safe := safeReplacement("moreover")
+	if !safe {
+		t.Fatal("conjunctive filler should be safely auto-fixable")
+	}
+	got := replaceWholeWord("Moreover, we ship.", "moreover", repl)
 	// The replacement is empty; we accept either ", we ship." or " , we ship."
 	// as long as the word is gone and the sentence remains readable.
 	if strings.Contains(strings.ToLower(got), "moreover") {
 		t.Errorf("moreover still present: %q", got)
+	}
+}
+
+// TestSafeReplacement_AdjectivesAreAdvisoryOnly pins the classification that
+// keeps --fix from mangling prose. Regression guard for nself-org/plugins#34,
+// where deleting these words alone rewrote 48 public wiki files into broken
+// English ("Comprehensive guide" -> " guide").
+func TestSafeReplacement_AdjectivesAreAdvisoryOnly(t *testing.T) {
+	for _, w := range []string{
+		"comprehensive", "powerful", "robust", "seamlessly",
+		"best-in-class", "world-class", "state-of-the-art",
+		"cutting-edge", "revolutionary", "game-changing",
+		"dive into", "delve into",
+	} {
+		if _, safe := safeReplacement(w); safe {
+			t.Errorf("%q must be advisory-only: deleting it alone breaks the sentence", w)
+		}
+	}
+	for _, w := range []string{"moreover", "furthermore", "additionally", "leverage"} {
+		if _, safe := safeReplacement(w); !safe {
+			t.Errorf("%q should still be auto-fixable", w)
+		}
+	}
+}
+
+// TestApplyAutoFix_LeavesAdjectivePhrasesIntact reproduces the exact strings
+// that plugins#34 corrupted and asserts --fix now leaves them untouched.
+func TestApplyAutoFix_LeavesAdjectivePhrasesIntact(t *testing.T) {
+	root := t.TempDir()
+	for _, anchor := range RequiredAnchors {
+		writeFile(t, filepath.Join(root, anchor), "# placeholder\n")
+	}
+	target := filepath.Join(root, ".claude/docs/prose.md")
+	const body = "# Title\n\n" +
+		"Comprehensive guide for database migrations.\n" +
+		"Wiki documentation is comprehensive\n" +
+		"4. **Comprehensive backup strategies** for safety\n" +
+		"The most powerful way to query your data:\n"
+	writeFile(t, target, body)
+
+	r, err := RunDocs(Options{Root: root})
+	if err != nil {
+		t.Fatalf("RunDocs: %v", err)
+	}
+	if _, err := ApplyAutoFix(root, r); err != nil {
+		t.Fatalf("ApplyAutoFix: %v", err)
+	}
+	data, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatalf("re-read: %v", err)
+	}
+	if got := string(data); got != body {
+		t.Errorf("adjective phrases must be left for a human rewrite.\n got: %q\nwant: %q", got, body)
+	}
+
+	// The findings must still be reported — advisory, not silently dropped.
+	var n int
+	for _, f := range r.Findings {
+		if f.Category == "banned_word" {
+			n++
+			if f.AutoFix {
+				t.Errorf("finding %q on line %d must not claim AutoFix", f.Match, f.Line)
+			}
+		}
+	}
+	if n == 0 {
+		t.Error("banned words must still be reported even when not auto-fixable")
 	}
 }
 
