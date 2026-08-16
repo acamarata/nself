@@ -25,6 +25,14 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Disable git-lfs filters
+        # See admin/web workflow for the full rationale: any file under this repo's
+        # filter=lfs .gitattributes patterns that was committed as raw (non-pointer)
+        # content will otherwise show as spuriously "modified" to git, which can trip
+        # peter-evans/create-pull-request's internal git stash/checkout dance in the
+        # next Open-auto-fix-PR step. Harmless no-op if nothing is affected.
+        run: git lfs uninstall --local || true
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -105,7 +113,6 @@ jobs:
           delete-branch: true
           add-paths: |
             **/*.md
-            **/*.mdx
             .claude/qa/findings/*.json
 
       - name: Upload JSON report
