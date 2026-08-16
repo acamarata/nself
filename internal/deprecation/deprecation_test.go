@@ -52,7 +52,7 @@ func TestLoadRegistry_WithEntry(t *testing.T) {
     type: command
     since: "v1.0.9"
     replacement: "nself new-cmd"
-    docs_url: "https://docs.nself.org/migrate"
+    docs_url: "https://nself.org/docs/migrate"
     phase: 1
 `
 	path := writeRegistry(t, yaml)
@@ -74,7 +74,7 @@ func TestWarnFormat_Phase1(t *testing.T) {
     type: command
     since: "v1.0.9"
     replacement: "nself new-cmd"
-    docs_url: "https://docs.nself.org/migrate"
+    docs_url: "https://nself.org/docs/migrate"
     phase: 1
 `
 	path := writeRegistry(t, yaml)
@@ -97,7 +97,7 @@ func TestWarnFormat_Phase1(t *testing.T) {
 	if !strings.Contains(out, "nself new-cmd") {
 		t.Errorf("warning must contain replacement, got: %q", out)
 	}
-	if !strings.Contains(out, "https://docs.nself.org/migrate") {
+	if !strings.Contains(out, "https://nself.org/docs/migrate") {
 		t.Errorf("warning must contain docs URL, got: %q", out)
 	}
 	if strings.Contains(out, "Will be removed") {
@@ -111,7 +111,7 @@ func TestWarnFormat_Phase2(t *testing.T) {
     type: command
     since: "v1.0.9"
     replacement: "nself new-cmd"
-    docs_url: "https://docs.nself.org/migrate"
+    docs_url: "https://nself.org/docs/migrate"
     phase: 2
 `
 	path := writeRegistry(t, yaml)
@@ -130,7 +130,7 @@ func TestWarnFormat_Phase2(t *testing.T) {
 func TestWarnWritesToStderr(t *testing.T) {
 	// Verify Warn() accepts os.Stderr without panic — io.Writer interface test.
 	var buf bytes.Buffer
-	deprecation.Warn(&buf, "nself x", "v1.0.0", "nself y", "https://docs.nself.org")
+	deprecation.Warn(&buf, "nself x", "v1.0.0", "nself y", "https://nself.org/docs")
 	if buf.Len() == 0 {
 		t.Error("Warn() must write output to the provided writer")
 	}
@@ -147,7 +147,7 @@ func TestLookup_NotFound(t *testing.T) {
 
 func TestPackageLevelWarnFormat(t *testing.T) {
 	var buf bytes.Buffer
-	deprecation.Warn(&buf, "nself old", "v1.1.0", "nself new", "https://docs.nself.org/migrate")
+	deprecation.Warn(&buf, "nself old", "v1.1.0", "nself new", "https://nself.org/docs/migrate")
 	out := buf.String()
 	if !strings.Contains(out, "[DEPRECATED]") {
 		t.Errorf("package-level Warn must contain [DEPRECATED], got: %q", out)

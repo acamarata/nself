@@ -207,5 +207,5 @@ Record:   v=DKIM1; k=rsa; p=...
 ## Related
 
 - [[cmd-license]] — Manage license keys for paid bundles
-- [docs.nself.org/mail](https://docs.nself.org/mail) — Full mail user guide
+- [nself.org/docs/mail](https://nself.org/docs/mail) — Full mail user guide
 - [[Home]]

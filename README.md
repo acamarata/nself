@@ -21,7 +21,7 @@ Complete, production-ready backend stack — PostgreSQL, GraphQL API, Authentica
 brew install nself-org/nself/nself
 ```
 
-[Quick Start](#quick-start) · [The Stack](#the-stack) · [Plugins](#plugins) · [Pricing](#pricing) · [Docs](https://docs.nself.org)
+[Quick Start](#quick-start) · [The Stack](#the-stack) · [Plugins](#plugins) · [Pricing](#pricing) · [Docs](https://nself.org/docs)
 
 </div>
 
@@ -250,7 +250,7 @@ nself build && nself restart
 
 ## CLI Command Reference
 
-ɳSelf provides **47 top-level commands** organized by domain. Full reference: [docs.nself.org/cli](https://docs.nself.org/cli).
+ɳSelf provides **47 top-level commands** organized by domain. Full reference: [nself.org/docs/cli](https://nself.org/docs/cli).
 
 ### Stack lifecycle
 
@@ -486,7 +486,7 @@ Security hardening runs automatically on every deploy. No license required.
 
 ## Docs and Community
 
-- [docs.nself.org](https://docs.nself.org) — complete documentation
+- [nself.org/docs](https://nself.org/docs) — complete documentation
 - [nself.org](https://nself.org) — project home, pricing, plugins catalog
 - [GitHub Discussions](https://github.com/nself-org/cli/discussions) — community Q&A
 - [GitHub Issues](https://github.com/nself-org/cli/issues) — bug reports
@@ -522,6 +522,6 @@ The 109 pro plugins are source-available under a separate commercial license. Co
 
 **ɳSelf CLI v1.1.2** · [nself.org](https://nself.org) · [GitHub](https://github.com/nself-org/cli)
 
-[Get Started](#quick-start) · [Documentation](https://docs.nself.org) · [Pricing](#pricing)
+[Get Started](#quick-start) · [Documentation](https://nself.org/docs) · [Pricing](#pricing)
 
 </div>

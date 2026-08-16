@@ -86,7 +86,7 @@
 //
 // Source: https://github.com/nself-org/cli/tree/main/sdk/go
 // Issues: https://github.com/nself-org/cli/issues
-// Docs:   https://docs.nself.org/sdk/go
+// Docs:   https://nself.org/docs/sdk/go
 //
 // # License
 //

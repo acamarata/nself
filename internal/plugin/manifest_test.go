@@ -56,7 +56,7 @@ func TestParseStatus_Deprecated(t *testing.T) {
 	m.Deprecation = &DeprecationBlock{
 		AnnouncedDate:  "2026-04-01",
 		EOLDate:        "2027-04-01",
-		MigrationGuide: "https://docs.nself.org/migrate/my-plugin",
+		MigrationGuide: "https://nself.org/docs/migrate/my-plugin",
 	}
 	if err := validateManifest(m); err != nil {
 		t.Errorf("expected deprecated with full block to be valid, got: %v", err)
@@ -127,7 +127,7 @@ func TestDeprecationBlock_ReplacedByPromptFires(t *testing.T) {
 	m.Deprecation = &DeprecationBlock{
 		AnnouncedDate:  "2026-04-01",
 		EOLDate:        "2027-04-01",
-		MigrationGuide: "https://docs.nself.org/migrate/my-plugin",
+		MigrationGuide: "https://nself.org/docs/migrate/my-plugin",
 		ReplacedBy:     "my-plugin-v2",
 	}
 	if err := validateManifest(m); err != nil {

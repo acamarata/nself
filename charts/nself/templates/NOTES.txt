@@ -17,4 +17,4 @@ Next steps:
 To install plugins:
   Set NSELF_PLUGIN_LICENSE_KEY and re-install with --plugins.
 
-Docs: https://docs.nself.org/guides/kubernetes
+Docs: https://nself.org/docs/guides/kubernetes

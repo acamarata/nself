@@ -257,4 +257,4 @@ Step-by-step guides for common workflows.
 | [Report Issues](https://github.com/nself-org/cli/issues) | Bug reports and feature requests |
 | [Discussions](https://github.com/nself-org/cli/discussions) | Community conversations |
 | [nself.org](https://nself.org) | Official website |
-| [docs.nself.org](https://docs.nself.org) | Online documentation |
+| [nself.org/docs](https://nself.org/docs) | Online documentation |

@@ -91,7 +91,7 @@ A PR satisfies the doc-sync check if at least one of these files is also modifie
 
 - `.github/wiki/**` (public repos) or `.github/docs/**` (private repos)
 - `.claude/docs/sport/F0*.md` (SPORT master lists)
-- `web/docs/content/**` (docs.nself.org content)
+- `web/docs/content/**` (nself.org/docs content)
 - `README.md` (when the change directly affects the readme content)
 
 ---

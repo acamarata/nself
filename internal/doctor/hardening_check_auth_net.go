@@ -305,7 +305,7 @@ func checkHardeningNginxRateZones(ctx context.Context, projectDir string) CheckR
 			Name:    checkID,
 			Status:  "fail",
 			Message: "SEC-HARDENING-06: nginx missing rate-limit zones for /auth/login and /api/ — add limit_req_zone directives",
-			FixCmd:  "See docs.nself.org/security/nginx-rate-limiting",
+			FixCmd:  "See nself.org/docs/security/nginx-rate-limiting",
 		}
 	default:
 		missing := "/api/"
@@ -317,7 +317,7 @@ func checkHardeningNginxRateZones(ctx context.Context, projectDir string) CheckR
 			Name:    checkID,
 			Status:  "warn",
 			Message: fmt.Sprintf("SEC-HARDENING-06: nginx rate-limit zone missing for %s — add limit_req_zone directive", missing),
-			FixCmd:  "See docs.nself.org/security/nginx-rate-limiting",
+			FixCmd:  "See nself.org/docs/security/nginx-rate-limiting",
 		}
 	}
 }

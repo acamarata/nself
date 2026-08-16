@@ -68,7 +68,7 @@ bundle. Equivalent Loki query:
 {container=~"nself-plugin-myplugin"} |= "ERROR"
 ```
 
-See [Observability guide](https://docs.nself.org/observability) for the Grafana dashboard.
+See [Observability guide](https://nself.org/docs/observability) for the Grafana dashboard.
 
 ## See Also
 

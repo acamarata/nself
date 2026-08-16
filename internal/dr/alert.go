@@ -15,7 +15,7 @@ const DrillAlertRuleYAML = `groups:
           service: dr
         annotations:
           summary: "DR drill {{ $labels.drill_id }} failed"
-          runbook: "https://docs.nself.org/ops/dr-drill-failure"
+          runbook: "https://nself.org/docs/ops/dr-drill-failure"
 `
 
 // DrillResultMetricName is the Prometheus metric name emitted by a drill run.

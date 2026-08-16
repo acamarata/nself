@@ -27,7 +27,7 @@ if [ -f "$REGISTRY" ]; then
     /^    type:/  { type=substr($0, index($0,$2)); gsub(/^"|"$/, "", type) }
     /^    since:/ { since=substr($0, index($0,$2)); gsub(/^"|"$/, "", since) }
     /^    replacement:/ { repl=substr($0, index($0,$2)); gsub(/^"|"$/, "", repl) }
-    /^    phase:/ { phase=substr($0, index($0,$2)); print "| " name " | " type " | " since " | " repl " | " phase " | https://docs.nself.org/migrate |" }
+    /^    phase:/ { phase=substr($0, index($0,$2)); print "| " name " | " type " | " since " | " repl " | " phase " | https://nself.org/docs/migrate |" }
   ' "$REGISTRY")
 fi
 

@@ -15,7 +15,7 @@ func TestMark_EmitsWarn(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
 	ctx := deprecation.WithLogger(context.Background(), logger)
 
-	deprecation.Mark(ctx, "OldHandler", "NewHandler", "v1.0.9", "https://docs.nself.org/plugins/deprecation")
+	deprecation.Mark(ctx, "OldHandler", "NewHandler", "v1.0.9", "https://nself.org/docs/plugins/deprecation")
 
 	out := buf.String()
 	if !strings.Contains(out, "deprecated") {
@@ -34,7 +34,7 @@ func TestMark_HandlerStillExecutes(t *testing.T) {
 	executed := false
 	ctx := context.Background()
 
-	deprecation.Mark(ctx, "OldHandler", "NewHandler", "v1.0.9", "https://docs.nself.org")
+	deprecation.Mark(ctx, "OldHandler", "NewHandler", "v1.0.9", "https://nself.org/docs")
 	executed = true
 
 	if !executed {
@@ -47,7 +47,7 @@ func TestMark_LogFormat(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
 	ctx := deprecation.WithLogger(context.Background(), logger)
 
-	deprecation.Mark(ctx, "Legacy", "Modern", "v1.0.9", "https://docs.nself.org")
+	deprecation.Mark(ctx, "Legacy", "Modern", "v1.0.9", "https://nself.org/docs")
 
 	out := buf.String()
 	// JSON handler should emit structured fields

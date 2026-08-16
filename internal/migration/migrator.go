@@ -432,7 +432,7 @@ func pluginWarning(projectDir, backupDir string) {
 	}
 
 	fmt.Fprintln(os.Stdout)
-	fmt.Fprintln(os.Stdout, "  See: https://docs.nself.org/migrate/from-v0.9#step-3-re-install-plugins")
+	fmt.Fprintln(os.Stdout, "  See: https://nself.org/docs/migrate/from-v0.9#step-3-re-install-plugins")
 	fmt.Fprintln(os.Stdout)
 }
 

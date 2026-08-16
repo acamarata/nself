@@ -162,4 +162,4 @@ func resolveViaCompose(pluginName string) (string, error) {
 // For production debugging, use Grafana/Loki with the nSelf monitoring stack.
 // Equivalent Loki query for plugin logs:
 //   {container=~"nself-plugin-<name>"} |= "ERROR"
-// See docs.nself.org/observability for the Grafana dashboard.
+// See nself.org/docs/observability for the Grafana dashboard.
