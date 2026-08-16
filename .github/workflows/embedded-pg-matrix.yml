@@ -160,5 +160,11 @@ jobs:
           CGO_ENABLED: 1
           INTEGRATION: 1
         run: |
-          go test -mod=vendor -tags integration -count=1 -timeout 1200s \
+          # Timeout ordering must be: in-test bootTimeout < go test -timeout < job
+          # timeout-minutes. internal/embedded/integration_test.go uses a 2100s
+          # (35 min) boot bound, so a 1200s (20 min) go test timeout fired first
+          # and killed the binary with "panic: test timed out after 20m0s" before
+          # the boot bound could ever apply. 2400s (40 min) sits above the boot
+          # bound and below the job budget.
+          go test -mod=vendor -tags integration -count=1 -timeout 2400s \
             -v ./internal/embedded/...

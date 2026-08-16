@@ -59,8 +59,9 @@ func TestEmbeddedPGBootCycle(t *testing.T) {
 	// workflow's cache step), so only the first run pays this. Liveness bound,
 	// not a perf assertion.
 	//
-	// The bound must sit UNDER the job's timeout-minutes (45 in
-	// .github/workflows/embedded-pg-matrix.yml) but comfortably ABOVE a cold
+	// The bound must sit UNDER the `go test -timeout` in
+	// .github/workflows/embedded-pg-matrix.yml (2400s), which in turn sits under
+	// the job's timeout-minutes (45), but comfortably ABOVE a cold
 	// compile. It was 900s, which is only 15 of those 45 minutes: on any cache
 	// miss the compile outran the bound and the test died at exactly 900.00s
 	// while the job still had 30 minutes of budget left. 2100s (35 min) keeps
