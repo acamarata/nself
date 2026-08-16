@@ -26,12 +26,20 @@ jobs:
           fetch-depth: 1
 
       - name: Disable git-lfs filters
-        # See admin/web workflow for the full rationale: any file under this repo's
-        # filter=lfs .gitattributes patterns that was committed as raw (non-pointer)
-        # content will otherwise show as spuriously "modified" to git, which can trip
-        # peter-evans/create-pull-request's internal git stash/checkout dance in the
-        # next Open-auto-fix-PR step. Harmless no-op if nothing is affected.
-        run: git lfs uninstall --local || true
+        # See admin's copy of this workflow (nself-org/admin#71) for the full rationale:
+        # any file under this repo's filter=lfs .gitattributes patterns that was
+        # committed as raw (non-pointer) content shows as spuriously "modified" to git,
+        # which can trip peter-evans/create-pull-request's internal git stash/checkout
+        # dance in the next Open-auto-fix-PR step. Harmless no-op here today (cli has
+        # only one candidate file that doesn't presently trip this).
+        #
+        # `git lfs uninstall --local` (the original version of this step) turned out to
+        # be a no-op on GitHub-hosted runners — the filter is registered at GLOBAL
+        # scope, not local. `.git/info/attributes` has higher precedence than any
+        # in-tree .gitattributes and is scoped to this one checkout only: this
+        # unconditionally clears the filter attribute for every path here, without
+        # touching git config at any scope.
+        run: echo '* -filter' >> .git/info/attributes
 
       - name: Set up Go
         uses: actions/setup-go@v5
