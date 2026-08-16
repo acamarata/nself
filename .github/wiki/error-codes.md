@@ -12,7 +12,7 @@ When the CLI encounters a problem, it prints a structured message in this format
 [E001] Docker not installed
   Why: The docker binary was not found in PATH.
   Fix: Install Docker: https://docs.docker.com/get-docker/
-  Docs: https://docs.nself.org/reference/error-codes#e001
+  Docs: https://nself.org/docs/reference/error-codes#e001
 ```
 
 The code in brackets (e.g., `[E001]`) is stable across CLI versions. You can search this page by code to find the cause and fix.
@@ -136,10 +136,10 @@ The full structured format for a CLI error:
 [EXXXX] What happened (brief)
   Why: Root cause explanation.
   Fix: Steps to resolve the issue.
-  Docs: https://docs.nself.org/reference/error-codes#eXXXX
+  Docs: https://nself.org/docs/reference/error-codes#eXXXX
 ```
 
-The `Why` and `Fix` lines provide context to act on. The `Docs` line links directly to the anchor for that code on this page (via `docs.nself.org`, which mirrors this wiki).
+The `Why` and `Fix` lines provide context to act on. The `Docs` line links directly to the anchor for that code on this page (via `nself.org/docs`, which mirrors this wiki).
 
 ---
 

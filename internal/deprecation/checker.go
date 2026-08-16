@@ -72,7 +72,7 @@ func CheckPluginCompat(installed []InstalledPlugin, reg *PluginRegistry) []Warni
 					DeprecatedIn:     cal.DeprecatedIn,
 					RemovedIn:        cal.RemovedIn,
 					Replacement:      cal.Replacement,
-					Docs: fmt.Sprintf("https://docs.nself.org/api/migration/%s-%s",
+					Docs: fmt.Sprintf("https://nself.org/docs/api/migration/%s-%s",
 						ip.Name, strings.ReplaceAll(strings.TrimPrefix(cal.Path, "/"), "/", "-")),
 				})
 			}

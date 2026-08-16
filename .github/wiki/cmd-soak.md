@@ -75,4 +75,4 @@ nself soak abort --rollback v1.0.8 --env prod --prod-i-mean-it --yes
 ### See Also
 
 - [nself deploy rollback](cmd-deploy.md), underlying rollback mechanism
-- [Observability](https://docs.nself.org/operations/observability), post-rollback metrics
+- [Observability](https://nself.org/docs/operations/observability), post-rollback metrics

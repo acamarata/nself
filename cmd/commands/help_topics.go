@@ -30,7 +30,7 @@ var helpTopics = map[string]helpTopic{
     nself start --env staging
     nself start --env production
 
-  Full guide: https://docs.nself.org/getting-started`,
+  Full guide: https://nself.org/docs/getting-started`,
 	},
 	"plugins": {
 		Title:   "Plugin System",
@@ -47,7 +47,7 @@ var helpTopics = map[string]helpTopic{
   Info:   nself plugin info <name>
   Remove: nself plugin remove <name>
 
-  Docs: https://docs.nself.org/plugins`,
+  Docs: https://nself.org/docs/plugins`,
 	},
 	"license": {
 		Title:   "License & Bundles",
@@ -62,7 +62,7 @@ var helpTopics = map[string]helpTopic{
   Validate:     nself license validate
   Upgrade:      nself license upgrade
 
-  Docs: https://docs.nself.org/licensing`,
+  Docs: https://nself.org/docs/licensing`,
 	},
 	"envs": {
 		Title:   "Environments",
@@ -78,7 +78,7 @@ var helpTopics = map[string]helpTopic{
   Full-environment init:
     nself init --full    # generates .env.dev, .env.staging, .env.prod, .env.secrets
 
-  Docs: https://docs.nself.org/environments`,
+  Docs: https://nself.org/docs/environments`,
 	},
 	"doctor": {
 		Title:   "Diagnostics",
@@ -94,7 +94,7 @@ var helpTopics = map[string]helpTopic{
     1  Checks failed
     2  Warnings only
 
-  Docs: https://docs.nself.org/doctor`,
+  Docs: https://nself.org/docs/doctor`,
 	},
 	"errors": {
 		Title:   "Error Codes",
@@ -110,7 +110,7 @@ var helpTopics = map[string]helpTopic{
   E300-E349  Init / project issues
   E350-E399  Domain issues
 
-  Full reference: https://docs.nself.org/reference/error-codes`,
+  Full reference: https://nself.org/docs/reference/error-codes`,
 	},
 }
 

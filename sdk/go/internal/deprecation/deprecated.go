@@ -3,7 +3,7 @@
 // Usage in a plugin handler:
 //
 //	func (p *MyPlugin) OldHandler(ctx context.Context, req Request) (Response, error) {
-//	    deprecation.Mark(ctx, "OldHandler", "NewHandler", "v1.0.9", "https://docs.nself.org/plugins/deprecation")
+//	    deprecation.Mark(ctx, "OldHandler", "NewHandler", "v1.0.9", "https://nself.org/docs/plugins/deprecation")
 //	    return p.NewHandler(ctx, req)
 //	}
 //

@@ -88,7 +88,7 @@ func FromCLIError(e *errs.CLIError) *UXError {
 		ux.Suggestions = []string{e.Fix}
 	}
 	if e.DocsPath != "" {
-		ux.DocsLink = "https://docs.nself.org/" + e.DocsPath
+		ux.DocsLink = "https://nself.org/docs/" + e.DocsPath
 	}
 	return ux
 }

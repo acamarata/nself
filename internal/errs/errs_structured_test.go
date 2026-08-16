@@ -34,7 +34,7 @@ func TestCLIError_Error_AllFields(t *testing.T) {
 	if !strings.Contains(got, "Fix: run nself install widget") {
 		t.Errorf("Error() = %q: missing Fix", got)
 	}
-	if !strings.Contains(got, "Docs: https://docs.nself.org/reference/error-codes#e001") {
+	if !strings.Contains(got, "Docs: https://nself.org/docs/reference/error-codes#e001") {
 		t.Errorf("Error() = %q: missing Docs", got)
 	}
 }

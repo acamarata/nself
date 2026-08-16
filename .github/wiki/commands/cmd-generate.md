@@ -118,7 +118,7 @@ Use generated types with the ɳSelf SDK packages:
 | Kotlin | `io.nself:client` | `import io.nself.generated.*` |
 | Python | `nself-client` | `from generated.python.models import User` |
 
-See [SDK reference](https://docs.nself.org/sdks/) for full usage.
+See [SDK reference](https://nself.org/docs/sdks/) for full usage.
 
 ## Notes
 

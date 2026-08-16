@@ -12,7 +12,7 @@ nself help-topics [topic]
 
 `nself help-topics` provides quick access to built-in guides covering common nSelf workflows. Running the command without a topic argument prints the full topic index. Pass a topic name to display the article for that topic.
 
-This command is a local reference that works without a network connection. For the full documentation site, visit [docs.nself.org](https://docs.nself.org).
+This command is a local reference that works without a network connection. For the full documentation site, visit [nself.org/docs](https://nself.org/docs).
 
 ## Available Topics
 

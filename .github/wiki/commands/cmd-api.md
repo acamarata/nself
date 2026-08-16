@@ -78,7 +78,7 @@ nself api deprecation-check [--json]
 ```
 
 Cross-references the central deprecation registry at `.claude/docs/api-deprecations.md`
-(mirrored publicly at `docs.nself.org/api/deprecations/`).
+(mirrored publicly at `nself.org/docs/api/deprecations/`).
 
 At v1.0.9 baseline, the registry is empty. This command exits 0 with "0 deprecations
 found" at baseline.
@@ -87,7 +87,7 @@ When future deprecations are added, this command will report:
 
 ```
 [ping_api] /license/old-endpoint (deprecated since v1.1.0, EOL 2028-06-01)
-  Migration: https://docs.nself.org/api/deprecations/ping-api-license-old-endpoint
+  Migration: https://nself.org/docs/api/deprecations/ping-api-license-old-endpoint
 ```
 
 ### Flags
@@ -126,7 +126,7 @@ backward-compatible through 2027-04-17. Breaking changes during this window requ
 2. A maintainer (not PR author) approval label
 3. An entry in the deprecation registry with at least 6 months notice
 
-See [API Deprecations](https://docs.nself.org/api/deprecations/) and
+See [API Deprecations](https://nself.org/docs/api/deprecations/) and
 `.claude/docs/operations/breaking-change-policy.md` for details.
 
 ---

@@ -268,7 +268,7 @@ func runStart(cmd *cobra.Command, _ []string) error {
 				projectDir = cwd
 			} else {
 				ui.Error(fmt.Sprintf("v0.9 project detected. Found %d legacy artifact(s): %s", count, strings.Join(names, ", ")))
-				fmt.Fprintln(os.Stderr, "Run `nself migrate` first. See https://docs.nself.org/migrate/from-v0.9")
+				fmt.Fprintln(os.Stderr, "Run `nself migrate` first. See https://nself.org/docs/migrate/from-v0.9")
 				startErr = fmt.Errorf("v0.9 project detected — run `nself migrate` first")
 				return startErr
 			}
@@ -285,7 +285,7 @@ func runStart(cmd *cobra.Command, _ []string) error {
 			ui.Warn(fmt.Sprintf("WARNING: v0.9 project detected (%d artifact(s): %s). Proceeding due to --allow-legacy (not recommended).", count, strings.Join(names, ", ")))
 		} else {
 			ui.Error(fmt.Sprintf("v0.9 project detected. Found %d legacy artifact(s): %s", count, strings.Join(names, ", ")))
-			fmt.Fprintln(os.Stderr, "Run `nself migrate` first. See https://docs.nself.org/migrate/from-v0.9")
+			fmt.Fprintln(os.Stderr, "Run `nself migrate` first. See https://nself.org/docs/migrate/from-v0.9")
 			startErr = fmt.Errorf("v0.9 project detected — run `nself migrate` first")
 			return startErr
 		}

@@ -185,6 +185,6 @@ and full restore orchestration.
 
 - [[cmd-backup]], full and metadata backups
 - [[cmd-restore]], restore from a pg_dump backup
-- [Point-in-Time Recovery Guide](https://docs.nself.org/guides/point-in-time-recovery)
+- [Point-in-Time Recovery Guide](https://nself.org/docs/guides/point-in-time-recovery)
 
 [[Home]]

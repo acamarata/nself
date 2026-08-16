@@ -18,7 +18,7 @@
     <owners>nself-org</owners>
     <projectUrl>https://nself.org</projectUrl>
     <projectSourceUrl>https://github.com/nself-org/cli</projectSourceUrl>
-    <docsUrl>https://docs.nself.org</docsUrl>
+    <docsUrl>https://nself.org/docs</docsUrl>
     <bugTrackerUrl>https://github.com/nself-org/cli/issues</bugTrackerUrl>
     <licenseUrl>https://github.com/nself-org/cli/blob/main/LICENSE</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>

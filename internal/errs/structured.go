@@ -39,7 +39,7 @@ func (e *CLIError) Error() string {
 		b.WriteString(fmt.Sprintf("\n  Fix: %s", e.Fix))
 	}
 	if e.DocsPath != "" {
-		b.WriteString(fmt.Sprintf("\n  Docs: https://docs.nself.org/%s", e.DocsPath))
+		b.WriteString(fmt.Sprintf("\n  Docs: https://nself.org/docs/%s", e.DocsPath))
 	}
 	return b.String()
 }

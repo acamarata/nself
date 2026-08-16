@@ -31,7 +31,7 @@ No CLI commands or flags are deprecated at v1.0.9.
 
 **Phase 1, Warning:** Item works. Every invocation prints:
 ```
-[DEPRECATED] 'nself old-cmd' (since v1.0.9) → use 'nself new-cmd'. Docs: https://docs.nself.org/...
+[DEPRECATED] 'nself old-cmd' (since v1.0.9) → use 'nself new-cmd'. Docs: https://nself.org/docs/...
 ```
 
 **Phase 2, Deprecated:** Item still works. Warning includes removal timeline.
@@ -39,7 +39,7 @@ No CLI commands or flags are deprecated at v1.0.9.
 **Phase 3, Removed:** Item gone. Clear error with migration guide link.
 
 Emergency removals (security CVEs only) skip phases. See the full doctrine at
-`docs.nself.org/deprecation-cycle`.
+`nself.org/docs/deprecation-cycle`.
 
 ## Adding a Deprecation
 
@@ -56,7 +56,7 @@ items:
     type: command
     since: "v1.1.0"
     replacement: "nself new-cmd"
-    docs_url: "https://docs.nself.org/migrate/v1-1-0"
+    docs_url: "https://nself.org/docs/migrate/v1-1-0"
     phase: 1
 ```
 

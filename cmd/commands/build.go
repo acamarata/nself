@@ -126,7 +126,7 @@ func runBuild(cmd *cobra.Command, args []string) error {
 					workdir = cwd
 				} else {
 					ui.Error(fmt.Sprintf("v0.9 project detected. Found %d legacy artifact(s): %s", count, strings.Join(names, ", ")))
-					fmt.Fprintln(os.Stderr, "Run `nself migrate` first. See https://docs.nself.org/migrate/from-v0.9")
+					fmt.Fprintln(os.Stderr, "Run `nself migrate` first. See https://nself.org/docs/migrate/from-v0.9")
 					return fmt.Errorf("v0.9 project detected — run `nself migrate` first")
 				}
 			}
@@ -152,7 +152,7 @@ func runBuild(cmd *cobra.Command, args []string) error {
 				}
 			} else {
 				ui.Error(fmt.Sprintf("v0.9 project detected. Found %d legacy artifact(s): %s", count, strings.Join(names, ", ")))
-				fmt.Fprintln(os.Stderr, "Run `nself migrate` first. See https://docs.nself.org/migrate/from-v0.9")
+				fmt.Fprintln(os.Stderr, "Run `nself migrate` first. See https://nself.org/docs/migrate/from-v0.9")
 				return fmt.Errorf("v0.9 project detected — run `nself migrate` first")
 			}
 		} else if count == 1 && !quiet {

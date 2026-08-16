@@ -33,7 +33,7 @@ items:
     type: env
     since: "v1.0.9"
     replacement: "nTV bundle — run: nself plugin install nTV"
-    docs_url: "https://docs.nself.org/migrate/v1-0-8-to-v1-0-9"
+    docs_url: "https://nself.org/docs/migrate/v1-0-8-to-v1-0-9"
     phase: 1
 
 # =============================================================================

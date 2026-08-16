@@ -200,7 +200,7 @@ function Install-Nself {
     Write-Host "  cd my-project"
     Write-Host "  nself start"
     Write-Host ""
-    Write-Host "Documentation: https://docs.nself.org" -ForegroundColor DarkGray
+    Write-Host "Documentation: https://nself.org/docs" -ForegroundColor DarkGray
 }
 
 Install-Nself

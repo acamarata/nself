@@ -76,5 +76,5 @@ nself dlq replay mux --filter status=quarantined --max-rows 50
 
 ### See Also
 
-- [Observability](https://docs.nself.org/operations/observability), DLQ metrics (S41-T02)
-- [mux plugin](https://docs.nself.org/plugins/mux), mux DLQ schema
+- [Observability](https://nself.org/docs/operations/observability), DLQ metrics (S41-T02)
+- [mux plugin](https://nself.org/docs/plugins/mux), mux DLQ schema

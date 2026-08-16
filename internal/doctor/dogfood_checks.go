@@ -67,7 +67,7 @@ var dogfoodSubapps = []string{
 // dogfoodSubappURLs maps subapps to their production URLs for header probing.
 var dogfoodSubappURLs = map[string]string{
 	"org":     "https://nself.org",
-	"docs":    "https://docs.nself.org",
+	"docs":    "https://nself.org/docs",
 	"nchat":   "https://chat.nself.org",
 	"nclaw":   "https://claw.nself.org",
 	"ntask":   "https://task.nself.org",
