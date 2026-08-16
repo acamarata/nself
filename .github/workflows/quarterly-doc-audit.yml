@@ -9,7 +9,15 @@ on:
       apply_autofix:
         description: "Apply safe auto-fixes and open a PR"
         required: false
-        default: "true"
+        # Opt-in, NOT the default. The autofix rewrites prose via the released
+        # `nself audit docs --fix`, which deleted banned adjectives at word level and
+        # produced broken English/Markdown in public wikis (nself-org/plugins#34 and
+        # #36, both closed unmerged, 48 files each). Root cause fixed in
+        # nself-org/cli#216, but this workflow downloads the latest RELEASE, so the old
+        # behaviour ships until a CLI release includes that fix. Scheduled runs pass no
+        # inputs, so the condition below is `== 'true'` (strict opt-in) rather than
+        # `!= 'false'`, which would have let the quarterly cron rewrite docs unattended.
+        default: 'false'
 
 permissions:
   contents: write
@@ -106,7 +114,7 @@ jobs:
 
       - name: Apply auto-fixes (banned words only)
         id: fix
-        if: ${{ github.event.inputs.apply_autofix != 'false' }}
+        if: ${{ github.event.inputs.apply_autofix == 'true' }}
         run: |
           set +e
           nself audit docs \
@@ -117,7 +125,7 @@ jobs:
           echo "ran=true" >> "$GITHUB_OUTPUT"
 
       - name: Open auto-fix PR
-        if: ${{ github.event.inputs.apply_autofix != 'false' }}
+        if: ${{ github.event.inputs.apply_autofix == 'true' }}
         uses: peter-evans/create-pull-request@v8
         with:
           commit-message: "docs(audit): quarterly sweep ${{ steps.quarter.outputs.label }}"
