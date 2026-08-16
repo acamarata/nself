@@ -113,7 +113,6 @@ jobs:
           delete-branch: true
           add-paths: |
             **/*.md
-            .claude/qa/findings/*.json
 
       - name: Upload JSON report
         uses: actions/upload-artifact@v7
