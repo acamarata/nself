@@ -494,7 +494,7 @@ jobs:
           echo "path=release-body.md" >> "$GITHUB_OUTPUT"
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           body_path: ${{ steps.body.outputs.path }}
