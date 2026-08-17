@@ -218,16 +218,28 @@ func (r *EmbeddedPGRuntime) boot(ctx context.Context) error {
 	if mainFn == nil {
 		return fmt.Errorf("embedded/runtime: pglite WASM missing __main_argc_argv export")
 	}
+	// Report an early pglite exit over a channel, NOT by taking r.mu.
+	//
+	// boot() runs with r.mu already held by Start(). If this goroutine took r.mu
+	// on its error path it would block forever against its own caller, the error
+	// would never be recorded, and boot() would sit in waitForSocket until the
+	// context deadline — turning a pglite crash that is knowable in seconds into
+	// a full-timeout failure with no diagnostic. That deadlock is exactly what
+	// wedged the Embedded PG Integration job: every test failed at its bound
+	// (2100s / 90s / 90s) and the panic dump showed goroutine 26 in waitForSocket
+	// while the goroutine spawned here sat in sync.Mutex.Lock.
+	//
+	// Buffered so this send never blocks even if nobody is listening (e.g. the
+	// socket came up fine and pglite exited later).
+	exitCh := make(chan error, 1)
 	go func() {
 		if _, err := mainFn.Func().Call(store, int32(0), int32(0)); err != nil {
 			// __main_argc_argv never returns under normal operation; an error here
 			// means the Postgres process exited unexpectedly.
-			r.mu.Lock()
-			if !r.stopped {
-				r.err = fmt.Errorf("embedded/runtime: pglite exited unexpectedly: %w", err)
-			}
-			r.mu.Unlock()
+			exitCh <- fmt.Errorf("embedded/runtime: pglite exited unexpectedly: %w", err)
+			return
 		}
+		exitCh <- fmt.Errorf("embedded/runtime: pglite main returned unexpectedly without error")
 	}()
 
 	// Wait for the socket to become available.
@@ -238,7 +250,7 @@ func (r *EmbeddedPGRuntime) boot(ctx context.Context) error {
 	waitCtx, cancel := context.WithDeadline(ctx, deadline)
 	defer cancel()
 
-	return r.waitForSocket(waitCtx)
+	return r.waitForSocket(waitCtx, exitCh)
 }
 
 // loadOrCompileModule tries to deserialize a pre-compiled module from the
@@ -283,13 +295,21 @@ func (r *EmbeddedPGRuntime) loadOrCompileModule() (*wasmtime.Module, error) {
 	return mod, nil
 }
 
-// waitForSocket polls the Unix domain socket until it accepts a connection or
-// ctx expires.
-func (r *EmbeddedPGRuntime) waitForSocket(ctx context.Context) error {
+// waitForSocket polls the Unix domain socket until it accepts a connection,
+// ctx expires, or pglite exits early.
+//
+// exitCh carries an early pglite exit. Selecting on it is what makes a failed
+// boot fail FAST with the real cause ("pglite exited unexpectedly: ...") instead
+// of polling a socket that will never appear and reporting a bare timeout when
+// the deadline expires. Pass a nil channel to disable that path.
+func (r *EmbeddedPGRuntime) waitForSocket(ctx context.Context, exitCh <-chan error) error {
 	for {
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("embedded/runtime: timed out waiting for pglite socket at %s: %w", r.sockPath, ctx.Err())
+		case err := <-exitCh:
+			// pglite died before the socket appeared — no point polling further.
+			return err
 		default:
 		}
 
@@ -304,6 +324,8 @@ func (r *EmbeddedPGRuntime) waitForSocket(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("embedded/runtime: timed out waiting for pglite socket: %w", ctx.Err())
+		case err := <-exitCh:
+			return err
 		case <-time.After(healthCheckInterval):
 		}
 	}

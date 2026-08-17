@@ -58,7 +58,24 @@ func TestEmbeddedPGBootCycle(t *testing.T) {
 	// 2-core CI runners. The compiled module is then cached on disk (and by the
 	// workflow's cache step), so only the first run pays this. Liveness bound,
 	// not a perf assertion.
-	ctx, cancel := context.WithTimeout(context.Background(), 900*time.Second)
+	//
+	// The bound must sit UNDER the `go test -timeout` in
+	// .github/workflows/embedded-pg-matrix.yml (2400s), which in turn sits under
+	// the job's timeout-minutes (45), but comfortably ABOVE a cold
+	// compile. It was 900s, which is only 15 of those 45 minutes: on any cache
+	// miss the compile outran the bound and the test died at exactly 900.00s
+	// while the job still had 30 minutes of budget left. 2100s (35 min) keeps
+	// 10 minutes of headroom for the runner to report the failure cleanly.
+	// Override with NSELF_EMBEDDED_BOOT_TIMEOUT for a faster local loop.
+	bootTimeout := 2100 * time.Second
+	if v := os.Getenv("NSELF_EMBEDDED_BOOT_TIMEOUT"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			bootTimeout = d
+		} else {
+			t.Fatalf("NSELF_EMBEDDED_BOOT_TIMEOUT=%q is not a valid duration: %v", v, err)
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), bootTimeout)
 	defer cancel()
 
 	rt, err := NewEmbeddedPGRuntime(runtimeDir, wasmPath)
