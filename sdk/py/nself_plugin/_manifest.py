@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
@@ -15,7 +14,7 @@ import yaml
 class ManifestValidationError(ValueError):
     """Raised when the plugin.yaml manifest is missing required fields or malformed."""
 
-    def __init__(self, message: str, field_name: Optional[str] = None) -> None:
+    def __init__(self, message: str, field_name: str | None = None) -> None:
         self.field_name = field_name
         super().__init__(f"plugin manifest: {message}")
 

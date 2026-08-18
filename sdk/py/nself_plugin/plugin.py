@@ -5,8 +5,9 @@ Mirrors plugin.Plugin interface and plugin.Info struct in plugin-sdk-go.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Awaitable, Callable, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ._runner import PluginContext
@@ -80,11 +81,11 @@ class Plugin:
             bundle=bundle,
         )
 
-        self._install: Optional[HookFn] = None
-        self._start: Optional[HookFn] = None
-        self._health: Optional[HealthFn] = None
-        self._migrate: Optional[HookFn] = None
-        self._uninstall: Optional[HookFn] = None
+        self._install: HookFn | None = None
+        self._start: HookFn | None = None
+        self._health: HealthFn | None = None
+        self._migrate: HookFn | None = None
+        self._uninstall: HookFn | None = None
 
     # Decorator-based hook registration
     def install(self, fn: HookFn) -> HookFn:
