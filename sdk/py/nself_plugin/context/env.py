@@ -5,7 +5,6 @@ Env var helpers — mirrors config.Env / config.EnvRequired in plugin-sdk-go.
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 
 class EnvHelper:
@@ -14,7 +13,7 @@ class EnvHelper:
     Mirrors config.Env, config.EnvRequired, etc. in plugin-sdk-go.
     """
 
-    def get(self, key: str, default: Optional[str] = None) -> Optional[str]:
+    def get(self, key: str, default: str | None = None) -> str | None:
         """Return the env var value or default."""
         v = os.environ.get(key)
         if v is not None and v != "":

@@ -2,11 +2,11 @@
 
 import pytest
 
-from nself_plugin import Plugin, PluginContext, HealthStatus
-from nself_plugin.context.env import EnvHelper
-from nself_plugin.context.nginx import NginxHelper
+from nself_plugin import HealthStatus, Plugin, PluginContext
 from nself_plugin.context.db import DatabaseHelperStub
+from nself_plugin.context.env import EnvHelper
 from nself_plugin.context.http import HttpHelper
+from nself_plugin.context.nginx import NginxHelper
 
 
 def make_ctx(port: int = 3850) -> PluginContext:

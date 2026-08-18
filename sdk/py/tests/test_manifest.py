@@ -2,7 +2,7 @@
 
 import pytest
 
-from nself_plugin import parse_manifest_string, ManifestValidationError
+from nself_plugin import ManifestValidationError, parse_manifest_string
 
 VALID_YAML = """
 name: test-plugin

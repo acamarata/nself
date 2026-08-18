@@ -7,7 +7,8 @@ Mirrors server.New() in plugin-sdk-go: auto-mounts /healthz, /readyz,
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Optional, cast
+from collections.abc import Callable
+from typing import Any, cast
 
 import httpx
 from fastapi import FastAPI
@@ -23,13 +24,13 @@ class HttpHelper:
         plugin_name: str,
         plugin_version: str,
         port: int,
-        health_check: Optional[Callable[[], Any]] = None,
+        health_check: Callable[[], Any] | None = None,
     ) -> None:
         self._plugin_name = plugin_name
         self._plugin_version = plugin_version
         self._port = port
         self._health_check = health_check
-        self._app: Optional[FastAPI] = None
+        self._app: FastAPI | None = None
         self._logger = logging.getLogger(f"nself.{plugin_name}.http")
 
     def create_app(self) -> FastAPI:
@@ -97,5 +98,7 @@ class HttpHelper:
                 status="degraded",
                 message=f"GET {path} returned HTTP {res.status_code}",
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — any failure to reach our own
+            # endpoint means the plugin is unavailable; the specific exception
+            # type is reported to the caller rather than acted on.
             return HealthStatus(status="unavailable", message=str(exc))
