@@ -56,20 +56,29 @@ jobs:
             exit "$STATUS"
           fi
 
-          # Count distinct OSV vulnerability IDs that resolve to actual call-graph hits.
-          FINDINGS=$(jq -r '
+          # Distinct OSV vulnerability IDs that resolve to actual call-graph hits.
+          jq -r '
             select(.finding != null)
             | .finding
             | select(.trace != null and (.trace | length) > 0)
             | .osv
-          ' govuln.json 2>/dev/null | sort -u | wc -l | tr -d ' ')
+          ' govuln.json 2>/dev/null | sort -u > "${RUNNER_TEMP}/all-osv.txt"
+
+          # Accepted advisories: same source of truth as govuln.yml.
+          sed 's/#.*//' .github/govulncheck-allow.txt \
+            | grep -oE 'GO-[0-9]{4}-[0-9]+' | sort -u > "${RUNNER_TEMP}/allow-osv.txt"
+
+          comm -23 "${RUNNER_TEMP}/all-osv.txt" "${RUNNER_TEMP}/allow-osv.txt" \
+            > "${RUNNER_TEMP}/unexpected-osv.txt"
+          FINDINGS=$(grep -c . "${RUNNER_TEMP}/unexpected-osv.txt" || true)
+          TOTAL=$(grep -c . "${RUNNER_TEMP}/all-osv.txt" || true)
 
           echo "findings=$FINDINGS" >> "$GITHUB_OUTPUT"
-          echo "::notice::govulncheck call-graph findings: $FINDINGS"
+          echo "::notice::govulncheck call-graph findings: ${TOTAL} total, ${FINDINGS} unexpected"
 
           if [ "$FINDINGS" -gt 0 ]; then
-            echo "::error::Reachable Go vulnerabilities present — failing build"
-            jq -r 'select(.finding != null and (.finding.trace | length) > 0) | "- \(.finding.osv)"' govuln.json | sort -u
+            echo "::error::Reachable Go vulnerabilities not in .github/govulncheck-allow.txt — failing build"
+            sed 's/^/- /' "${RUNNER_TEMP}/unexpected-osv.txt"
             exit 1
           fi
 

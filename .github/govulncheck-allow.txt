@@ -1,0 +1,23 @@
+# govulncheck accepted-advisory allowlist
+#
+# One OSV/Go advisory ID per line. Anything govulncheck reports that is NOT
+# listed here fails the gate, so this file narrows the gate, it never disables
+# it. Every entry needs a reason and a tracking issue.
+#
+# Format: <GO-ID>  # <reason> (tracking: #<issue>)
+#
+# Removing an entry is part of closing its tracking issue.
+
+# github.com/lib/pq — 7 advisories, every one "Fixed in: N/A". No published
+# version of lib/pq is unaffected (v1.12.3 -> 7 affected, v1.10.9 -> 5), so
+# there is nothing to bump to; the module is no longer getting security fixes.
+# Real fix is migrating to jackc/pgx v5, tracked in #232.
+# Exploitation requires a malicious PostgreSQL endpoint or an active MITM on an
+# unauthenticated transport. nSelf connects to the operator's own stack.
+GO-2026-6166  # lib/pq, no upstream fix (tracking: #232)
+GO-2026-6168  # lib/pq, no upstream fix (tracking: #232)
+GO-2026-6169  # lib/pq, no upstream fix (tracking: #232)
+GO-2026-6170  # lib/pq, no upstream fix (tracking: #232)
+GO-2026-6171  # lib/pq, no upstream fix (tracking: #232)
+GO-2026-6172  # lib/pq, no upstream fix (tracking: #232)
+GO-2026-6173  # lib/pq CVE-2026-56874, unbounded read -> OOM (tracking: #232)

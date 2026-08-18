@@ -31,4 +31,31 @@ jobs:
       - name: Run govulncheck
         env:
           GOFLAGS: -mod=vendor
-        run: govulncheck ./...
+        run: |
+          set -uo pipefail
+          # Capture the report; a non-zero exit just means "found something",
+          # which the allowlist below decides about.
+          govulncheck ./... > "${RUNNER_TEMP}/govuln-report.txt" 2>&1 || true
+          cat "${RUNNER_TEMP}/govuln-report.txt"
+
+          found=$(grep -oE 'GO-[0-9]{4}-[0-9]+' "${RUNNER_TEMP}/govuln-report.txt" | sort -u)
+          allow=$(sed 's/#.*//' .github/govulncheck-allow.txt \
+                  | grep -oE 'GO-[0-9]{4}-[0-9]+' | sort -u)
+
+          # Anything reported that is not explicitly accepted fails the gate.
+          unexpected=$(comm -23 <(printf '%s\n' "$found") <(printf '%s\n' "$allow"))
+          if [ -n "${unexpected}" ]; then
+            printf '::error::govulncheck found advisories not in .github/govulncheck-allow.txt:\n'
+            printf '::error::%s\n' ${unexpected}
+            exit 1
+          fi
+
+          # Accepted entries that no longer fire should be pruned so the
+          # allowlist cannot rot into a blanket suppression.
+          stale=$(comm -13 <(printf '%s\n' "$found") <(printf '%s\n' "$allow"))
+          if [ -n "${stale}" ]; then
+            printf '::warning::allowlist entries no longer reported (remove them): %s\n' ${stale}
+          fi
+
+          printf 'govulncheck gate passed: %s accepted advisory/ies, 0 unexpected\n' \
+            "$(printf '%s\n' "$found" | grep -c . || true)"
