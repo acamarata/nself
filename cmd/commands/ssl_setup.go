@@ -147,12 +147,11 @@ func runSSLSetup(cmd *cobra.Command, args []string) error {
 		certArgs = append(certArgs, "--staging")
 	}
 
-	// Certificate path.
-	certArgs = append(certArgs,
-		"--cert-path", fmt.Sprintf("/etc/nginx/ssl/%s/fullchain.pem", domain),
-		"--key-path", fmt.Sprintf("/etc/nginx/ssl/%s/privkey.pem", domain),
-	)
-
+	// No --cert-path/--key-path: certbot ignores them for `certonly` and always
+	// writes to /etc/letsencrypt/live/<domain>/. They previously pointed at
+	// /etc/nginx/ssl/<dotted-domain>/, which is a CONTAINER path being handed to
+	// a certbot process running on the HOST, so it neither placed nor found
+	// anything. The certificate is installed explicitly below instead.
 	ui.Info(fmt.Sprintf("Running: certbot %s", strings.Join(certArgs, " ")))
 
 	certCmd := exec.Command("certbot", certArgs...)
@@ -162,12 +161,15 @@ func runSSLSetup(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("certbot failed: %w", err)
 	}
 
-	// Set cert file permissions.
-	for _, f := range []string{"fullchain.pem", "privkey.pem"} {
-		path := fmt.Sprintf("/etc/nginx/ssl/%s/%s", domain, f)
-		if chErr := os.Chmod(path, 0600); chErr != nil {
-			ui.Warn(fmt.Sprintf("Could not set permissions on %s: %v", path, chErr))
-		}
+	// Install into the tree compose mounts at /etc/nginx/ssl, using the same
+	// certificates/<domain-safe> layout internal/ssl and `ssl add` use.
+	// For a wildcard request the lineage is still named after the bare domain.
+	certDir := filepath.Join(workdir, "ssl", "certificates", domainToFilesafe(domain))
+	if err := os.MkdirAll(certDir, 0750); err != nil {
+		return fmt.Errorf("creating cert directory: %w", err)
+	}
+	if err := installIssuedCert(domain, certDir); err != nil {
+		return fmt.Errorf("installing certificate for %s: %w", domain, err)
 	}
 
 	// Reload nginx.
@@ -225,12 +227,26 @@ func runSSLAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create the cert output directory so certbot can write into it.
-	certDir := filepath.Join(workdir, "ssl", domain)
+	//
+	// This must match the layout the nginx container actually sees. Compose
+	// mounts "./ssl:/etc/nginx/ssl:ro" and internal/ssl writes certificates to
+	// ssl/certificates/<dir>, where <dir> is the domain with dots replaced by
+	// dashes. Writing to ssl/<dotted-domain> instead produced a cert on disk
+	// that the generated server block could never reference, so `ssl add`
+	// reported success while nginx kept serving the self-signed wildcard.
+	domainSafe := domainToFilesafe(domain)
+	certDir := filepath.Join(workdir, "ssl", "certificates", domainSafe)
 	if err := os.MkdirAll(certDir, 0750); err != nil {
 		return fmt.Errorf("creating cert directory: %w", err)
 	}
 
 	// Use HTTP-01 challenge for single domain adds (simpler, no DNS provider needed).
+	//
+	// --cert-path/--key-path are deliberately NOT passed: certbot ignores them
+	// for `certonly` (they apply to `install`), which is why earlier versions
+	// appeared to place the certificate where nginx expected it while certbot
+	// actually wrote to /etc/letsencrypt/live/<domain>/ and nothing ever bridged
+	// the two. We copy explicitly below instead.
 	certArgs := []string{
 		"certonly",
 		"--non-interactive",
@@ -239,8 +255,6 @@ func runSSLAdd(cmd *cobra.Command, args []string) error {
 		"--webroot",
 		"--webroot-path", "/var/www/certbot",
 		"-d", domain,
-		"--cert-path", filepath.Join(certDir, "fullchain.pem"),
-		"--key-path", filepath.Join(certDir, "privkey.pem"),
 	}
 
 	ui.Info(fmt.Sprintf("Provisioning certificate for %s...", domain))
@@ -249,6 +263,14 @@ func runSSLAdd(cmd *cobra.Command, args []string) error {
 	certCmd.Stderr = os.Stderr
 	if err := certCmd.Run(); err != nil {
 		return fmt.Errorf("certbot failed: %w", err)
+	}
+
+	// Install the issued certificate into the tree nginx actually reads.
+	// Without this the cert exists only under /etc/letsencrypt and nginx keeps
+	// serving the self-signed wildcard, which is a silent no-op from the
+	// operator's point of view.
+	if err := installIssuedCert(domain, certDir); err != nil {
+		return fmt.Errorf("installing certificate for %s: %w", domain, err)
 	}
 
 	// Write the nginx server block for this custom domain.
@@ -271,8 +293,8 @@ func runSSLAdd(cmd *cobra.Command, args []string) error {
 		ui.Warn(fmt.Sprintf("Nginx reload failed: %v", err))
 	}
 
-	domainSafe := domainToFilesafe(domain)
-	ui.Info(fmt.Sprintf("Custom domain conf written to nginx/conf.d/custom-%s.conf", domainSafe))
+	ui.Info(fmt.Sprintf("Custom domain conf written to %s",
+		filepath.Join(workdir, "nginx", "conf.d", fmt.Sprintf("custom-%s.conf", domainSafe))))
 	ui.Success(fmt.Sprintf("Certificate provisioned for %s.", domain))
 	return nil
 }
@@ -284,10 +306,47 @@ func domainToFilesafe(domain string) string {
 	return r.Replace(domain)
 }
 
+// letsEncryptLiveDir is where certbot stores issued certificates. Declared as a
+// variable so tests can point it at a temp dir.
+var letsEncryptLiveDir = "/etc/letsencrypt/live"
+
+// installIssuedCert copies the certificate certbot just issued for domain into
+// certDir, which is the directory the generated nginx server block references.
+//
+// certbot `certonly` always writes to /etc/letsencrypt/live/<domain>/ and
+// ignores --cert-path/--key-path, so without this step the certificate is
+// issued but invisible to nginx. Files are written 0600 because privkey.pem is
+// a private key; the containing directory is created by the caller.
+//
+// Copies rather than symlinks: /etc/letsencrypt/live entries are themselves
+// symlinks into ../archive, and a bind-mounted symlink chain does not resolve
+// inside the nginx container.
+func installIssuedCert(domain, certDir string) error {
+	liveDir := filepath.Join(letsEncryptLiveDir, domain)
+
+	for _, name := range []string{"fullchain.pem", "privkey.pem"} {
+		src := filepath.Join(liveDir, name)
+		data, err := os.ReadFile(src) //nolint:gosec // path derived from the validated domain
+		if err != nil {
+			return fmt.Errorf("reading %s (did certbot succeed?): %w", src, err)
+		}
+		dst := filepath.Join(certDir, name)
+		if err := os.WriteFile(dst, data, 0600); err != nil {
+			return fmt.Errorf("writing %s: %w", dst, err)
+		}
+	}
+	return nil
+}
+
 // writeCustomDomainConf generates an nginx server block for domain and writes
 // it to nginx/conf.d/custom-{domain-safe}.conf inside workdir.
 // When upstream is non-empty the server block proxy_passes to it; otherwise it
 // returns a 200 informational response until --upstream is configured.
+//
+// server_name keeps the real dotted domain, but ssl_certificate must point at
+// ssl/certificates/{domain-safe} — the layout internal/ssl writes and that
+// compose mounts at /etc/nginx/ssl. Using the dotted domain here produced a
+// path nginx could not resolve even once the conf was in place.
 func writeCustomDomainConf(workdir, domain, upstream string) error {
 	confDir := filepath.Join(workdir, "nginx", "conf.d")
 	if err := os.MkdirAll(confDir, 0750); err != nil {
@@ -328,8 +387,8 @@ server {
     http2 on;
     server_name %s;
 
-    ssl_certificate     /etc/nginx/ssl/%s/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/%s/privkey.pem;
+    ssl_certificate     /etc/nginx/ssl/certificates/%s/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/certificates/%s/privkey.pem;
 
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
@@ -338,7 +397,7 @@ server {
 
 %s
 }
-`, domain, domain, domain, domain, locationBlock)
+`, domain, domain, domainSafe, domainSafe, locationBlock)
 
 	if err := os.WriteFile(confPath, []byte(conf), 0644); err != nil {
 		return fmt.Errorf("writing %s: %w", confPath, err)
@@ -346,15 +405,39 @@ server {
 	return nil
 }
 
-// sslRenewalServiceContent is the systemd service unit for certbot renewal.
-const sslRenewalServiceContent = `[Unit]
+// sslRenewalServiceUnit builds the systemd service unit for certbot renewal,
+// rooted at workdir.
+//
+// Two things this has to get right, both of which were previously wrong:
+//
+//   - WorkingDirectory. The reload runs `docker compose exec`, which can only
+//     find the project's compose file from the project root. Without it the
+//     post-hook silently failed and nginx kept the old certificate loaded.
+//
+//   - deploy-hook. `certbot renew` refreshes /etc/letsencrypt/live/<domain>/
+//     but nothing copied the result into ssl/certificates/<domain-safe>/, so a
+//     renewed certificate never reached nginx and the served cert would simply
+//     expire ~90 days after issue. The hook mirrors installIssuedCert: it runs
+//     only for lineages that actually renewed, derives the same dash-safe
+//     directory name, and installs both files 0600.
+func sslRenewalServiceUnit(workdir string) string {
+	deployHook := fmt.Sprintf(
+		`safe=$(basename "$RENEWED_LINEAGE" | tr '.:' '--'); `+
+			`dest=%s/ssl/certificates/$safe; `+
+			`mkdir -p "$dest" && `+
+			`install -m 600 "$RENEWED_LINEAGE/fullchain.pem" "$RENEWED_LINEAGE/privkey.pem" "$dest/"`,
+		workdir)
+
+	return fmt.Sprintf(`[Unit]
 Description=nself SSL certificate renewal
 After=network.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/certbot renew --quiet --post-hook "docker compose exec nginx nginx -s reload"
-`
+WorkingDirectory=%s
+ExecStart=/usr/bin/certbot renew --quiet --deploy-hook "%s" --post-hook "docker compose exec nginx nginx -s reload"
+`, workdir, deployHook)
+}
 
 // sslRenewalTimerContent is the systemd timer unit that triggers renewal twice daily.
 const sslRenewalTimerContent = `[Unit]
@@ -372,19 +455,19 @@ WantedBy=timers.target
 // installSSLRenewalCron installs automatic Let's Encrypt certificate renewal.
 // On Linux with systemd, creates and enables a systemd timer unit.
 // Returns an error with crontab fallback instructions if installation fails.
-func installSSLRenewalCron(_ string) error {
+func installSSLRenewalCron(workdir string) error {
 	if _, err := exec.LookPath("systemctl"); err != nil {
 		return fmt.Errorf("systemd not available — add to crontab: 30 3 * * * certbot renew --quiet")
 	}
-	return installSSLRenewalSystemd()
+	return installSSLRenewalSystemd(workdir)
 }
 
 // installSSLRenewalSystemd writes and enables the nself-ssl-renew systemd timer.
-func installSSLRenewalSystemd() error {
+func installSSLRenewalSystemd(workdir string) error {
 	const unitDir = "/etc/systemd/system"
 
 	servicePath := filepath.Join(unitDir, "nself-ssl-renew.service")
-	if err := os.WriteFile(servicePath, []byte(sslRenewalServiceContent), 0644); err != nil {
+	if err := os.WriteFile(servicePath, []byte(sslRenewalServiceUnit(workdir)), 0644); err != nil {
 		return fmt.Errorf("writing service unit: %w", err)
 	}
 
