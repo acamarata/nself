@@ -99,9 +99,16 @@ jobs:
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
           VERSION=$(node -p "require('./sdk/ts-sdk/package.json').version")
+          # --latest=false is load-bearing. The SDK publishes into nself-org/cli,
+          # so without it GitHub hands the "Latest" slot to this release simply
+          # because it is newest. install.nself.org resolves releases/latest and
+          # would then download nself-<ver>-linux-amd64.tar.gz from an SDK
+          # release that ships no CLI binaries — a hard 404 for every new user.
+          # That is exactly what happened with v1.2.7 on 2026-08-18.
           gh release create "$TAG" \
             --title "@nself/sdk v${VERSION}" \
             --notes "Published @nself/sdk v${VERSION} to npm." \
             --draft=false \
             --prerelease=false \
+            --latest=false \
             || true

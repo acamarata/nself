@@ -56,11 +56,33 @@ get_latest_version() {
     return
   fi
 
+  # Take the newest release that actually ships a CLI tarball, not simply
+  # releases/latest.
+  #
+  # The @nself/sdk package publishes its own releases into this same repo, on
+  # the same tag. When one of those is newest it takes the "Latest" slot even
+  # though it carries no CLI binaries, and releases/latest then points at a tag
+  # whose nself-<ver>-<os>-<arch> assets do not exist — every install 404s.
+  # That broke installs on 2026-08-18 with v1.2.7. The SDK workflow now passes
+  # --latest=false, and this check means a future mistake degrades to picking
+  # the previous good release instead of failing outright.
   local latest
-  latest=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null \
-    | grep '"tag_name"' \
-    | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/' \
-    | sed 's/^v//')
+  latest=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=20" 2>/dev/null \
+    | tr ',{' '\n\n' \
+    | grep -E '"(tag_name|name)": *"' \
+    | sed -E 's/.*: *"([^"]*)".*/\1/' \
+    | grep -E '^(v?[0-9]+\.[0-9]+\.[0-9]+|nself-[0-9].*\.tar\.gz)$' \
+    | awk '/^nself-.*linux-amd64\.tar\.gz$/ {if (tag != "") {print tag; exit}} /^v?[0-9]+\.[0-9]+\.[0-9]+$/ {tag=$0}' \
+    | sed 's/^v//' | head -1)
+
+  # Fall back to releases/latest if the asset scan found nothing (e.g. the API
+  # shape changed); better to try than to hard-fail here.
+  if [ -z "$latest" ]; then
+    latest=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null \
+      | grep '"tag_name"' \
+      | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/' \
+      | sed 's/^v//')
+  fi
 
   if [ -z "$latest" ]; then
     error "Could not determine latest version. Set NSELF_VERSION=x.y.z or check https://github.com/${REPO}/releases"
