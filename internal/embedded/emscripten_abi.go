@@ -546,20 +546,34 @@ func defineEmscriptenABI(linker *wasmtime.Linker, store *wasmtime.Store) error {
 //
 //	GOT.mem::__heap_base — mutable i32; address of the start of the free heap.
 //
-// Mutability: GOT.mem globals MUST be mutable so the dynamic linker can write
-// the final relocated address. Initial value 0 is correct; the runtime writes
-// the real address during module initialisation.
+// Mutability: GOT.mem globals MUST be mutable, matching the import's declared
+// type. wasmtime rejects instantiation on a mutability mismatch.
+//
+// Value: heapBase MUST be the first address past the module's static data.
+//
+// The previous comment here claimed "initial value 0 is correct; the runtime
+// writes the real address during module initialisation". That is true under
+// Emscripten's JS loader, which ships a dynamic linker. It is false here:
+// wasmtime has no dynamic linker, so whatever the host defines is what the
+// module keeps forever. Leaving __heap_base at 0 places the heap on top of the
+// static data segment at address 0, and allocator arithmetic derived from it
+// walks straight out of linear memory.
+//
+// The correct value comes from the module's own dylink.0 section
+// (WASM_DYLINK_MEM_INFO.memorysize, rounded up to memoryalignment) — see
+// dylink.go. For pglite v0.2.17 that is 2172900 bytes aligned to 4096 = 0x213000.
+// Deriving it per-module means a pglite upgrade cannot silently invalidate it.
 //
 // Must be called after DefineWasi() and defineEmscriptenABI(), before Instantiate().
-func defineGOTNamespaces(linker *wasmtime.Linker, store *wasmtime.Store) error {
+func defineGOTNamespaces(linker *wasmtime.Linker, store *wasmtime.Store, heapBase uint32) error {
 	// All GOT.mem globals are mutable i32.
 	i32Mut := wasmtime.NewGlobalType(wasmtime.NewValType(wasmtime.KindI32), true)
 
-	gotMemGlobals := []string{
-		"__heap_base",
+	gotMemGlobals := map[string]uint32{
+		"__heap_base": heapBase,
 	}
-	for _, name := range gotMemGlobals {
-		g, err := wasmtime.NewGlobal(store, i32Mut, wasmtime.ValI32(0))
+	for name, val := range gotMemGlobals {
+		g, err := wasmtime.NewGlobal(store, i32Mut, wasmtime.ValI32(int32(val))) //nolint:gosec // heapBase < 2^31 for any real module
 		if err != nil {
 			return fmt.Errorf("embedded/abi: GOT.mem::%s create: %w", name, err)
 		}
