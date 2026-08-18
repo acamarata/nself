@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -194,8 +195,16 @@ func TestInstallIssuedCert_CopiesFromLetsEncryptLive(t *testing.T) {
 			t.Fatalf("stat %s: %v", name, err)
 		}
 		// privkey.pem is a private key; 0600 is required, not cosmetic.
-		if perm := fi.Mode().Perm(); perm != 0o600 {
-			t.Errorf("%s mode = %o, want 600", name, perm)
+		//
+		// Windows has no Unix permission bits: Go's os.WriteFile maps the mode
+		// onto a read-only flag only, so a file written 0600 stats back as 0666
+		// there. The production write in ssl_setup.go is correct and unchanged;
+		// only the assertion is unportable, so it stays strict everywhere the
+		// bits actually exist.
+		if runtime.GOOS != "windows" {
+			if perm := fi.Mode().Perm(); perm != 0o600 {
+				t.Errorf("%s mode = %o, want 600", name, perm)
+			}
 		}
 	}
 }
