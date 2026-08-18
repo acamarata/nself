@@ -17,6 +17,7 @@ package embedded
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -64,6 +65,11 @@ type EmbeddedPGRuntime struct {
 	started bool
 	stopped bool
 	err     error // sticky error from a failed Start
+
+	// heapBaseCached memoises the dylink-derived heap base so a restart does not
+	// re-read and re-parse the 8 MB module. 0 means "not resolved yet" and is
+	// also the correct value for a module with no dylink.0 section.
+	heapBaseCached uint32
 }
 
 // NewEmbeddedPGRuntime constructs an EmbeddedPGRuntime. runtimeDir is the
@@ -87,6 +93,38 @@ func NewEmbeddedPGRuntime(runtimeDir, wasmPath string) (*EmbeddedPGRuntime, erro
 		wasmPath:   wasmPath,
 		sockPath:   filepath.Join(runtimeDir, "pglite.sock"),
 	}, nil
+}
+
+// resolveHeapBase returns the address the module's heap must start at, read
+// from its own dylink.0 section and memoised for subsequent boots.
+//
+// A SIDE_MODULE declares how much static memory it occupies; the heap begins
+// immediately after that, aligned as the module asks. Getting this wrong does
+// not fail loudly — the module instantiates fine and then traps once the
+// allocator touches an address derived from a bogus base.
+//
+// A module with no dylink.0 section is not a SIDE_MODULE and needs no host-side
+// placement, so 0 is returned and the global stays where the module put it.
+func (r *EmbeddedPGRuntime) resolveHeapBase() (uint32, error) {
+	if r.heapBaseCached != 0 {
+		return r.heapBaseCached, nil
+	}
+
+	raw, err := os.ReadFile(r.wasmPath)
+	if err != nil {
+		return 0, fmt.Errorf("read %s: %w", r.wasmPath, err)
+	}
+
+	info, err := parseDylinkMemInfo(raw)
+	if errors.Is(err, errNoDylink) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+
+	r.heapBaseCached = info.HeapBase()
+	return r.heapBaseCached, nil
 }
 
 // SockPath returns the AF_UNIX socket path where the embedded PG is reachable.
@@ -178,11 +216,18 @@ func (r *EmbeddedPGRuntime) boot(ctx context.Context) error {
 		return fmt.Errorf("embedded/runtime: Emscripten ABI: %w", err)
 	}
 
-	// pglite v0.2.17 also imports GOT.mem namespace globals used by
-	// Emscripten's dynamic-linking GOT relocation. These are mutable i32
-	// globals whose values are written by the dynamic linker at startup.
-	// Confirmed imports (via WebAssembly.Module.imports): GOT.mem::__heap_base.
-	if err := defineGOTNamespaces(linker, store); err != nil {
+	// pglite v0.2.17 also imports GOT.mem namespace globals used by Emscripten's
+	// dynamic-linking GOT relocation: GOT.mem::__heap_base.
+	//
+	// Under Emscripten's JS loader a dynamic linker writes these before any
+	// module code runs. wasmtime has no dynamic linker, so the host must supply
+	// the final value or the module keeps whatever it was given — see
+	// defineGOTNamespaces and dylink.go.
+	heapBase, hbErr := r.resolveHeapBase()
+	if hbErr != nil {
+		return fmt.Errorf("embedded/runtime: resolve heap base: %w", hbErr)
+	}
+	if err := defineGOTNamespaces(linker, store, heapBase); err != nil {
 		return fmt.Errorf("embedded/runtime: GOT namespaces: %w", err)
 	}
 
