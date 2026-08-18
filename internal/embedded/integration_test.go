@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 // shortTempDir creates a temp dir under /tmp to keep AF_UNIX paths short
@@ -112,7 +112,7 @@ func TestEmbeddedPGBootCycle(t *testing.T) {
 
 	// Verify basic query via the UDS socket.
 	dsn := fmt.Sprintf("host=%s dbname=nself sslmode=disable", runtimeDir)
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
 	}
@@ -153,9 +153,9 @@ func TestSocketBridgeProxy(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = bridge.Close() })
 
-	// The bridge directory acts as the "host" in lib/pq DSN.
+	// The bridge directory acts as the "host" in the libpq-style DSN.
 	bridgeDSN := fmt.Sprintf("host=%s dbname=nself sslmode=disable", runtimeDir)
-	db, err := sql.Open("postgres", bridgeDSN)
+	db, err := sql.Open("pgx", bridgeDSN)
 	if err != nil {
 		t.Fatalf("sql.Open bridge: %v", err)
 	}
@@ -172,7 +172,7 @@ func TestSocketBridgeProxy(t *testing.T) {
 }
 
 // TestMigrationRunnerEmbedded verifies that DDL statements execute against the
-// embedded runtime via the database/sql + lib/pq wire path.
+// embedded runtime via the database/sql + pgx wire path.
 func TestMigrationRunnerEmbedded(t *testing.T) {
 	wasmPath := requireWasmPath(t)
 	runtimeDir := shortIntegTempDir(t)
@@ -190,7 +190,7 @@ func TestMigrationRunnerEmbedded(t *testing.T) {
 	t.Cleanup(func() { _ = rt.Stop() })
 
 	dsn := fmt.Sprintf("host=%s dbname=nself sslmode=disable", runtimeDir)
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
 	}

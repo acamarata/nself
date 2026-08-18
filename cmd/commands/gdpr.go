@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/nself-org/cli/internal/gdpr"
 	"github.com/nself-org/cli/internal/ui"
 	"github.com/spf13/cobra"
@@ -368,7 +368,7 @@ func openDB() (*sql.DB, error) {
 	if dsn == "" {
 		return nil, fmt.Errorf("DATABASE_URL is not set; run `nself env` to verify your environment")
 	}
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("gdpr: open database: %w", err)
 	}

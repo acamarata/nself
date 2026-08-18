@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	// pq registers the "postgres" driver used by the embedded-PG SQL path.
-	_ "github.com/lib/pq"
+	// pgx stdlib registers the "pgx" driver used by the embedded-PG SQL path.
+	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/errs"
@@ -45,7 +45,7 @@ type MigrationStatus struct {
 // Unix-domain socket. Returns the first column of the first row as a
 // newline-joined string (mirrors the `-tAc` psql output format).
 func querySQLEmbedded(ctx context.Context, dsn string, query string) (string, error) {
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return "", fmt.Errorf("embedded sql.Open: %w", err)
 	}
@@ -74,7 +74,7 @@ func querySQLEmbedded(ctx context.Context, dsn string, query string) (string, er
 // pipeSQLEmbedded executes raw SQL text against the embedded pglite instance
 // via its Unix-domain socket. Mirrors pipeSQLToContainer for the embedded path.
 func pipeSQLEmbedded(ctx context.Context, dsn string, sqlText string) error {
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return fmt.Errorf("embedded sql.Open: %w", err)
 	}
