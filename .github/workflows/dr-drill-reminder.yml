@@ -26,8 +26,30 @@ jobs:
     name: Create DR Drill Reminder Issue
     runs-on: ubuntu-latest
     steps:
+      # cron ORs day-of-month with day-of-week when both are restricted, so
+      # '0 9 1-7 1,4,7,10 1' fires on the 1st-7th AND on every Monday of those
+      # months, not on the first Monday. The header comment claimed this was
+      # "filtered in the job", but no filter was ever implemented, which produced
+      # ten duplicate issues for 2026-Q3 alone. Filter here for real.
+      - name: Skip unless today is the first Monday of the quarter month
+        id: gate
+        run: |
+          DOM=$(date -u +%-d)
+          DOW=$(date -u +%u)   # 1 = Monday
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "manual dispatch — bypassing the first-Monday gate"
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          elif [ "$DOW" -eq 1 ] && [ "$DOM" -le 7 ]; then
+            echo "first Monday (dom=${DOM}) — proceeding"
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "not the first Monday (dom=${DOM} dow=${DOW}) — no reminder today"
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Determine quarter and drill type
         id: quarter
+        if: steps.gate.outputs.proceed == 'true'
         run: |
           MONTH=$(date +%-m)
           YEAR=$(date +%Y)
@@ -41,6 +63,7 @@ jobs:
           echo "year=${YEAR}" >> $GITHUB_OUTPUT
 
       - name: Create reminder issue
+        if: steps.gate.outputs.proceed == 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         with:
           script: |
@@ -49,11 +72,28 @@ jobs:
               drill: '${{ steps.quarter.outputs.drill }}',
               year: '${{ steps.quarter.outputs.year }}'
             };
-            
+
+            const title = `DR Drill ${year}-${quarter}: ${drill}`;
+
+            // Second line of defence: even if the schedule fires more than once,
+            // never open a duplicate while a reminder for this quarter is open.
+            const existing = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'dr-drill',
+              per_page: 100,
+            });
+            const dupe = existing.find(i => i.title === title);
+            if (dupe) {
+              core.notice(`Reminder already open as #${dupe.number} — not creating a duplicate.`);
+              return;
+            }
+
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `DR Drill ${year}-${quarter}: ${drill}`,
+              title,
               body: [
                 '## Quarterly DR Drill Reminder',
                 '',
