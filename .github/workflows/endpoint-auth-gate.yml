@@ -32,7 +32,7 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.22'
+          go-version-file: go.mod
           cache: true
 
       - name: Run unit tests

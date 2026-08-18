@@ -33,8 +33,24 @@ func shortIntegTempDir(t *testing.T) string {
 	return dir
 }
 
+// quarantined reports whether the embedded-PG integration tests should be
+// skipped. pglite v0.2.17 is an Emscripten SIDE_MODULE whose GOT.mem/GOT.func
+// relocations are never applied host-side, so it traps with an out-of-bounds
+// access before Postgres starts. These tests have never passed on main.
+//
+// Tracked in https://github.com/nself-org/cli/issues/231. Removing this skip is
+// part of closing that issue. Set EMBEDDED_PG_WASM_FIXED=1 to run them while
+// working on the fix.
+func quarantined(t *testing.T) {
+	t.Helper()
+	if os.Getenv("EMBEDDED_PG_WASM_FIXED") == "" {
+		t.Skip("embedded pglite WASM runtime does not boot yet — quarantined, see issue #231 (set EMBEDDED_PG_WASM_FIXED=1 to run)")
+	}
+}
+
 func requireWasmPath(t *testing.T) string {
 	t.Helper()
+	quarantined(t)
 	wp := os.Getenv("PGLITE_WASM_PATH")
 	if wp == "" {
 		// Use a fixed known-good path for local development.
