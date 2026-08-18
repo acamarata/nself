@@ -18,10 +18,18 @@ on:
 #     CI size to 10.1 MB gzip on darwin/arm64. The 10% regression gate below still
 #     catches runaway growth per-PR. The hard limit floor is raised to 11 MB to
 #     reflect current reality; tracking issue for size reduction is P103 R1.)
+#     (Raised again to 12 MB in #236: migrating off github.com/lib/pq to
+#     github.com/jackc/pgx/v5 removed 7 advisories that had no upstream fix in
+#     any published lib/pq version. Measured cost on darwin/arm64:
+#     uncompressed 29.90 -> 32.97 MB, gzip 10.54 -> 11.21 MB. The compressed
+#     hard cap moves 11 -> 12 to fit that, keeping ~0.8 MB of headroom rather
+#     than sitting flush against the limit. The uncompressed cap is untouched
+#     at 35 MB, and the 10% per-PR regression gate still catches runaway
+#     growth. Size reduction remains tracked under P103 R1.)
 #   Regression threshold:      10% growth without size-grow-approved label
 env:
   BINARY_SIZE_LIMIT_MB: "35"
-  COMPRESSED_SIZE_LIMIT_MB: "11"
+  COMPRESSED_SIZE_LIMIT_MB: "12"
   REGRESSION_THRESHOLD_PCT: "10"
 
 concurrency:
