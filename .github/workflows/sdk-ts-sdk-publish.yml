@@ -58,6 +58,16 @@ jobs:
             echo "proceed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          # npm rejects re-publishing an existing version with E403, which turns
+          # any re-run of a partially-failed release into a permanent red check
+          # even though the package is already on the registry. Publishing is
+          # idempotent from our side, so treat "already there" as done.
+          VERSION=$(node -p "require('./sdk/ts-sdk/package.json').version")
+          if npm view "@nself/sdk@${VERSION}" version >/dev/null 2>&1; then
+            echo "@nself/sdk@${VERSION} is already published — nothing to do. No-op success."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           echo "proceed=true" >> "$GITHUB_OUTPUT"
 
       - name: Install dependencies
