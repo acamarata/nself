@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"regexp"
 
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 // DefaultExtensions are always installed regardless of POSTGRES_EXTENSIONS config.
@@ -20,7 +20,7 @@ var extensionNameRE = regexp.MustCompile(`^[a-z][a-z0-9_\-]{0,63}$`)
 // plus any extras provided. Called from nself start Phase 2 (DB init).
 // Safe to call multiple times — IF NOT EXISTS is idempotent.
 func InstallExtensions(ctx context.Context, dsn string, extras []string) error {
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return fmt.Errorf("open: %w", err)
 	}

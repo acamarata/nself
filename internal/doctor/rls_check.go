@@ -64,7 +64,7 @@ func CheckRLSEnforcement(ctx context.Context, strict bool) []CheckResult {
 		}}
 	}
 
-	db, err := sql.Open("postgres", dbURL)
+	db, err := sql.Open("pgx", dbURL)
 	if err != nil {
 		return []CheckResult{{
 			Section: "security",

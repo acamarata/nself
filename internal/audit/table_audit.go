@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/lib/pq" // postgres driver (pure Go, CGO_ENABLED=0 compatible)
+	_ "github.com/jackc/pgx/v5/stdlib" // postgres driver (pure Go, CGO_ENABLED=0 compatible)
 	"gopkg.in/yaml.v3"
 )
 
@@ -90,7 +90,7 @@ func RunTableAuditWithConfig(ctx context.Context, cfg AuditConfig) (*AuditReport
 		return nil, fmt.Errorf("NSELF_DB_URL not set; cannot run table audit")
 	}
 
-	db, err := sql.Open("postgres", dbURL)
+	db, err := sql.Open("pgx", dbURL)
 	if err != nil {
 		return nil, fmt.Errorf("open DB: %w", err)
 	}

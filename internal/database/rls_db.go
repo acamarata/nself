@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/nself-org/cli/internal/config"
 )
@@ -17,7 +17,7 @@ func Open(ctx context.Context, cfg *config.Config) (*sql.DB, error) {
 	if url == "" {
 		return nil, fmt.Errorf("database URL is empty — check POSTGRES_* env vars in your .env")
 	}
-	db, err := sql.Open("postgres", url)
+	db, err := sql.Open("pgx", url)
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}

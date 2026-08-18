@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 // requireBenchWasmPath returns the pglite WASM path for benchmarks; skips
@@ -104,7 +104,7 @@ func BenchmarkEmbeddedPGSelectThroughput(b *testing.B) {
 	b.Cleanup(func() { _ = rt.Stop() })
 
 	dsn := fmt.Sprintf("host=%s dbname=nself sslmode=disable", runtimeDir)
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		b.Fatalf("sql.Open: %v", err)
 	}

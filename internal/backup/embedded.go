@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	// pq registers the "postgres" driver for UDS connections to embedded pglite.
-	_ "github.com/lib/pq"
+	// pgx stdlib registers the "pgx" driver for UDS connections to embedded pglite.
+	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/nself-org/cli/internal/config"
 )
@@ -36,7 +36,7 @@ func embeddedRuntimeDir() string {
 	return filepath.Join(wd, ".nself", "embedded-pg")
 }
 
-// embeddedDSN returns the lib/pq UDS connection string for the embedded pglite
+// embeddedDSN returns the UDS connection string for the embedded pglite
 // instance. `host` is the directory that contains the UNIX socket file.
 func embeddedDSN(cfg *config.Config) string {
 	db := cfg.Postgres.DB
@@ -66,7 +66,7 @@ func embeddedBackupDir(cfg *config.Config) (string, error) {
 // BackupEmbedded creates a backup of the embedded pglite database. It first
 // attempts to use pg_dump (pointing at the UDS socket) to produce a
 // pg_dump-custom-format artifact compatible with pg_restore. If pg_dump is not
-// available on PATH, it falls back to a wire-protocol SQL dump via lib/pq.
+// available on PATH, it falls back to a wire-protocol SQL dump via pgx.
 //
 // The artifact is written atomically (to a temp file then renamed) to prevent
 // partial backup files from being visible to concurrent readers.
@@ -144,7 +144,7 @@ func backupEmbeddedPGDump(ctx context.Context, cfg *config.Config, pgdumpPath, b
 // provides a human-readable, restorable SQL file.
 func backupEmbeddedSQL(ctx context.Context, cfg *config.Config, backupDir, ts string) (*EmbeddedBackupResult, error) {
 	dsn := embeddedDSN(cfg)
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("embedded sql.Open: %w", err)
 	}
