@@ -57,7 +57,7 @@ func ReadComposeManifest(workdir string) ([]string, error) {
 	f, err := os.Open(manifestPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return []string{"docker-compose.yml"}, nil
+			return withUserOverride(workdir, []string{"docker-compose.yml"}), nil
 		}
 		return nil, fmt.Errorf("opening compose manifest: %w", err)
 	}
@@ -82,10 +82,40 @@ func ReadComposeManifest(workdir string) ([]string, error) {
 
 	// If the manifest was empty or all entries were stale, fall back to base.
 	if len(paths) == 0 {
-		return []string{"docker-compose.yml"}, nil
+		return withUserOverride(workdir, []string{"docker-compose.yml"}), nil
 	}
 
-	return paths, nil
+	return withUserOverride(workdir, paths), nil
+}
+
+// userComposeOverrideFile is the hand-written file Docker Compose merges
+// automatically when it is invoked with no -f at all.
+const userComposeOverrideFile = "docker-compose.override.yml"
+
+// withUserOverride appends the user's docker-compose.override.yml when it sits
+// next to the generated compose file.
+//
+// `docker compose` only auto-merges the override when invoked with NO -f flag.
+// The CLI always passes -f (it has to: plugin fragments are separate files), so
+// the override was silently inert on every project — the container came up with
+// none of it applied and nothing said so. Reported by the ntask clean-fork
+// self-host drill, 2026-08-24, where the override was the only place the
+// functions service got its entrypoint, a writable rootfs and its SMTP/MinIO
+// environment.
+//
+// It is appended LAST on purpose: Compose lets later -f files win, and a
+// hand-written override must beat both the generated base and any plugin
+// fragment, which is the whole reason it exists.
+func withUserOverride(workdir string, paths []string) []string {
+	for _, p := range paths {
+		if filepath.Base(p) == userComposeOverrideFile {
+			return paths // already listed; do not add it twice
+		}
+	}
+	if _, err := os.Stat(filepath.Join(workdir, userComposeOverrideFile)); err != nil {
+		return paths
+	}
+	return append(paths, userComposeOverrideFile)
 }
 
 // pluginManifestMinimal holds the fields we need from plugin.json during build.

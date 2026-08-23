@@ -2236,7 +2236,6 @@
     "hidden": false,
     "group_id": "extend",
     "flags": [
-      "--no-mdns",
       "--port",
       "--transport"
     ]

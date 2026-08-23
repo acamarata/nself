@@ -40,7 +40,7 @@ func TestCommandInventoryIsCurrent(t *testing.T) {
 		t.Fatalf("regenerate inventory: %v", err)
 	}
 
-	if string(committed) != string(live) {
+	if normalizeEOL(string(committed)) != normalizeEOL(string(live)) {
 		t.Fatalf("command inventory is stale — run `make cmd-inventory` and commit the result.\n"+
 			"committed %d bytes, regenerated %d bytes", len(committed), len(live))
 	}
@@ -70,13 +70,13 @@ func TestPublishedCommandCountMatchesBinary(t *testing.T) {
 	}
 
 	want := "**Total top-level commands: " + strconv.Itoa(len(entries)) + "**"
-	if !strings.Contains(string(wiki), want) {
+	if !strings.Contains(normalizeEOL(string(wiki)), want) {
 		t.Fatalf(".github/wiki/Commands.md does not state %q — run `make cmd-inventory`", want)
 	}
 
 	// Every inventory entry must have a row in the index.
 	for _, e := range entries {
-		if !strings.Contains(string(wiki), "`"+e.Path+"`") {
+		if !strings.Contains(normalizeEOL(string(wiki)), "`"+e.Path+"`") {
 			t.Errorf("command %q is missing from the generated wiki index", e.Path)
 		}
 	}
@@ -102,7 +102,15 @@ func TestCoreServicesPageIsCurrent(t *testing.T) {
 		t.Fatalf("regenerate catalog: %v", err)
 	}
 
-	if !strings.Contains(string(committed), strings.TrimSpace(string(live))) {
+	if !strings.Contains(normalizeEOL(string(committed)), normalizeEOL(strings.TrimSpace(string(live)))) {
 		t.Fatal("core-services page is stale — run `make core-services` and commit the result")
 	}
 }
+
+// normalizeEOL strips carriage returns before comparing generated output.
+//
+// The repo is LF-only (.gitattributes enforces it) and Go tooling emits LF on
+// every platform, but a checkout configured otherwise would turn every one of
+// these drift tests into a false failure that says "stale" when nothing is
+// stale. Comparing without \r keeps the tests reporting real drift only.
+func normalizeEOL(s string) string { return strings.ReplaceAll(s, "\r\n", "\n") }

@@ -588,7 +588,7 @@ func TestRegistryMarshalJSON_PreservesFetchedAtAndUpdatedAt(t *testing.T) {
 // TestRegistryFetchedAt_NoCache verifies RegistryFetchedAt returns "" rather
 // than erroring when no registry cache file exists yet.
 func TestRegistryFetchedAt_NoCache(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setTestHome(t, t.TempDir())
 	if got := RegistryFetchedAt(); got != "" {
 		t.Errorf("RegistryFetchedAt() = %q, want empty with no cache file", got)
 	}
@@ -599,7 +599,7 @@ func TestRegistryFetchedAt_NoCache(t *testing.T) {
 // writeCache, without making a network call.
 func TestRegistryFetchedAt_ReadsCache(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	setTestHome(t, home)
 
 	cacheDir := filepath.Join(home, ".nself", "cache", "plugins")
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
@@ -613,4 +613,16 @@ func TestRegistryFetchedAt_ReadsCache(t *testing.T) {
 	if got := RegistryFetchedAt(); got != "2026-08-23T22:00:19.502Z" {
 		t.Errorf("RegistryFetchedAt() = %q, want the cached fetchedAt", got)
 	}
+}
+
+// setTestHome points os.UserHomeDir at dir on every platform.
+//
+// os.UserHomeDir reads $HOME on Unix but %USERPROFILE% on Windows, so a test
+// that sets only HOME silently exercises the developer's real home directory
+// on Windows — which is how these tests passed locally and failed on the
+// windows-2022 runner.
+func setTestHome(t *testing.T, dir string) {
+	t.Helper()
+	t.Setenv("HOME", dir)
+	t.Setenv("USERPROFILE", dir)
 }
