@@ -56,13 +56,19 @@ func TestInitCmd_Registered(t *testing.T) {
 // TestInitCmd_FlagName verifies that the --name flag is accepted by the init
 // command without a parse error.
 func TestInitCmd_FlagName(t *testing.T) {
+	// Run in a scratch directory: these execute a real `nself init`, which
+	// generates a project where it stands. Without this they wrote .env,
+	// .nself/, nginx/ and friends straight into cmd/commands/ and rewrote the
+	// tracked .env.example fixture.
+	t.Chdir(t.TempDir())
+
 	root := newInitCmd()
 	var buf bytes.Buffer
 	root.SetOut(&buf)
 	root.SetErr(&buf)
 
-	// The command will fail because there is no nself project in the temp dir,
-	// but the flag must be recognised (not an "unknown flag" error).
+	// The flag must be recognised (not an "unknown flag" error); whether the
+	// command then succeeds is not what this test is about.
 	root.SetArgs([]string{"init", "--name", "myproject", "--non-interactive"})
 	err := root.Execute()
 
@@ -73,6 +79,12 @@ func TestInitCmd_FlagName(t *testing.T) {
 
 // TestInitCmd_FlagDomain verifies that the --domain flag is accepted.
 func TestInitCmd_FlagDomain(t *testing.T) {
+	// Run in a scratch directory: these execute a real `nself init`, which
+	// generates a project where it stands. Without this they wrote .env,
+	// .nself/, nginx/ and friends straight into cmd/commands/ and rewrote the
+	// tracked .env.example fixture.
+	t.Chdir(t.TempDir())
+
 	root := newInitCmd()
 	var buf bytes.Buffer
 	root.SetOut(&buf)
@@ -89,6 +101,12 @@ func TestInitCmd_FlagDomain(t *testing.T) {
 // TestInitCmd_FlagNonInteractive verifies that the --non-interactive flag is
 // accepted.
 func TestInitCmd_FlagNonInteractive(t *testing.T) {
+	// Run in a scratch directory: these execute a real `nself init`, which
+	// generates a project where it stands. Without this they wrote .env,
+	// .nself/, nginx/ and friends straight into cmd/commands/ and rewrote the
+	// tracked .env.example fixture.
+	t.Chdir(t.TempDir())
+
 	root := newInitCmd()
 	var buf bytes.Buffer
 	root.SetOut(&buf)
@@ -105,6 +123,12 @@ func TestInitCmd_FlagNonInteractive(t *testing.T) {
 // TestInitCmd_UnknownFlagRejected verifies that an unrecognised flag is
 // rejected with a cobra error rather than silently ignored.
 func TestInitCmd_UnknownFlagRejected(t *testing.T) {
+	// Run in a scratch directory: these execute a real `nself init`, which
+	// generates a project where it stands. Without this they wrote .env,
+	// .nself/, nginx/ and friends straight into cmd/commands/ and rewrote the
+	// tracked .env.example fixture.
+	t.Chdir(t.TempDir())
+
 	root := newInitCmd()
 	var buf bytes.Buffer
 	root.SetOut(&buf)
@@ -120,6 +144,12 @@ func TestInitCmd_UnknownFlagRejected(t *testing.T) {
 
 // TestInitCmd_FlagFast verifies that the --fast flag is accepted.
 func TestInitCmd_FlagFast(t *testing.T) {
+	// Run in a scratch directory: these execute a real `nself init`, which
+	// generates a project where it stands. Without this they wrote .env,
+	// .nself/, nginx/ and friends straight into cmd/commands/ and rewrote the
+	// tracked .env.example fixture.
+	t.Chdir(t.TempDir())
+
 	root := newInitCmd()
 	var buf bytes.Buffer
 	root.SetOut(&buf)
