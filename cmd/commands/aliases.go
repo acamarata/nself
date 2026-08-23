@@ -4,8 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/spf13/cobra"
 )
 
 // normalizeInvokedBinary rewrites os.Args when the binary is invoked through
@@ -34,28 +32,15 @@ func normalizeInvokedBinary() {
 	os.Args = rewritten
 }
 
-func init() {
-	// TRAP-09: guard against duplicate registration if up/down are ever
-	// added as first-class commands in the future.
-	for _, c := range RootCmd.Commands() {
-		if c.Name() == "up" || c.Name() == "down" {
-			return
-		}
-	}
-
-	upCmd := &cobra.Command{
-		Use:    "up",
-		Short:  "Alias for: nself start",
-		Hidden: true,
-		RunE:   startCmd.RunE,
-	}
-
-	downCmd := &cobra.Command{
-		Use:    "down",
-		Short:  "Alias for: nself stop",
-		Hidden: true,
-		RunE:   stopCmd.RunE,
-	}
-
-	RootCmd.AddCommand(upCmd, downCmd)
-}
+// NOTE on `up` / `down`:
+//
+// These used to be registered here as hidden sibling commands wrapping
+// startCmd.RunE / stopCmd.RunE. They were dead code: startCmd and stopCmd
+// already declare Aliases{"up"} / Aliases{"down"}, and cobra resolves an alias
+// to the real command before it ever reaches a same-named sibling. Worse, the
+// wrappers copied only RunE, so had they ever been reached, `nself up
+// --allow-legacy` and every other start flag would have failed to parse.
+//
+// The canonical aliases live on startCmd/stopCmd. Their deprecation warnings
+// come from internal/deprecation/registry.yaml, keyed on the spelling the user
+// typed — see invokedCommandPath in root.go.

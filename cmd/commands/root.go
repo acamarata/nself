@@ -55,12 +55,12 @@ The Golden Path:
 }
 
 func init() {
-	// Load deprecation registry at startup (≤5ms; cached in memory).
-	// Resolve path relative to the executable so it works after `make install`.
-	// Missing or malformed registry is logged in debug mode only — never crashes.
+	// Load the deprecation registry at startup (≤5ms; cached in memory).
+	// The registry is compiled into the binary via go:embed, so it travels with
+	// a single-file install. NSELF_DEPRECATION_REGISTRY overrides it with a file
+	// for tests. A malformed registry is logged in debug mode only, never fatal.
 	var regErr error
-	regPath := resolveRegistryPath()
-	deprecationRegistry, regErr = deprecation.LoadRegistry(regPath)
+	deprecationRegistry, regErr = deprecation.LoadEmbeddedRegistry()
 	if regErr != nil && os.Getenv("NSELF_DEBUG") == "1" {
 		fmt.Fprintf(os.Stderr, "debug: deprecation registry: %v\n", regErr)
 	}
@@ -98,8 +98,7 @@ func init() {
 			noWarn, _ := cmd.Flags().GetBool("no-deprecation-warnings")
 			quiet, _ := cmd.Flags().GetBool("quiet")
 			if !noWarn && !quiet {
-				cmdPath := cmd.CommandPath() // e.g. "nself old-cmd"
-				if item, ok := deprecationRegistry.Lookup(cmdPath); ok {
+				if item, ok := deprecationRegistry.Lookup(invokedCommandPath(cmd)); ok {
 					deprecationRegistry.Warn(os.Stderr, item)
 				}
 			}
@@ -170,6 +169,27 @@ func init() {
 		}
 		return nil
 	}
+}
+
+// invokedCommandPath returns the command path as the user actually spelled it,
+// which is what the deprecation registry is keyed on.
+//
+// cmd.CommandPath() alone is wrong for an aliased invocation: `nself up` resolves
+// to startCmd, whose CommandPath is "nself start". Keying on that would either
+// never warn about the old spelling (registry entry "nself up" unreachable) or
+// warn on every correct `nself start` (entry "nself start" always matching).
+// cobra records the spelling that selected the command in CalledAs(), so an
+// alias gets its own registry key while the canonical name stays silent.
+func invokedCommandPath(cmd *cobra.Command) string {
+	called := cmd.CalledAs()
+	if called == "" || called == cmd.Name() {
+		return cmd.CommandPath()
+	}
+	prefix := "nself"
+	if parent := cmd.Parent(); parent != nil {
+		prefix = parent.CommandPath()
+	}
+	return prefix + " " + called
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -318,26 +338,4 @@ func min(a, b int) int {
 		return a
 	}
 	return b
-}
-
-// resolveRegistryPath returns the path to the deprecation registry YAML.
-// It looks next to the executable first (installed binary), then falls back
-// to a development-tree path relative to the working directory.
-func resolveRegistryPath() string {
-	// Option 1: next to the installed binary (production)
-	if exe, err := os.Executable(); err == nil {
-		candidate := filepath.Join(filepath.Dir(exe), "internal", "deprecation", "registry.yaml")
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate
-		}
-	}
-	// Option 2: relative to cwd (development / `make build` in repo root)
-	if cwd, err := os.Getwd(); err == nil {
-		candidate := filepath.Join(cwd, "internal", "deprecation", "registry.yaml")
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate
-		}
-	}
-	// Fallback: let LoadRegistry return a "not found" error gracefully
-	return filepath.Join("internal", "deprecation", "registry.yaml")
 }

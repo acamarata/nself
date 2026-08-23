@@ -1,6 +1,7 @@
 # nSelf CLI + Plugin Deprecation Registry
-# Read at startup by internal/deprecation.LoadRegistry() (CLI items)
-# and internal/deprecation.LoadPluginRegistry() (plugin API items).
+# Compiled into the binary via go:embed (internal/deprecation/embedded.go) and read
+# at startup by LoadEmbeddedRegistry() (CLI items) and LoadPluginRegistry()
+# (plugin API items). Override for previews/tests with NSELF_DEPRECATION_REGISTRY.
 #
 # CLI Schema (items[]):
 #   name:        string   # CLI command/flag name (e.g. "nself old-cmd" or "--old-flag")
@@ -34,6 +35,22 @@ items:
     since: "v1.0.9"
     replacement: "nTV bundle — run: nself plugin install nTV"
     docs_url: "https://nself.org/docs/migrate/v1-0-8-to-v1-0-9"
+    phase: 1
+
+  # Legacy hidden aliases kept for pre-v1 muscle memory (cmd/commands/aliases.go).
+  # They keep working; the warning points at the canonical spelling.
+  - name: "nself up"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself start"
+    docs_url: "https://nself.org/docs/cli/start"
+    phase: 1
+
+  - name: "nself down"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself stop"
+    docs_url: "https://nself.org/docs/cli/stop"
     phase: 1
 
 # =============================================================================

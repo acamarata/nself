@@ -178,7 +178,7 @@ Example:
 		pluginName := args[0]
 		jsonOut, _ := cmd.Flags().GetBool("json")
 
-		reg, err := deprecation.LoadPluginRegistry(resolveRegistryPath())
+		reg, err := deprecation.LoadEmbeddedPluginRegistry()
 		if err != nil {
 			return fmt.Errorf("loading plugin registry: %w", err)
 		}
@@ -379,7 +379,7 @@ func probeLocalHasura(client *http.Client) string {
 // scanDeprecations loads the plugin registry and returns deprecated endpoint entries.
 // pluginFilter scopes results to a single plugin name when non-empty.
 func scanDeprecations(pluginFilter string) []map[string]string {
-	reg, err := deprecation.LoadPluginRegistry(resolveRegistryPath())
+	reg, err := deprecation.LoadEmbeddedPluginRegistry()
 	if err != nil {
 		return nil
 	}
