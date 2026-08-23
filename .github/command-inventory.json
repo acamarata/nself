@@ -2585,10 +2585,11 @@
       {
         "name": "install",
         "path": "nself plugin install",
-        "short": "Install one or more plugins (license check for pro)",
+        "short": "Install one or more plugins (license check for pro); a plugin arg may be a name or an https:// URL",
         "hidden": false,
         "flags": [
           "--allow-eol",
+          "--checksum",
           "--dry-run",
           "--force",
           "--key",
@@ -2596,7 +2597,8 @@
           "--show-graph",
           "--skip-sbom-check",
           "--version",
-          "--with-optional"
+          "--with-optional",
+          "--yes"
         ]
       },
       {
@@ -2665,6 +2667,15 @@
           "--template",
           "--tenancy",
           "--tier"
+        ]
+      },
+      {
+        "name": "outdated",
+        "path": "nself plugin outdated",
+        "short": "List installed plugins with a newer version available",
+        "hidden": false,
+        "flags": [
+          "--json"
         ]
       },
       {

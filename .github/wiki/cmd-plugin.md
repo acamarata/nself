@@ -49,6 +49,26 @@ After a successful `nself plugin install`, the CLI sends a single fire-and-forge
 The event body contains one field: `instanceId`, which is an opaque SHA-256 hash of a machine-local identifier. No hostname, IP address, username, or project name is transmitted. The event is deduplicated per (instance, plugin) per ISO week, so reinstalling the same plugin in the same week does not double-count. If the network is unavailable, the event is silently dropped with no retry.
 
 To opt out, set `NSELF_DISABLE_TELEMETRY=1` in your environment or `.env.local`.
+
+## Official by name, third-party by URL
+
+`nself plugin install <name>` resolves against the official plugins.nself.org registry: license-checked for pro tiers, and its tarball is Ed25519-signature-verified against a registry-pinned author key.
+
+`nself plugin install <https-url>` installs directly from an arbitrary URL instead, for plugins that aren't in the registry. This path:
+
+- Never contacts the official registry — no license check, no EOL/deprecation lifecycle handling, no install telemetry.
+- Is **not** signature-verified. There is no registry-pinned key to check an arbitrary URL's tarball against.
+- Verifies a checksum only when you pass `--checksum <sha256>` yourself (obtained out-of-band, e.g. from the plugin's README or release notes) — the same trust model as `pip install --hash=` or a Homebrew formula. Without `--checksum`, the download's integrity is unverified and the CLI says so.
+- Always prints a warning naming the source host and asks for interactive confirmation before downloading anything, unless you pass `--yes` (for CI/non-interactive use).
+- Requires `https://` (plain `http://` is rejected, except against `localhost`/`127.0.0.1` for local development).
+
+`nself plugin outdated` and `nself plugin list --detailed` skip plugins that came from a third-party URL when comparing against the registry — there's nothing registered to compare them to.
+
+## Freshness
+
+`nself plugin list --detailed` prints an `Updated` column per plugin, sourced from the registry entry's (or local `plugin.json`'s) `updated_at` field when present. As of the current plugins.nself.org registry, no plugin carries a per-plugin `updated_at` — only a registry-wide snapshot timestamp, which `--detailed` prints as a `Registry snapshot: <timestamp>` header line instead of a per-row value. The column is plumbing ready for the day the registry starts sending a per-plugin value; it never fabricates one.
+
+`nself plugin outdated` compares every installed plugin's version against the registry and lists the ones behind, with `--json` for scripting. It exits `0` when everything is current and `1` when at least one plugin is outdated, so it composes in CI.
 <!-- END PROSE:description -->
 
 ## Flags
@@ -72,13 +92,14 @@ To opt out, set `NSELF_DISABLE_TELEMETRY=1` in your environment or `.env.local`.
 | `enable` | Re-enable a previously disabled plugin |
 | `info` | Show detailed plugin information |
 | `init` | Scaffold a new plugin project |
-| `install` | Install one or more plugins (license check for pro) |
+| `install` | Install one or more plugins (license check for pro); a plugin arg may be a name or an https:// URL |
 | `inventory` | List installed plugins with version, tier, and status |
 | `link` | Register a local plugin directory as a shadow override |
 | `list` | List available and installed plugins |
 | `logs` | Tail logs from a plugin container |
 | `marketplace` | Browse the ɳSelf plugin marketplace |
 | `new` | Scaffold a new plugin project (deprecated: use 'init') |
+| `outdated` | List installed plugins with a newer version available |
 | `refresh` | Force refresh the registry cache |
 | `remove` | Remove a plugin |
 | `search` | Search plugins by name, description, or tag |
@@ -137,6 +158,24 @@ nself plugin update
 
 # Check for available updates without installing
 nself plugin updates
+
+# List installed plugins that are behind the registry version (exits 1 if any are)
+nself plugin outdated
+
+# Same, as JSON for scripting
+nself plugin outdated --json
+
+# Show freshness (Updated column + registry snapshot timestamp)
+nself plugin list --detailed
+
+# Install a third-party plugin directly from a URL (prompts for confirmation)
+nself plugin install https://example.com/releases/my-plugin-1.0.0.tar.gz
+
+# Same, verifying against a checksum you obtained from the source yourself
+nself plugin install https://example.com/releases/my-plugin-1.0.0.tar.gz --checksum <sha256>
+
+# Same, non-interactively for CI (still prints the third-party warning)
+nself plugin install https://example.com/releases/my-plugin-1.0.0.tar.gz --yes
 
 # Show installed plugins with version and tier
 nself plugin inventory

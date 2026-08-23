@@ -1078,13 +1078,14 @@ Subcommands:
 - `enable` — Re-enable a previously disabled plugin
 - `info` — Show detailed plugin information
 - `init` — Scaffold a new plugin project
-- `install` — Install one or more plugins (license check for pro)
+- `install` — Install one or more plugins (license check for pro); a plugin arg may be a name or an https:// URL
 - `inventory` — List installed plugins with version, tier, and status
 - `link` — Register a local plugin directory as a shadow override
 - `list` — List available and installed plugins
 - `logs` — Tail logs from a plugin container
 - `marketplace` — Browse the nSelf plugin marketplace
 - `new` — Scaffold a new plugin project (deprecated: use 'init')
+- `outdated` — List installed plugins with a newer version available
 - `refresh` — Force refresh the registry cache
 - `remove` — Remove a plugin
 - `search` — Search plugins by name, description, or tag

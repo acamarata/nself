@@ -45,9 +45,24 @@ var pluginListCmd = &cobra.Command{
 
 var pluginInstallCmd = &cobra.Command{
 	Use:   "install <plugin> [plugin...]",
-	Short: "Install one or more plugins (license check for pro)",
-	Args:  cobra.MinimumNArgs(1),
-	RunE:  runPluginInstall,
+	Short: "Install one or more plugins (license check for pro); a plugin arg may be a name or an https:// URL",
+	Long: `Install one or more plugins.
+
+Official by name, third-party by URL:
+  nself plugin install ai            official registry plugin — license
+                                      checked for pro tiers, Ed25519 signature
+                                      verified against a registry-pinned key.
+  nself plugin install https://...   third-party source — never touches the
+                                      registry, no signature verification.
+                                      Pass --checksum <sha256> to verify the
+                                      download against a value you obtained
+                                      out-of-band (e.g. the plugin's README);
+                                      without it, integrity is unverified.
+                                      Requires interactive confirmation
+                                      naming the source host unless --yes is
+                                      passed (for CI).`,
+	Args: cobra.MinimumNArgs(1),
+	RunE: runPluginInstall,
 }
 
 var pluginRemoveCmd = &cobra.Command{
@@ -134,6 +149,8 @@ func init() {
 	pluginInstallCmd.Flags().Bool("skip-sbom-check", false, "Skip SBOM verification (air-gapped installs only — sets NSELF_SKIP_SBOM_CHECK=1)") // S2.T12
 	pluginInstallCmd.Flags().Bool("dry-run", false, "Show what would be installed without making changes")
 	pluginInstallCmd.Flags().Bool("show-graph", false, "Show dependency graph with topological sort order")
+	pluginInstallCmd.Flags().Bool("yes", false, "Skip the third-party source confirmation prompt (non-interactive/CI use)")
+	pluginInstallCmd.Flags().String("checksum", "", "Expected SHA-256 checksum of the downloaded archive (third-party URL installs only)")
 
 	// Flags on update.
 	pluginUpdateCmd.Flags().Bool("allow-eol", false, "Allow updating to/from an EOL plugin (not recommended)") // S58-T03
@@ -213,6 +230,15 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	// CLI-R16: the registry has no per-plugin freshness field today (only a
+	// registry-wide snapshot timestamp), so surface that instead of inventing
+	// a per-row value. Only meaningful for the registry view, not --installed.
+	if detailed && !installed {
+		if fetchedAt := plugin.RegistryFetchedAt(); fetchedAt != "" {
+			fmt.Printf("Registry snapshot: %s\n\n", fetchedAt)
+		}
+	}
+
 	for _, p := range plugins {
 		// S58-T03: EOL plugins are hidden from listing unless --show-eol is set.
 		if p.PublishStatus == "eol" && !showEOL {
@@ -243,7 +269,14 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 			// "stable" and "" show no badge — clean install signal
 		}
 		if detailed {
-			fmt.Printf("%-20s %-10s %-12s%s%s\n", p.Name, p.Version, p.Category, stateTag, statusBadge)
+			// CLI-R16: show per-plugin UpdatedAt only when the source (registry
+			// entry or local plugin.json) actually provided one. "-" signals
+			// "unknown", never a fabricated date.
+			updated := p.UpdatedAt
+			if updated == "" {
+				updated = "-"
+			}
+			fmt.Printf("%-20s %-10s %-12s %-12s%s%s\n", p.Name, p.Version, p.Category, updated, stateTag, statusBadge)
 		} else {
 			fmt.Printf("%-20s%s%s\n", p.Name, stateTag, statusBadge)
 		}
@@ -261,6 +294,26 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	withOptional, _ := cmd.Flags().GetBool("with-optional")
 	showGraph, _ := cmd.Flags().GetBool("show-graph")
+	yes, _ := cmd.Flags().GetBool("yes")
+	checksum, _ := cmd.Flags().GetString("checksum")
+
+	// CLI-R16: "official by name, third-party by URL" — split the requested
+	// refs up front so registry-only flows (preview/show-graph/dry-run, the
+	// free-account flow, license checks) only ever see official names.
+	var officialNames, thirdPartyURLs []string
+	for _, a := range args {
+		if plugin.IsThirdPartyInstallSource(a) {
+			thirdPartyURLs = append(thirdPartyURLs, a)
+		} else {
+			officialNames = append(officialNames, a)
+		}
+	}
+	if len(thirdPartyURLs) > 0 && (preview || dryRun || showGraph) {
+		return fmt.Errorf("--preview, --dry-run, and --show-graph require registry-resolved dependency data and are not supported for third-party URL installs")
+	}
+	if checksum != "" && len(thirdPartyURLs) != 1 {
+		return fmt.Errorf("--checksum applies to exactly one third-party URL install at a time (got %d); install it separately", len(thirdPartyURLs))
+	}
 
 	// S2.T12: --skip-sbom-check sets the env var read by plugin.installLocked.
 	// Air-gapped installs only — emit a prominent warning when used.
@@ -290,23 +343,27 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 
 	ctx := context.Background()
 	registryURL := os.Getenv("NSELF_PLUGIN_REGISTRY")
-	if err := plugin.ValidateNetworkAccess(ctx, registryURL); err != nil {
-		return err
+	// Third-party-only installs never touch the official registry, so skip
+	// the reachability check when there's nothing official to resolve.
+	if len(officialNames) > 0 {
+		if err := plugin.ValidateNetworkAccess(ctx, registryURL); err != nil {
+			return err
+		}
 	}
 
 	// --preview: resolve and print the dependency tree, then exit without installing.
 	if preview {
-		return runPluginInstallPreview(ctx, args, registryURL, withOptional)
+		return runPluginInstallPreview(ctx, officialNames, registryURL, withOptional)
 	}
 
 	// --show-graph: resolve deps, detect cycles, print topo-sorted DAG, exit without installing.
 	if showGraph {
-		return runPluginInstallShowGraph(ctx, args, registryURL)
+		return runPluginInstallShowGraph(ctx, officialNames, registryURL)
 	}
 
 	// --dry-run: show what would be installed and checkpoint without making changes.
 	if dryRun {
-		return runPluginInstallDryRun(ctx, args, registryURL)
+		return runPluginInstallDryRun(ctx, officialNames, registryURL)
 	}
 
 	cfg, err := loadConfig()
@@ -323,8 +380,8 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 		pingURL = "https://ping.nself.org"
 	}
 	existingKey := os.Getenv("NSELF_PLUGIN_LICENSE_KEY")
-	if existingKey == "" && os.Getenv("NSELF_LICENSE_SKIP_VERIFY") != "1" {
-		if err := maybeRegisterFreeAccount(ctx, pingURL, args); err != nil {
+	if len(officialNames) > 0 && existingKey == "" && os.Getenv("NSELF_LICENSE_SKIP_VERIFY") != "1" {
+		if err := maybeRegisterFreeAccount(ctx, pingURL, officialNames); err != nil {
 			// Non-fatal: free account creation failure never blocks plugin install.
 			fmt.Fprintf(os.Stderr, "note: could not create free account (%v); continuing without one\n", err)
 		}
@@ -336,7 +393,7 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 	// one plugin does not abort the remaining installs.
 	var failures []string
 	installedCount := 0
-	for _, name := range args {
+	for _, name := range officialNames {
 		// S58-T03: EOL gate — check status before attempting install.
 		if eolErr := plugin.CheckEOLBlock(ctx, name, allowEOL); eolErr != nil {
 			fmt.Fprintf(os.Stderr, "  %v\n", eolErr)
@@ -359,6 +416,25 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 		if plugin.IsFreeKey(currentKey) {
 			plugin.SendFreeInstallTelemetry(pingURL, currentKey, name)
 		}
+	}
+
+	// CLI-R16: third-party URL installs — never touch the registry, no
+	// license/EOL/telemetry handling (none of that is meaningful without a
+	// registry entry). Each one requires interactive confirmation naming the
+	// source host first, unless --yes was passed.
+	for _, srcURL := range thirdPartyURLs {
+		if err := confirmThirdPartyInstall(cmd, srcURL, yes); err != nil {
+			fmt.Fprintf(os.Stderr, "  %v\n", err)
+			failures = append(failures, srcURL)
+			continue
+		}
+		fmt.Fprintf(os.Stderr, "Installing plugin from %s...\n", srcURL)
+		if err := plugin.InstallFromURL(ctx, cfg, srcURL, pluginDir, checksum); err != nil {
+			fmt.Fprintf(os.Stderr, "  error installing from %q: %v\n", srcURL, err)
+			failures = append(failures, srcURL)
+			continue
+		}
+		installedCount++
 	}
 
 	// S20: Upsell prompt after 3rd successful free-plugin install.

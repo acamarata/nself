@@ -169,7 +169,7 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 85**
 | `nself oauth` | Manage OAuth provider tokens | account | refresh |
 | `nself ops` | Ops-profile deployment and management | deploy | deploy |
 | `nself pentest-kit` | Penetration-test readiness kit (Business+) | advanced | credentials, generate, remediation, status |
-| `nself plugin` | Manage nSelf plugins | extend | audit-tables, compat-check, debug, dev, disable, enable, info, init, install, inventory, link, list, logs, marketplace, new, refresh, remove, search, start, status, stop, submit, test, unlink, update, updates |
+| `nself plugin` | Manage nSelf plugins | extend | audit-tables, compat-check, debug, dev, disable, enable, info, init, install, inventory, link, list, logs, marketplace, new, outdated, refresh, remove, search, start, status, stop, submit, test, unlink, update, updates |
 | `nself promote` | Promote one environment to another (e.g. staging to prod) | deploy | rollback |
 | `nself queue` | Manage async job queues (pg-boss) | data | cron, jobs, list, purge, retry |
 | `nself region` | Manage multi-region nSelf deployments | deploy | add, list, promote, status |

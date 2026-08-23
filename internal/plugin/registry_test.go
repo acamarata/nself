@@ -2,6 +2,8 @@ package plugin
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -504,5 +506,111 @@ func BenchmarkRegistryParse(b *testing.B) {
 		if err != nil {
 			b.Fatalf("parseRegistryJSON: %v", err)
 		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// CLI-R16 — plugin freshness
+//
+// The live plugins.nself.org registry (inspected 2026-08-23) carries a
+// top-level "fetchedAt" snapshot timestamp but no per-plugin "updated_at"
+// field. These tests lock in: (1) fetchedAt is parsed and preserved through
+// the cache round-trip, (2) a per-plugin updated_at IS plumbed through when a
+// registry entry provides one (forward-compat), and (3) its absence produces
+// an empty string, never a fabricated value.
+// ---------------------------------------------------------------------------
+
+// TestParseRegistryJSON_FetchedAt verifies the registry-wide "fetchedAt"
+// field is captured on Registry, and that its absence yields "".
+func TestParseRegistryJSON_FetchedAt(t *testing.T) {
+	withFetchedAt := `{"version":"1.0.0","fetchedAt":"2026-08-23T22:00:19.502Z","plugins":[{"name":"audit-log","version":"1.0.0"}]}`
+	reg, err := parseRegistryJSON([]byte(withFetchedAt))
+	if err != nil {
+		t.Fatalf("parseRegistryJSON: %v", err)
+	}
+	if reg.FetchedAt != "2026-08-23T22:00:19.502Z" {
+		t.Errorf("FetchedAt = %q, want the live registry's snapshot timestamp", reg.FetchedAt)
+	}
+
+	withoutFetchedAt := `{"version":"1.0.0","plugins":[{"name":"audit-log","version":"1.0.0"}]}`
+	reg2, err := parseRegistryJSON([]byte(withoutFetchedAt))
+	if err != nil {
+		t.Fatalf("parseRegistryJSON: %v", err)
+	}
+	if reg2.FetchedAt != "" {
+		t.Errorf("FetchedAt = %q, want empty when the source registry doesn't send one", reg2.FetchedAt)
+	}
+}
+
+// TestEntryToManifest_UpdatedAtCopied verifies a per-plugin "updated_at" is
+// plumbed through to PluginManifest.UpdatedAt when present, and stays empty
+// (never invented) when absent — matching today's live registry payload.
+func TestEntryToManifest_UpdatedAtCopied(t *testing.T) {
+	withUpdatedAt := entryToManifest(pluginEntry{Name: "audit-log", Version: "1.0.0", UpdatedAt: "2026-08-01T00:00:00Z"})
+	if withUpdatedAt.UpdatedAt != "2026-08-01T00:00:00Z" {
+		t.Errorf("UpdatedAt = %q, want the entry's updated_at value", withUpdatedAt.UpdatedAt)
+	}
+
+	withoutUpdatedAt := entryToManifest(pluginEntry{Name: "audit-log", Version: "1.0.0"})
+	if withoutUpdatedAt.UpdatedAt != "" {
+		t.Errorf("UpdatedAt = %q, want empty when the registry entry has no updated_at", withoutUpdatedAt.UpdatedAt)
+	}
+}
+
+// TestRegistryMarshalJSON_PreservesFetchedAtAndUpdatedAt extends the existing
+// cache round-trip coverage to the two CLI-R16 freshness fields.
+func TestRegistryMarshalJSON_PreservesFetchedAtAndUpdatedAt(t *testing.T) {
+	reg := Registry{
+		FetchedAt: "2026-08-23T22:00:19.502Z",
+		Plugins: []PluginManifest{
+			{Name: "audit-log", Version: "1.0.0", UpdatedAt: "2026-08-01T00:00:00Z"},
+		},
+	}
+
+	data, err := reg.MarshalJSON()
+	if err != nil {
+		t.Fatalf("MarshalJSON: %v", err)
+	}
+
+	got, err := parseRegistryJSON(data)
+	if err != nil {
+		t.Fatalf("parseRegistryJSON after marshal: %v", err)
+	}
+
+	if got.FetchedAt != reg.FetchedAt {
+		t.Errorf("FetchedAt lost in cache round-trip: got %q, want %q", got.FetchedAt, reg.FetchedAt)
+	}
+	if len(got.Plugins) != 1 || got.Plugins[0].UpdatedAt != "2026-08-01T00:00:00Z" {
+		t.Errorf("UpdatedAt lost in cache round-trip: got %+v", got.Plugins)
+	}
+}
+
+// TestRegistryFetchedAt_NoCache verifies RegistryFetchedAt returns "" rather
+// than erroring when no registry cache file exists yet.
+func TestRegistryFetchedAt_NoCache(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	if got := RegistryFetchedAt(); got != "" {
+		t.Errorf("RegistryFetchedAt() = %q, want empty with no cache file", got)
+	}
+}
+
+// TestRegistryFetchedAt_ReadsCache verifies RegistryFetchedAt reads the
+// top-level fetchedAt back out of the on-disk registry cache written by
+// writeCache, without making a network call.
+func TestRegistryFetchedAt_ReadsCache(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	cacheDir := filepath.Join(home, ".nself", "cache", "plugins")
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	payload := `{"version":"1.0.0","fetchedAt":"2026-08-23T22:00:19.502Z","plugins":[]}`
+	if err := os.WriteFile(filepath.Join(cacheDir, registryCacheFile), []byte(payload), 0600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	if got := RegistryFetchedAt(); got != "2026-08-23T22:00:19.502Z" {
+		t.Errorf("RegistryFetchedAt() = %q, want the cached fetchedAt", got)
 	}
 }
