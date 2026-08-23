@@ -1,6 +1,35 @@
-// Package metrics emits Prometheus-compatible metrics written to a textfile
-// collector directory for node_exporter to scrape. Backup operations record
-// last-success timestamps, duration, bytes, and verify results.
+// Package metrics emits Prometheus-compatible metrics for one-shot nSelf CLI
+// command invocations (backup.go: backup/verify results; license.go: license
+// grace-period state; stripe.go: webhook processing outcomes) by writing
+// node_exporter textfile-collector .prom files rather than serving a live
+// /metrics endpoint.
+//
+// Purpose: let short-lived CLI processes (a single `nself backup create` run,
+// a license grace check, a webhook handler invocation) surface Prometheus
+// metrics even though the process exits before any scraper could reach it —
+// node_exporter picks up the written .prom files on its own schedule instead.
+//
+// Inputs: a *Record struct per emitter (BackupRecord, VerifyRecord,
+// LicenseRecord, StripeEventRecord, etc.) describing the single outcome to
+// record, plus an optional TextfileDir override (defaults to
+// DefaultTextfileDir).
+//
+// Outputs: atomically-written `.prom` files under the textfile collector
+// directory, one gauge/counter set per emitter, each file fully replaced (not
+// appended) on every run.
+//
+// Constraints: this package is for processes that exit — it has no
+// live registry and cannot serve /metrics itself. A long-running process
+// (a daemon, an embedded server) belongs in internal/observability instead,
+// which keeps a live *prometheus.Registry and HTTP handler in memory.
+// Resolved as a deliberate split, not overlapping responsibility, in
+// CLI-R14 (2026-08-23): the two packages instrument disjoint process
+// lifecycles. Current importers: internal/backup/create.go and
+// internal/backup/verify.go (EmitBackup/EmitVerify); license.go and
+// stripe.go's emitters are wired for the license-grace and Stripe-webhook
+// features and are exercised by this package's own tests but have no
+// production caller yet — left in place as forward wiring, out of scope for
+// this ticket's dedup pass.
 package metrics
 
 import (

@@ -1,5 +1,32 @@
-// Package observability provides shared Prometheus metrics and OpenTelemetry
-// tracing helpers for all nSelf Go services.
+// Package observability instruments long-running nSelf Go services (the
+// embedded servers behind `nself admin`, plugin daemons, and any process that
+// stays up long enough to be scraped) with a live Prometheus registry, an
+// HTTP /metrics endpoint, OpenTelemetry tracing, structured JSON logging, and
+// request/field redaction.
+//
+// Purpose: one shared instrumentation layer so every long-running nSelf
+// process emits metrics, traces, and logs in the same shape, with the same
+// cardinality and PII-redaction guarantees, instead of each service rolling
+// its own.
+//
+// Inputs: a RegistryConfig/LogConfig/TracerConfig describing the service
+// (name, instance, env, version); HTTP handlers to wrap via TraceMiddleware
+// or Recoverer; raw log fields to pass through redact.go before emission.
+//
+// Outputs: a *prometheus.Registry plus an http.Handler serving it
+// (MetricsHandler/ServeMetrics); an OTel tracer/exporter; a slog.Handler that
+// redacts sensitive fields and attaches trace IDs.
+//
+// Constraints: this package assumes the process lives long enough to serve
+// its own /metrics endpoint — it is the wrong tool for one-shot CLI command
+// invocations, which exit before anything could scrape them. That case is
+// internal/metrics (below), which writes node_exporter textfile-collector
+// snapshots instead of serving a live endpoint. Resolved as a deliberate
+// split, not overlapping responsibility, in CLI-R14 (2026-08-23): both
+// packages are named "metrics" in spirit but serve disjoint process
+// lifecycles, so they stay separate. Current importers: cmd/commands/root.go
+// (process-wide tracing/logging bootstrap) and internal/doctor/redact_audit.go
+// (verifies redact.go actually strips secrets).
 package observability
 
 import (

@@ -1,8 +1,30 @@
-// Package errs defines sentinel errors for the nself CLI.
+// Package errs is the sole home for structured, user-facing CLI errors and
+// the process exit-code contract for the nSelf CLI.
 //
-// Named "errs" (not "errors") to avoid shadowing the Go standard library.
-// Other packages import as: nself/internal/errs
-// Usage: errs.ErrDockerNotRunning
+// Purpose: give every command a single place to (a) classify a failure by a
+// stable code (E001-E399, see codes.go's Registry), (b) attach a What/Why/Fix
+// explanation via CLIError (structured.go), and (c) map that failure onto one
+// of the four canonical process exit codes (exit_codes.go, exit_error.go) so
+// wrappers (CI runners, schedulers, ops scripts) can branch on outcome class
+// without parsing stderr.
+//
+// Inputs: sentinel errors declared in this file (errs.ErrDockerNotRunning
+// etc.), or a Registry code passed to New/Newf/Wrap.
+//
+// Outputs: *CLIError (implements error, formats as "[CODE] What / Why / Fix")
+// and *ExitError (implements error + ExitCode() int for main() to read).
+//
+// Constraints: named "errs" (not "errors") to avoid shadowing the Go standard
+// library; other packages import as `nself-org/cli/internal/errs`. This
+// package absorbed the sole responsibility for structured user-facing errors
+// as of CLI-R14 (2026-08-23) — the parallel, unimported `internal/errors`
+// catalog (ERR-INSTALL-*, ERR-LICENSE-*, etc. with a Message struct and its
+// own HelpFooter) was deleted as a confirmed-dead duplicate: same shape
+// (Code/What/Why/Fix), same category coverage (docker, config, plugin,
+// license, ssl, database, health, init, domain), zero importers anywhere in
+// the tree. Nothing from it was migrated because everything it did is already
+// covered here via Registry + CLIError, and CLIError additionally carries the
+// exit-code classification that the deleted package never had.
 package errs
 
 import "errors"
