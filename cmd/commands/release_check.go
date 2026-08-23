@@ -26,7 +26,7 @@ type releaseCheckResult struct {
 }
 
 var releaseCheckCmd = &cobra.Command{
-	Use:   "release-check <version>",
+	Use:   "check <version>",
 	Short: "Run pre-release gates for a version",
 	Long: `Run pre-release gates before executing 'nself release <version>'.
 
@@ -55,7 +55,7 @@ func init() {
 	releaseCheckCmd.Flags().Bool("json", false, "Output results as JSON")
 	releaseCheckCmd.Flags().Bool("skip-ci", false, "Skip GitHub CI check (use in offline environments)")
 	releaseCheckCmd.Flags().Bool("skip-security", false, "Skip security CVE scan")
-	RootCmd.AddCommand(releaseCheckCmd)
+	releaseCmd.AddCommand(releaseCheckCmd)
 }
 
 func runReleaseCheck(cmd *cobra.Command, args []string) error {

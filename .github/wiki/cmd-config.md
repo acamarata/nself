@@ -37,6 +37,7 @@ The `validate` subcommand runs all registered configuration validators and repor
 | Name | Description |
 |------|-------------|
 | `export` | Export current config to a file or stdout |
+| `features` | Manage CLI-built-in feature flags |
 | `get` | Get a single configuration value |
 | `import` | Import config from a file into .env |
 | `list` | List all known config keys with current values |

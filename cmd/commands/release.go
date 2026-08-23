@@ -76,7 +76,7 @@ Examples:
 }
 
 var releaseStatusCmd = &cobra.Command{
-	Use:   "release-status",
+	Use:   "status",
 	Short: "Show running version vs latest across all release artifacts",
 	Long: `Shows per-artifact version drift summary.
 
@@ -100,7 +100,7 @@ Examples:
 }
 
 var releaseRollbackCmd = &cobra.Command{
-	Use:   "release-rollback <version> <prior-version>",
+	Use:   "rollback <version> <prior-version>",
 	Short: "Roll back a release to prior version",
 	Long: `Reverts a release to a prior version.
 
@@ -137,9 +137,11 @@ func init() {
 	releaseRollbackCmd.Flags().Bool("json", false, "Output as JSON")
 	releaseRollbackCmd.Flags().Bool("delete-tags", false, "Also delete git tags (DESTRUCTIVE — requires explicit flag)")
 
+	// CLI-R09: four top-level release* commands collapse into one `release`
+	// group. The old spellings still work via legacy_spellings.go.
+	releaseCmd.AddCommand(releaseStatusCmd)
+	releaseCmd.AddCommand(releaseRollbackCmd)
 	RootCmd.AddCommand(releaseCmd)
-	RootCmd.AddCommand(releaseStatusCmd)
-	RootCmd.AddCommand(releaseRollbackCmd)
 }
 
 // ── release ──────────────────────────────────────────────────────────────────

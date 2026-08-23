@@ -21,7 +21,7 @@ import (
 // current working directory as the project root, matching `nself build` /
 // `nself start` behavior.
 var featureCmd = &cobra.Command{
-	Use:   "feature",
+	Use:   "features",
 	Short: "Manage CLI-built-in feature flags",
 	Long: `Manage CLI-built-in feature flags.
 
@@ -270,7 +270,7 @@ func init() {
 			return
 		}
 	}
-	RootCmd.AddCommand(featureCmd)
+	configCmd.AddCommand(featureCmd)
 }
 
 // Ensure strings import is referenced (used by duplicate-registration guard).

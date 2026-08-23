@@ -364,6 +364,12 @@
         ]
       },
       {
+        "name": "pitr",
+        "path": "nself backup pitr",
+        "short": "Point-in-time recovery: enable, disable, status, base-backup, restore",
+        "hidden": false
+      },
+      {
         "name": "prune",
         "path": "nself backup prune",
         "short": "Remove old backups by retention policy",
@@ -793,6 +799,12 @@
         ]
       },
       {
+        "name": "features",
+        "path": "nself config features",
+        "short": "Manage CLI-built-in feature flags",
+        "hidden": false
+      },
+      {
         "name": "get",
         "path": "nself config get",
         "short": "Get a single configuration value",
@@ -1152,17 +1164,6 @@
     ]
   },
   {
-    "name": "dns-setup",
-    "path": "nself dns-setup",
-    "short": "Add project domains to /etc/hosts (run with sudo)",
-    "hidden": false,
-    "group_id": "config",
-    "flags": [
-      "--dry-run",
-      "--project"
-    ]
-  },
-  {
     "name": "doctor",
     "path": "nself doctor",
     "short": "Run comprehensive system diagnostics",
@@ -1393,45 +1394,6 @@
     ]
   },
   {
-    "name": "feature",
-    "path": "nself feature",
-    "short": "Manage CLI-built-in feature flags",
-    "hidden": false,
-    "group_id": "config",
-    "subcommands": [
-      {
-        "name": "disable",
-        "path": "nself feature disable",
-        "short": "Disable a feature flag (records an override)",
-        "hidden": false
-      },
-      {
-        "name": "enable",
-        "path": "nself feature enable",
-        "short": "Enable a feature flag (records an override)",
-        "hidden": false
-      },
-      {
-        "name": "list",
-        "path": "nself feature list",
-        "short": "List all registered feature flags with effective state",
-        "hidden": false,
-        "flags": [
-          "--json"
-        ]
-      },
-      {
-        "name": "status",
-        "path": "nself feature status",
-        "short": "Show the effective state for a single flag",
-        "hidden": false,
-        "flags": [
-          "--json"
-        ]
-      }
-    ]
-  },
-  {
     "name": "federation",
     "path": "nself federation",
     "short": "Manage GraphQL Federation (opt-in, requires NSELF_FEDERATION=true)",
@@ -1462,15 +1424,18 @@
     ]
   },
   {
-    "name": "flag",
-    "path": "nself flag",
-    "short": "Manage feature flags",
+    "name": "flags",
+    "path": "nself flags",
+    "short": "Manage application feature flags",
     "hidden": false,
     "group_id": "config",
+    "aliases": [
+      "flag"
+    ],
     "subcommands": [
       {
         "name": "disable",
-        "path": "nself flag disable",
+        "path": "nself flags disable",
         "short": "Disable a feature flag",
         "hidden": false,
         "flags": [
@@ -1479,7 +1444,7 @@
       },
       {
         "name": "enable",
-        "path": "nself flag enable",
+        "path": "nself flags enable",
         "short": "Enable a feature flag",
         "hidden": false,
         "flags": [
@@ -1488,7 +1453,7 @@
       },
       {
         "name": "get",
-        "path": "nself flag get",
+        "path": "nself flags get",
         "short": "Get a single feature flag",
         "hidden": false,
         "flags": [
@@ -1498,7 +1463,7 @@
       },
       {
         "name": "history",
-        "path": "nself flag history",
+        "path": "nself flags history",
         "short": "Show audit log for a feature flag",
         "hidden": false,
         "flags": [
@@ -1508,7 +1473,7 @@
       },
       {
         "name": "kill",
-        "path": "nself flag kill",
+        "path": "nself flags kill",
         "short": "Kill-switch a feature flag (emergency disable with required reason)",
         "hidden": false,
         "flags": [
@@ -1518,7 +1483,7 @@
       },
       {
         "name": "list",
-        "path": "nself flag list",
+        "path": "nself flags list",
         "short": "List all feature flags",
         "hidden": false,
         "flags": [
@@ -1529,7 +1494,7 @@
       },
       {
         "name": "prune",
-        "path": "nself flag prune",
+        "path": "nself flags prune",
         "short": "List (or delete) stale feature flags",
         "hidden": false,
         "flags": [
@@ -1540,7 +1505,7 @@
       },
       {
         "name": "set",
-        "path": "nself flag set",
+        "path": "nself flags set",
         "short": "Update a feature flag's enabled state and/or rollout percentage",
         "hidden": false,
         "flags": [
@@ -2293,6 +2258,16 @@
         ]
       },
       {
+        "name": "from-v099",
+        "path": "nself migrate from-v099",
+        "short": "Migrate v0.9.9 home-level state (license key, channel, ssh keys) to v1.x layout",
+        "hidden": false,
+        "flags": [
+          "--check",
+          "--yes"
+        ]
+      },
+      {
         "name": "generate",
         "path": "nself migrate generate",
         "short": "Generate a SQL migration from a natural-language description",
@@ -2348,17 +2323,6 @@
     ]
   },
   {
-    "name": "migrate-from-v099",
-    "path": "nself migrate-from-v099",
-    "short": "Migrate v0.9.9 home-level state (license key, channel, ssh keys) to v1.x layout",
-    "hidden": false,
-    "group_id": "advanced",
-    "flags": [
-      "--check",
-      "--yes"
-    ]
-  },
-  {
     "name": "model",
     "path": "nself model",
     "short": "Manage local AI models via Ollama",
@@ -2384,6 +2348,12 @@
         "flags": [
           "--json"
         ]
+      },
+      {
+        "name": "ollama",
+        "path": "nself model ollama",
+        "short": "Manage local Ollama LLM stack",
+        "hidden": false
       },
       {
         "name": "pull",
@@ -2448,27 +2418,6 @@
     ]
   },
   {
-    "name": "ollama",
-    "path": "nself ollama",
-    "short": "Manage local Ollama LLM stack",
-    "hidden": false,
-    "group_id": "ai",
-    "subcommands": [
-      {
-        "name": "models",
-        "path": "nself ollama models",
-        "short": "Manage Ollama models",
-        "hidden": false
-      },
-      {
-        "name": "status",
-        "path": "nself ollama status",
-        "short": "Show Ollama service status and default model",
-        "hidden": false
-      }
-    ]
-  },
-  {
     "name": "ops",
     "path": "nself ops",
     "short": "Ops-profile deployment and management",
@@ -2522,59 +2471,6 @@
         "name": "status",
         "path": "nself pentest-kit status",
         "short": "Show open pentest findings by severity",
-        "hidden": false
-      }
-    ]
-  },
-  {
-    "name": "pitr",
-    "path": "nself pitr",
-    "short": "Point-in-time recovery: enable, disable, status, base-backup, restore",
-    "hidden": false,
-    "group_id": "data",
-    "subcommands": [
-      {
-        "name": "base-backup",
-        "path": "nself pitr base-backup",
-        "short": "Take a manual pg_basebackup snapshot now",
-        "hidden": false,
-        "flags": [
-          "--encrypt-recipient"
-        ]
-      },
-      {
-        "name": "disable",
-        "path": "nself pitr disable",
-        "short": "Stop WAL archiving (removes PITR config snippet)",
-        "hidden": false
-      },
-      {
-        "name": "enable",
-        "path": "nself pitr enable",
-        "short": "Configure WAL archiving and enable PITR",
-        "hidden": false,
-        "flags": [
-          "--encrypt-recipient",
-          "--retention-days",
-          "--to",
-          "--wal-timeout"
-        ]
-      },
-      {
-        "name": "restore",
-        "path": "nself pitr restore",
-        "short": "Restore database to a specific point in time",
-        "hidden": false,
-        "flags": [
-          "--auto-promote",
-          "--identity",
-          "--to"
-        ]
-      },
-      {
-        "name": "status",
-        "path": "nself pitr status",
-        "short": "Show PITR retention window, segment count, and latest WAL timestamp",
         "hidden": false
       }
     ]
@@ -2975,41 +2871,40 @@
       "--release-notes",
       "--skip-check",
       "--skip-plugins-pro"
-    ]
-  },
-  {
-    "name": "release-check",
-    "path": "nself release-check",
-    "short": "Run pre-release gates for a version",
-    "hidden": false,
-    "group_id": "deploy",
-    "flags": [
-      "--json",
-      "--skip-ci",
-      "--skip-security"
-    ]
-  },
-  {
-    "name": "release-rollback",
-    "path": "nself release-rollback",
-    "short": "Roll back a release to prior version",
-    "hidden": false,
-    "group_id": "deploy",
-    "flags": [
-      "--delete-tags",
-      "--dry-run",
-      "--json"
-    ]
-  },
-  {
-    "name": "release-status",
-    "path": "nself release-status",
-    "short": "Show running version vs latest across all release artifacts",
-    "hidden": false,
-    "group_id": "deploy",
-    "flags": [
-      "--json",
-      "--timeout"
+    ],
+    "subcommands": [
+      {
+        "name": "check",
+        "path": "nself release check",
+        "short": "Run pre-release gates for a version",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--skip-ci",
+          "--skip-security"
+        ]
+      },
+      {
+        "name": "rollback",
+        "path": "nself release rollback",
+        "short": "Roll back a release to prior version",
+        "hidden": false,
+        "flags": [
+          "--delete-tags",
+          "--dry-run",
+          "--json"
+        ]
+      },
+      {
+        "name": "status",
+        "path": "nself release status",
+        "short": "Show running version vs latest across all release artifacts",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--timeout"
+        ]
+      }
     ]
   },
   {
@@ -3661,6 +3556,16 @@
       "--undo"
     ],
     "subcommands": [
+      {
+        "name": "dns",
+        "path": "nself trust dns",
+        "short": "Add project domains to /etc/hosts (run with sudo)",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--project"
+        ]
+      },
       {
         "name": "status",
         "path": "nself trust status",

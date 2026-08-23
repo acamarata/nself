@@ -53,6 +53,72 @@ items:
     docs_url: "https://nself.org/docs/cli/stop"
     phase: 1
 
+  # CLI-R09 consolidation. Every old spelling still works: cmd/commands/
+  # legacy_spellings.go rewrites argv onto the canonical path, so flags and
+  # positional arguments behave identically.
+  - name: "nself release-check"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself release check"
+    docs_url: "https://nself.org/docs/cli/release"
+    phase: 1
+
+  - name: "nself release-rollback"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself release rollback"
+    docs_url: "https://nself.org/docs/cli/release"
+    phase: 1
+
+  - name: "nself release-status"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself release status"
+    docs_url: "https://nself.org/docs/cli/release"
+    phase: 1
+
+  - name: "nself migrate-from-v099"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself migrate from-v099"
+    docs_url: "https://nself.org/docs/migrate/from-v0.9"
+    phase: 1
+
+  - name: "nself dns-setup"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself trust dns"
+    docs_url: "https://nself.org/docs/cli/trust"
+    phase: 1
+
+  - name: "nself ollama"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself model ollama"
+    docs_url: "https://nself.org/docs/cli/model"
+    phase: 1
+
+  - name: "nself feature"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself config features"
+    docs_url: "https://nself.org/docs/cli/config"
+    phase: 1
+
+  - name: "nself pitr"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself backup pitr"
+    docs_url: "https://nself.org/docs/cli/backup"
+    phase: 1
+
+  - name: "nself flag"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself flags"
+    docs_url: "https://nself.org/docs/cli/flags"
+    phase: 1
+
 # =============================================================================
 # Plugin API versioning — G2 (api_version), G4 (deprecated_endpoints + removal)
 # =============================================================================

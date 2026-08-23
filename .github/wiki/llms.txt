@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (92)
+## Commands (84)
 
 ### nself account
 
@@ -146,6 +146,7 @@ Subcommands:
 - `drill` — Run a DR drill: restore latest backup into scratch DB and measure RTO
 - `init-key` — Generate age encryption keypair for backups
 - `list` — List available backups
+- `pitr` — Point-in-time recovery: enable, disable, status, base-backup, restore
 - `prune` — Remove old backups by retention policy
 - `restore` — Restore from a backup
 - `restore-remote` — Restore a backup directly from a remote URL
@@ -305,6 +306,7 @@ nself config <subcommand> [flags]
 Subcommands:
 
 - `export` — Export current config to a file or stdout
+- `features` — Manage CLI-built-in feature flags
 - `get` — Get a single configuration value
 - `import` — Import config from a file into .env
 - `list` — List all known config keys with current values
@@ -437,21 +439,6 @@ Subcommands:
 
 Full page: [[cmd-dlq]]
 
-### nself dns-setup
-
-Add project domains to /etc/hosts (run with sudo)
-
-```
-nself dns-setup [flags]
-```
-
-Flags:
-
-- `--dry-run` (default false) — Print entries that would be added without writing
-- `--project` (default "") — Path to nself project directory (useful when running with sudo)
-
-Full page: [[cmd-dns-setup]]
-
 ### nself doctor
 
 Run comprehensive system diagnostics
@@ -569,23 +556,6 @@ Flags:
 
 Full page: [[cmd-exec]]
 
-### nself feature
-
-Manage CLI-built-in feature flags
-
-```
-nself feature <subcommand> [flags]
-```
-
-Subcommands:
-
-- `disable` — Disable a feature flag (records an override)
-- `enable` — Enable a feature flag (records an override)
-- `list` — List all registered feature flags with effective state
-- `status` — Show the effective state for a single flag
-
-Full page: [[cmd-feature]]
-
 ### nself federation
 
 Manage GraphQL Federation (opt-in, requires NSELF_FEDERATION=true)
@@ -602,12 +572,12 @@ Subcommands:
 
 Full page: [[cmd-federation]]
 
-### nself flag
+### nself flags
 
-Manage feature flags
+Manage application feature flags
 
 ```
-nself flag <subcommand> [flags]
+nself flags <subcommand> [flags]
 ```
 
 Subcommands:
@@ -621,7 +591,7 @@ Subcommands:
 - `prune` — List (or delete) stale feature flags
 - `set` — Update a feature flag's enabled state and/or rollout percentage
 
-Full page: [[cmd-flag]]
+Full page: [[cmd-flags]]
 
 ### nself functions
 
@@ -984,6 +954,7 @@ Subcommands:
 - `detect` — Detect v1 artifacts in the current project
 - `firebase` — Generate nSelf migration artifacts from a Firebase export
 - `from-bash` — Migrate a v0.9.9 Bash-era project to the current nSelf CLI
+- `from-v099` — Migrate v0.9.9 home-level state (license key, channel, ssh keys) to v1.x layout
 - `generate` — Generate a SQL migration from a natural-language description
 - `rollback` — Restore a v1 backup created by migrate run
 - `run` — Migrate v1 project to v2
@@ -995,21 +966,6 @@ Flags:
 - `--from-bash` (default false) — Migrate from a v0.9.9 Bash-era project (alias for: nself migrate from-bash)
 
 Full page: [[cmd-migrate]]
-
-### nself migrate-from-v099
-
-Migrate v0.9.9 home-level state (license key, channel, ssh keys) to v1.x layout
-
-```
-nself migrate-from-v099 [flags]
-```
-
-Flags:
-
-- `--check` (default false) — Detect legacy state without migrating
-- `--yes` (default false) — Skip the confirmation prompt (non-interactive)
-
-Full page: [[cmd-migrate-from-v099]]
 
 ### nself model
 
@@ -1023,6 +979,7 @@ Subcommands:
 
 - `benchmark` — Run a standard prompt and report tokens/s + p99 latency
 - `list` — List all pulled Ollama models
+- `ollama` — Manage local Ollama LLM stack
 - `pull` — Pull (download) a model from the Ollama registry
 - `remove` — Remove a pulled model from Ollama to free disk space
 - `update` — Re-pull a model to fetch the latest version of its tag
@@ -1057,21 +1014,6 @@ Subcommands:
 
 Full page: [[cmd-oauth]]
 
-### nself ollama
-
-Manage local Ollama LLM stack
-
-```
-nself ollama <subcommand> [flags]
-```
-
-Subcommands:
-
-- `models` — Manage Ollama models
-- `status` — Show Ollama service status and default model
-
-Full page: [[cmd-ollama]]
-
 ### nself ops
 
 Ops-profile deployment and management
@@ -1102,24 +1044,6 @@ Subcommands:
 - `status` — Show open pentest findings by severity
 
 Full page: [[cmd-pentest-kit]]
-
-### nself pitr
-
-Point-in-time recovery: enable, disable, status, base-backup, restore
-
-```
-nself pitr <subcommand> [flags]
-```
-
-Subcommands:
-
-- `base-backup` — Take a manual pg_basebackup snapshot now
-- `disable` — Stop WAL archiving (removes PITR config snippet)
-- `enable` — Configure WAL archiving and enable PITR
-- `restore` — Restore database to a specific point in time
-- `status` — Show PITR retention window, segment count, and latest WAL timestamp
-
-Full page: [[cmd-pitr]]
 
 ### nself plugin
 
@@ -1224,6 +1148,12 @@ Orchestrate the full release cascade for a version
 nself release <version> [flags]
 ```
 
+Subcommands:
+
+- `check` — Run pre-release gates for a version
+- `rollback` — Roll back a release to prior version
+- `status` — Show running version vs latest across all release artifacts
+
 Flags:
 
 - `--dry-run` (default false) — Log all steps without executing them
@@ -1233,53 +1163,6 @@ Flags:
 - `--skip-plugins-pro` (default false) — Skip plugins-pro tag (use when not releasing plugins-pro)
 
 Full page: [[cmd-release]]
-
-### nself release-check
-
-Run pre-release gates for a version
-
-```
-nself release-check <version> [flags]
-```
-
-Flags:
-
-- `--json` (default false) — Output results as JSON
-- `--skip-ci` (default false) — Skip GitHub CI check (use in offline environments)
-- `--skip-security` (default false) — Skip security CVE scan
-
-Full page: [[cmd-release-check]]
-
-### nself release-rollback
-
-Roll back a release to prior version
-
-```
-nself release-rollback <version> <prior-version> [flags]
-```
-
-Flags:
-
-- `--delete-tags` (default false) — Also delete git tags (DESTRUCTIVE — requires explicit flag)
-- `--dry-run` (default false) — Log rollback steps without executing
-- `--json` (default false) — Output as JSON
-
-Full page: [[cmd-release-rollback]]
-
-### nself release-status
-
-Show running version vs latest across all release artifacts
-
-```
-nself release-status [flags]
-```
-
-Flags:
-
-- `--json` (default false) — Output as JSON
-- `--timeout` (default 30s) — HTTP timeout per artifact check
-
-Full page: [[cmd-release-status]]
 
 ### nself reset
 
@@ -1606,6 +1489,7 @@ nself trust <subcommand> [flags]
 
 Subcommands:
 
+- `dns` — Add project domains to /etc/hosts (run with sudo)
 - `status` — Show trusted cert CAs, last rotation date, and expiry warnings
 
 Flags:

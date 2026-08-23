@@ -60,6 +60,16 @@ The release runs 13 ordered steps (0-12):
 | `--help`, `-h` | — | Show help |
 <!-- END GENERATED:flags -->
 
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `check` | Run pre-release gates for a version |
+| `rollback` | Roll back a release to prior version |
+| `status` | Show running version vs latest across all release artifacts |
+<!-- END GENERATED:subcommands -->
+
 ## Examples
 
 <!-- BEGIN PROSE:examples -->

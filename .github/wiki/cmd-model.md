@@ -246,6 +246,7 @@ Benchmarking gemma-3-4b  (5 runs)...
 |------|-------------|
 | `benchmark` | Run a standard prompt and report tokens/s + p99 latency |
 | `list` | List all pulled Ollama models |
+| `ollama` | Manage local Ollama LLM stack |
 | `pull` | Pull (download) a model from the Ollama registry |
 | `remove` | Remove a pulled model from Ollama to free disk space |
 | `update` | Re-pull a model to fetch the latest version of its tag |

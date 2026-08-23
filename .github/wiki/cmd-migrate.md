@@ -68,6 +68,7 @@ go test -mod=vendor -run TestE2E ./internal/migration/...
 | `detect` | Detect v1 artifacts in the current project |
 | `firebase` | Generate ɳSelf migration artifacts from a Firebase export |
 | `from-bash` | Migrate a v0.9.9 Bash-era project to the current ɳSelf CLI |
+| `from-v099` | Migrate v0.9.9 home-level state (license key, channel, ssh keys) to v1.x layout |
 | `generate` | Generate a SQL migration from a natural-language description |
 | `rollback` | Restore a v1 backup created by migrate run |
 | `run` | Migrate v1 project to v2 |

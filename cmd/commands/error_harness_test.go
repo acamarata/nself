@@ -164,9 +164,9 @@ var errorHarnessCases = []errorHarnessCase{
 	{"exec", []string{"exec", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── feature ────────────────────────────────────────────────────────────
-	{"feature", []string{"feature"}, "(a) no project dir"},
-	{"feature", []string{"feature", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"feature", []string{"feature", "unknownsub_xyz"}, "(c) unknown sub"},
+	{"config features", []string{"config", "features"}, "(a) no project dir"},
+	{"config features", []string{"config", "features", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"config features", []string{"config", "features", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── functions ──────────────────────────────────────────────────────────
 	{"functions", []string{"functions"}, "(a) no project dir"},
@@ -218,9 +218,9 @@ var errorHarnessCases = []errorHarnessCase{
 	{"migrate", []string{"migrate", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── migrate-from-v099 ──────────────────────────────────────────────────
-	{"migrate-from-v099", []string{"migrate-from-v099"}, "(a) no project dir"},
-	{"migrate-from-v099", []string{"migrate-from-v099", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"migrate-from-v099", []string{"migrate-from-v099", "unknownsub_xyz"}, "(c) unknown sub"},
+	{"migrate from-v099", []string{"migrate", "from-v099"}, "(a) no project dir"},
+	{"migrate from-v099", []string{"migrate", "from-v099", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"migrate from-v099", []string{"migrate", "from-v099", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── model ──────────────────────────────────────────────────────────────
 	{"model", []string{"model"}, "(a) shows help (no project required)"},
@@ -364,13 +364,16 @@ var errorHarnessCases = []errorHarnessCase{
 	{"dlq", []string{"dlq", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── dns-setup ──────────────────────────────────────────────────────────
-	{"dns-setup", []string{"dns-setup"}, "(a) no project dir"},
-	{"dns-setup", []string{"dns-setup", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"dns-setup", []string{"dns-setup", "unknownsub_xyz"}, "(c) unknown sub"},
+	{"trust dns", []string{"trust", "dns"}, "(a) no project dir"},
+	{"trust dns", []string{"trust", "dns", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"trust dns", []string{"trust", "dns", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── flag ───────────────────────────────────────────────────────────────
-	{"flag", []string{"flag"}, "(a) no project dir"},
-	{"flag", []string{"flag", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	// CLI-R09 renamed `flag` to `flags`; `flag` stays as a cobra alias, so both
+	// spellings are exercised here.
+	{"flags", []string{"flags"}, "(a) no project dir"},
+	{"flags", []string{"flags", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"flags", []string{"flag"}, "(c) legacy alias still routes"},
 	{"flag", []string{"flag", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── oauth ──────────────────────────────────────────────────────────────
@@ -440,9 +443,9 @@ var errorHarnessCases = []errorHarnessCase{
 
 	// ── ollama ─────────────────────────────────────────────────────────────
 	// ollama root returns cmd.Help() (nil) — soft case.
-	{"ollama", []string{"ollama"}, "(a) shows help (no project required)"},
-	{"ollama", []string{"ollama", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"ollama", []string{"ollama", "unknownsub_xyz"}, "(c) unknown sub"},
+	{"model ollama", []string{"model", "ollama"}, "(a) shows help (no project required)"},
+	{"model ollama", []string{"model", "ollama", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"model ollama", []string{"model", "ollama", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── pentest-kit ────────────────────────────────────────────────────────
 	// pentest-kit root returns cmd.Help() (nil) — soft case.
@@ -452,9 +455,9 @@ var errorHarnessCases = []errorHarnessCase{
 
 	// ── pitr ───────────────────────────────────────────────────────────────
 	// pitr root returns cmd.Help() (nil) — soft case.
-	{"pitr", []string{"pitr"}, "(a) shows help (no project required)"},
-	{"pitr", []string{"pitr", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"pitr", []string{"pitr", "unknownsub_xyz"}, "(c) unknown sub"},
+	{"backup pitr", []string{"backup", "pitr"}, "(a) shows help (no project required)"},
+	{"backup pitr", []string{"backup", "pitr", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"backup pitr", []string{"backup", "pitr", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── region ─────────────────────────────────────────────────────────────
 	// region root returns cmd.Help() (nil) — soft case.
@@ -481,19 +484,19 @@ var errorHarnessCases = []errorHarnessCase{
 	{"release", []string{"release", "1.0.0", "extra-arg"}, "(c) wrong arity"}, // ExactArgs(1) rejects before RunE; avoids slow subprocess cascade
 
 	// ── release-check ──────────────────────────────────────────────────────
-	{"release-check", []string{"release-check"}, "(a) no project dir"},
-	{"release-check", []string{"release-check", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"release-check", []string{"release-check", "1.0.0", "extra-arg"}, "(c) wrong arity"}, // ExactArgs(1) rejects before RunE; avoids slow gate suite
+	{"release check", []string{"release", "check"}, "(a) no project dir"},
+	{"release check", []string{"release", "check", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"release check", []string{"release", "check", "1.0.0", "extra-arg"}, "(c) wrong arity"}, // ExactArgs(1) rejects before RunE; avoids slow gate suite
 
 	// ── release-rollback ───────────────────────────────────────────────────
-	{"release-rollback", []string{"release-rollback"}, "(a) no project dir"},
-	{"release-rollback", []string{"release-rollback", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"release-rollback", []string{"release-rollback", "1.0.0", "0.9.0", "extra-arg"}, "(c) wrong arity"}, // ExactArgs(2) rejects before RunE
+	{"release rollback", []string{"release", "rollback"}, "(a) no project dir"},
+	{"release rollback", []string{"release", "rollback", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"release rollback", []string{"release", "rollback", "1.0.0", "0.9.0", "extra-arg"}, "(c) wrong arity"}, // ExactArgs(2) rejects before RunE
 
 	// ── release-status ─────────────────────────────────────────────────────
-	{"release-status", []string{"release-status"}, "(a) no project dir"},
-	{"release-status", []string{"release-status", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"release-status", []string{"release-status", "unknownsub_xyz"}, "(c) unknown sub"},
+	{"release status", []string{"release", "status"}, "(a) no project dir"},
+	{"release status", []string{"release", "status", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"release status", []string{"release", "status", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── ops ────────────────────────────────────────────────────────────────
 	// ops root returns cmd.Help() (nil) — soft case (no project required).

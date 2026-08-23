@@ -75,7 +75,7 @@ func init() {
 	ollamaModelsCmd.AddCommand(ollamaModelsRemoveCmd)
 	ollamaCmd.AddCommand(ollamaModelsCmd)
 	ollamaCmd.AddCommand(ollamaStatusCmd)
-	RootCmd.AddCommand(ollamaCmd)
+	modelCmd.AddCommand(ollamaCmd)
 }
 
 // --- helpers ---

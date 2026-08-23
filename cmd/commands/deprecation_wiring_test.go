@@ -118,6 +118,12 @@ func TestEveryDeprecatedCommandEntryIsReachable(t *testing.T) {
 	}
 	walk(RootCmd)
 
+	// Retired top-level spellings are reachable through argv rewriting rather
+	// than through a registered command (CLI-R09, legacy_spellings.go).
+	for name := range legacySpellings {
+		reachable["nself "+name] = true
+	}
+
 	var dead []string
 	for _, name := range reg.Names() {
 		item, _ := reg.Lookup(name)
@@ -191,5 +197,55 @@ func findRepoRootForTest(t *testing.T) string {
 			t.Fatal("go.mod not found")
 		}
 		dir = parent
+	}
+}
+
+// TestEveryLegacySpellingResolves checks the other direction of the CLI-R09
+// rewrite: each retired name must land on a command that actually exists, and
+// must carry a deprecation entry so the user is told where it went. A typo in
+// either table would otherwise produce a command that silently does nothing or
+// a rename nobody is told about.
+func TestEveryLegacySpellingResolves(t *testing.T) {
+	reg, err := deprecation.LoadEmbeddedRegistry()
+	if err != nil {
+		t.Fatalf("LoadEmbeddedRegistry: %v", err)
+	}
+
+	for name, entry := range legacySpellings {
+		if len(entry.canonical) == 0 {
+			t.Errorf("%q maps to an empty canonical path", name)
+			continue
+		}
+
+		target, _, findErr := RootCmd.Find(entry.canonical)
+		if findErr != nil {
+			t.Errorf("%q maps to %v, which cobra cannot resolve: %v", name, entry.canonical, findErr)
+			continue
+		}
+		want := "nself " + strings.Join(entry.canonical, " ")
+		if target.CommandPath() != want {
+			t.Errorf("%q maps to %v but cobra resolved it to %q", name, entry.canonical, target.CommandPath())
+		}
+
+		item, ok := reg.Lookup("nself " + name)
+		if !ok {
+			t.Errorf("%q has no deprecation registry entry — users get no warning", name)
+			continue
+		}
+		if item.Replacement != want {
+			t.Errorf("%q registry replacement is %q; the rewrite sends it to %q",
+				name, item.Replacement, want)
+		}
+	}
+}
+
+// TestLegacySpellingsAreNotRegisteredCommands guards the ordering requirement:
+// a retired name must NOT still be a registered top-level command, or the
+// rewrite would shadow a real command instead of redirecting a dead one.
+func TestLegacySpellingsAreNotRegisteredCommands(t *testing.T) {
+	for _, c := range RootCmd.Commands() {
+		if _, ok := legacySpellings[c.Name()]; ok {
+			t.Errorf("%q is both a registered top-level command and a legacy spelling", c.Name())
+		}
 	}
 }

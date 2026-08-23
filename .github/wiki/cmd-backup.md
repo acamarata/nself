@@ -264,6 +264,7 @@ Outputs the public key to add to `.env` as `BACKUP_AGE_RECIPIENTS`.
 | `drill` | Run a DR drill: restore latest backup into scratch DB and measure RTO |
 | `init-key` | Generate age encryption keypair for backups |
 | `list` | List available backups |
+| `pitr` | Point-in-time recovery: enable, disable, status, base-backup, restore |
 | `prune` | Remove old backups by retention policy |
 | `restore` | Restore from a backup |
 | `restore-remote` | Restore a backup directly from a remote URL |

@@ -14,9 +14,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// CLI-R09: `flag` (application feature flags, served by the feature-flags
+// plugin) and `feature` (CLI build-time capability gates) were an ambiguous
+// pair — two similarly named top-level commands for unrelated concepts.
+// `feature` moved to `nself config features`; this one is now plural to match
+// what it manages. `flag` stays as a cobra alias, so the old spelling keeps
+// working and its deprecation entry fires through CalledAs (see CLI-R03).
 var flagCmd = &cobra.Command{
-	Use:   "flag",
-	Short: "Manage feature flags",
+	Use:     "flags",
+	Aliases: []string{"flag"},
+	Short:   "Manage application feature flags",
 	Long: `Manage feature flags via the nself feature-flags plugin.
 
 Feature flags let you toggle functionality, run canary rollouts, and kill-switch

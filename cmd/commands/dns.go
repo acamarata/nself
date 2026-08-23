@@ -19,7 +19,7 @@ import (
 )
 
 var dnsSetupCmd = &cobra.Command{
-	Use:   "dns-setup",
+	Use:   "dns",
 	Short: "Add project domains to /etc/hosts (run with sudo)",
 	Long: `Add all project domains to /etc/hosts so local *.custom-domain URLs resolve.
 
@@ -43,7 +43,7 @@ nself.org and localhost setups do not need this.`,
 func init() {
 	dnsSetupCmd.Flags().BoolP("dry-run", "n", false, "Print entries that would be added without writing")
 	dnsSetupCmd.Flags().StringP("project", "p", "", "Path to nself project directory (useful when running with sudo)")
-	RootCmd.AddCommand(dnsSetupCmd)
+	trustCmd.AddCommand(dnsSetupCmd)
 }
 
 func runDNSSetup(cmd *cobra.Command, args []string) error {

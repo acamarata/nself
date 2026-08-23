@@ -207,6 +207,14 @@ func Execute() error {
 	// Product-alias shim: 'nsentry <args>' (symlinked binary) ≡ 'nself sentry <args>'.
 	normalizeInvokedBinary()
 
+	// CLI-R09: rewrite retired top-level spellings onto their new home before
+	// anything else looks at os.Args. This has to precede the plugin proxy
+	// below: a retired name is no longer a registered command, so the proxy
+	// would otherwise try to resolve it as a plugin.
+	if legacy := rewriteLegacyInvocation(); legacy != "" {
+		warnLegacySpelling(legacy)
+	}
+
 	// Route cobra error/usage output to stderr so structured output stays clean.
 	RootCmd.SetErr(os.Stderr)
 

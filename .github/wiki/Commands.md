@@ -111,7 +111,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 92**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 84**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -122,7 +122,7 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 92**
 | `nself alerts` | Manage Prometheus alert rules and silences | observe | list, silence, test |
 | `nself api` | API versioning and deprecation tooling for operators | extend | changelog, deprecation-check, version |
 | `nself audit` | Run ecosystem audits (docs, origin, etc.) | observe | docs |
-| `nself backup` | Backup operations: create, list, restore, verify, prune, config, status, init-key | data | config, create, drill, init-key, list, prune, restore, restore-remote, resume, schedule, status, stream, verify |
+| `nself backup` | Backup operations: create, list, restore, verify, prune, config, status, init-key | data | config, create, drill, init-key, list, pitr, prune, restore, restore-remote, resume, schedule, status, stream, verify |
 | `nself billing` | Billing operations: usage, invoice-preview, report, retry-event | account | invoice-preview, report, retry-event, usage |
 | `nself build` | Compose your infrastructure from .env | core | — |
 | `nself bundle` | Manage and inspect nSelf plugin bundles | extend | info, install, list, remove |
@@ -130,22 +130,20 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 92**
 | `nself claw` | Manage nClaw AI assistant | ai | chat, config, export, keys, mcp, memories, migrate, pair, prompt, proxy, session, status, topics, unlock |
 | `nself clean` | Remove generated artifacts (docker-compose.yml, nginx configs, build cache) | core | — |
 | `nself completion` | Generate shell completion scripts | account | — |
-| `nself config` | Manage project configuration | config | export, get, import, list, set, show, validate |
+| `nself config` | Manage project configuration | config | export, features, get, import, list, set, show, validate |
 | `nself costs` | Show estimated per-install operational costs | observe | — |
 | `nself db` | Database operations: migrations, backups, restore, seed, shell | data | backup, backup-sync, backup-sync-status, drift, drop, fk-index, hasura, lint, list, migrate, pgbouncer, pitr, reset, reset-checksum, restore, restore-drill, restore-drill-list, rls, seed, shell, soft-delete, verify-checksums |
 | `nself deploy` | Deploy the stack to a target environment | deploy | check-access, environments, health, logs, promote, rollback, status, web |
 | `nself dev` | Start development environment | core | — |
 | `nself dlq` | Manage dead-letter queues for nSelf plugins | data | replay |
-| `nself dns-setup` | Add project domains to /etc/hosts (run with sudo) | config | — |
 | `nself doctor` | Run comprehensive system diagnostics | core | — |
 | `nself dogfood` | Production dogfood audit and reporting | observe | audit, report |
 | `nself dr` | Disaster recovery operations: drill, promote-standby, reconfigure-dns, rollback, fence | deploy | drill, fence, promote-standby, reconfigure-dns, rollback |
 | `nself encryption` | Manage BYOK per-tenant encryption (Enterprise) | advanced | configure, key-events, rotate, status, verify |
 | `nself env` | Multi-environment management: switch, list, diff, copy | config | copy, diff, list, show, target, use |
 | `nself exec` | Execute a command inside a service container | core | — |
-| `nself feature` | Manage CLI-built-in feature flags | config | disable, enable, list, status |
 | `nself federation` | Manage GraphQL Federation (opt-in, requires NSELF_FEDERATION=true) | advanced | compose, introspect, status |
-| `nself flag` | Manage feature flags | config | disable, enable, get, history, kill, list, prune, set |
+| `nself flags` | Manage application feature flags | config | disable, enable, get, history, kill, list, prune, set |
 | `nself functions` | Manage serverless functions | data | delete, deploy, invoke, list, logs |
 | `nself gateway` | Manage the nSelf AI gateway (nself-ai-gateway, port 3761) | ai | keys, quota, routes, status |
 | `nself gauth` | Manage Google OAuth tokens for nSelf AI services | ai | refresh, revoke, status |
@@ -164,23 +162,17 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 92**
 | `nself maintenance` | Maintenance utilities: disk cleanup, scheduler | observe | disk-cleanup, schedule, status |
 | `nself man` | Generate man pages for all nself commands | account | — |
 | `nself mcp` | Start the nSelf MCP server | extend | — |
-| `nself migrate` | Detect and migrate legacy artifacts to the current nSelf version | data | detect, firebase, from-bash, generate, rollback, run, supabase, watch |
-| `nself migrate-from-v099` | Migrate v0.9.9 home-level state (license key, channel, ssh keys) to v1.x layout | advanced | — |
-| `nself model` | Manage local AI models via Ollama | ai | benchmark, list, pull, remove, update |
+| `nself migrate` | Detect and migrate legacy artifacts to the current nSelf version | data | detect, firebase, from-bash, from-v099, generate, rollback, run, supabase, watch |
+| `nself model` | Manage local AI models via Ollama | ai | benchmark, list, ollama, pull, remove, update |
 | `nself monitor` | Monitoring stack management | observe | upgrade-dashboards |
 | `nself oauth` | Manage OAuth provider tokens | account | refresh |
-| `nself ollama` | Manage local Ollama LLM stack | ai | models, status |
 | `nself ops` | Ops-profile deployment and management | deploy | deploy |
 | `nself pentest-kit` | Penetration-test readiness kit (Business+) | advanced | credentials, generate, remediation, status |
-| `nself pitr` | Point-in-time recovery: enable, disable, status, base-backup, restore | data | base-backup, disable, enable, restore, status |
 | `nself plugin` | Manage nSelf plugins | extend | audit-tables, compat-check, debug, dev, disable, enable, info, init, install, inventory, link, list, logs, marketplace, new, refresh, remove, search, start, status, stop, submit, test, unlink, update, updates |
 | `nself promote` | Promote one environment to another (e.g. staging to prod) | deploy | rollback |
 | `nself queue` | Manage async job queues (pg-boss) | data | cron, jobs, list, purge, retry |
 | `nself region` | Manage multi-region nSelf deployments | deploy | add, list, promote, status |
-| `nself release` | Orchestrate the full release cascade for a version | deploy | — |
-| `nself release-check` | Run pre-release gates for a version | deploy | — |
-| `nself release-rollback` | Roll back a release to prior version | deploy | — |
-| `nself release-status` | Show running version vs latest across all release artifacts | deploy | — |
+| `nself release` | Orchestrate the full release cascade for a version | deploy | check, rollback, status |
 | `nself reset` | Stop containers, remove all data volumes, and clean generated files | core | — |
 | `nself restart` | Smart restart with config change detection | core | — |
 | `nself secrets` | Manage encrypted project secrets (age encryption) | config | audit, decrypt-on-deploy, edit, get, init, lint, list, list-schedules, rekey, retire, rotate, rotation-log, schedule, set, verify |
@@ -197,7 +189,7 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 92**
 | `nself telemetry` | Manage CLI telemetry preferences | account | off, on, status |
 | `nself template` | Browse and publish full-stack app templates | config | info, list, publish, update |
 | `nself tenant` | [PREVIEW] Tenant management: create, upgrade, suspend, destroy, audit | advanced | audit, create, destroy, suspend, upgrade |
-| `nself trust` | Set up local dev trust (DNS, SSL, port forwarding) | config | status |
+| `nself trust` | Set up local dev trust (DNS, SSL, port forwarding) | config | dns, status |
 | `nself uninstall` | Remove nSelf project data and generated files | account | — |
 | `nself update` | Update the nSelf CLI and admin UI | account | images |
 | `nself upgrade` | Upgrade the nSelf CLI (detects install method) | account | — |
