@@ -32,7 +32,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself dlq` | Manage dead-letter queues for nSelf plugins | — | replay |
 | `nself dns-setup` | Add project domains to /etc/hosts (run with sudo) | — | — |
 | `nself doctor` | Run comprehensive system diagnostics | — | — |
-| `nself dogfood` | Production dogfood audit and reporting | — | audit, report |
 | `nself dr` | Disaster recovery operations: drill, promote-standby, reconfigure-dns, rollback, fence | — | drill, fence, promote-standby, reconfigure-dns, rollback |
 | `nself encryption` | Manage BYOK per-tenant encryption (Enterprise) | — | configure, key-events, rotate, status, verify |
 | `nself env` | Multi-environment management: switch, list, diff, copy | — | copy, diff, list, show, target, use |
@@ -111,7 +110,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 85**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 84**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -137,7 +136,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 85**
 | `nself dev` | Start development environment | core | — |
 | `nself dlq` | Manage dead-letter queues for nSelf plugins | data | replay |
 | `nself doctor` | Run comprehensive system diagnostics | core | — |
-| `nself dogfood` | Production dogfood audit and reporting | observe | audit, report |
 | `nself dr` | Disaster recovery operations: drill, promote-standby, reconfigure-dns, rollback, fence | deploy | drill, fence, promote-standby, reconfigure-dns, rollback |
 | `nself encryption` | Manage BYOK per-tenant encryption (Enterprise) | advanced | configure, key-events, rotate, status, verify |
 | `nself env` | Multi-environment management: switch, list, diff, copy | config | copy, diff, explain, list, show, target, use |

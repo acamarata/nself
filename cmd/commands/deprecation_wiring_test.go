@@ -111,6 +111,17 @@ func TestNoDeprecationWarningsFlagSuppresses(t *testing.T) {
 // entries that can never match. Each `type: command` entry must name a real
 // command path or a real alias of one; otherwise the warning is dead weight and
 // the rename it documents is silently unannounced.
+//
+// Exception: phase 3 ("removed", per the schema comment atop registry.yaml)
+// entries are exempt. Phase 1/2 promise a working rewrite target — reachable
+// through a registered command or a legacySpellings alias — so an unreachable
+// one really is dead weight. Phase 3 means the opposite: the command was
+// deleted outright (CLI-R11 plugin extraction is the first case), so by
+// definition nothing in RootCmd's tree can ever reach it again. The entry's
+// job there is purely documentary: it pins the replacement text so it stays
+// reviewable and consistent with whatever does surface the message at
+// runtime (for a plugin extraction, internal/plugin.ProxyCommand's own
+// "unknown command" hint — see the dogfood entry's comment in registry.yaml).
 func TestEveryDeprecatedCommandEntryIsReachable(t *testing.T) {
 	reg, err := deprecation.LoadEmbeddedRegistry()
 	if err != nil {
@@ -145,6 +156,9 @@ func TestEveryDeprecatedCommandEntryIsReachable(t *testing.T) {
 		item, _ := reg.Lookup(name)
 		if item.Type != deprecation.TypeCommand {
 			continue
+		}
+		if item.Phase >= 3 {
+			continue // removed entirely — see the exemption note above.
 		}
 		if !reachable[name] {
 			dead = append(dead, name)

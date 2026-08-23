@@ -130,6 +130,27 @@ items:
     docs_url: "https://nself.org/docs/cli/reset"
     phase: 1
 
+  # CLI-R11 thin-core extraction, first slice. Unlike the phase-1 entries
+  # above, `dogfood` has no new home inside core — it moved to a plugin
+  # entirely, so there is no argv rewrite in cmd/commands/legacy_spellings.go
+  # for it. Once cmd/commands/dogfood.go is deleted, `nself dogfood` becomes
+  # an unrecognized top-level command and root.go's Execute() routes it
+  # straight to internal/plugin.ProxyCommand — which prints its own
+  # "unknown command ... install it with: nself install dogfood" message
+  # BEFORE cobra ever reaches PersistentPreRunE, so this registry entry is
+  # not consulted by the current code path. It is recorded here so the
+  # replacement text is pinned and reviewable, and so a future wiring of
+  # ProxyCommand into the deprecation registry (tracked as a CLI-R11 follow-up,
+  # not part of this ticket) has a single source of truth to read from. The
+  # wording below intentionally matches ProxyCommand's own hint so the two
+  # never contradict even though only one of them is reachable today.
+  - name: "nself dogfood"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install dogfood"
+    docs_url: "https://nself.org/docs/plugins/dogfood"
+    phase: 3
+
 # =============================================================================
 # Plugin API versioning — G2 (api_version), G4 (deprecated_endpoints + removal)
 # =============================================================================
