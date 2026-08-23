@@ -12,13 +12,23 @@ LDFLAGS := -s -w \
 	-X $(MODULE)/internal/license.licensePubKeyHex=$(NSELF_LICENSE_PUBKEY_HEX)
 BUILDFLAGS := -trimpath
 
-.PHONY: build clean test vet install cross dist verify-prod sport-f21 sbom man fmt fmt-check
+.PHONY: build clean test vet install cross dist verify-prod sport-f21 sport-f02 cmd-inventory sbom man fmt fmt-check
 
 verify-prod:
 	@bash scripts/prod-verify/p87-verification.sh
 
 sport-f21:
 	@bash scripts/sport/generate-f21.sh
+
+## cmd-inventory — CLI-R06. Regenerate the command inventory from the cobra tree.
+## Writes .github/command-inventory.json and .github/wiki/COMMANDS.md.
+## Set NSELF_SPORT_DIR to also refresh SPORT F02 (it lives in the PPI, not here).
+## internal/repoqa asserts the committed copies match, so run this after adding,
+## renaming, or removing any command.
+cmd-inventory:
+	@bash scripts/sport/generate-f02.sh
+
+sport-f02: cmd-inventory
 
 ## Q04 — SBOM generation (local dev target)
 ## Requires: syft (https://github.com/anchore/syft)

@@ -1,0 +1,3769 @@
+[
+  {
+    "name": "account",
+    "path": "nself account",
+    "short": "Manage your nSelf account, sessions, licenses, team, and devices",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "devices",
+        "path": "nself account devices",
+        "short": "List and revoke registered devices",
+        "hidden": false,
+        "flags": [
+          "--force",
+          "--json",
+          "--revoke"
+        ]
+      },
+      {
+        "name": "licenses",
+        "path": "nself account licenses",
+        "short": "List and manage account licenses",
+        "hidden": false,
+        "flags": [
+          "--activate",
+          "--json"
+        ]
+      },
+      {
+        "name": "login",
+        "path": "nself account login",
+        "short": "Log in to your nSelf account",
+        "hidden": false,
+        "flags": [
+          "--no-browser",
+          "--reauth",
+          "--timeout"
+        ]
+      },
+      {
+        "name": "logout",
+        "path": "nself account logout",
+        "short": "Log out of your nSelf account",
+        "hidden": false,
+        "flags": [
+          "--all"
+        ]
+      },
+      {
+        "name": "status",
+        "path": "nself account status",
+        "short": "Show current account summary",
+        "hidden": false,
+        "flags": [
+          "--json"
+        ]
+      },
+      {
+        "name": "team",
+        "path": "nself account team",
+        "short": "Manage team members",
+        "hidden": false,
+        "flags": [
+          "--invite",
+          "--json",
+          "--remove",
+          "--role"
+        ]
+      },
+      {
+        "name": "transfer",
+        "path": "nself account transfer",
+        "short": "Transfer a license to another account",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "admin",
+    "path": "nself admin",
+    "short": "Manage the nSelf Admin dashboard",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "connect",
+        "path": "nself admin connect",
+        "short": "Connect to a remote nSelf Admin via SSH tunnel",
+        "hidden": false,
+        "flags": [
+          "--all",
+          "--as",
+          "--local-port",
+          "--port",
+          "--remote-port",
+          "--user"
+        ]
+      },
+      {
+        "name": "health",
+        "path": "nself admin health",
+        "short": "Check Admin service liveness",
+        "hidden": false
+      },
+      {
+        "name": "logs",
+        "path": "nself admin logs",
+        "short": "Tail Admin container logs",
+        "hidden": false,
+        "flags": [
+          "--follow",
+          "--tail"
+        ]
+      },
+      {
+        "name": "projects",
+        "path": "nself admin projects",
+        "short": "Manage multi-project admin configuration",
+        "hidden": false
+      },
+      {
+        "name": "start",
+        "path": "nself admin start",
+        "short": "Start the Admin service",
+        "hidden": false,
+        "flags": [
+          "--expose-network"
+        ]
+      },
+      {
+        "name": "stop",
+        "path": "nself admin stop",
+        "short": "Stop the Admin container",
+        "hidden": false,
+        "flags": [
+          "--force"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ai",
+    "path": "nself ai",
+    "short": "Manage the nSelf AI plugin and local LLM stack",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "chat",
+        "path": "nself ai chat",
+        "short": "Send a quick chat message to the local AI",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--model"
+        ]
+      },
+      {
+        "name": "local",
+        "path": "nself ai local",
+        "short": "Manage local Ollama runtime and models",
+        "hidden": false
+      },
+      {
+        "name": "pool",
+        "path": "nself ai pool",
+        "short": "Manage the Gemini API key pool (auto-provisioned + manual)",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "ai-studio",
+    "path": "nself ai-studio",
+    "short": "Google AI Studio integration for local nSelf instances",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "bridge",
+        "path": "nself ai-studio bridge",
+        "short": "Start a secure AI Studio bridge via Cloudflare Tunnel",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--idle-timeout",
+          "--ip-allowlist",
+          "--no-context",
+          "--port",
+          "--region"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "alerts",
+    "path": "nself alerts",
+    "short": "Manage Prometheus alert rules and silences",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "list",
+        "path": "nself alerts list",
+        "short": "List all configured alert rules",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--severity"
+        ]
+      },
+      {
+        "name": "silence",
+        "path": "nself alerts silence",
+        "short": "Silence an alert for a specified duration",
+        "hidden": false,
+        "flags": [
+          "--duration",
+          "--reason"
+        ]
+      },
+      {
+        "name": "test",
+        "path": "nself alerts test",
+        "short": "Fire a synthetic test alert",
+        "hidden": false,
+        "flags": [
+          "--alertmanager-url"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "api",
+    "path": "nself api",
+    "short": "API versioning and deprecation tooling for operators",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "changelog",
+        "path": "nself api changelog",
+        "short": "Print the deprecation sunset calendar for a plugin",
+        "hidden": false,
+        "flags": [
+          "--json"
+        ]
+      },
+      {
+        "name": "deprecation-check",
+        "path": "nself api deprecation-check",
+        "short": "Check for deprecated API usage in this install",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--plugin",
+          "--strict"
+        ]
+      },
+      {
+        "name": "version",
+        "path": "nself api version",
+        "short": "Show API version for every surface observable from this install",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--surface",
+          "--timeout"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "audit",
+    "path": "nself audit",
+    "short": "Run ecosystem audits (docs, origin, etc.)",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "docs",
+        "path": "nself audit docs",
+        "short": "Run the quarterly documentation audit",
+        "hidden": false,
+        "flags": [
+          "--fix",
+          "--output",
+          "--quarter",
+          "--root",
+          "--scan",
+          "--summary"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "backup",
+    "path": "nself backup",
+    "short": "Backup operations: create, list, restore, verify, prune, config, status, init-key",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "config",
+        "path": "nself backup config",
+        "short": "View backup configuration",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--format",
+          "--full-at",
+          "--install-cron",
+          "--prune-at",
+          "--remote",
+          "--unit-dir",
+          "--verify-at",
+          "--verify-on",
+          "--wal-every"
+        ]
+      },
+      {
+        "name": "create",
+        "path": "nself backup create",
+        "short": "Create a new backup",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--encrypt",
+          "--no-encrypt",
+          "--remote",
+          "--tag",
+          "--type"
+        ]
+      },
+      {
+        "name": "drill",
+        "path": "nself backup drill",
+        "short": "Run a DR drill: restore latest backup into scratch DB and measure RTO",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--file",
+          "--json",
+          "--rto-hours"
+        ]
+      },
+      {
+        "name": "init-key",
+        "path": "nself backup init-key",
+        "short": "Generate age encryption keypair for backups",
+        "hidden": false
+      },
+      {
+        "name": "list",
+        "path": "nself backup list",
+        "short": "List available backups",
+        "hidden": false,
+        "flags": [
+          "--env",
+          "--format",
+          "--remote",
+          "--since"
+        ]
+      },
+      {
+        "name": "prune",
+        "path": "nself backup prune",
+        "short": "Remove old backups by retention policy",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--format",
+          "--keep-daily",
+          "--keep-monthly",
+          "--keep-weekly"
+        ]
+      },
+      {
+        "name": "restore",
+        "path": "nself backup restore",
+        "short": "Restore from a backup",
+        "hidden": false,
+        "flags": [
+          "--decrypt-key",
+          "--only",
+          "--point-in-time",
+          "--to",
+          "--yes"
+        ]
+      },
+      {
+        "name": "restore-remote",
+        "path": "nself backup restore-remote",
+        "short": "Restore a backup directly from a remote URL",
+        "hidden": false,
+        "flags": [
+          "--from",
+          "--key",
+          "--yes"
+        ]
+      },
+      {
+        "name": "resume",
+        "path": "nself backup resume",
+        "short": "Resume an interrupted streaming backup",
+        "hidden": false
+      },
+      {
+        "name": "schedule",
+        "path": "nself backup schedule",
+        "short": "Schedule recurring streaming backups via systemd timers",
+        "hidden": false,
+        "flags": [
+          "--cron",
+          "--dry-run",
+          "--recipient",
+          "--to",
+          "--unit-dir"
+        ]
+      },
+      {
+        "name": "status",
+        "path": "nself backup status",
+        "short": "Show backup subsystem status",
+        "hidden": false,
+        "flags": [
+          "--format"
+        ]
+      },
+      {
+        "name": "stream",
+        "path": "nself backup stream",
+        "short": "Stream an encrypted backup directly to a remote destination",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--recipient",
+          "--to"
+        ]
+      },
+      {
+        "name": "verify",
+        "path": "nself backup verify",
+        "short": "Verify backup integrity",
+        "hidden": false,
+        "flags": [
+          "--cleanup",
+          "--keep",
+          "--restore-test"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "billing",
+    "path": "nself billing",
+    "short": "Billing operations: usage, invoice-preview, report, retry-event",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "invoice-preview",
+        "path": "nself billing invoice-preview",
+        "short": "Preview next Stripe invoice (requires STRIPE_SECRET_KEY)",
+        "hidden": false
+      },
+      {
+        "name": "report",
+        "path": "nself billing report",
+        "short": "Generate billing report across tenants",
+        "hidden": false,
+        "flags": [
+          "--format",
+          "--month",
+          "--tenant"
+        ]
+      },
+      {
+        "name": "retry-event",
+        "path": "nself billing retry-event",
+        "short": "Re-enqueue a failed Stripe outbox event",
+        "hidden": false
+      },
+      {
+        "name": "usage",
+        "path": "nself billing usage",
+        "short": "Show usage metrics for a tenant",
+        "hidden": false,
+        "flags": [
+          "--format",
+          "--month"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "build",
+    "path": "nself build",
+    "short": "Compose your infrastructure from .env",
+    "hidden": false,
+    "flags": [
+      "--allow-insecure",
+      "--allow-legacy",
+      "--check",
+      "--debug",
+      "--force",
+      "--no-auto-redis",
+      "--no-cache",
+      "--no-migration-check",
+      "--no-monorepo",
+      "--profile",
+      "--quiet",
+      "--security-report",
+      "--verbose"
+    ]
+  },
+  {
+    "name": "bundle",
+    "path": "nself bundle",
+    "short": "Manage and inspect nSelf plugin bundles",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "info",
+        "path": "nself bundle info",
+        "short": "Show bundle details, plugins, and license status",
+        "hidden": false,
+        "flags": [
+          "--json"
+        ]
+      },
+      {
+        "name": "install",
+        "path": "nself bundle install",
+        "short": "Install every plugin in a bundle (license-gated, atomic rollback on failure)",
+        "hidden": false,
+        "flags": [
+          "--channel",
+          "--dry-run",
+          "--force",
+          "--strict"
+        ]
+      },
+      {
+        "name": "list",
+        "path": "nself bundle list",
+        "short": "List all available nSelf plugin bundles",
+        "hidden": false,
+        "flags": [
+          "--installed",
+          "--json"
+        ]
+      },
+      {
+        "name": "remove",
+        "path": "nself bundle remove",
+        "short": "Remove every plugin in a bundle",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--keep-data"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ci",
+    "path": "nself ci",
+    "short": "Run the nself-ci gate suite and post a GitHub commit status",
+    "hidden": false,
+    "flags": [
+      "--check",
+      "--no-gitleaks",
+      "--no-status",
+      "--owner",
+      "--repo",
+      "--sha",
+      "--verbose"
+    ],
+    "subcommands": [
+      {
+        "name": "eval",
+        "path": "nself ci eval",
+        "short": "Run eval-gate suite or validate an eval-set YAML",
+        "hidden": false,
+        "flags": [
+          "--all",
+          "--dry-run",
+          "--eval-url",
+          "--fail-fast",
+          "--k",
+          "--no-cache",
+          "--output",
+          "--repo",
+          "--source-account",
+          "--suite",
+          "--tier",
+          "--validate-only"
+        ]
+      },
+      {
+        "name": "forgejo",
+        "path": "nself ci forgejo",
+        "short": "Show Forgejo server + runner health (ops profile)",
+        "hidden": false,
+        "flags": [
+          "--runner",
+          "--url"
+        ]
+      },
+      {
+        "name": "serve",
+        "path": "nself ci serve",
+        "short": "Start the nself-ci webhook listener daemon (port 3845)",
+        "hidden": false,
+        "flags": [
+          "--addr",
+          "--concurrency",
+          "--secret",
+          "--timeout",
+          "--verbose",
+          "--workdir"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "claw",
+    "path": "nself claw",
+    "short": "Manage nClaw AI assistant",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "chat",
+        "path": "nself claw chat",
+        "short": "Start an interactive chat session with nClaw",
+        "hidden": false,
+        "flags": [
+          "--model",
+          "--resume",
+          "--session",
+          "--topic"
+        ]
+      },
+      {
+        "name": "config",
+        "path": "nself claw config",
+        "short": "Show or modify nClaw CLI configuration",
+        "hidden": false
+      },
+      {
+        "name": "export",
+        "path": "nself claw export",
+        "short": "Export all nClaw data",
+        "hidden": false,
+        "flags": [
+          "--format"
+        ]
+      },
+      {
+        "name": "keys",
+        "path": "nself claw keys",
+        "short": "Manage API keys",
+        "hidden": false
+      },
+      {
+        "name": "mcp",
+        "path": "nself claw mcp",
+        "short": "Start an MCP server for nClaw",
+        "hidden": false,
+        "flags": [
+          "--port",
+          "--transport"
+        ]
+      },
+      {
+        "name": "memories",
+        "path": "nself claw memories",
+        "short": "List or search memories",
+        "hidden": false
+      },
+      {
+        "name": "migrate",
+        "path": "nself claw migrate",
+        "short": "Apply pending claw schema migrations",
+        "hidden": false,
+        "flags": [
+          "--from",
+          "--to"
+        ]
+      },
+      {
+        "name": "pair",
+        "path": "nself claw pair",
+        "short": "Generate a pairing code for nClaw clients",
+        "hidden": false,
+        "flags": [
+          "--direct",
+          "--qr"
+        ]
+      },
+      {
+        "name": "prompt",
+        "path": "nself claw prompt",
+        "short": "Send a single prompt to nClaw and print the response",
+        "hidden": false,
+        "flags": [
+          "--file",
+          "--json",
+          "--model",
+          "--no-memory",
+          "--no-stream",
+          "--raw",
+          "--system",
+          "--timeout",
+          "--topic"
+        ]
+      },
+      {
+        "name": "proxy",
+        "path": "nself claw proxy",
+        "short": "Start a local OpenAI-compatible proxy",
+        "hidden": false
+      },
+      {
+        "name": "session",
+        "path": "nself claw session",
+        "short": "Manage Claude Code PTY sessions",
+        "hidden": false
+      },
+      {
+        "name": "status",
+        "path": "nself claw status",
+        "short": "Show nClaw server status and health",
+        "hidden": false
+      },
+      {
+        "name": "topics",
+        "path": "nself claw topics",
+        "short": "List or search topics",
+        "hidden": false
+      },
+      {
+        "name": "unlock",
+        "path": "nself claw unlock",
+        "short": "Temporarily unlock the web UI for first-time account setup",
+        "hidden": false,
+        "flags": [
+          "--minutes"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "clean",
+    "path": "nself clean",
+    "short": "Remove generated artifacts (docker-compose.yml, nginx configs, build cache)",
+    "hidden": false
+  },
+  {
+    "name": "completion",
+    "path": "nself completion",
+    "short": "Generate shell completion scripts",
+    "hidden": false
+  },
+  {
+    "name": "config",
+    "path": "nself config",
+    "short": "Manage project configuration",
+    "hidden": false,
+    "flags": [
+      "--env",
+      "--json",
+      "--reveal"
+    ],
+    "subcommands": [
+      {
+        "name": "export",
+        "path": "nself config export",
+        "short": "Export current config to a file or stdout",
+        "hidden": false,
+        "flags": [
+          "--format",
+          "--output"
+        ]
+      },
+      {
+        "name": "get",
+        "path": "nself config get",
+        "short": "Get a single configuration value",
+        "hidden": false
+      },
+      {
+        "name": "import",
+        "path": "nself config import",
+        "short": "Import config from a file into .env",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--force"
+        ]
+      },
+      {
+        "name": "list",
+        "path": "nself config list",
+        "short": "List all known config keys with current values",
+        "hidden": false
+      },
+      {
+        "name": "set",
+        "path": "nself config set",
+        "short": "Update a configuration value (writes to .env)",
+        "hidden": false
+      },
+      {
+        "name": "show",
+        "path": "nself config show",
+        "short": "Show all config key=value pairs (masked by default)",
+        "hidden": false,
+        "flags": [
+          "--format"
+        ]
+      },
+      {
+        "name": "validate",
+        "path": "nself config validate",
+        "short": "Validate configuration against all registered rules",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "costs",
+    "path": "nself costs",
+    "short": "Show estimated per-install operational costs",
+    "hidden": false,
+    "flags": [
+      "--format",
+      "--server-type"
+    ]
+  },
+  {
+    "name": "db",
+    "path": "nself db",
+    "short": "Database operations: migrations, backups, restore, seed, shell",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "backup",
+        "path": "nself db backup",
+        "short": "Create pg_dump backup",
+        "hidden": false
+      },
+      {
+        "name": "backup-sync",
+        "path": "nself db backup-sync",
+        "short": "Sync local backups to remote storage (cross-region)",
+        "hidden": false,
+        "flags": [
+          "--encrypt",
+          "--recipients",
+          "--remote"
+        ]
+      },
+      {
+        "name": "backup-sync-status",
+        "path": "nself db backup-sync-status",
+        "short": "Show cross-region backup sync status",
+        "hidden": false
+      },
+      {
+        "name": "drift",
+        "path": "nself db drift",
+        "short": "Schema drift detection: scan np_* tables for Theme 25 column compliance",
+        "hidden": false,
+        "aliases": [
+          "schema-drift"
+        ]
+      },
+      {
+        "name": "drop",
+        "path": "nself db drop",
+        "short": "Drop the project database (DESTRUCTIVE)",
+        "hidden": false,
+        "flags": [
+          "--yes"
+        ]
+      },
+      {
+        "name": "fk-index",
+        "path": "nself db fk-index",
+        "short": "Audit and create indexes for foreign key columns",
+        "hidden": false
+      },
+      {
+        "name": "hasura",
+        "path": "nself db hasura",
+        "short": "Hasura metadata operations",
+        "hidden": false
+      },
+      {
+        "name": "lint",
+        "path": "nself db lint",
+        "short": "Check RLS policies on tenant-scoped tables",
+        "hidden": false,
+        "flags": [
+          "--format",
+          "--matrix",
+          "--metric",
+          "--remediate",
+          "--rls"
+        ]
+      },
+      {
+        "name": "list",
+        "path": "nself db list",
+        "short": "List databases in the project Postgres instance",
+        "hidden": false
+      },
+      {
+        "name": "migrate",
+        "path": "nself db migrate",
+        "short": "Manage database migrations",
+        "hidden": false,
+        "flags": [
+          "--plugin"
+        ]
+      },
+      {
+        "name": "pgbouncer",
+        "path": "nself db pgbouncer",
+        "short": "PgBouncer connection pooler operations",
+        "hidden": false
+      },
+      {
+        "name": "pitr",
+        "path": "nself db pitr",
+        "short": "Point-in-time recovery: status, enable, test, restore",
+        "hidden": false
+      },
+      {
+        "name": "reset",
+        "path": "nself db reset",
+        "short": "Drop and recreate database (DESTRUCTIVE)",
+        "hidden": false,
+        "flags": [
+          "--force",
+          "--yes"
+        ]
+      },
+      {
+        "name": "reset-checksum",
+        "path": "nself db reset-checksum",
+        "short": "Reset stored checksum for a migration (dangerous)",
+        "hidden": false,
+        "flags": [
+          "--i-know-what-im-doing"
+        ]
+      },
+      {
+        "name": "restore",
+        "path": "nself db restore",
+        "short": "Restore from backup",
+        "hidden": false,
+        "flags": [
+          "--overwrite",
+          "--yes"
+        ]
+      },
+      {
+        "name": "restore-drill",
+        "path": "nself db restore-drill",
+        "short": "Run a non-destructive restore drill",
+        "hidden": false,
+        "flags": [
+          "--file"
+        ]
+      },
+      {
+        "name": "restore-drill-list",
+        "path": "nself db restore-drill-list",
+        "short": "List past restore drill results",
+        "hidden": false
+      },
+      {
+        "name": "rls",
+        "path": "nself db rls",
+        "short": "Row-Level Security management: audit, apply, rollback",
+        "hidden": false
+      },
+      {
+        "name": "seed",
+        "path": "nself db seed",
+        "short": "Database seeding: run, list, verify, graph",
+        "hidden": false
+      },
+      {
+        "name": "shell",
+        "path": "nself db shell",
+        "short": "Open psql interactive shell",
+        "hidden": false
+      },
+      {
+        "name": "soft-delete",
+        "path": "nself db soft-delete",
+        "short": "Manage soft-delete (deleted_at) patterns across tables",
+        "hidden": false
+      },
+      {
+        "name": "verify-checksums",
+        "path": "nself db verify-checksums",
+        "short": "Verify migration file checksums against stored values",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "deploy",
+    "path": "nself deploy",
+    "short": "Deploy the stack to a target environment",
+    "hidden": false,
+    "flags": [
+      "--canary",
+      "--dry-run",
+      "--env",
+      "--exclude-frontends",
+      "--follow",
+      "--force",
+      "--force-migration",
+      "--include-frontends",
+      "--json",
+      "--rolling",
+      "--server",
+      "--skip-canary",
+      "--skip-health",
+      "--strategy",
+      "--yes"
+    ],
+    "subcommands": [
+      {
+        "name": "check-access",
+        "path": "nself deploy check-access",
+        "short": "Verify access to configured deploy targets (deprecated: use 'nself env target probe')",
+        "hidden": false,
+        "flags": [
+          "--json"
+        ]
+      },
+      {
+        "name": "environments",
+        "path": "nself deploy environments",
+        "short": "List configured deploy environments and server capabilities",
+        "hidden": false
+      },
+      {
+        "name": "health",
+        "path": "nself deploy health",
+        "short": "Run health checks against a target deployment",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--server"
+        ]
+      },
+      {
+        "name": "logs",
+        "path": "nself deploy logs",
+        "short": "Show deployment logs for a target",
+        "hidden": false,
+        "flags": [
+          "--server"
+        ]
+      },
+      {
+        "name": "promote",
+        "path": "nself deploy promote",
+        "short": "Promote a canary deploy to 100% green traffic",
+        "hidden": false
+      },
+      {
+        "name": "rollback",
+        "path": "nself deploy rollback",
+        "short": "Roll back the last deployment for a target",
+        "hidden": false
+      },
+      {
+        "name": "status",
+        "path": "nself deploy status",
+        "short": "Show deployment status for a target",
+        "hidden": false,
+        "flags": [
+          "--blue-green",
+          "--env",
+          "--json",
+          "--server"
+        ]
+      },
+      {
+        "name": "web",
+        "path": "nself deploy web",
+        "short": "Build web apps locally and deploy prebuilt output to Vercel",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--prod",
+          "--token",
+          "--web-dir"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "dev",
+    "path": "nself dev",
+    "short": "Start development environment",
+    "hidden": false,
+    "flags": [
+      "--hot"
+    ]
+  },
+  {
+    "name": "dlq",
+    "path": "nself dlq",
+    "short": "Manage dead-letter queues for nSelf plugins",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "replay",
+        "path": "nself dlq replay",
+        "short": "Re-enqueue DLQ rows for a plugin",
+        "hidden": false,
+        "flags": [
+          "--base-url",
+          "--dry-run",
+          "--filter",
+          "--max-rows"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "dns-setup",
+    "path": "nself dns-setup",
+    "short": "Add project domains to /etc/hosts (run with sudo)",
+    "hidden": false,
+    "flags": [
+      "--dry-run",
+      "--project"
+    ]
+  },
+  {
+    "name": "doctor",
+    "path": "nself doctor",
+    "short": "Run comprehensive system diagnostics",
+    "hidden": false,
+    "flags": [
+      "--ai",
+      "--alerts",
+      "--check-legacy",
+      "--deep",
+      "--fix",
+      "--format",
+      "--full",
+      "--headless",
+      "--install-check",
+      "--json",
+      "--only",
+      "--section",
+      "--skip",
+      "--skip-ollama",
+      "--skip-pool",
+      "--verbose",
+      "--yes"
+    ]
+  },
+  {
+    "name": "dogfood",
+    "path": "nself dogfood",
+    "short": "Production dogfood audit and reporting",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "audit",
+        "path": "nself dogfood audit",
+        "short": "Run comprehensive dogfood audit (21 checks)",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--save"
+        ]
+      },
+      {
+        "name": "report",
+        "path": "nself dogfood report",
+        "short": "Show the latest dogfood audit report",
+        "hidden": false,
+        "flags": [
+          "--json"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "dr",
+    "path": "nself dr",
+    "short": "Disaster recovery operations: drill, promote-standby, reconfigure-dns, rollback, fence",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "drill",
+        "path": "nself dr drill",
+        "short": "Execute a DR drill",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--hetzner-project",
+          "--install-cron",
+          "--now",
+          "--region",
+          "--render-alerts",
+          "--render-cloud-init",
+          "--scenario",
+          "--schedule",
+          "--ssh-key",
+          "--vm-type"
+        ]
+      },
+      {
+        "name": "fence",
+        "path": "nself dr fence",
+        "short": "Set read-only flag in Redis for split-brain prevention",
+        "hidden": false,
+        "flags": [
+          "--dry-run"
+        ]
+      },
+      {
+        "name": "promote-standby",
+        "path": "nself dr promote-standby",
+        "short": "Promote warm standby to primary",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--region",
+          "--yes"
+        ]
+      },
+      {
+        "name": "reconfigure-dns",
+        "path": "nself dr reconfigure-dns",
+        "short": "Update DNS records to point to new primary",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--ip"
+        ]
+      },
+      {
+        "name": "rollback",
+        "path": "nself dr rollback",
+        "short": "Demote promoted standby and resync from original primary",
+        "hidden": false,
+        "flags": [
+          "--dry-run"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "encryption",
+    "path": "nself encryption",
+    "short": "Manage BYOK per-tenant encryption (Enterprise)",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "configure",
+        "path": "nself encryption configure",
+        "short": "Configure a KMS provider for BYOK encryption",
+        "hidden": false,
+        "flags": [
+          "--credentials-ref",
+          "--endpoint",
+          "--key-id",
+          "--key-name",
+          "--key-path",
+          "--provider",
+          "--region"
+        ]
+      },
+      {
+        "name": "key-events",
+        "path": "nself encryption key-events",
+        "short": "List the key event audit trail",
+        "hidden": false
+      },
+      {
+        "name": "rotate",
+        "path": "nself encryption rotate",
+        "short": "Rotate data encryption keys",
+        "hidden": false,
+        "flags": [
+          "--dry-run"
+        ]
+      },
+      {
+        "name": "status",
+        "path": "nself encryption status",
+        "short": "Show BYOK configuration and last verification",
+        "hidden": false
+      },
+      {
+        "name": "verify",
+        "path": "nself encryption verify",
+        "short": "Test KMS connectivity (wrap+unwrap round-trip)",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "env",
+    "path": "nself env",
+    "short": "Multi-environment management: switch, list, diff, copy",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "copy",
+        "path": "nself env copy",
+        "short": "Scaffold a new environment from an existing one",
+        "hidden": false
+      },
+      {
+        "name": "diff",
+        "path": "nself env diff",
+        "short": "Compare two environment configs side-by-side",
+        "hidden": false
+      },
+      {
+        "name": "list",
+        "path": "nself env list",
+        "short": "List available environments",
+        "hidden": false
+      },
+      {
+        "name": "show",
+        "path": "nself env show",
+        "short": "Show current environment config (secrets redacted)",
+        "hidden": false
+      },
+      {
+        "name": "target",
+        "path": "nself env target",
+        "short": "Manage control-plane server targets",
+        "hidden": false
+      },
+      {
+        "name": "use",
+        "path": "nself env use",
+        "short": "Switch active environment",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "exec",
+    "path": "nself exec",
+    "short": "Execute a command inside a service container",
+    "hidden": false,
+    "flags": [
+      "--env",
+      "--no-tty",
+      "--user",
+      "--workdir"
+    ]
+  },
+  {
+    "name": "feature",
+    "path": "nself feature",
+    "short": "Manage CLI-built-in feature flags",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "disable",
+        "path": "nself feature disable",
+        "short": "Disable a feature flag (records an override)",
+        "hidden": false
+      },
+      {
+        "name": "enable",
+        "path": "nself feature enable",
+        "short": "Enable a feature flag (records an override)",
+        "hidden": false
+      },
+      {
+        "name": "list",
+        "path": "nself feature list",
+        "short": "List all registered feature flags with effective state",
+        "hidden": false,
+        "flags": [
+          "--json"
+        ]
+      },
+      {
+        "name": "status",
+        "path": "nself feature status",
+        "short": "Show the effective state for a single flag",
+        "hidden": false,
+        "flags": [
+          "--json"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "federation",
+    "path": "nself federation",
+    "short": "Manage GraphQL Federation (opt-in, requires NSELF_FEDERATION=true)",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "compose",
+        "path": "nself federation compose",
+        "short": "Re-compose supergraph schema from installed plugin subgraphs",
+        "hidden": false
+      },
+      {
+        "name": "introspect",
+        "path": "nself federation introspect",
+        "short": "Print the full supergraph schema to stdout",
+        "hidden": false
+      },
+      {
+        "name": "status",
+        "path": "nself federation status",
+        "short": "Show subgraph health and schema composition status",
+        "hidden": false,
+        "flags": [
+          "--json"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "flag",
+    "path": "nself flag",
+    "short": "Manage feature flags",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "disable",
+        "path": "nself flag disable",
+        "short": "Disable a feature flag",
+        "hidden": false,
+        "flags": [
+          "--plugin-url"
+        ]
+      },
+      {
+        "name": "enable",
+        "path": "nself flag enable",
+        "short": "Enable a feature flag",
+        "hidden": false,
+        "flags": [
+          "--plugin-url"
+        ]
+      },
+      {
+        "name": "get",
+        "path": "nself flag get",
+        "short": "Get a single feature flag",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--plugin-url"
+        ]
+      },
+      {
+        "name": "history",
+        "path": "nself flag history",
+        "short": "Show audit log for a feature flag",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--plugin-url"
+        ]
+      },
+      {
+        "name": "kill",
+        "path": "nself flag kill",
+        "short": "Kill-switch a feature flag (emergency disable with required reason)",
+        "hidden": false,
+        "flags": [
+          "--plugin-url",
+          "--reason"
+        ]
+      },
+      {
+        "name": "list",
+        "path": "nself flag list",
+        "short": "List all feature flags",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--plugin-url",
+          "--type"
+        ]
+      },
+      {
+        "name": "prune",
+        "path": "nself flag prune",
+        "short": "List (or delete) stale feature flags",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--plugin-url",
+          "--stale"
+        ]
+      },
+      {
+        "name": "set",
+        "path": "nself flag set",
+        "short": "Update a feature flag's enabled state and/or rollout percentage",
+        "hidden": false,
+        "flags": [
+          "--enabled",
+          "--plugin-url",
+          "--rollout-pct"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "functions",
+    "path": "nself functions",
+    "short": "Manage serverless functions",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "delete",
+        "path": "nself functions delete",
+        "short": "Delete a deployed function",
+        "hidden": false,
+        "flags": [
+          "--confirm"
+        ]
+      },
+      {
+        "name": "deploy",
+        "path": "nself functions deploy",
+        "short": "Deploy a function from a file or directory",
+        "hidden": false,
+        "flags": [
+          "--env",
+          "--name",
+          "--runtime"
+        ]
+      },
+      {
+        "name": "invoke",
+        "path": "nself functions invoke",
+        "short": "Invoke a deployed function",
+        "hidden": false,
+        "flags": [
+          "--auth",
+          "--method",
+          "--payload"
+        ]
+      },
+      {
+        "name": "list",
+        "path": "nself functions list",
+        "short": "List deployed functions",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--runtime"
+        ]
+      },
+      {
+        "name": "logs",
+        "path": "nself functions logs",
+        "short": "Stream logs for a function",
+        "hidden": false,
+        "flags": [
+          "--follow",
+          "--since",
+          "--tail"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "gateway",
+    "path": "nself gateway",
+    "short": "Manage the nSelf AI gateway (nself-ai-gateway, port 3761)",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "keys",
+        "path": "nself gateway keys",
+        "short": "Manage AI provider keys",
+        "hidden": false
+      },
+      {
+        "name": "quota",
+        "path": "nself gateway quota",
+        "short": "Show AI request quota usage",
+        "hidden": false,
+        "flags": [
+          "--model",
+          "--provider"
+        ]
+      },
+      {
+        "name": "routes",
+        "path": "nself gateway routes",
+        "short": "List gateway routing rules",
+        "hidden": false
+      },
+      {
+        "name": "status",
+        "path": "nself gateway status",
+        "short": "Health-check all three AI services",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "gauth",
+    "path": "nself gauth",
+    "short": "Manage Google OAuth tokens for nSelf AI services",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "refresh",
+        "path": "nself gauth refresh",
+        "short": "Force-refresh a Google OAuth access token for an account",
+        "hidden": false,
+        "flags": [
+          "--account",
+          "--force"
+        ]
+      },
+      {
+        "name": "revoke",
+        "path": "nself gauth revoke",
+        "short": "Revoke and remove a stored Google OAuth refresh token",
+        "hidden": false,
+        "flags": [
+          "--account"
+        ]
+      },
+      {
+        "name": "status",
+        "path": "nself gauth status",
+        "short": "Show token expiry for all provisioned gauth accounts",
+        "hidden": false,
+        "flags": [
+          "--account",
+          "--json"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "gdpr",
+    "path": "nself gdpr",
+    "short": "GDPR data portability and right-to-erasure (Art. 20, 17)",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "delete",
+        "path": "nself gdpr delete",
+        "short": "Delete or anonymize all data for a user (GDPR Art. 17 erasure)",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--user"
+        ]
+      },
+      {
+        "name": "export",
+        "path": "nself gdpr export",
+        "short": "Export all data for a user (GDPR Art. 20 portability)",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--format",
+          "--notify",
+          "--output",
+          "--user"
+        ]
+      },
+      {
+        "name": "forget",
+        "path": "nself gdpr forget",
+        "short": "Alias for 'delete' — right to be forgotten (GDPR Art. 17)",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--user"
+        ]
+      },
+      {
+        "name": "list-requests",
+        "path": "nself gdpr list-requests",
+        "short": "List all GDPR requests",
+        "hidden": false,
+        "flags": [
+          "--status"
+        ]
+      },
+      {
+        "name": "status",
+        "path": "nself gdpr status",
+        "short": "Show the status of a GDPR request",
+        "hidden": false,
+        "flags": [
+          "--request"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "generate",
+    "path": "nself generate",
+    "short": "Generate type-safe client SDK types from the live Hasura schema",
+    "hidden": false,
+    "flags": [
+      "--env",
+      "--lang",
+      "--no-hooks",
+      "--operations",
+      "--out",
+      "--pydantic",
+      "--watch"
+    ]
+  },
+  {
+    "name": "health",
+    "path": "nself health",
+    "short": "Health check management with continuous monitoring",
+    "hidden": false,
+    "flags": [
+      "--env",
+      "--interval",
+      "--json",
+      "--quiet",
+      "--retries",
+      "--timeout"
+    ],
+    "subcommands": [
+      {
+        "name": "check",
+        "path": "nself health check",
+        "short": "Run all health checks",
+        "hidden": false
+      },
+      {
+        "name": "config",
+        "path": "nself health config",
+        "short": "Show health check settings",
+        "hidden": false
+      },
+      {
+        "name": "endpoint",
+        "path": "nself health endpoint",
+        "short": "Check an HTTP endpoint",
+        "hidden": false
+      },
+      {
+        "name": "history",
+        "path": "nself health history",
+        "short": "Show last 20 health checks",
+        "hidden": false
+      },
+      {
+        "name": "service",
+        "path": "nself health service",
+        "short": "Check a single service",
+        "hidden": false
+      },
+      {
+        "name": "watch",
+        "path": "nself health watch",
+        "short": "Continuous health monitoring",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "help-topics",
+    "path": "nself help-topics",
+    "short": "Browse help topics (quickstart, plugins, license, envs, doctor, errors)",
+    "hidden": false
+  },
+  {
+    "name": "infra",
+    "path": "nself infra",
+    "short": "Provision nSelf infrastructure via Terraform",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "apply",
+        "path": "nself infra apply",
+        "short": "Provision nSelf infrastructure via Terraform",
+        "hidden": false,
+        "flags": [
+          "--auto-approve",
+          "--deploy-pubkey",
+          "--domain",
+          "--force",
+          "--location",
+          "--provider",
+          "--server-type",
+          "--state-bucket"
+        ]
+      },
+      {
+        "name": "destroy",
+        "path": "nself infra destroy",
+        "short": "Destroy nSelf infrastructure",
+        "hidden": false,
+        "flags": [
+          "--auto-approve",
+          "--domain",
+          "--provider"
+        ]
+      },
+      {
+        "name": "plan",
+        "path": "nself infra plan",
+        "short": "Show the Terraform plan for the given provider",
+        "hidden": false,
+        "flags": [
+          "--domain",
+          "--provider",
+          "--state-bucket"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "init",
+    "path": "nself init",
+    "short": "Initialize a new nSelf project",
+    "hidden": false,
+    "flags": [
+      "--cs-template",
+      "--demo",
+      "--domain",
+      "--dry-run",
+      "--fast",
+      "--force",
+      "--full",
+      "--interactive",
+      "--list-presets",
+      "--name",
+      "--no-pgvector",
+      "--no-seed",
+      "--non-interactive",
+      "--preset",
+      "--profile",
+      "--quiet",
+      "--skip-validation",
+      "--template",
+      "--wizard"
+    ]
+  },
+  {
+    "name": "k8s",
+    "path": "nself k8s",
+    "short": "Manage nSelf on Kubernetes via Helm",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "install",
+        "path": "nself k8s install",
+        "short": "Install nSelf on a Kubernetes cluster",
+        "hidden": false,
+        "flags": [
+          "--cluster",
+          "--domain",
+          "--plugins",
+          "--release"
+        ]
+      },
+      {
+        "name": "status",
+        "path": "nself k8s status",
+        "short": "Show the Helm release status",
+        "hidden": false,
+        "flags": [
+          "--cluster",
+          "--release"
+        ]
+      },
+      {
+        "name": "upgrade",
+        "path": "nself k8s upgrade",
+        "short": "Upgrade the nSelf Helm release",
+        "hidden": false,
+        "flags": [
+          "--cluster",
+          "--release"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "license",
+    "path": "nself license",
+    "short": "Manage license keys for nSelf product bundles",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "add",
+        "path": "nself license add",
+        "short": "Add one or more license keys",
+        "hidden": false
+      },
+      {
+        "name": "clear",
+        "path": "nself license clear",
+        "short": "Remove all saved license keys",
+        "hidden": false
+      },
+      {
+        "name": "export",
+        "path": "nself license export",
+        "short": "Export signed license cache for air-gap transfer",
+        "hidden": false
+      },
+      {
+        "name": "health",
+        "path": "nself license health",
+        "short": "Validate format, ping server, and report cache integrity",
+        "hidden": false,
+        "flags": [
+          "--json"
+        ]
+      },
+      {
+        "name": "import",
+        "path": "nself license import",
+        "short": "Import a previously exported license cache file",
+        "hidden": false,
+        "flags": [
+          "--force"
+        ]
+      },
+      {
+        "name": "list",
+        "path": "nself license list",
+        "short": "Show all configured licenses (alias for status)",
+        "hidden": false,
+        "flags": [
+          "--plugin"
+        ]
+      },
+      {
+        "name": "migrate",
+        "path": "nself license migrate",
+        "short": "Migrate legacy license key to a nSelf account",
+        "hidden": false,
+        "flags": [
+          "--account-id",
+          "--dry-run",
+          "--key"
+        ]
+      },
+      {
+        "name": "refresh",
+        "path": "nself license refresh",
+        "short": "Force-refresh license validation against ping.nself.org",
+        "hidden": false
+      },
+      {
+        "name": "remove",
+        "path": "nself license remove",
+        "short": "Remove a license key by value or product name",
+        "hidden": false
+      },
+      {
+        "name": "restore",
+        "path": "nself license restore",
+        "short": "Reactivate dormant plugins with a new license key",
+        "hidden": false,
+        "flags": [
+          "--key"
+        ]
+      },
+      {
+        "name": "revalidate",
+        "path": "nself license revalidate",
+        "short": "Force a fresh validation against ping.nself.org and update the cache",
+        "hidden": false
+      },
+      {
+        "name": "revoke",
+        "path": "nself license revoke",
+        "short": "Mark local license as revoked and wipe the stored key",
+        "hidden": false,
+        "flags": [
+          "--yes"
+        ]
+      },
+      {
+        "name": "set",
+        "path": "nself license set",
+        "short": "Replace all keys with a single key",
+        "hidden": false
+      },
+      {
+        "name": "show",
+        "path": "nself license show",
+        "short": "Display license tier, bundles, plugins, and cache expiry",
+        "hidden": false,
+        "flags": [
+          "--json"
+        ]
+      },
+      {
+        "name": "simulate-offline",
+        "path": "nself license simulate-offline",
+        "short": "Simulate being offline for N days (testing only)",
+        "hidden": false,
+        "flags": [
+          "--clear"
+        ]
+      },
+      {
+        "name": "status",
+        "path": "nself license status",
+        "short": "Show all configured licenses and plugin coverage",
+        "hidden": false,
+        "flags": [
+          "--plugin"
+        ]
+      },
+      {
+        "name": "tail",
+        "path": "nself license tail",
+        "short": "Stream live license validation events from ping_api",
+        "hidden": false,
+        "flags": [
+          "--filter",
+          "--ping-url"
+        ]
+      },
+      {
+        "name": "upgrade",
+        "path": "nself license upgrade",
+        "short": "Open pricing page in browser",
+        "hidden": false
+      },
+      {
+        "name": "validate",
+        "path": "nself license validate",
+        "short": "Validate key against ping.nself.org",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "login",
+    "path": "nself login",
+    "short": "Log in to your nSelf account",
+    "hidden": false,
+    "flags": [
+      "--force",
+      "--no-browser"
+    ]
+  },
+  {
+    "name": "logout",
+    "path": "nself logout",
+    "short": "Log out of your nSelf account",
+    "hidden": false,
+    "flags": [
+      "--all"
+    ]
+  },
+  {
+    "name": "logs",
+    "path": "nself logs",
+    "short": "View and filter service logs",
+    "hidden": false,
+    "flags": [
+      "--all",
+      "--compact",
+      "--errors",
+      "--follow",
+      "--grep",
+      "--json",
+      "--level",
+      "--more",
+      "--no-color",
+      "--plain",
+      "--quiet",
+      "--search",
+      "--service",
+      "--since",
+      "--status",
+      "--summary",
+      "--tail",
+      "--top",
+      "--until"
+    ]
+  },
+  {
+    "name": "mail",
+    "path": "nself mail",
+    "short": "Send transactional and broadcast email through the nSelf stack",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "broadcast",
+        "path": "nself mail broadcast",
+        "short": "Send a broadcast to a list using a saved template",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--list",
+          "--template"
+        ]
+      },
+      {
+        "name": "dkim",
+        "path": "nself mail dkim",
+        "short": "Manage DKIM verification",
+        "hidden": false
+      },
+      {
+        "name": "send",
+        "path": "nself mail send",
+        "short": "Send a single transactional email",
+        "hidden": false,
+        "flags": [
+          "--body",
+          "--body-file",
+          "--body-type",
+          "--json",
+          "--subject",
+          "--to"
+        ]
+      },
+      {
+        "name": "status",
+        "path": "nself mail status",
+        "short": "Query delivery status for a sent message",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--message-id"
+        ]
+      },
+      {
+        "name": "templates",
+        "path": "nself mail templates",
+        "short": "Manage Postmark templates",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "maintenance",
+    "path": "nself maintenance",
+    "short": "Maintenance utilities: disk cleanup, scheduler",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "disk-cleanup",
+        "path": "nself maintenance disk-cleanup",
+        "short": "Free disk space: Docker prune, log rotation, journal vacuum",
+        "hidden": false
+      },
+      {
+        "name": "schedule",
+        "path": "nself maintenance schedule",
+        "short": "Install or remove the daily disk-cleanup timer",
+        "hidden": false,
+        "flags": [
+          "--daily",
+          "--off"
+        ]
+      },
+      {
+        "name": "status",
+        "path": "nself maintenance status",
+        "short": "Show daily cleanup scheduler status",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "man",
+    "path": "nself man",
+    "short": "Generate man pages for all nself commands",
+    "hidden": false,
+    "flags": [
+      "--output"
+    ]
+  },
+  {
+    "name": "mcp",
+    "path": "nself mcp",
+    "short": "Start the nSelf MCP server",
+    "hidden": false,
+    "flags": [
+      "--no-mdns",
+      "--port",
+      "--transport"
+    ]
+  },
+  {
+    "name": "migrate",
+    "path": "nself migrate",
+    "short": "Detect and migrate legacy artifacts to the current nSelf version",
+    "hidden": false,
+    "flags": [
+      "--from-bash"
+    ],
+    "subcommands": [
+      {
+        "name": "detect",
+        "path": "nself migrate detect",
+        "short": "Detect v1 artifacts in the current project",
+        "hidden": false
+      },
+      {
+        "name": "firebase",
+        "path": "nself migrate firebase",
+        "short": "Generate nSelf migration artifacts from a Firebase export",
+        "hidden": false,
+        "flags": [
+          "--auth-export",
+          "--dry-run",
+          "--export-dir",
+          "--output-dir",
+          "--project-name"
+        ]
+      },
+      {
+        "name": "from-bash",
+        "path": "nself migrate from-bash",
+        "short": "Migrate a v0.9.9 Bash-era project to the current nSelf CLI",
+        "hidden": false,
+        "flags": [
+          "--auto",
+          "--yes"
+        ]
+      },
+      {
+        "name": "generate",
+        "path": "nself migrate generate",
+        "short": "Generate a SQL migration from a natural-language description",
+        "hidden": false,
+        "flags": [
+          "--ai-endpoint",
+          "--confidence",
+          "--dry-run",
+          "--migrations-dir",
+          "--yes"
+        ]
+      },
+      {
+        "name": "rollback",
+        "path": "nself migrate rollback",
+        "short": "Restore a v1 backup created by migrate run",
+        "hidden": false,
+        "flags": [
+          "--backup",
+          "--list"
+        ]
+      },
+      {
+        "name": "run",
+        "path": "nself migrate run",
+        "short": "Migrate v1 project to v2",
+        "hidden": false
+      },
+      {
+        "name": "supabase",
+        "path": "nself migrate supabase",
+        "short": "Migrate a Supabase project to nSelf",
+        "hidden": false,
+        "flags": [
+          "--out",
+          "--project-ref",
+          "--supabase-key"
+        ]
+      },
+      {
+        "name": "watch",
+        "path": "nself migrate watch",
+        "short": "Watch model files and propose SQL migrations on change",
+        "hidden": false,
+        "flags": [
+          "--ai-endpoint",
+          "--debounce",
+          "--extensions",
+          "--migrations-dir",
+          "--paths"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "migrate-from-v099",
+    "path": "nself migrate-from-v099",
+    "short": "Migrate v0.9.9 home-level state (license key, channel, ssh keys) to v1.x layout",
+    "hidden": false,
+    "flags": [
+      "--check",
+      "--yes"
+    ]
+  },
+  {
+    "name": "model",
+    "path": "nself model",
+    "short": "Manage local AI models via Ollama",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "benchmark",
+        "path": "nself model benchmark",
+        "short": "Run a standard prompt and report tokens/s + p99 latency",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--prompt",
+          "--runs"
+        ]
+      },
+      {
+        "name": "list",
+        "path": "nself model list",
+        "short": "List all pulled Ollama models",
+        "hidden": false,
+        "flags": [
+          "--json"
+        ]
+      },
+      {
+        "name": "pull",
+        "path": "nself model pull",
+        "short": "Pull (download) a model from the Ollama registry",
+        "hidden": false
+      },
+      {
+        "name": "remove",
+        "path": "nself model remove",
+        "short": "Remove a pulled model from Ollama to free disk space",
+        "hidden": false,
+        "aliases": [
+          "rm",
+          "delete"
+        ]
+      },
+      {
+        "name": "update",
+        "path": "nself model update",
+        "short": "Re-pull a model to fetch the latest version of its tag",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "monitor",
+    "path": "nself monitor",
+    "short": "Monitoring stack management",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "upgrade-dashboards",
+        "path": "nself monitor upgrade-dashboards",
+        "short": "Upgrade Grafana dashboards to the latest bundled versions",
+        "hidden": false,
+        "flags": [
+          "--force"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "oauth",
+    "path": "nself oauth",
+    "short": "Manage OAuth provider tokens",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "refresh",
+        "path": "nself oauth refresh",
+        "short": "Trigger immediate OAuth token refresh for a provider",
+        "hidden": false,
+        "flags": [
+          "--account-id",
+          "--all",
+          "--base-url"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ollama",
+    "path": "nself ollama",
+    "short": "Manage local Ollama LLM stack",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "models",
+        "path": "nself ollama models",
+        "short": "Manage Ollama models",
+        "hidden": false
+      },
+      {
+        "name": "status",
+        "path": "nself ollama status",
+        "short": "Show Ollama service status and default model",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "ops",
+    "path": "nself ops",
+    "short": "Ops-profile deployment and management",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "deploy",
+        "path": "nself ops deploy",
+        "short": "Deploy with the ops profile to the ops server",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--follow"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "pentest-kit",
+    "path": "nself pentest-kit",
+    "short": "Penetration-test readiness kit (Business+)",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "credentials",
+        "path": "nself pentest-kit credentials",
+        "short": "Create pentest role and test credentials in Hasura",
+        "hidden": false
+      },
+      {
+        "name": "generate",
+        "path": "nself pentest-kit generate",
+        "short": "Generate pentest scope document",
+        "hidden": false,
+        "flags": [
+          "--output-dir"
+        ]
+      },
+      {
+        "name": "remediation",
+        "path": "nself pentest-kit remediation",
+        "short": "Import pentest findings from a structured report",
+        "hidden": false,
+        "flags": [
+          "--import"
+        ]
+      },
+      {
+        "name": "status",
+        "path": "nself pentest-kit status",
+        "short": "Show open pentest findings by severity",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "pitr",
+    "path": "nself pitr",
+    "short": "Point-in-time recovery: enable, disable, status, base-backup, restore",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "base-backup",
+        "path": "nself pitr base-backup",
+        "short": "Take a manual pg_basebackup snapshot now",
+        "hidden": false,
+        "flags": [
+          "--encrypt-recipient"
+        ]
+      },
+      {
+        "name": "disable",
+        "path": "nself pitr disable",
+        "short": "Stop WAL archiving (removes PITR config snippet)",
+        "hidden": false
+      },
+      {
+        "name": "enable",
+        "path": "nself pitr enable",
+        "short": "Configure WAL archiving and enable PITR",
+        "hidden": false,
+        "flags": [
+          "--encrypt-recipient",
+          "--retention-days",
+          "--to",
+          "--wal-timeout"
+        ]
+      },
+      {
+        "name": "restore",
+        "path": "nself pitr restore",
+        "short": "Restore database to a specific point in time",
+        "hidden": false,
+        "flags": [
+          "--auto-promote",
+          "--identity",
+          "--to"
+        ]
+      },
+      {
+        "name": "status",
+        "path": "nself pitr status",
+        "short": "Show PITR retention window, segment count, and latest WAL timestamp",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "plugin",
+    "path": "nself plugin",
+    "short": "Manage nSelf plugins",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "audit-tables",
+        "path": "nself plugin audit-tables",
+        "short": "Audit np_* table row counts and multi-tenant isolation compliance",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--table"
+        ]
+      },
+      {
+        "name": "compat-check",
+        "path": "nself plugin compat-check",
+        "short": "Check installed plugins against the current CLI version",
+        "hidden": false,
+        "flags": [
+          "--json"
+        ]
+      },
+      {
+        "name": "debug",
+        "path": "nself plugin debug",
+        "short": "Attach a dlv debugger to a running plugin process",
+        "hidden": false,
+        "flags": [
+          "--port",
+          "--port-only"
+        ]
+      },
+      {
+        "name": "dev",
+        "path": "nself plugin dev",
+        "short": "Start a plugin in development mode with hot-reload",
+        "hidden": false,
+        "flags": [
+          "--debug",
+          "--entrypoint",
+          "--no-link"
+        ]
+      },
+      {
+        "name": "disable",
+        "path": "nself plugin disable",
+        "short": "Disable a plugin (excluded from compose on next build)",
+        "hidden": false
+      },
+      {
+        "name": "enable",
+        "path": "nself plugin enable",
+        "short": "Re-enable a previously disabled plugin",
+        "hidden": false
+      },
+      {
+        "name": "info",
+        "path": "nself plugin info",
+        "short": "Show detailed plugin information",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--open"
+        ]
+      },
+      {
+        "name": "init",
+        "path": "nself plugin init",
+        "short": "Scaffold a new plugin project",
+        "hidden": false,
+        "aliases": [
+          "scaffold"
+        ],
+        "flags": [
+          "--author",
+          "--bundle",
+          "--category",
+          "--description",
+          "--force",
+          "--min-cli",
+          "--min-sdk",
+          "--no-interactive",
+          "--out",
+          "--port",
+          "--template",
+          "--tenancy",
+          "--tier"
+        ]
+      },
+      {
+        "name": "install",
+        "path": "nself plugin install",
+        "short": "Install one or more plugins (license check for pro)",
+        "hidden": false,
+        "flags": [
+          "--allow-eol",
+          "--dry-run",
+          "--force",
+          "--key",
+          "--preview",
+          "--show-graph",
+          "--skip-sbom-check",
+          "--version",
+          "--with-optional"
+        ]
+      },
+      {
+        "name": "inventory",
+        "path": "nself plugin inventory",
+        "short": "List installed plugins with version, tier, and status",
+        "hidden": false
+      },
+      {
+        "name": "link",
+        "path": "nself plugin link",
+        "short": "Register a local plugin directory as a shadow override",
+        "hidden": false,
+        "flags": [
+          "--host",
+          "--list"
+        ]
+      },
+      {
+        "name": "list",
+        "path": "nself plugin list",
+        "short": "List available and installed plugins",
+        "hidden": false,
+        "flags": [
+          "--category",
+          "--detailed",
+          "--installed",
+          "--show-eol"
+        ]
+      },
+      {
+        "name": "logs",
+        "path": "nself plugin logs",
+        "short": "Tail logs from a plugin container",
+        "hidden": false,
+        "flags": [
+          "--follow",
+          "--grep",
+          "--since",
+          "--tail"
+        ]
+      },
+      {
+        "name": "marketplace",
+        "path": "nself plugin marketplace",
+        "short": "Browse the nSelf plugin marketplace",
+        "hidden": false
+      },
+      {
+        "name": "new",
+        "path": "nself plugin new",
+        "short": "Scaffold a new plugin project (deprecated: use 'init')",
+        "hidden": false,
+        "deprecated": "use 'nself plugin init' instead",
+        "flags": [
+          "--author",
+          "--bundle",
+          "--category",
+          "--description",
+          "--force",
+          "--min-cli",
+          "--min-sdk",
+          "--no-interactive",
+          "--out",
+          "--port",
+          "--template",
+          "--tenancy",
+          "--tier"
+        ]
+      },
+      {
+        "name": "refresh",
+        "path": "nself plugin refresh",
+        "short": "Force refresh the registry cache",
+        "hidden": false
+      },
+      {
+        "name": "remove",
+        "path": "nself plugin remove",
+        "short": "Remove a plugin",
+        "hidden": false,
+        "flags": [
+          "--force",
+          "--keep-data"
+        ]
+      },
+      {
+        "name": "search",
+        "path": "nself plugin search",
+        "short": "Search plugins by name, description, or tag",
+        "hidden": false,
+        "flags": [
+          "--free",
+          "--json",
+          "--pro"
+        ]
+      },
+      {
+        "name": "start",
+        "path": "nself plugin start",
+        "short": "Start a plugin service",
+        "hidden": false
+      },
+      {
+        "name": "status",
+        "path": "nself plugin status",
+        "short": "Show plugin status",
+        "hidden": false,
+        "flags": [
+          "--detailed"
+        ]
+      },
+      {
+        "name": "stop",
+        "path": "nself plugin stop",
+        "short": "Stop a plugin service",
+        "hidden": false
+      },
+      {
+        "name": "submit",
+        "path": "nself plugin submit",
+        "short": "Validate a plugin for submission to the registry",
+        "hidden": false,
+        "flags": [
+          "--strict"
+        ]
+      },
+      {
+        "name": "test",
+        "path": "nself plugin test",
+        "short": "Run a plugin's test suite (unit + smoke install/uninstall)",
+        "hidden": false,
+        "flags": [
+          "--host",
+          "--no-cleanup",
+          "--phase"
+        ]
+      },
+      {
+        "name": "unlink",
+        "path": "nself plugin unlink",
+        "short": "Remove a local plugin shadow, restoring the registry version",
+        "hidden": false
+      },
+      {
+        "name": "update",
+        "path": "nself plugin update",
+        "short": "Update a specific plugin or all plugins",
+        "hidden": false,
+        "flags": [
+          "--allow-eol"
+        ]
+      },
+      {
+        "name": "updates",
+        "path": "nself plugin updates",
+        "short": "Check for available plugin updates",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "promote",
+    "path": "nself promote",
+    "short": "Promote one environment to another (e.g. staging to prod)",
+    "hidden": false,
+    "flags": [
+      "--approve-id",
+      "--confirm",
+      "--dry-run",
+      "--json"
+    ],
+    "subcommands": [
+      {
+        "name": "rollback",
+        "path": "nself promote rollback",
+        "short": "Rollback to pre-promotion backup",
+        "hidden": false,
+        "flags": [
+          "--tag"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "queue",
+    "path": "nself queue",
+    "short": "Manage async job queues (pg-boss)",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "cron",
+        "path": "nself queue cron",
+        "short": "Manage scheduled cron jobs",
+        "hidden": false
+      },
+      {
+        "name": "jobs",
+        "path": "nself queue jobs",
+        "short": "List jobs in a queue",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--limit",
+          "--state"
+        ]
+      },
+      {
+        "name": "list",
+        "path": "nself queue list",
+        "short": "List all queues with job counts",
+        "hidden": false,
+        "flags": [
+          "--json"
+        ]
+      },
+      {
+        "name": "purge",
+        "path": "nself queue purge",
+        "short": "Purge completed/dead jobs older than specified duration",
+        "hidden": false,
+        "flags": [
+          "--older-than"
+        ]
+      },
+      {
+        "name": "retry",
+        "path": "nself queue retry",
+        "short": "Retry a failed or dead job",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "region",
+    "path": "nself region",
+    "short": "Manage multi-region nSelf deployments",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "add",
+        "path": "nself region add",
+        "short": "Add a replica region",
+        "hidden": false,
+        "flags": [
+          "--pg-url",
+          "--redis-url",
+          "--region"
+        ]
+      },
+      {
+        "name": "list",
+        "path": "nself region list",
+        "short": "List configured regions",
+        "hidden": false
+      },
+      {
+        "name": "promote",
+        "path": "nself region promote",
+        "short": "Promote a replica to primary (failover)",
+        "hidden": false,
+        "flags": [
+          "--region"
+        ]
+      },
+      {
+        "name": "status",
+        "path": "nself region status",
+        "short": "Show replication and routing status for all regions",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "release",
+    "path": "nself release",
+    "short": "Orchestrate the full release cascade for a version",
+    "hidden": false,
+    "flags": [
+      "--dry-run",
+      "--json",
+      "--release-notes",
+      "--skip-check",
+      "--skip-plugins-pro"
+    ]
+  },
+  {
+    "name": "release-check",
+    "path": "nself release-check",
+    "short": "Run pre-release gates for a version",
+    "hidden": false,
+    "flags": [
+      "--json",
+      "--skip-ci",
+      "--skip-security"
+    ]
+  },
+  {
+    "name": "release-rollback",
+    "path": "nself release-rollback",
+    "short": "Roll back a release to prior version",
+    "hidden": false,
+    "flags": [
+      "--delete-tags",
+      "--dry-run",
+      "--json"
+    ]
+  },
+  {
+    "name": "release-status",
+    "path": "nself release-status",
+    "short": "Show running version vs latest across all release artifacts",
+    "hidden": false,
+    "flags": [
+      "--json",
+      "--timeout"
+    ]
+  },
+  {
+    "name": "reset",
+    "path": "nself reset",
+    "short": "Stop containers, remove all data volumes, and clean generated files",
+    "hidden": false,
+    "flags": [
+      "--no-monorepo",
+      "--yes"
+    ]
+  },
+  {
+    "name": "restart",
+    "path": "nself restart",
+    "short": "Smart restart with config change detection",
+    "hidden": false,
+    "flags": [
+      "--all",
+      "--no-build",
+      "--skip-build",
+      "--smart",
+      "--verbose"
+    ]
+  },
+  {
+    "name": "secrets",
+    "path": "nself secrets",
+    "short": "Manage encrypted project secrets (age encryption)",
+    "hidden": false,
+    "flags": [
+      "--env"
+    ],
+    "subcommands": [
+      {
+        "name": "audit",
+        "path": "nself secrets audit",
+        "short": "Report secrets that haven't been rotated in \u003e90 days",
+        "hidden": false
+      },
+      {
+        "name": "decrypt-on-deploy",
+        "path": "nself secrets decrypt-on-deploy",
+        "short": "Output decrypted secrets as KEY=VALUE for CI/CD",
+        "hidden": false
+      },
+      {
+        "name": "edit",
+        "path": "nself secrets edit",
+        "short": "Open decrypted secrets in $EDITOR, re-encrypt on save",
+        "hidden": false
+      },
+      {
+        "name": "get",
+        "path": "nself secrets get",
+        "short": "Get a secret value",
+        "hidden": false
+      },
+      {
+        "name": "init",
+        "path": "nself secrets init",
+        "short": "Generate age key and set up .secrets/ directory",
+        "hidden": false
+      },
+      {
+        "name": "lint",
+        "path": "nself secrets lint",
+        "short": "Check for plaintext secrets in git-tracked files",
+        "hidden": false
+      },
+      {
+        "name": "list",
+        "path": "nself secrets list",
+        "short": "List all secrets for an environment",
+        "hidden": false
+      },
+      {
+        "name": "list-schedules",
+        "path": "nself secrets list-schedules",
+        "short": "List all rotation schedule statuses (alias for: secrets schedule)",
+        "hidden": false
+      },
+      {
+        "name": "rekey",
+        "path": "nself secrets rekey",
+        "short": "Re-encrypt all secrets, removing a team member's key",
+        "hidden": false,
+        "flags": [
+          "--remove"
+        ]
+      },
+      {
+        "name": "retire",
+        "path": "nself secrets retire",
+        "short": "Retire the _PREVIOUS variant of a dual-window rotated secret",
+        "hidden": false
+      },
+      {
+        "name": "rotate",
+        "path": "nself secrets rotate",
+        "short": "Rotate a secret to a new value",
+        "hidden": false,
+        "flags": [
+          "--dual-window"
+        ]
+      },
+      {
+        "name": "rotation-log",
+        "path": "nself secrets rotation-log",
+        "short": "Show rotation event log",
+        "hidden": false,
+        "flags": [
+          "--secret"
+        ]
+      },
+      {
+        "name": "schedule",
+        "path": "nself secrets schedule",
+        "short": "Add a rotation schedule or show all schedule statuses",
+        "hidden": false,
+        "flags": [
+          "--every",
+          "--secret"
+        ]
+      },
+      {
+        "name": "set",
+        "path": "nself secrets set",
+        "short": "Set a secret value (prompts if value not provided)",
+        "hidden": false
+      },
+      {
+        "name": "verify",
+        "path": "nself secrets verify",
+        "short": "Verify that a named secret exists in the store",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "security",
+    "path": "nself security",
+    "short": "Server security: audit, setup, and status",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "audit",
+        "path": "nself security audit",
+        "short": "Run a read-only security audit",
+        "hidden": false
+      },
+      {
+        "name": "setup",
+        "path": "nself security setup",
+        "short": "Apply baseline server hardening",
+        "hidden": false,
+        "flags": [
+          "--apply"
+        ]
+      },
+      {
+        "name": "status",
+        "path": "nself security status",
+        "short": "Show current security posture",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "self-heal",
+    "path": "nself self-heal",
+    "short": "Run targeted self-healing routines for nSelf components",
+    "hidden": false,
+    "flags": [
+      "--dry-run",
+      "--jwt",
+      "--no-print",
+      "--to-file"
+    ]
+  },
+  {
+    "name": "sentry",
+    "path": "nself sentry",
+    "short": "ɳSentry ops: status, alerts, and observability",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "alerts",
+        "path": "nself sentry alerts",
+        "short": "Manage ɳSentry alert channels",
+        "hidden": false
+      },
+      {
+        "name": "incidents",
+        "path": "nself sentry incidents",
+        "short": "Manage ɳSentry incidents",
+        "hidden": false
+      },
+      {
+        "name": "login",
+        "path": "nself sentry login",
+        "short": "Authenticate the CLI with ɳSentry (SaaS or self-hosted)",
+        "hidden": false,
+        "flags": [
+          "--api-key",
+          "--api-url",
+          "--json"
+        ]
+      },
+      {
+        "name": "logout",
+        "path": "nself sentry logout",
+        "short": "Remove the stored ɳSentry API key",
+        "hidden": false
+      },
+      {
+        "name": "monitors",
+        "path": "nself sentry monitors",
+        "short": "Manage ɳSentry uptime monitors",
+        "hidden": false
+      },
+      {
+        "name": "status",
+        "path": "nself sentry status",
+        "short": "Fetch and display the ɳSentry status page",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--timeout",
+          "--token",
+          "--url"
+        ]
+      },
+      {
+        "name": "status-pages",
+        "path": "nself sentry status-pages",
+        "short": "Manage ɳSentry status pages",
+        "hidden": false
+      },
+      {
+        "name": "whoami",
+        "path": "nself sentry whoami",
+        "short": "Show the authenticated ɳSentry account, tier, and quota usage",
+        "hidden": false,
+        "flags": [
+          "--api-key",
+          "--api-url",
+          "--json"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "sentry-server",
+    "path": "nself sentry-server",
+    "short": "Provision and manage ɳSentry ops servers",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "provision",
+        "path": "nself sentry-server provision",
+        "short": "Provision an ops/sentry server for a project",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--host",
+          "--key-path",
+          "--location",
+          "--server-type"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "service",
+    "path": "nself service",
+    "short": "Manage optional services",
+    "hidden": false,
+    "flags": [
+      "--env"
+    ],
+    "subcommands": [
+      {
+        "name": "add",
+        "path": "nself service add",
+        "short": "Scaffold a custom service (CS_N slot) into the current project",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--force",
+          "--lang",
+          "--template"
+        ]
+      },
+      {
+        "name": "configure",
+        "path": "nself service configure",
+        "short": "Configure service settings (e.g. email provider presets)",
+        "hidden": false,
+        "flags": [
+          "--provider"
+        ]
+      },
+      {
+        "name": "disable",
+        "path": "nself service disable",
+        "short": "Disable an optional service",
+        "hidden": false
+      },
+      {
+        "name": "enable",
+        "path": "nself service enable",
+        "short": "Enable an optional service",
+        "hidden": false
+      },
+      {
+        "name": "list",
+        "path": "nself service list",
+        "short": "List all optional services with enabled/disabled status",
+        "hidden": false,
+        "flags": [
+          "--json"
+        ]
+      },
+      {
+        "name": "ps",
+        "path": "nself service ps",
+        "short": "Show status of all nSelf stack services",
+        "hidden": false
+      },
+      {
+        "name": "restart",
+        "path": "nself service restart",
+        "short": "Restart a named nSelf service",
+        "hidden": false
+      },
+      {
+        "name": "scale",
+        "path": "nself service scale",
+        "short": "Set the replica count for a named service",
+        "hidden": false
+      },
+      {
+        "name": "start",
+        "path": "nself service start",
+        "short": "Start a named nSelf service",
+        "hidden": false
+      },
+      {
+        "name": "stop",
+        "path": "nself service stop",
+        "short": "Stop a named nSelf service (container preserved)",
+        "hidden": false
+      },
+      {
+        "name": "update",
+        "path": "nself service update",
+        "short": "Pull the latest image for a service and restart it",
+        "hidden": false
+      },
+      {
+        "name": "upgrade",
+        "path": "nself service upgrade",
+        "short": "Pin a service to a specific image version",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "soak",
+    "path": "nself soak",
+    "short": "Manage soak testing lifecycle",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "abort",
+        "path": "nself soak abort",
+        "short": "Abort a running soak and roll back to a prior version",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--env",
+          "--prod-i-mean-it",
+          "--rollback",
+          "--yes"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "ssl",
+    "path": "nself ssl",
+    "short": "Manage SSL certificates",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "add",
+        "path": "nself ssl add",
+        "short": "Provision an SSL certificate for a single domain",
+        "hidden": false,
+        "flags": [
+          "--upstream"
+        ]
+      },
+      {
+        "name": "renew",
+        "path": "nself ssl renew",
+        "short": "Reload nginx and optionally renew certificates",
+        "hidden": false
+      },
+      {
+        "name": "setup",
+        "path": "nself ssl setup",
+        "short": "Set up SSL certificates via DNS-01 challenge",
+        "hidden": false,
+        "flags": [
+          "--email",
+          "--install-cron",
+          "--provider",
+          "--staging",
+          "--wildcard"
+        ]
+      },
+      {
+        "name": "status",
+        "path": "nself ssl status",
+        "short": "Show SSL certificate status",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "start",
+    "path": "nself start",
+    "short": "Boot your nSelf stack",
+    "hidden": false,
+    "aliases": [
+      "up"
+    ],
+    "flags": [
+      "--allow-legacy",
+      "--clean-start",
+      "--debug",
+      "--embedded-pg",
+      "--force-recreate",
+      "--fresh",
+      "--profile",
+      "--quick",
+      "--quiet",
+      "--skip-build",
+      "--skip-db-init",
+      "--skip-health-checks",
+      "--skip-plugins",
+      "--skip-port-check",
+      "--timeout",
+      "--verbose",
+      "--watch"
+    ]
+  },
+  {
+    "name": "status",
+    "path": "nself status",
+    "short": "Show health status of all services",
+    "hidden": false,
+    "flags": [
+      "--deep",
+      "--health-only",
+      "--json",
+      "--metrics",
+      "--verbose"
+    ]
+  },
+  {
+    "name": "stop",
+    "path": "nself stop",
+    "short": "Gracefully shut down all services or specific services",
+    "hidden": false,
+    "aliases": [
+      "down"
+    ],
+    "flags": [
+      "--graceful",
+      "--no-monorepo",
+      "--remove-images",
+      "--remove-orphans",
+      "--rmi",
+      "--verbose",
+      "--volumes"
+    ]
+  },
+  {
+    "name": "telemetry",
+    "path": "nself telemetry",
+    "short": "Manage CLI telemetry preferences",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "off",
+        "path": "nself telemetry off",
+        "short": "Disable telemetry (writes to ~/.nself/config.toml)",
+        "hidden": false
+      },
+      {
+        "name": "on",
+        "path": "nself telemetry on",
+        "short": "Enable telemetry (writes to ~/.nself/config.toml)",
+        "hidden": false
+      },
+      {
+        "name": "status",
+        "path": "nself telemetry status",
+        "short": "Show current telemetry state and anonymous install-ID",
+        "hidden": false
+      }
+    ]
+  },
+  {
+    "name": "template",
+    "path": "nself template",
+    "short": "Browse and publish full-stack app templates",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "info",
+        "path": "nself template info",
+        "short": "Show detail for a single template",
+        "hidden": false,
+        "flags": [
+          "--json"
+        ]
+      },
+      {
+        "name": "list",
+        "path": "nself template list",
+        "short": "List available app templates",
+        "hidden": false,
+        "flags": [
+          "--category",
+          "--free",
+          "--json",
+          "--sort"
+        ]
+      },
+      {
+        "name": "publish",
+        "path": "nself template publish",
+        "short": "Submit a template to the nSelf registry",
+        "hidden": false,
+        "flags": [
+          "--manifest",
+          "--tarball"
+        ]
+      },
+      {
+        "name": "update",
+        "path": "nself template update",
+        "short": "Apply incremental migrations for the installed template",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--force"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "tenant",
+    "path": "nself tenant",
+    "short": "[PREVIEW] Tenant management: create, upgrade, suspend, destroy, audit",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "audit",
+        "path": "nself tenant audit",
+        "short": "Query tenant audit log",
+        "hidden": false,
+        "flags": [
+          "--format",
+          "--since"
+        ]
+      },
+      {
+        "name": "create",
+        "path": "nself tenant create",
+        "short": "Create a new tenant",
+        "hidden": false,
+        "flags": [
+          "--plan"
+        ]
+      },
+      {
+        "name": "destroy",
+        "path": "nself tenant destroy",
+        "short": "Hard-delete a tenant (DESTRUCTIVE)",
+        "hidden": false,
+        "flags": [
+          "--confirm-name"
+        ]
+      },
+      {
+        "name": "suspend",
+        "path": "nself tenant suspend",
+        "short": "Suspend a tenant",
+        "hidden": false,
+        "flags": [
+          "--reason"
+        ]
+      },
+      {
+        "name": "upgrade",
+        "path": "nself tenant upgrade",
+        "short": "Change a tenant's plan",
+        "hidden": false,
+        "flags": [
+          "--plan"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "trust",
+    "path": "nself trust",
+    "short": "Set up local dev trust (DNS, SSL, port forwarding)",
+    "hidden": false,
+    "flags": [
+      "--project",
+      "--skip-dns",
+      "--skip-ports",
+      "--skip-ssl",
+      "--status",
+      "--undo"
+    ],
+    "subcommands": [
+      {
+        "name": "status",
+        "path": "nself trust status",
+        "short": "Show trusted cert CAs, last rotation date, and expiry warnings",
+        "hidden": false,
+        "flags": [
+          "--project"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "uninstall",
+    "path": "nself uninstall",
+    "short": "Remove nSelf project data and generated files",
+    "hidden": false,
+    "flags": [
+      "--keep-data",
+      "--purge",
+      "--yes"
+    ]
+  },
+  {
+    "name": "update",
+    "path": "nself update",
+    "short": "Update the nSelf CLI and admin UI",
+    "hidden": false,
+    "flags": [
+      "--admin",
+      "--check",
+      "--cli",
+      "--force",
+      "--restart",
+      "--version"
+    ],
+    "subcommands": [
+      {
+        "name": "images",
+        "path": "nself update images",
+        "short": "Refresh Docker image digests from registries",
+        "hidden": false,
+        "flags": [
+          "--dry-run"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "upgrade",
+    "path": "nself upgrade",
+    "short": "Upgrade the nSelf CLI (detects install method)",
+    "hidden": false,
+    "flags": [
+      "--binary-sha256",
+      "--binary-url",
+      "--channel",
+      "--check",
+      "--rollback",
+      "--version"
+    ]
+  },
+  {
+    "name": "urls",
+    "path": "nself urls",
+    "short": "Display all service URLs with route conflict detection",
+    "hidden": false,
+    "flags": [
+      "--all",
+      "--check-conflicts",
+      "--diff",
+      "--env",
+      "--json"
+    ]
+  },
+  {
+    "name": "verify-sbom",
+    "path": "nself verify-sbom",
+    "short": "Verify the SBOM signature for a CLI release",
+    "hidden": false,
+    "flags": [
+      "--repo",
+      "--version"
+    ]
+  },
+  {
+    "name": "version",
+    "path": "nself version",
+    "short": "Show version and system information",
+    "hidden": false,
+    "flags": [
+      "--json",
+      "--short"
+    ]
+  },
+  {
+    "name": "waf",
+    "path": "nself waf",
+    "short": "Manage the Web Application Firewall (Coraza + OWASP CRS)",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "enable",
+        "path": "nself waf enable",
+        "short": "Enable the WAF in detection mode",
+        "hidden": false
+      },
+      {
+        "name": "mode",
+        "path": "nself waf mode",
+        "short": "Set WAF enforcement mode",
+        "hidden": false
+      },
+      {
+        "name": "report",
+        "path": "nself waf report",
+        "short": "Show recent WAF events",
+        "hidden": false,
+        "flags": [
+          "--since"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "watchdog",
+    "path": "nself watchdog",
+    "short": "Self-healing container watchdog with circuit breaker",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "history",
+        "path": "nself watchdog history",
+        "short": "Show watchdog event history",
+        "hidden": false,
+        "flags": [
+          "--json",
+          "--since"
+        ]
+      },
+      {
+        "name": "reset",
+        "path": "nself watchdog reset",
+        "short": "Reset a specific service circuit breaker (including PERMANENT_OPEN)",
+        "hidden": false,
+        "flags": [
+          "--force"
+        ]
+      },
+      {
+        "name": "reset-breakers",
+        "path": "nself watchdog reset-breakers",
+        "short": "Reset all tripped circuit breakers to closed state",
+        "hidden": false
+      },
+      {
+        "name": "status",
+        "path": "nself watchdog status",
+        "short": "Show watchdog status and circuit breaker states",
+        "hidden": false,
+        "flags": [
+          "--json"
+        ]
+      },
+      {
+        "name": "test-alert",
+        "path": "nself watchdog test-alert",
+        "short": "Send a test alert through all configured channels (TG + email)",
+        "hidden": false,
+        "flags": [
+          "--service",
+          "--severity"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "webhooks",
+    "path": "nself webhooks",
+    "short": "Manage webhook processing and outbox",
+    "hidden": false,
+    "subcommands": [
+      {
+        "name": "outbox",
+        "path": "nself webhooks outbox",
+        "short": "Manage the webhook durable outbox queue",
+        "hidden": false
+      }
+    ]
+  }
+]

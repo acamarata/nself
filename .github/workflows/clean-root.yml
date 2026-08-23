@@ -34,6 +34,35 @@ jobs:
           fi
           echo "Repo root markdown is clean (only README.md present)."
 
+      # CLI-R06: the PRI's Clean Root allowlist and the tracked tree had drifted
+      # apart — nine directories (bin, charts, monitoring, packaging, scripts,
+      # templates, terraform, test, tools) were tracked at root while the PRI
+      # forbade them, and the PRI listed a pkg/ that does not exist. Rather than
+      # relocate nine working directories, the allowlist is made explicit here
+      # and in the PRI, and this step keeps the two honest.
+      - name: Enforce explicit root-entry allowlist
+        run: |
+          set -euo pipefail
+          ALLOWED=".dockerignore .gitattributes .github .gitignore .gitleaks.toml .goreleaser.yml Dockerfile LICENSE Makefile README.md bin charts cmd go.mod go.sum internal monitoring packaging scripts sdk templates terraform test tools vendor"
+          echo "$ALLOWED" | tr ' ' '\n' | sort > /tmp/root-allowed.txt
+          git ls-files | awk -F/ '{print $1}' | sort -u > /tmp/root-tracked.txt
+          UNEXPECTED=$(comm -23 /tmp/root-tracked.txt /tmp/root-allowed.txt)
+          if [ -n "$UNEXPECTED" ]; then
+            echo "::error::Root entries not on the Clean Root allowlist:"
+            echo "$UNEXPECTED"
+            echo ""
+            echo "Either relocate them, or add them to BOTH:"
+            echo "  .github/workflows/clean-root.yml (this step)"
+            echo "  .claude/CLAUDE.md (PRI, Clean Root section)"
+            exit 1
+          fi
+          STALE=$(comm -13 /tmp/root-tracked.txt /tmp/root-allowed.txt)
+          if [ -n "$STALE" ]; then
+            echo "::warning::Allowlist names entries that are no longer tracked (prune them):"
+            echo "$STALE"
+          fi
+          echo "Root entries match the Clean Root allowlist."
+
       - name: Forbid tracked .DS_Store / OS junk anywhere in tree
         run: |
           OFFENDERS=$(git ls-files | grep -E '(^|/)(\.DS_Store|Thumbs\.db|desktop\.ini)$|\.swp$|\.swo$' || true)
