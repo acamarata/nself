@@ -1,60 +1,54 @@
 package commands
 
+// mcp.go — the nSelf MCP server command and its tool registrations.
+//
+// Purpose: CLI-R15 "MCP v2". Exposes the real core CLI surface (status,
+//   doctor, urls, logs, service list, env list, config get/set/show, build,
+//   start/stop/restart, db migrate status, backup list, deploy status,
+//   plugin list/install) plus the pre-existing Hasura data tools, as MCP
+//   tools with output schemas and annotations, so an agent can plan around
+//   them instead of guessing from prose.
+// Inputs:  --transport (stdio|sse|http), --port, NSELF_MCP_TOKEN (bearer
+//   auth on sse/http — see mcp_auth.go).
+// Outputs: an MCP server over the chosen transport.
+// Constraints: every mcp.NewTool(...) registration call for the non-Sentry
+//   tools MUST stay physically in this file (or mcp_sentry.go) —
+//   tools/parity/mcptools.go hardcodes cmd/commands/mcp.go and
+//   cmd/commands/mcp_sentry.go as the only two files it text-scans for tool
+//   coverage, and this ticket may not edit tools/parity/**. Handler
+//   implementations live in mcp_tools_core.go / mcp_tools_mutate.go /
+//   mcp_tools_data.go to keep this file under the 300-line cap; only the
+//   registration call sites are here.
+// SPORT: CLI-CMD-MCP-001
+
 import (
-	"bytes"
-	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"log/slog"
-	"net"
 	"net/http"
 	"os"
-	"os/exec"
-	"strings"
-	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/nself-org/cli/internal/config"
-	"github.com/nself-org/cli/internal/httptimeout"
-	"github.com/nself-org/cli/internal/sqlallowlist"
+	"github.com/nself-org/cli/internal/health"
 	"github.com/spf13/cobra"
 )
 
-const (
-	mcpServerPort    = 3825
-	mcpServiceName   = "_nself._tcp"
-	mcpServiceDomain = "local."
-	mcpMDNSPort      = 5353
-)
+const mcpServerPort = 3825
 
 var mcpCmd = &cobra.Command{
 	Use:   "mcp",
 	Short: "Start the nSelf MCP server",
-	Long: `Start a Model Context Protocol (MCP) server exposing nSelf infrastructure tools.
+	Long: `Start a Model Context Protocol (MCP) server exposing nSelf as tools,
+resources, and prompts for Claude Code and other MCP clients.
 
-Runs on stdio by default — suitable for direct use as a Claude Code MCP server.
-Use --transport sse to expose over HTTP on port 3825.
+Runs on stdio by default — the correct mode for Claude Code's mcpServers
+config. Use --transport sse or --transport http to expose the server over
+a local HTTP port instead; set NSELF_MCP_TOKEN to require a bearer token on
+those transports.
 
-The server advertises itself via mDNS as "_nself._tcp.local" so Claude Code
-and other MCP clients can discover local instances automatically.
-
-Available tools:
-  nself_list_plugins      List the plugin catalog (installed + available)
-  nself_get_schema        Hasura schema introspection
-  nself_get_permissions   Hasura permissions snapshot
-  nself_run_migration     Apply a SQL migration (confirmation-gated)
-  nself_tail_logs         Tail docker logs for a service
-  nself_doctor            Run nself doctor --deep
-  sentry_monitors_list    List ɳSentry uptime monitors
-  sentry_monitors_add     Create an ɳSentry uptime monitor
-  sentry_incidents_list   List ɳSentry incidents (filter by status)
-  sentry_incidents_ack    Acknowledge an incident
-  sentry_status           Public status page summary
-
-Sentry tools authenticate via NSELF_SENTRY_API_KEY or ~/.nself/sentry.json
-(run 'nself sentry login'); NSELF_SENTRY_API_URL targets a self-hosted bundle.
+Run 'nself mcp' from inside an nSelf project directory. See the generated
+tool/resource/prompt list at .github/wiki/cmd-mcp.md (run 'make mcp-docs'
+to regenerate it from this source).
 
 Claude Code config (.claude/settings.json):
   "mcpServers": {
@@ -67,20 +61,18 @@ Claude Code config (.claude/settings.json):
 }
 
 func init() {
-	mcpCmd.Flags().StringP("transport", "t", "stdio", "Transport: stdio or sse")
-	mcpCmd.Flags().IntP("port", "p", mcpServerPort, "Port for SSE transport")
-	mcpCmd.Flags().Bool("no-mdns", false, "Disable mDNS service advertising")
+	mcpCmd.Flags().StringP("transport", "t", "stdio", "Transport: stdio, sse, or http")
+	mcpCmd.Flags().IntP("port", "p", mcpServerPort, "Port for the sse/http transports")
 	RootCmd.AddCommand(mcpCmd)
 }
 
 func runMCPServe(cmd *cobra.Command, args []string) error {
 	transport, _ := cmd.Flags().GetString("transport")
 	port, _ := cmd.Flags().GetInt("port")
-	noMDNS, _ := cmd.Flags().GetBool("no-mdns")
 
-	// Require an nSelf project directory. Without this guard the server starts
-	// even from an empty directory, spawning a persistent mDNS goroutine that
-	// outlives the test deadline.
+	// Require an nSelf project directory so tool handlers that assume one
+	// (nearly all of them) fail fast with a clear message instead of an
+	// obscure error three calls deep.
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("getting working directory: %w", err)
@@ -91,17 +83,15 @@ func runMCPServe(cmd *cobra.Command, args []string) error {
 
 	s := server.NewMCPServer(
 		"nSelf MCP Server",
-		"1.0.0",
+		"2.0.0",
 		server.WithToolCapabilities(true),
+		server.WithResourceCapabilities(true, true),
+		server.WithPromptCapabilities(true),
 	)
 
 	registerMCPTools(s)
-
-	// Start mDNS advertising in background (best-effort, never fatal).
-	// Pass the command context so the goroutine stops when the server is shut down.
-	if !noMDNS {
-		go advertiseMDNS(cmd.Context(), port)
-	}
+	registerMCPResources(s)
+	registerMCPPrompts(s)
 
 	switch transport {
 	case "stdio":
@@ -109,374 +99,181 @@ func runMCPServe(cmd *cobra.Command, args []string) error {
 	case "sse":
 		addr := fmt.Sprintf("127.0.0.1:%d", port)
 		fmt.Fprintf(os.Stderr, "nSelf MCP server listening on %s (SSE)\n", addr)
-		sseServer := server.NewSSEServer(s)
-		return sseServer.Start(addr)
+		httpSrv := &http.Server{Addr: addr, Handler: mcpBearerMiddleware(server.NewSSEServer(s))}
+		return httpSrv.ListenAndServe()
+	case "http":
+		addr := fmt.Sprintf("127.0.0.1:%d", port)
+		fmt.Fprintf(os.Stderr, "nSelf MCP server listening on %s (streamable HTTP)\n", addr)
+		httpSrv := &http.Server{Addr: addr, Handler: mcpBearerMiddleware(server.NewStreamableHTTPServer(s))}
+		return httpSrv.ListenAndServe()
 	default:
-		return fmt.Errorf("unknown transport %q (use stdio or sse)", transport)
+		return fmt.Errorf("unknown transport %q (use stdio, sse, or http)", transport)
 	}
 }
 
-// registerMCPTools attaches all nSelf MCP tools to the server
-// (6 infrastructure tools here + 5 ɳSentry tools in mcp_sentry.go).
+// registerMCPTools attaches every MCP tool: ɳSentry (mcp_sentry.go), the
+// core CLI surface (this file), and the Hasura data tools (this file).
 func registerMCPTools(s *server.MCPServer) {
 	registerSentryMCPTools(s)
-
-	s.AddTool(
-		mcp.NewTool("nself_list_plugins",
-			mcp.WithDescription("List the nSelf plugin catalog: installed and available plugins"),
-		),
-		mcpListPluginsHandler(),
-	)
-
-	s.AddTool(
-		mcp.NewTool("nself_get_schema",
-			mcp.WithDescription("Introspect the Hasura GraphQL schema and return table/type information"),
-		),
-		mcpGetSchemaHandler(),
-	)
-
-	s.AddTool(
-		mcp.NewTool("nself_get_permissions",
-			mcp.WithDescription("Return a snapshot of Hasura role permissions for all tables"),
-		),
-		mcpGetPermissionsHandler(),
-	)
-
-	s.AddTool(
-		mcp.NewTool("nself_run_migration",
-			mcp.WithDescription("Apply a SQL migration against the nSelf Postgres database. Requires explicit confirmation via the 'confirm' flag."),
-			mcp.WithString("sql", mcp.Required(), mcp.Description("SQL to execute as a migration")),
-			mcp.WithBoolean("confirm", mcp.Required(), mcp.Description("Must be true to execute — prevents accidental runs")),
-		),
-		mcpRunMigrationHandler(),
-	)
-
-	s.AddTool(
-		mcp.NewTool("nself_tail_logs",
-			mcp.WithDescription("Tail docker logs for a named nSelf service or plugin container"),
-			mcp.WithString("service", mcp.Required(), mcp.Description("Service or plugin name (e.g. postgres, hasura, auth, ai)")),
-			mcp.WithNumber("lines", mcp.Description("Number of lines to return (default 50)")),
-		),
-		mcpTailLogsHandler(),
-	)
-
-	s.AddTool(
-		mcp.NewTool("nself_doctor",
-			mcp.WithDescription("Run nself doctor --deep and return the diagnostic report"),
-		),
-		mcpDoctorHandler(),
-	)
+	registerCoreMCPTools(s)
+	registerDataMCPTools(s)
 }
 
-// ── Tool handlers ────────────────────────────────────────────────────────────
+// registerCoreMCPTools registers every tool backed by a `nself` command
+// (status/doctor/urls/logs/service/env/config/build/start/stop/restart/
+// db/backup/deploy/plugin) — see mcp_tools_core.go and mcp_tools_mutate.go
+// for the handlers.
+func registerCoreMCPTools(s *server.MCPServer) {
+	s.AddTool(mcp.NewTool("nself_status",
+		mcp.WithDescription("Health status of every service in the current nSelf project"),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithOutputSchema[health.HealthReport](),
+	), mcpStatusHandler())
 
-func mcpListPluginsHandler() server.ToolHandlerFunc {
-	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		pluginDir := resolvePluginDir()
-		plugins, err := mcpRunCommand(ctx, "nself", "plugin", "list", "--detailed")
-		if err != nil {
-			// Fall back: try to read from plugin dir directly via internal call.
-			_ = pluginDir
-			return mcp.NewToolResultText(fmt.Sprintf("Error listing plugins: %v", err)), nil
-		}
-		return mcp.NewToolResultText(plugins), nil
-	}
+	s.AddTool(mcp.NewTool("nself_doctor",
+		mcp.WithDescription("Run the full nSelf diagnostic suite (Docker, disk, ports, certs, and more)"),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithOutputSchema[DoctorResult](),
+	), mcpDoctorHandler())
+
+	s.AddTool(mcp.NewTool("nself_urls",
+		mcp.WithDescription("Computed service URLs for the current project, grouped by required/optional/custom/frontend"),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithOutputSchema[urlsOutput](),
+	), mcpURLsHandler())
+
+	s.AddTool(mcp.NewTool("nself_logs",
+		mcp.WithDescription("Tail recent docker compose logs for one service, or the whole stack"),
+		mcp.WithString("service", mcp.Description("Service name (empty = all services)")),
+		mcp.WithNumber("lines", mcp.Description("Number of lines to return (default 50)")),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithOutputSchema[LogsResult](),
+	), mcpLogsHandler())
+
+	s.AddTool(mcp.NewTool("nself_service_list",
+		mcp.WithDescription("List running/stopped services with container name, status, and health"),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithOutputSchema[ServiceListResult](),
+	), mcpServiceListHandler())
+
+	s.AddTool(mcp.NewTool("nself_env_list",
+		mcp.WithDescription("List available environments (dev/staging/prod) and which is active"),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithOutputSchema[EnvListResult](),
+	), mcpEnvListHandler())
+
+	s.AddTool(mcp.NewTool("nself_config_get",
+		mcp.WithDescription("Read one config key from the project's env file. Secret values are always redacted."),
+		mcp.WithString("key", mcp.Required(), mcp.Description("Config key, e.g. BASE_DOMAIN")),
+		mcp.WithString("env", mcp.Description("Env suffix (dev/staging/prod); empty = plain .env")),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithOutputSchema[ConfigGetResult](),
+	), mcpConfigGetHandler())
+
+	s.AddTool(mcp.NewTool("nself_config_show",
+		mcp.WithDescription("List every config key/value in the project's env file. Secret values are always redacted."),
+		mcp.WithString("env", mcp.Description("Env suffix (dev/staging/prod); empty = plain .env")),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithOutputSchema[ConfigShowResult](),
+	), mcpConfigShowHandler())
+
+	s.AddTool(mcp.NewTool("nself_config_set",
+		mcp.WithDescription("Set one config key in the project's env file"),
+		mcp.WithString("key", mcp.Required(), mcp.Description("Config key, uppercase letters/digits/underscore only")),
+		mcp.WithString("value", mcp.Required(), mcp.Description("Value to set")),
+		mcp.WithString("env", mcp.Description("Env suffix (dev/staging/prod); empty = plain .env")),
+		mcp.WithReadOnlyHintAnnotation(false),
+		mcp.WithIdempotentHintAnnotation(true),
+		mcp.WithDestructiveHintAnnotation(false),
+		mcp.WithOutputSchema[ConfigSetResult](),
+	), mcpConfigSetHandler())
+
+	s.AddTool(mcp.NewTool("nself_build",
+		mcp.WithDescription("Regenerate docker-compose.yml and nginx config from the project's env files. Overwrites prior generated output."),
+		mcp.WithReadOnlyHintAnnotation(false),
+		mcp.WithDestructiveHintAnnotation(true),
+		mcp.WithIdempotentHintAnnotation(true),
+		mcp.WithOutputSchema[ExecResult](),
+	), mcpLifecycleHandler("build", "--quiet"))
+
+	s.AddTool(mcp.NewTool("nself_start",
+		mcp.WithDescription("Start the nSelf stack (docker compose up). Safe to call when already running."),
+		mcp.WithReadOnlyHintAnnotation(false),
+		mcp.WithDestructiveHintAnnotation(false),
+		mcp.WithIdempotentHintAnnotation(true),
+		mcp.WithOutputSchema[ExecResult](),
+	), mcpLifecycleHandler("start"))
+
+	s.AddTool(mcp.NewTool("nself_stop",
+		mcp.WithDescription("Stop the nSelf stack. Causes downtime for any consumer of this project's services."),
+		mcp.WithReadOnlyHintAnnotation(false),
+		mcp.WithDestructiveHintAnnotation(true),
+		mcp.WithIdempotentHintAnnotation(true),
+		mcp.WithOutputSchema[ExecResult](),
+	), mcpLifecycleHandler("stop"))
+
+	s.AddTool(mcp.NewTool("nself_restart",
+		mcp.WithDescription("Restart the nSelf stack. Causes brief downtime."),
+		mcp.WithReadOnlyHintAnnotation(false),
+		mcp.WithDestructiveHintAnnotation(true),
+		mcp.WithIdempotentHintAnnotation(true),
+		mcp.WithOutputSchema[ExecResult](),
+	), mcpLifecycleHandler("restart"))
+
+	s.AddTool(mcp.NewTool("nself_db_migrate_status",
+		mcp.WithDescription("List database migrations and whether each has been applied"),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithOutputSchema[MigrateStatusResult](),
+	), mcpDBMigrateStatusHandler())
+
+	s.AddTool(mcp.NewTool("nself_backup_list",
+		mcp.WithDescription("List local backups with id, date, size, and type"),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithOutputSchema[BackupListResult](),
+	), mcpBackupListHandler())
+
+	s.AddTool(mcp.NewTool("nself_deploy_status",
+		mcp.WithDescription("Fast local deploy-state read (postgres container presence + control-plane inventory). Not a full SSH-probed remote status — use the CLI for that."),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithOutputSchema[DeployStatusResult](),
+	), mcpDeployStatusHandler())
+
+	s.AddTool(mcp.NewTool("nself_plugin_list",
+		mcp.WithDescription("List the plugin catalog: registry entries and/or installed plugins"),
+		mcp.WithBoolean("installed", mcp.Description("true = installed only; false/omitted = full registry catalog")),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithOutputSchema[PluginListResult](),
+	), mcpPluginListHandler())
+
+	s.AddTool(mcp.NewTool("nself_plugin_install",
+		mcp.WithDescription("Install one plugin by name (core path only — no --force/--preview/--dry-run)"),
+		mcp.WithString("name", mcp.Required(), mcp.Description("Plugin name, e.g. mlflow")),
+		mcp.WithReadOnlyHintAnnotation(false),
+		mcp.WithDestructiveHintAnnotation(false),
+		mcp.WithIdempotentHintAnnotation(true),
+		mcp.WithOutputSchema[PluginInstallResult](),
+	), mcpPluginInstallHandler())
 }
 
-func mcpGetSchemaHandler() server.ToolHandlerFunc {
-	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		hasuraURL := resolveHasuraEndpoint()
-		adminSecret := os.Getenv("HASURA_GRAPHQL_ADMIN_SECRET")
-		if adminSecret == "" {
-			adminSecret = os.Getenv("NSELF_HASURA_ADMIN_SECRET")
-		}
+// registerDataMCPTools registers the three Hasura/Postgres data tools —
+// see mcp_tools_data.go for the handlers.
+func registerDataMCPTools(s *server.MCPServer) {
+	s.AddTool(mcp.NewTool("nself_get_schema",
+		mcp.WithDescription("Introspect the Hasura GraphQL schema and return table/type information"),
+		mcp.WithReadOnlyHintAnnotation(true),
+	), mcpGetSchemaHandler())
 
-		introspectURL := strings.TrimRight(hasuraURL, "/") + "/v1/graphql"
-		body := map[string]string{"query": introspectionQuery}
-		respBytes, err := mcpPostJSON(ctx, introspectURL, adminSecret, body)
-		if err != nil {
-			return mcp.NewToolResultText(fmt.Sprintf("Schema introspection error: %v", err)), nil
-		}
+	s.AddTool(mcp.NewTool("nself_get_permissions",
+		mcp.WithDescription("Return a snapshot of Hasura role permissions for all tables"),
+		mcp.WithReadOnlyHintAnnotation(true),
+	), mcpGetPermissionsHandler())
 
-		// Compact the response for readability.
-		var compacted bytes.Buffer
-		if err := json.Compact(&compacted, respBytes); err != nil {
-			return mcp.NewToolResultText(string(respBytes)), nil
-		}
-		return mcp.NewToolResultText(compacted.String()), nil
-	}
+	s.AddTool(mcp.NewTool("nself_run_migration",
+		mcp.WithDescription("Apply a SQL migration against the nSelf Postgres database. Requires explicit confirmation via the 'confirm' flag. A DDL allowlist blocks destructive statements even with confirm=true."),
+		mcp.WithString("sql", mcp.Required(), mcp.Description("SQL to execute as a migration")),
+		mcp.WithBoolean("confirm", mcp.Required(), mcp.Description("Must be true to execute — prevents accidental runs")),
+		mcp.WithReadOnlyHintAnnotation(false),
+		mcp.WithDestructiveHintAnnotation(true),
+		mcp.WithIdempotentHintAnnotation(false),
+	), mcpRunMigrationHandler())
 }
-
-func mcpGetPermissionsHandler() server.ToolHandlerFunc {
-	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		hasuraURL := resolveHasuraEndpoint()
-		adminSecret := os.Getenv("HASURA_GRAPHQL_ADMIN_SECRET")
-		if adminSecret == "" {
-			adminSecret = os.Getenv("NSELF_HASURA_ADMIN_SECRET")
-		}
-
-		metadataURL := strings.TrimRight(hasuraURL, "/") + "/v1/metadata"
-		payload := map[string]interface{}{
-			"type": "export_metadata",
-			"args": map[string]interface{}{},
-		}
-		respBytes, err := mcpPostJSON(ctx, metadataURL, adminSecret, payload)
-		if err != nil {
-			return mcp.NewToolResultText(fmt.Sprintf("Permissions snapshot error: %v", err)), nil
-		}
-
-		// Extract permissions subset to keep the response concise.
-		var meta map[string]interface{}
-		if err := json.Unmarshal(respBytes, &meta); err != nil {
-			return mcp.NewToolResultText(string(respBytes)), nil
-		}
-
-		sources, _ := meta["sources"].([]interface{})
-		type tablePerms struct {
-			Table       string      `json:"table"`
-			Permissions interface{} `json:"permissions"`
-		}
-		var result []tablePerms
-		for _, src := range sources {
-			srcMap, ok := src.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			tables, _ := srcMap["tables"].([]interface{})
-			for _, t := range tables {
-				tMap, ok := t.(map[string]interface{})
-				if !ok {
-					continue
-				}
-				tableInfo, _ := tMap["table"].(map[string]interface{})
-				tableName, _ := tableInfo["name"].(string)
-				perms := map[string]interface{}{}
-				for _, key := range []string{"select_permissions", "insert_permissions", "update_permissions", "delete_permissions"} {
-					if v, ok := tMap[key]; ok {
-						perms[key] = v
-					}
-				}
-				result = append(result, tablePerms{Table: tableName, Permissions: perms})
-			}
-		}
-
-		out, err := json.MarshalIndent(result, "", "  ")
-		if err != nil {
-			return mcp.NewToolResultText(string(respBytes)), nil
-		}
-		return mcp.NewToolResultText(string(out)), nil
-	}
-}
-
-func mcpRunMigrationHandler() server.ToolHandlerFunc {
-	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		args := req.GetArguments()
-		sql, _ := args["sql"].(string)
-		confirm, _ := args["confirm"].(bool)
-
-		if sql == "" {
-			return mcp.NewToolResultText("Error: sql is required"), nil
-		}
-		if !confirm {
-			return mcp.NewToolResultText("Error: confirm must be true to execute the migration. This is a safety gate."), nil
-		}
-
-		// DDL allowlist: reject destructive or privilege-altering SQL before
-		// any execution path. This blocks AI Studio sessions from running
-		// DROP TABLE, TRUNCATE, DELETE FROM, ALTER ROLE, GRANT/REVOKE, or
-		// psql meta-commands even when confirm=true is set programmatically.
-		if err := sqlallowlist.ValidateMigrationSQL(sql); err != nil {
-			return mcp.NewToolResultText(fmt.Sprintf("Error: %v", err)), nil
-		}
-
-		// Use nself db migrate to apply the SQL.
-		out, err := mcpRunCommand(ctx, "nself", "db", "migrate", "--sql", sql)
-		if err != nil {
-			// Fallback: apply directly via psql if db migrate doesn't support --sql.
-			out, err = mcpApplyMigrationDirect(ctx, sql)
-			if err != nil {
-				return mcp.NewToolResultText(fmt.Sprintf("Migration failed: %v", err)), nil
-			}
-		}
-		return mcp.NewToolResultText("Migration applied successfully.\n" + out), nil
-	}
-}
-
-func mcpTailLogsHandler() server.ToolHandlerFunc {
-	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		args := req.GetArguments()
-		service, _ := args["service"].(string)
-		if service == "" {
-			return mcp.NewToolResultText("Error: service is required"), nil
-		}
-		lines := 50
-		if n, ok := args["lines"].(float64); ok && n > 0 {
-			lines = int(n)
-		}
-
-		// Resolve container name: nself-<service> convention.
-		containerName := "nself-" + service
-		out, err := mcpRunCommand(ctx, "docker", "logs", "--tail", fmt.Sprintf("%d", lines), containerName)
-		if err != nil {
-			// Try docker compose fallback.
-			out, err = mcpRunCommand(ctx, "docker", "compose", "logs", "--tail", fmt.Sprintf("%d", lines), service)
-			if err != nil {
-				return mcp.NewToolResultText(fmt.Sprintf("Error tailing logs for %s: %v", service, err)), nil
-			}
-		}
-		return mcp.NewToolResultText(out), nil
-	}
-}
-
-func mcpDoctorHandler() server.ToolHandlerFunc {
-	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		out, err := mcpRunCommand(ctx, "nself", "doctor", "--deep", "--json")
-		if err != nil {
-			// Non-zero exit is normal for doctor (warnings/failures); return output.
-			if out != "" {
-				return mcp.NewToolResultText(out), nil
-			}
-			return mcp.NewToolResultText(fmt.Sprintf("Doctor error: %v", err)), nil
-		}
-		return mcp.NewToolResultText(out), nil
-	}
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-// resolveHasuraEndpoint returns the Hasura base URL from env, defaulting to localhost:8080.
-func resolveHasuraEndpoint() string {
-	if u := os.Getenv("NSELF_HASURA_GRAPHQL_URL"); u != "" {
-		return u
-	}
-	if u := os.Getenv("HASURA_GRAPHQL_URL"); u != "" {
-		return u
-	}
-	return "http://127.0.0.1:8080"
-}
-
-// mcpPostJSON sends a JSON POST request with the Hasura admin secret header.
-func mcpPostJSON(ctx context.Context, url, adminSecret string, payload interface{}) ([]byte, error) {
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("marshal payload: %w", err)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
-	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	if adminSecret != "" {
-		req.Header.Set("X-Hasura-Admin-Secret", adminSecret)
-	}
-
-	resp, err := httptimeout.Default.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read response: %w", err)
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(respBody))
-	}
-	return respBody, nil
-}
-
-// mcpRunCommand runs an external command and returns combined stdout+stderr output.
-func mcpRunCommand(ctx context.Context, name string, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, name, args...)
-	out, err := cmd.CombinedOutput()
-	return strings.TrimSpace(string(out)), err
-}
-
-// mcpApplyMigrationDirect applies SQL directly via the Postgres connection string.
-// It enforces the DDL allowlist as a defence-in-depth layer even on this fallback
-// path — the primary check in mcpRunMigrationHandler runs first, but a second
-// guard here ensures no direct caller can bypass it.
-func mcpApplyMigrationDirect(ctx context.Context, sql string) (string, error) {
-	// Defence-in-depth: re-validate even on the fallback path.
-	if err := sqlallowlist.ValidateMigrationSQL(sql); err != nil {
-		return "", err
-	}
-
-	pgURL := os.Getenv("POSTGRES_URL")
-	if pgURL == "" {
-		pgURL = os.Getenv("DATABASE_URL")
-	}
-	if pgURL == "" {
-		return "", fmt.Errorf("no POSTGRES_URL or DATABASE_URL set; cannot apply migration directly")
-	}
-	out, err := mcpRunCommand(ctx, "psql", pgURL, "-c", sql)
-	return out, err
-}
-
-// advertiseMDNS sends a minimal mDNS announcement for _nself._tcp.local on port 3825.
-// This is a best-effort, single-shot DNS-SD advertisement via the standard mDNS multicast.
-// It never crashes the main server if it fails.
-//
-// ctx is used to stop the re-announcement loop when the server shuts down. Without
-// context cancellation the ticker goroutine would run indefinitely, which causes
-// "Test I/O incomplete" failures in the test harness.
-func advertiseMDNS(ctx context.Context, port int) {
-	hostname, err := os.Hostname()
-	if err != nil {
-		hostname = "localhost"
-	}
-
-	// Build a minimal PTR + SRV + TXT record set and multicast on 224.0.0.251:5353.
-	// This gives Claude Code and other mDNS browsers enough to discover the instance.
-	conn, err := net.ListenPacket("udp4", "0.0.0.0:0")
-	if err != nil {
-		return
-	}
-	defer conn.Close()
-
-	dst := &net.UDPAddr{IP: net.ParseIP("224.0.0.251"), Port: mcpMDNSPort}
-	// Simple DNS-SD announcement: plain text fallback for discovery.
-	// Full zeroconf requires a dedicated library; this sends a human-readable
-	// broadcast so that tools polling the LAN can detect the service.
-	announcement := fmt.Sprintf(
-		"_nself._tcp.local. PTR %s._nself._tcp.local. SRV 0 0 %d %s.local. TXT \"path=/mcp\" \"port=%d\"",
-		hostname, port, hostname, port,
-	)
-	if _, err := conn.WriteTo([]byte(announcement), dst); err != nil {
-		slog.Debug("mcp mdns announcement failed", "err", err)
-	}
-
-	// Re-announce every 60 seconds (RFC 6762 recommendation for long-lived services).
-	// Select on ctx.Done() so the goroutine exits cleanly when the server stops.
-	ticker := time.NewTicker(60 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			if _, err := conn.WriteTo([]byte(announcement), dst); err != nil {
-				slog.Debug("mcp mdns re-announcement failed", "err", err)
-			}
-		}
-	}
-}
-
-// introspectionQuery is the standard GraphQL introspection query.
-const introspectionQuery = `{
-  __schema {
-    types {
-      name
-      kind
-      fields {
-        name
-        type { name kind ofType { name kind } }
-      }
-    }
-    queryType { name }
-    mutationType { name }
-    subscriptionType { name }
-  }
-}`

@@ -47,6 +47,12 @@ wiki-check:
 	@CGO_ENABLED=0 go run -mod=vendor ./tools/wikigen -check
 	@bash scripts/ci/wiki-link-audit.sh
 
+## mcp-docs — CLI-R15. Print the current MCP tool/resource/prompt list,
+## generated from cmd/commands/mcp*.go — paste into cmd-mcp.md's PROSE blocks
+## by hand after adding/removing a tool, resource, or prompt.
+mcp-docs:
+	@CGO_ENABLED=0 go run -mod=vendor ./tools/mcpdoc
+
 ## parity — CLI-R17. Regenerate the four-surface parity matrix (wiki page, MCP
 ## tool, env var docs, OpenAPI route) for every top-level command. Writes
 ## .github/surface-parity.md and .github/surface-parity.json. internal/repoqa

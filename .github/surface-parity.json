@@ -69,7 +69,7 @@
       "path": "nself backup",
       "group_id": "data",
       "wiki_page": true,
-      "mcp_tool": false,
+      "mcp_tool": true,
       "env_vars": "n/a",
       "openapi": "n/a (see below)"
     },
@@ -87,7 +87,7 @@
       "path": "nself build",
       "group_id": "core",
       "wiki_page": true,
-      "mcp_tool": false,
+      "mcp_tool": true,
       "env_vars": "undocumented: NSELF_PROFILE",
       "openapi": "n/a (see below)"
     },
@@ -141,7 +141,7 @@
       "path": "nself config",
       "group_id": "config",
       "wiki_page": true,
-      "mcp_tool": false,
+      "mcp_tool": true,
       "env_vars": "n/a",
       "openapi": "n/a (see below)"
     },
@@ -159,7 +159,7 @@
       "path": "nself db",
       "group_id": "data",
       "wiki_page": true,
-      "mcp_tool": false,
+      "mcp_tool": true,
       "env_vars": "n/a",
       "openapi": "n/a (see below)"
     },
@@ -168,7 +168,7 @@
       "path": "nself deploy",
       "group_id": "deploy",
       "wiki_page": true,
-      "mcp_tool": false,
+      "mcp_tool": true,
       "env_vars": "undocumented: NSELF_DEPLOY_ENV, NSELF_DEPLOY_HOST_, NSELF_FEATURE_BLUE_GREEN_DEPLOY, VERCEL_TOKEN",
       "openapi": "n/a (see below)"
     },
@@ -231,7 +231,7 @@
       "path": "nself env",
       "group_id": "config",
       "wiki_page": true,
-      "mcp_tool": false,
+      "mcp_tool": true,
       "env_vars": "documented",
       "openapi": "n/a (see below)"
     },
@@ -348,7 +348,7 @@
       "path": "nself install",
       "group_id": "extend",
       "wiki_page": true,
-      "mcp_tool": false,
+      "mcp_tool": true,
       "env_vars": "n/a",
       "openapi": "n/a (see below)"
     },
@@ -430,7 +430,7 @@
       "group_id": "extend",
       "wiki_page": true,
       "mcp_tool": false,
-      "env_vars": "undocumented: HASURA_GRAPHQL_URL, NSELF_HASURA_ADMIN_SECRET, NSELF_HASURA_GRAPHQL_URL, NSENTRY_STATUS_URL, POSTGRES_URL",
+      "env_vars": "undocumented: HASURA_GRAPHQL_URL, INTEGRATION, NSELF_HASURA_ADMIN_SECRET, NSELF_HASURA_GRAPHQL_URL, NSENTRY_STATUS_URL, POSTGRES_URL",
       "openapi": "n/a (see below)"
     },
     {
@@ -438,7 +438,7 @@
       "path": "nself migrate",
       "group_id": "data",
       "wiki_page": true,
-      "mcp_tool": false,
+      "mcp_tool": true,
       "env_vars": "undocumented: NSELF_AI_ENDPOINT, NSELF_MIGRATION_AUTO_APPLY, NSELF_PROFILE, NSELF_SUPABASE_SKIP",
       "openapi": "n/a (see below)"
     },
@@ -492,7 +492,7 @@
       "path": "nself plugin",
       "group_id": "extend",
       "wiki_page": true,
-      "mcp_tool": false,
+      "mcp_tool": true,
       "env_vars": "undocumented: GOPATH, NSELF_LICENSE_SKIP_VERIFY, NSELF_LOCAL_URL, NSELF_MARKETPLACE_URL, NSELF_PING_URL, NSELF_PLUGIN_CACHE, NSELF_PLUGIN_DIR, NSELF_PLUGIN_LICENSE_KEY, NSELF_PLUGIN_REGISTRY",
       "openapi": "n/a (see below)"
     },
@@ -555,7 +555,7 @@
       "path": "nself restart",
       "group_id": "core",
       "wiki_page": true,
-      "mcp_tool": false,
+      "mcp_tool": true,
       "env_vars": "n/a",
       "openapi": "n/a (see below)"
     },
@@ -609,7 +609,7 @@
       "path": "nself service",
       "group_id": "config",
       "wiki_page": true,
-      "mcp_tool": false,
+      "mcp_tool": true,
       "env_vars": "n/a",
       "openapi": "n/a (see below)"
     },
@@ -636,7 +636,7 @@
       "path": "nself start",
       "group_id": "core",
       "wiki_page": true,
-      "mcp_tool": false,
+      "mcp_tool": true,
       "env_vars": "undocumented: AI_AUTO_INSTALL, NSELF_PROFILE, NSELF_SKIP_DB_INIT",
       "openapi": "n/a (see below)"
     },
@@ -654,7 +654,7 @@
       "path": "nself stop",
       "group_id": "core",
       "wiki_page": true,
-      "mcp_tool": false,
+      "mcp_tool": true,
       "env_vars": "n/a",
       "openapi": "n/a (see below)"
     },
@@ -717,7 +717,7 @@
       "path": "nself urls",
       "group_id": "core",
       "wiki_page": true,
-      "mcp_tool": false,
+      "mcp_tool": true,
       "env_vars": "n/a",
       "openapi": "n/a (see below)"
     },

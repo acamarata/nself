@@ -1,7 +1,7 @@
 # nself mcp
 
 <!-- BEGIN PROSE:summary -->
-> Start the nSelf MCP server and expose infrastructure tools to Claude Code and other MCP clients.
+> Start the nSelf MCP server: 26 tools, 4 resources, and 3 prompts covering the real core CLI surface, for Claude Code and other MCP clients.
 <!-- END PROSE:summary -->
 
 ## Synopsis
@@ -14,35 +14,83 @@ nself mcp [flags]
 
 <!-- BEGIN PROSE:description -->
 `nself mcp` starts a [Model Context Protocol](https://modelcontextprotocol.io) server that
-exposes nSelf infrastructure operations as tools. MCP clients (including Claude Code) can
-then call those tools directly, without leaving their coding environment.
+exposes nSelf as tools, resources, and prompts. MCP clients (including Claude Code) can
+then call those directly, without leaving their coding environment.
 
 By default the server runs over `stdio`, which is the correct mode for Claude Code's
-`mcpServers` configuration. Use `--transport sse` to expose the server over HTTP on a local
-port instead.
-
-The server provides eleven tools:
-
-| Tool | Description |
-|------|-------------|
-| `nself_list_plugins` | List the plugin catalog (installed and available plugins) |
-| `nself_get_schema` | Hasura GraphQL schema introspection |
-| `nself_get_permissions` | Hasura role permissions snapshot |
-| `nself_run_migration` | Apply a SQL migration (requires `confirm: true`; DDL allowlist enforced, see below) |
-| `nself_tail_logs` | Tail Docker logs for a named service or plugin container |
-| `nself_doctor` | Run `nself doctor --deep` and return the diagnostic report |
-| `sentry_monitors_list` | List ɳSentry uptime monitors for the authenticated tenant |
-| `sentry_monitors_add` | Create an ɳSentry uptime monitor (tier quotas apply) |
-| `sentry_incidents_list` | List ɳSentry incidents, optionally filtered by status |
-| `sentry_incidents_ack` | Acknowledge an open ɳSentry incident by id |
-| `sentry_status` | Fetch the ɳSentry public status page summary |
-
-The server advertises itself via mDNS as `_nself._tcp.local` so Claude Code and other
-mDNS-aware clients can discover a running instance on the local network automatically.
-Pass `--no-mdns` to suppress this.
+`mcpServers` configuration. Use `--transport sse` or `--transport http` (streamable HTTP)
+to expose the server over a local port instead — set `NSELF_MCP_TOKEN` to require a bearer
+token on those two transports (stdio has no network exposure, so it never needs one).
 
 `nself mcp` must be run from inside a directory that contains an nSelf project (i.e. one
 initialised by `nself init`). The server exits immediately if no project is found.
+
+### Tools (26)
+
+Every tool below calls the same internal Go package the matching `nself <cmd>` uses —
+mutating tools (`nself_build`/`nself_start`/`nself_stop`/`nself_restart`/
+`nself_plugin_install`) re-exec the `nself` binary itself (resolved via `os.Executable()`,
+never a bare `"nself"` on PATH) rather than running in-process, since their CLI
+implementations print operator banners to stdout and, for start/stop, install a
+process-lifetime signal trap — neither of which belongs in a long-lived MCP server. Every
+tool declares an output schema and read-only/destructive/idempotent annotations so an agent
+can plan without probing.
+
+| Name | Description |
+|------|-------------|
+| `nself_backup_list` | List local backups with id, date, size, and type |
+| `nself_build` | Regenerate docker-compose.yml and nginx config from the project's env files. Overwrites prior generated output. |
+| `nself_config_get` | Read one config key from the project's env file. Secret values are always redacted. |
+| `nself_config_set` | Set one config key in the project's env file |
+| `nself_config_show` | List every config key/value in the project's env file. Secret values are always redacted. |
+| `nself_db_migrate_status` | List database migrations and whether each has been applied |
+| `nself_deploy_status` | Fast local deploy-state read (postgres container presence + control-plane inventory). Not a full SSH-probed remote status — use the CLI for that. |
+| `nself_doctor` | Run the full nSelf diagnostic suite (Docker, disk, ports, certs, and more) |
+| `nself_env_list` | List available environments (dev/staging/prod) and which is active |
+| `nself_get_permissions` | Return a snapshot of Hasura role permissions for all tables |
+| `nself_get_schema` | Introspect the Hasura GraphQL schema and return table/type information |
+| `nself_logs` | Tail recent docker compose logs for one service, or the whole stack |
+| `nself_plugin_install` | Install one plugin by name (core path only — no --force/--preview/--dry-run) |
+| `nself_plugin_list` | List the plugin catalog: registry entries and/or installed plugins |
+| `nself_restart` | Restart the nSelf stack. Causes brief downtime. |
+| `nself_run_migration` | Apply a SQL migration against the nSelf Postgres database. Requires explicit confirmation via the 'confirm' flag. A DDL allowlist blocks destructive statements even with confirm=true. |
+| `nself_service_list` | List running/stopped services with container name, status, and health |
+| `nself_start` | Start the nSelf stack (docker compose up). Safe to call when already running. |
+| `nself_status` | Health status of every service in the current nSelf project |
+| `nself_stop` | Stop the nSelf stack. Causes downtime for any consumer of this project's services. |
+| `nself_urls` | Computed service URLs for the current project, grouped by required/optional/custom/frontend |
+| `sentry_incidents_ack` | Acknowledge an open ɳSentry incident by id |
+| `sentry_incidents_list` | List ɳSentry incidents, optionally filtered by status (open, acknowledged, resolved) |
+| `sentry_monitors_add` | Create an ɳSentry uptime monitor. Tier quotas apply (free: 10 @ 5-min). |
+| `sentry_monitors_list` | List ɳSentry uptime monitors for the authenticated tenant (id, name, url, kind, interval, status) |
+| `sentry_status` | Fetch the ɳSentry public status page summary (overall status + per-component health) |
+
+Regenerate this table from source with `go run ./tools/mcpdoc` — it text-scans
+`cmd/commands/mcp.go`, `cmd/commands/mcp_sentry.go`, `cmd/commands/mcp_resources.go`, and
+`cmd/commands/mcp_prompts.go`, so it can never drift from what the server actually
+registers.
+
+### Resources (4)
+
+| Name | Description |
+|------|-------------|
+| `nself://config` | Project config snapshot |
+| `nself://env` | Effective env cascade inputs |
+| `nself://services` | Service inventory |
+| `nself://urls` | Service URLs |
+
+`nself://env` lists every env file present in the project (secrets redacted) but
+deliberately does not compute which file wins for a given key — that precedence is being
+revised (see `nself env explain` on the roadmap); ask the CLI, not this resource, for the
+authoritative answer.
+
+### Prompts (3)
+
+| Name | Description |
+|------|-------------|
+| `add-service` | Enable an optional service (or install a plugin) and bring it up safely |
+| `diagnose-failure` | Investigate why an nSelf service is unhealthy or a project won't start |
+| `prepare-deploy` | Run the pre-deploy checklist before promoting a project to staging or prod |
 
 ## ɳSentry Tools: AI Agents Operate Monitoring
 
@@ -118,9 +166,8 @@ For blocked statement types, run `nself db migrate` directly from the CLI.
 <!-- BEGIN GENERATED:flags -->
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--no-mdns` | `false` | Disable mDNS service advertising |
-| `--port`, `-p` | `3825` | Port for SSE transport |
-| `--transport`, `-t` | `stdio` | Transport: stdio or sse |
+| `--port`, `-p` | `3825` | Port for the sse/http transports |
+| `--transport`, `-t` | `stdio` | Transport: stdio, sse, or http |
 | `--help`, `-h` | — | Show help |
 <!-- END GENERATED:flags -->
 
@@ -143,13 +190,13 @@ nself mcp --transport sse --port 4000
 ```
 
 ```bash
-# Run without mDNS advertising (e.g. in CI)
-nself mcp --no-mdns
+# Run the streamable-HTTP transport
+nself mcp --transport http --port 4000
 ```
 
 ```bash
-# Run SSE on a custom port without mDNS
-nself mcp --transport sse --port 4000 --no-mdns
+# Require a bearer token on the sse/http transports (stdio never needs one)
+NSELF_MCP_TOKEN=$(openssl rand -hex 32) nself mcp --transport http
 ```
 
 ### Claude Code configuration
