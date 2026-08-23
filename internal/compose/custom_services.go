@@ -11,15 +11,15 @@ import (
 // User overrides via CS_N_ENV are applied last and win over defaults.
 func coreEnvVars(cfg *config.Config, svc config.CustomService) map[string]string {
 	env := map[string]string{
-		"PROJECT_NAME":                cfg.ProjectName,
-		"BASE_DOMAIN":                 cfg.BaseDomain,
-		"ENV":                         cfg.Env,
-		"POSTGRES_HOST":               "postgres",
-		"POSTGRES_PORT":               "5432",
-		"POSTGRES_DB":                 cfg.Postgres.DB,
-		"POSTGRES_USER":               cfg.Postgres.User,
-		"POSTGRES_PASSWORD":           cfg.Postgres.Password,
-		"DATABASE_URL": cfg.DatabaseURL(),
+		"PROJECT_NAME":      cfg.ProjectName,
+		"BASE_DOMAIN":       cfg.BaseDomain,
+		"ENV":               cfg.Env,
+		"POSTGRES_HOST":     "postgres",
+		"POSTGRES_PORT":     "5432",
+		"POSTGRES_DB":       cfg.Postgres.DB,
+		"POSTGRES_USER":     cfg.Postgres.User,
+		"POSTGRES_PASSWORD": cfg.Postgres.Password,
+		"DATABASE_URL":      cfg.DatabaseURL(),
 		// Gap #7: Hasura always listens on 8080 INSIDE its container regardless
 		// of the host-mapped cfg.Hasura.Port (compose maps
 		// "127.0.0.1:<Hasura.Port>:8080" — see buildHasuraService). Custom

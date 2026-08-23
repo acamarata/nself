@@ -103,10 +103,10 @@ func auditArgs(t *testing.T, s controlplane.Server) {
 //   - "unreachable-server": SSH fails
 //   - all others: fully reachable (manage)
 type mixedKeyProber struct {
-	badKeyServer   string
+	badKeyServer      string
 	unreachableServer string
-	goodKeyPath    string
-	keyRef         string
+	goodKeyPath       string
+	keyRef            string
 }
 
 func (p *mixedKeyProber) SSHReachable(s controlplane.Server) (bool, int, error) {

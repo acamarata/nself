@@ -14,12 +14,12 @@ import (
 // These MUST match the inputs used in plugin-sign.test.ts so both suites
 // validate byte-identical canonical output.
 const (
-	goldenBundle     = "nclaw"
-	goldenName       = "claw"
-	goldenSHA256     = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	goldenSize int64 = 102400
-	goldenVis        = "public"
-	goldenVersion    = "1.2.3"
+	goldenBundle        = "nclaw"
+	goldenName          = "claw"
+	goldenSHA256        = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	goldenSize    int64 = 102400
+	goldenVis           = "public"
+	goldenVersion       = "1.2.3"
 )
 
 // TestCanonicalPluginObject_GoldenFile verifies that canonicalPluginObject

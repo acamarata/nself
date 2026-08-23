@@ -95,7 +95,9 @@ func DeleteUserData(ctx context.Context, db *sql.DB, userID string) (processed i
 // Inputs:  tbl — the TableStrategy read from the plugin registry
 // Outputs: qtbl, qcol — double-quoted safe identifiers; err on invalid input
 // Constraints: rejects empty string, SQL metacharacters, values >64 chars per
-//              RFC PostgreSQL identifier limit, and any char outside [a-zA-Z0-9_]
+//
+//	RFC PostgreSQL identifier limit, and any char outside [a-zA-Z0-9_]
+//
 // SPORT: MASTER-FEATURES.md — SQL injection hardening — cli
 func validateTableStrategy(tbl TableStrategy) (qtbl, qcol string, err error) {
 	qtbl, err = database.SanitizeIdentifier(tbl.Table)

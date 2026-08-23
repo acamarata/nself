@@ -12,7 +12,7 @@ LDFLAGS := -s -w \
 	-X $(MODULE)/internal/license.licensePubKeyHex=$(NSELF_LICENSE_PUBKEY_HEX)
 BUILDFLAGS := -trimpath
 
-.PHONY: build clean test vet install cross dist verify-prod sport-f21 sbom man
+.PHONY: build clean test vet install cross dist verify-prod sport-f21 sbom man fmt fmt-check
 
 verify-prod:
 	@bash scripts/prod-verify/p87-verification.sh
@@ -67,6 +67,14 @@ test:
 
 vet:
 	CGO_ENABLED=0 go vet -mod=vendor ./...
+
+## fmt — format all first-party Go source (cmd/ internal/ tools/).
+fmt:
+	gofmt -w cmd internal tools
+
+## fmt-check — CLI-R01 gate. Same script CI runs; fails on any unformatted file.
+fmt-check:
+	@bash scripts/ci/gofmt-check.sh
 
 cross: cross-linux cross-darwin
 

@@ -484,7 +484,9 @@ func Update(ctx context.Context, cfg *config.Config, name string, pluginDir stri
 // Returns (false, nil) when neither var is set (normal verification path).
 //
 // Purpose: Extracted so unit tests can exercise the bypass-gate logic without
-//          spinning up a full HTTP registry server.
+//
+//	spinning up a full HTTP registry server.
+//
 // SPORT: security-audit; ticket P2-E2-W2-S3-T10
 func checkSigBypassAllowed(env, pluginName string) (bypassed bool, err error) {
 	skipVerify := os.Getenv("NSELF_LICENSE_SKIP_VERIFY") == "1"

@@ -13,10 +13,10 @@ import (
 // not docker exec with a bare -e flag, so assertions (a)-(d) reflect that.
 func TestHasuraMetadataApplyCmd(t *testing.T) {
 	cases := []struct {
-		name       string
-		secret     string
-		hasuraDir  string
-		port       int
+		name      string
+		secret    string
+		hasuraDir string
+		port      int
 	}{
 		{
 			name:      "standard secret",

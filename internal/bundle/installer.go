@@ -7,8 +7,10 @@
 //
 // --dry-run    prints the planned actions and exits without filesystem changes.
 // --force      re-installs even if the same version is already installed
-//              (repair/upgrade path). License is ALWAYS validated regardless of
-//              --force; --force NEVER bypasses the license check.
+//
+//	(repair/upgrade path). License is ALWAYS validated regardless of
+//	--force; --force NEVER bypasses the license check.
+//
 // --strict     fails if any plugin in the bundle is missing from the registry
 //
 //	(default: skip missing with a warning).

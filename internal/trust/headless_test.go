@@ -7,9 +7,9 @@ import (
 // TestIsHeadless covers all documented truthy values plus falsy values.
 func TestIsHeadless(t *testing.T) {
 	tests := []struct {
-		name  string
-		env   string
-		want  bool
+		name string
+		env  string
+		want bool
 	}{
 		// Truthy values
 		{name: "value_1", env: "1", want: true},

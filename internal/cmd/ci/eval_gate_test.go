@@ -27,8 +27,8 @@ func evalGateServer(t *testing.T, statusCode int, body interface{}) *httptest.Se
 // TestEvalGateExitCode_Cleared verifies exit 0 when the gate is cleared.
 func TestEvalGateExitCode_Cleared(t *testing.T) {
 	srv := evalGateServer(t, http.StatusOK, map[string]interface{}{
-		"tier":    "semi-auto",
-		"cleared": true,
+		"tier":     "semi-auto",
+		"cleared":  true,
 		"enforced": true,
 	})
 

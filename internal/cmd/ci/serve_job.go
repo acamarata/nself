@@ -1,14 +1,17 @@
 // Package ci — serve_job.go
 //
 // Purpose: Run a single CI gate job in an ephemeral Docker container.
-//   Clones the target repo ref into a temp workdir, mounts it into a container
-//   with CPU/memory limits and a per-job timeout, runs the nself-ci binary, then
-//   posts a GitHub commit status and emits a completion event to NSELF_CI_EVENT_SINK.
-//   Container is always cleaned up — leak-free even on timeout or panic.
+//
+//	Clones the target repo ref into a temp workdir, mounts it into a container
+//	with CPU/memory limits and a per-job timeout, runs the nself-ci binary, then
+//	posts a GitHub commit status and emits a completion event to NSELF_CI_EVENT_SINK.
+//	Container is always cleaned up — leak-free even on timeout or panic.
+//
 // Inputs:  ciJob, binaryPath string, ServeConfig
 // Outputs: GitHub commit status (pending → success/failure); optional event POST
 // Constraints: Requires Docker daemon + gh CLI on PATH; uses exec (not Docker SDK)
-//   to keep vendor tree clean; SPORT CLI-CMD-CI-SERVE-001
+//
+//	to keep vendor tree clean; SPORT CLI-CMD-CI-SERVE-001
 package ci
 
 import (
@@ -130,12 +133,12 @@ func runGateInDocker(binaryPath, workdir string, cfg ServeConfig) (passed bool, 
 		"run",
 		"--rm",
 		"--name", containerName,
-		"--network=none",          // no outbound network (gate is local)
-		"--cpus=1.5",              // cap CPU: 1.5 cores
-		"--memory=1g",             // cap RAM: 1 GiB
-		"--memory-swap=1g",        // disable swap
-		"--read-only",             // immutable container FS
-		"--tmpfs=/tmp:size=256m",  // writable /tmp in RAM
+		"--network=none",         // no outbound network (gate is local)
+		"--cpus=1.5",             // cap CPU: 1.5 cores
+		"--memory=1g",            // cap RAM: 1 GiB
+		"--memory-swap=1g",       // disable swap
+		"--read-only",            // immutable container FS
+		"--tmpfs=/tmp:size=256m", // writable /tmp in RAM
 		"-v", fmt.Sprintf("%s:/repo:rw", workdir),
 		"-v", fmt.Sprintf("%s:/usr/local/bin/nself-ci:ro", binaryPath),
 		"--workdir=/repo",

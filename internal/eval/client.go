@@ -136,7 +136,9 @@ func (c *Client) GetRun(ctx context.Context, runID string) (EvalRunResult, error
 // Purpose: Block CLI until eval run completes; enforce 10min hard ceiling.
 // Inputs:  ctx, runID.
 // Outputs: Final EvalRunResult; ErrPollTimeout after 10min; ErrPreconditionNotMet
-//   if the run signals precondition_failed=true.
+//
+//	if the run signals precondition_failed=true.
+//
 // Constraints: Terminal states: "passed", "failed". "queued"/"running" → keep polling.
 func (c *Client) WaitForRun(ctx context.Context, runID string) (EvalRunResult, error) {
 	deadline := time.Now().Add(pollTimeout)

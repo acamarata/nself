@@ -6,7 +6,7 @@ import (
 
 func TestResolveVersionConflictsFromPins_MaxWins(t *testing.T) {
 	bundlePins := map[string]VersionPins{
-		"nclaw": {"ai": "1.0.0", "mux": "2.0.0"},
+		"nclaw":  {"ai": "1.0.0", "mux": "2.0.0"},
 		"clawde": {"ai": "1.2.0", "mux": "2.0.0"},
 	}
 	resolved, conflicts, err := ResolveVersionConflictsFromPins(bundlePins, false, nil)

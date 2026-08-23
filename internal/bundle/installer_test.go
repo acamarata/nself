@@ -144,9 +144,9 @@ func TestInstall_ForceStillValidatesLicense(t *testing.T) {
 	}
 
 	_, err := Install(context.Background(), "nsentry", InstallOpts{
-		Force:   true,
-		Out:     &buf,
-		Channel: ChannelStable,
+		Force:     true,
+		Out:       &buf,
+		Channel:   ChannelStable,
 		PluginDir: pluginDir,
 		// Phase 1: bundle entitled check returns false (simulates no key).
 		bundleEntitledChecker: func(_ context.Context, _, _ string) (bool, error) {

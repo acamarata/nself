@@ -1,7 +1,9 @@
 // Package gateway provides client utilities for nself-ai-gateway (port 3761).
 //
 // Purpose: Wrap HTTP calls to nself-ai-gateway, nself-ai-cc, and nself-ai-mcp
-//   for use in CLI gateway commands.
+//
+//	for use in CLI gateway commands.
+//
 // Inputs: Port constants from internal/ports; JWT from internal/auth.
 // Outputs: Typed structs for keys, quota, routes, service health.
 // Constraints: Key material never returned in any output type.

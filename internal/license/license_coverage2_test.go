@@ -513,7 +513,6 @@ func TestWriteCache_HappyPathPermissions(t *testing.T) {
 	}
 }
 
-
 // ── isStaleFailOpen branches ──────────────────────────────────────────────
 
 func TestIsStaleFailOpen_NilCache(t *testing.T) {
@@ -593,7 +592,6 @@ func TestTryRemote_HTTP200_ValidResponseC2(t *testing.T) {
 	}
 }
 
-
 // ── SimulateOffline / ClearSimulation branches ────────────────────────────
 
 // TestSimulateOffline_GuardDisabledC2 is a coverage companion to the existing
@@ -622,7 +620,6 @@ func TestClearSimulation_GuardDisabled(t *testing.T) {
 		t.Errorf("expected ErrSimulationNotAllowed, got %v", err)
 	}
 }
-
 
 // ── fmt (suppress unused warning) ─────────────────────────────────────────
 
