@@ -30,9 +30,8 @@ func renderMarkdown(rows []Row) string {
 		"informational — see the matching-rule comments in tools/parity/ for exactly how " +
 		"each column is decided and why it may under-count.\n\n")
 
-	b.WriteString("**OpenAPI Route** is always `n/a`: this repo has no route source to check " +
-		"against (no `internal/apidocs`, no `openapi.go` anywhere in the tree as of CLI-R17). " +
-		"If that changes, wire a real check here instead of inventing data.\n\n")
+	b.WriteString("**OpenAPI Route** is always `n/a`: " + openAPIFinding +
+		" See tools/parity/openapi.go for the full investigation and citations.\n\n")
 
 	b.WriteString("**Env Vars** reflects only direct `os.Getenv`/`viper.Get*` calls in the " +
 		"command's own `cmd/commands/<name>*.go` files — env vars read through internal/* " +

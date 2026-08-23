@@ -8,7 +8,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: NSELF_NO_BROWSER",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "admin",
@@ -17,7 +17,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: ADMIN_PORT",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "ai",
@@ -26,7 +26,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: AI_DEFAULT_MODEL, OLLAMA_BASE_URL, OLLAMA_HOST, PLUGIN_AI_INTERNAL_URL, PLUGIN_INTERNAL_SECRET",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "ai-studio",
@@ -35,7 +35,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "alerts",
@@ -44,7 +44,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "api",
@@ -53,7 +53,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "audit",
@@ -62,7 +62,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "backup",
@@ -71,7 +71,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "billing",
@@ -80,7 +80,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "build",
@@ -89,7 +89,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: NSELF_PROFILE",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "bundle",
@@ -98,7 +98,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "ci",
@@ -107,7 +107,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: NSELF_FORGEJO_ADMIN_PASSWORD, NSELF_FORGEJO_ADMIN_USER",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "claw",
@@ -116,7 +116,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: CLAW_PROXY_ALLOWED_ORIGINS, NSELF_AICC_URL, NSELF_CLAW_API_KEY, NSELF_CLAW_SERVER, NSELF_EXTERNAL_URL, PLUGIN_CLAW_INTERNAL_URL",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "clean",
@@ -125,7 +125,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "completion",
@@ -134,7 +134,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "config",
@@ -143,7 +143,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "costs",
@@ -152,7 +152,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: HETZNER_SERVER_TYPE",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "db",
@@ -161,7 +161,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "deploy",
@@ -170,7 +170,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: NSELF_DEPLOY_ENV, NSELF_DEPLOY_HOST_, NSELF_FEATURE_BLUE_GREEN_DEPLOY, VERCEL_TOKEN",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "dev",
@@ -179,7 +179,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "dlq",
@@ -188,16 +188,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
-    },
-    {
-      "name": "dns-setup",
-      "path": "nself dns-setup",
-      "group_id": "config",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "doctor",
@@ -206,7 +197,7 @@
       "wiki_page": true,
       "mcp_tool": true,
       "env_vars": "undocumented: NSELF_PING_API_URL",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "dogfood",
@@ -215,7 +206,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "dr",
@@ -224,7 +215,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "encryption",
@@ -233,7 +224,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: BYOK_PLUGIN_URL, NSELF_API_URL, NSELF_TENANT_ID",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "env",
@@ -242,7 +233,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "exec",
@@ -251,16 +242,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
-    },
-    {
-      "name": "feature",
-      "path": "nself feature",
-      "group_id": "config",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "federation",
@@ -269,16 +251,16 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
-      "name": "flag",
-      "path": "nself flag",
+      "name": "flags",
+      "path": "nself flags",
       "group_id": "config",
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "functions",
@@ -287,7 +269,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "gateway",
@@ -296,7 +278,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "gauth",
@@ -305,7 +287,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: GAUTH_PORT, GAUTH_URL",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "gdpr",
@@ -314,7 +296,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "documented",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "generate",
@@ -323,7 +305,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: NSELF_HASURA_PROD_ADMIN_SECRET, NSELF_HASURA_PROD_URL, NSELF_HASURA_STAGING_ADMIN_SECRET, NSELF_HASURA_STAGING_URL",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "health",
@@ -332,7 +314,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "help-topics",
@@ -341,7 +323,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "infra",
@@ -350,7 +332,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: HCLOUD_TOKEN, HETZNER_NSELF_TOKEN",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "init",
@@ -359,7 +341,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: NSELF_LICENSE_KEY",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "k8s",
@@ -368,7 +350,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: NSELF_PLUGIN_LICENSE_KEY",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "license",
@@ -377,7 +359,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: NSELF_LICENSE_SKIP_VERIFY, NSELF_PING_API_URL",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "login",
@@ -386,7 +368,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "logout",
@@ -395,7 +377,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "logs",
@@ -404,7 +386,7 @@
       "wiki_page": true,
       "mcp_tool": true,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "mail",
@@ -413,7 +395,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: NSELF_PING_API_URL",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "maintenance",
@@ -422,7 +404,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "man",
@@ -431,7 +413,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "mcp",
@@ -440,7 +422,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: HASURA_GRAPHQL_URL, NSELF_HASURA_ADMIN_SECRET, NSELF_HASURA_GRAPHQL_URL, NSENTRY_STATUS_URL, POSTGRES_URL",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "migrate",
@@ -449,16 +431,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: NSELF_AI_ENDPOINT, NSELF_MIGRATION_AUTO_APPLY, NSELF_PROFILE, NSELF_SUPABASE_SKIP",
-      "openapi": "n/a"
-    },
-    {
-      "name": "migrate-from-v099",
-      "path": "nself migrate-from-v099",
-      "group_id": "advanced",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "model",
@@ -467,7 +440,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: NSELF_OLLAMA_DEFAULT_MODEL, NSELF_OLLAMA_HOST, NSELF_OLLAMA_TIMEOUT_SECONDS, PLUGIN_AI_OLLAMA_URL",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "monitor",
@@ -476,7 +449,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "oauth",
@@ -485,16 +458,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
-    },
-    {
-      "name": "ollama",
-      "path": "nself ollama",
-      "group_id": "ai",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "undocumented: NSELF_OLLAMA_DEFAULT_MODEL, NSELF_OLLAMA_HOST, NSELF_OLLAMA_TIMEOUT_SECONDS, PLUGIN_AI_OLLAMA_URL",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "ops",
@@ -503,7 +467,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "pentest-kit",
@@ -512,16 +476,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
-    },
-    {
-      "name": "pitr",
-      "path": "nself pitr",
-      "group_id": "data",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "undocumented: NSELF_PITR_EXPERIMENTAL",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "plugin",
@@ -530,7 +485,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: GOPATH, NSELF_LICENSE_SKIP_VERIFY, NSELF_LOCAL_URL, NSELF_MARKETPLACE_URL, NSELF_PING_URL, NSELF_PLUGIN_CACHE, NSELF_PLUGIN_DIR, NSELF_PLUGIN_LICENSE_KEY, NSELF_PLUGIN_REGISTRY",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "promote",
@@ -539,7 +494,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "queue",
@@ -548,7 +503,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "region",
@@ -557,7 +512,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "release",
@@ -566,34 +521,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: GITHUB_TOKEN, NSELF_VERSION",
-      "openapi": "n/a"
-    },
-    {
-      "name": "release-check",
-      "path": "nself release-check",
-      "group_id": "deploy",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a"
-    },
-    {
-      "name": "release-rollback",
-      "path": "nself release-rollback",
-      "group_id": "deploy",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a"
-    },
-    {
-      "name": "release-status",
-      "path": "nself release-status",
-      "group_id": "deploy",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "reset",
@@ -602,7 +530,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "restart",
@@ -611,7 +539,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "secrets",
@@ -620,7 +548,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: EDITOR",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "security",
@@ -629,7 +557,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "self-heal",
@@ -638,7 +566,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "sentry",
@@ -647,7 +575,7 @@
       "wiki_page": true,
       "mcp_tool": true,
       "env_vars": "undocumented: HCLOUD_TOKEN, HETZNER_NSELF_TOKEN, NSELF_DEPLOY_HOST_OPS, NSENTRY_PRIVATE_TOKEN, OPS_DEPLOY_HOST, STATUS_PAGE_PRIVATE_TOKEN",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "sentry-server",
@@ -656,7 +584,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "service",
@@ -665,7 +593,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "soak",
@@ -674,7 +602,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "ssl",
@@ -683,7 +611,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "start",
@@ -692,7 +620,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: AI_AUTO_INSTALL, NSELF_PROFILE, NSELF_SKIP_DB_INIT",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "status",
@@ -701,7 +629,7 @@
       "wiki_page": true,
       "mcp_tool": true,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "stop",
@@ -710,7 +638,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "telemetry",
@@ -719,7 +647,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: NSELF_TELEMETRY, NSELF_TELEMETRY_OPT_OUT",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "template",
@@ -728,7 +656,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: NSELF_TEMPLATE_REGISTRY_URL",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "tenant",
@@ -737,7 +665,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "trust",
@@ -746,7 +674,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "uninstall",
@@ -755,7 +683,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "update",
@@ -764,7 +692,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "upgrade",
@@ -773,7 +701,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "urls",
@@ -782,7 +710,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "verify-sbom",
@@ -791,7 +719,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "version",
@@ -800,7 +728,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: BENCH_RESULTS_FILE",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "waf",
@@ -809,7 +737,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "watchdog",
@@ -818,7 +746,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: NSELF_ENV",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     },
     {
       "name": "webhooks",
@@ -827,7 +755,7 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: NSELF_WEBHOOK_OUTBOX_DIR",
-      "openapi": "n/a"
+      "openapi": "n/a (see below)"
     }
   ]
 }
