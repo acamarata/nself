@@ -23,6 +23,28 @@ If anything goes wrong, use `nself migrate rollback` to restore from the automat
 
 > **Note:** `nself migrate` manages v0.9→v1 project migration. For database schema migrations within a v1 project, see [[cmd-db]].
 
+## Env cascade order migration (CLI-R18)
+
+Every bare `nself migrate` run also checks the project's `.env` cascade for CLI-R18 drift, independent of the v0.9→v1 artifact scan above. CLI-R18 changed the load order (later wins) from:
+
+```
+.env.dev → .env.{staging|prod} → .env.secrets → .env.local → .env → .env.ai
+```
+
+to:
+
+```
+.env → .env.{dev|staging|prod} → .env.secrets → .env.local
+```
+
+with `.env.ai` eliminated as a cascade layer — its content folds into `.env.secrets`. For every variable whose winning file or value would differ between the two orders, `nself migrate`:
+
+- **Auto-fixes** the common case (bare `.env` or `.env.ai` used to win over `.env.secrets`/`.env.{env}`): writes the pre-migration effective value into `.env.secrets`, so the resolved config doesn't silently change. A folded `.env.ai` is archived to `.env.ai.migrated` once every one of its keys is resolved this way.
+- **Flags for manual review** the two shapes it refuses to guess on: a personal `.env.local` override that a committed file was incorrectly shadowing (fixing this automatically would either perpetuate the bug or silently override your personal file), and a dev-only value that was leaking into staging/prod under the old always-load-`.env.dev` quirk (baking that leak into `.env.secrets` would just relocate the bug).
+- **Reports "no change needed"** when the two orders already resolve identically — the common case for most projects.
+
+Set `NSELF_LEGACY_ENV_ORDER=1` to keep a project on the old order temporarily (one minor version, with a warning on every use) while you review flagged items. See [[cmd-env]] → `env explain` to inspect the cascade in effect at any time, and [[Config-Env-Vars]] for the full reference.
+
 ## Plugin re-install warning
 
 After `nself migrate run` completes, the output includes a plugin re-install block:

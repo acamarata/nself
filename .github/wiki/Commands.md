@@ -140,7 +140,7 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 85**
 | `nself dogfood` | Production dogfood audit and reporting | observe | audit, report |
 | `nself dr` | Disaster recovery operations: drill, promote-standby, reconfigure-dns, rollback, fence | deploy | drill, fence, promote-standby, reconfigure-dns, rollback |
 | `nself encryption` | Manage BYOK per-tenant encryption (Enterprise) | advanced | configure, key-events, rotate, status, verify |
-| `nself env` | Multi-environment management: switch, list, diff, copy | config | copy, diff, list, show, target, use |
+| `nself env` | Multi-environment management: switch, list, diff, copy | config | copy, diff, explain, list, show, target, use |
 | `nself exec` | Execute a command inside a service container | core | — |
 | `nself federation` | Manage GraphQL Federation (opt-in, requires NSELF_FEDERATION=true) | advanced | compose, introspect, status |
 | `nself flags` | Manage application feature flags | config | disable, enable, get, history, kill, list, prune, set |

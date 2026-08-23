@@ -22,19 +22,29 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/nself-org/cli/internal/version"
+
 	"github.com/joho/godotenv"
 )
 
 // Load reads the .env cascade from projectDir, populates a Config struct from
 // os.Getenv, applies smart defaults, and returns the complete configuration.
 //
-// Cascade order (later overrides earlier):
+// Cascade order (later overrides earlier), approved 2026-08-23 GATE B
+// (CLI-R18):
 //
-//	.env.dev → .env.{ENV} → .env.secrets → .env.local → .env → .env.ai
+//	.env → .env.{dev|staging|prod} → .env.secrets → .env.local
 //
-// .env.ai is loaded last so the AI tier configuration (generated once by
-// `nself init`, contains NSELF_MASTER_SECRET) always takes effect at plugin
-// startup without requiring a separate loader. Spec: p88 §8.4.
+// .env is the shared, committed base; exactly one of .env.dev/.env.staging/
+// .env.prod loads, matching ENV; .env.secrets never ships in git; .env.local
+// is the personal override and always wins. .env.ai no longer exists as a
+// cascade layer — its content is folded into .env.secrets at init/upgrade
+// (internal/setup/envai.go, internal/migrate/env_order.go).
+//
+// Setting NSELF_LEGACY_ENV_ORDER=1 restores the pre-CLI-R18 order for exactly
+// one minor version (see EnvCascadeOrder in cascade.go for both orders in
+// full), printing a warning on every use. Run `nself migrate` to move a
+// project off the escape hatch permanently.
 //
 // Each file is optional. Missing files are silently skipped.
 func Load(projectDir string) (*Config, error) {
@@ -45,24 +55,17 @@ func Load(projectDir string) (*Config, error) {
 	}
 	env = normalizeEnv(env)
 
-	// 2. Build the file cascade.
-	files := []string{
-		filepath.Join(projectDir, ".env.dev"),
+	// 2. Build the file cascade — canonical order unless the legacy escape
+	// hatch is set.
+	legacy := LegacyOrderActive()
+	if legacy {
+		warnLegacyEnvOrder()
 	}
-	switch env {
-	case "staging":
-		files = append(files, filepath.Join(projectDir, ".env.staging"))
-	case "prod":
-		files = append(files, filepath.Join(projectDir, ".env.prod"))
+	names := EnvCascadeOrder(env, legacy)
+	files := make([]string, 0, len(names))
+	for _, n := range names {
+		files = append(files, filepath.Join(projectDir, n))
 	}
-	files = append(files,
-		filepath.Join(projectDir, ".env.secrets"),
-		filepath.Join(projectDir, ".env.local"),
-		filepath.Join(projectDir, ".env"),
-		// P88 Sprint 01 T-01-10: AI tier config is loaded last so AI_* vars
-		// always reach plugin-ai at startup. Contains NSELF_MASTER_SECRET.
-		filepath.Join(projectDir, ".env.ai"),
-	)
 
 	// 3. Load each file (skip if not exists, later overrides earlier).
 	// Simultaneously collect all keys that appear in any .env file so we can
@@ -153,4 +156,18 @@ func Load(projectDir string) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// warnLegacyEnvOrder logs a warning every time the NSELF_LEGACY_ENV_ORDER
+// escape hatch is honored, naming the variable and the version in which it
+// will stop being read (CLI-R18: the hatch is supported for exactly one
+// minor version after the reorder ships).
+func warnLegacyEnvOrder() {
+	removalVersion := version.NextMinor(version.Version)
+	slog.Warn(
+		"NSELF_LEGACY_ENV_ORDER is set — using the pre-CLI-R18 .env cascade order. This escape hatch will be removed",
+		"var", LegacyEnvOrderVar,
+		"removed_in", removalVersion,
+		"fix", "run 'nself migrate' to move this project to the new cascade order",
+	)
 }

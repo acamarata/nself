@@ -6,7 +6,8 @@ import (
 	"strconv"
 )
 
-// BudgetConfig holds the daily and monthly budget caps from .env.ai.
+// BudgetConfig holds the daily and monthly budget caps from the AI config
+// block (CLI-R18: folded into .env.secrets; previously a dedicated .env.ai).
 type BudgetConfig struct {
 	DailyUSD   float64 // AI_DAILY_BUDGET_USD (0 = disabled / free tier only)
 	MonthlyUSD float64 // AI_MONTHLY_BUDGET_USD (0 = disabled / free tier only)
