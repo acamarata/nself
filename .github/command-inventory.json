@@ -4,6 +4,7 @@
     "path": "nself account",
     "short": "Manage your nSelf account, sessions, licenses, team, and devices",
     "hidden": false,
+    "group_id": "account",
     "subcommands": [
       {
         "name": "devices",
@@ -80,6 +81,7 @@
     "path": "nself admin",
     "short": "Manage the nSelf Admin dashboard",
     "hidden": false,
+    "group_id": "account",
     "subcommands": [
       {
         "name": "connect",
@@ -142,6 +144,7 @@
     "path": "nself ai",
     "short": "Manage the nSelf AI plugin and local LLM stack",
     "hidden": false,
+    "group_id": "ai",
     "subcommands": [
       {
         "name": "chat",
@@ -172,6 +175,7 @@
     "path": "nself ai-studio",
     "short": "Google AI Studio integration for local nSelf instances",
     "hidden": false,
+    "group_id": "ai",
     "subcommands": [
       {
         "name": "bridge",
@@ -194,6 +198,7 @@
     "path": "nself alerts",
     "short": "Manage Prometheus alert rules and silences",
     "hidden": false,
+    "group_id": "observe",
     "subcommands": [
       {
         "name": "list",
@@ -231,6 +236,7 @@
     "path": "nself api",
     "short": "API versioning and deprecation tooling for operators",
     "hidden": false,
+    "group_id": "extend",
     "subcommands": [
       {
         "name": "changelog",
@@ -270,6 +276,7 @@
     "path": "nself audit",
     "short": "Run ecosystem audits (docs, origin, etc.)",
     "hidden": false,
+    "group_id": "observe",
     "subcommands": [
       {
         "name": "docs",
@@ -292,6 +299,7 @@
     "path": "nself backup",
     "short": "Backup operations: create, list, restore, verify, prune, config, status, init-key",
     "hidden": false,
+    "group_id": "data",
     "subcommands": [
       {
         "name": "config",
@@ -449,6 +457,7 @@
     "path": "nself billing",
     "short": "Billing operations: usage, invoice-preview, report, retry-event",
     "hidden": false,
+    "group_id": "account",
     "subcommands": [
       {
         "name": "invoice-preview",
@@ -490,6 +499,7 @@
     "path": "nself build",
     "short": "Compose your infrastructure from .env",
     "hidden": false,
+    "group_id": "core",
     "flags": [
       "--allow-insecure",
       "--allow-legacy",
@@ -511,6 +521,7 @@
     "path": "nself bundle",
     "short": "Manage and inspect nSelf plugin bundles",
     "hidden": false,
+    "group_id": "extend",
     "subcommands": [
       {
         "name": "info",
@@ -560,6 +571,7 @@
     "path": "nself ci",
     "short": "Run the nself-ci gate suite and post a GitHub commit status",
     "hidden": false,
+    "group_id": "deploy",
     "flags": [
       "--check",
       "--no-gitleaks",
@@ -621,6 +633,7 @@
     "path": "nself claw",
     "short": "Manage nClaw AI assistant",
     "hidden": false,
+    "group_id": "ai",
     "subcommands": [
       {
         "name": "chat",
@@ -747,19 +760,22 @@
     "name": "clean",
     "path": "nself clean",
     "short": "Remove generated artifacts (docker-compose.yml, nginx configs, build cache)",
-    "hidden": false
+    "hidden": false,
+    "group_id": "core"
   },
   {
     "name": "completion",
     "path": "nself completion",
     "short": "Generate shell completion scripts",
-    "hidden": false
+    "hidden": false,
+    "group_id": "account"
   },
   {
     "name": "config",
     "path": "nself config",
     "short": "Manage project configuration",
     "hidden": false,
+    "group_id": "config",
     "flags": [
       "--env",
       "--json",
@@ -826,6 +842,7 @@
     "path": "nself costs",
     "short": "Show estimated per-install operational costs",
     "hidden": false,
+    "group_id": "observe",
     "flags": [
       "--format",
       "--server-type"
@@ -836,6 +853,7 @@
     "path": "nself db",
     "short": "Database operations: migrations, backups, restore, seed, shell",
     "hidden": false,
+    "group_id": "data",
     "subcommands": [
       {
         "name": "backup",
@@ -1011,6 +1029,7 @@
     "path": "nself deploy",
     "short": "Deploy the stack to a target environment",
     "hidden": false,
+    "group_id": "deploy",
     "flags": [
       "--canary",
       "--dry-run",
@@ -1106,6 +1125,7 @@
     "path": "nself dev",
     "short": "Start development environment",
     "hidden": false,
+    "group_id": "core",
     "flags": [
       "--hot"
     ]
@@ -1115,6 +1135,7 @@
     "path": "nself dlq",
     "short": "Manage dead-letter queues for nSelf plugins",
     "hidden": false,
+    "group_id": "data",
     "subcommands": [
       {
         "name": "replay",
@@ -1135,6 +1156,7 @@
     "path": "nself dns-setup",
     "short": "Add project domains to /etc/hosts (run with sudo)",
     "hidden": false,
+    "group_id": "config",
     "flags": [
       "--dry-run",
       "--project"
@@ -1145,6 +1167,7 @@
     "path": "nself doctor",
     "short": "Run comprehensive system diagnostics",
     "hidden": false,
+    "group_id": "core",
     "flags": [
       "--ai",
       "--alerts",
@@ -1170,6 +1193,7 @@
     "path": "nself dogfood",
     "short": "Production dogfood audit and reporting",
     "hidden": false,
+    "group_id": "observe",
     "subcommands": [
       {
         "name": "audit",
@@ -1197,6 +1221,7 @@
     "path": "nself dr",
     "short": "Disaster recovery operations: drill, promote-standby, reconfigure-dns, rollback, fence",
     "hidden": false,
+    "group_id": "deploy",
     "subcommands": [
       {
         "name": "drill",
@@ -1263,6 +1288,7 @@
     "path": "nself encryption",
     "short": "Manage BYOK per-tenant encryption (Enterprise)",
     "hidden": false,
+    "group_id": "advanced",
     "subcommands": [
       {
         "name": "configure",
@@ -1313,6 +1339,7 @@
     "path": "nself env",
     "short": "Multi-environment management: switch, list, diff, copy",
     "hidden": false,
+    "group_id": "config",
     "subcommands": [
       {
         "name": "copy",
@@ -1357,6 +1384,7 @@
     "path": "nself exec",
     "short": "Execute a command inside a service container",
     "hidden": false,
+    "group_id": "core",
     "flags": [
       "--env",
       "--no-tty",
@@ -1369,6 +1397,7 @@
     "path": "nself feature",
     "short": "Manage CLI-built-in feature flags",
     "hidden": false,
+    "group_id": "config",
     "subcommands": [
       {
         "name": "disable",
@@ -1407,6 +1436,7 @@
     "path": "nself federation",
     "short": "Manage GraphQL Federation (opt-in, requires NSELF_FEDERATION=true)",
     "hidden": false,
+    "group_id": "advanced",
     "subcommands": [
       {
         "name": "compose",
@@ -1436,6 +1466,7 @@
     "path": "nself flag",
     "short": "Manage feature flags",
     "hidden": false,
+    "group_id": "config",
     "subcommands": [
       {
         "name": "disable",
@@ -1525,6 +1556,7 @@
     "path": "nself functions",
     "short": "Manage serverless functions",
     "hidden": false,
+    "group_id": "data",
     "subcommands": [
       {
         "name": "delete",
@@ -1585,6 +1617,7 @@
     "path": "nself gateway",
     "short": "Manage the nSelf AI gateway (nself-ai-gateway, port 3761)",
     "hidden": false,
+    "group_id": "ai",
     "subcommands": [
       {
         "name": "keys",
@@ -1621,6 +1654,7 @@
     "path": "nself gauth",
     "short": "Manage Google OAuth tokens for nSelf AI services",
     "hidden": false,
+    "group_id": "ai",
     "subcommands": [
       {
         "name": "refresh",
@@ -1658,6 +1692,7 @@
     "path": "nself gdpr",
     "short": "GDPR data portability and right-to-erasure (Art. 20, 17)",
     "hidden": false,
+    "group_id": "advanced",
     "subcommands": [
       {
         "name": "delete",
@@ -1717,6 +1752,7 @@
     "path": "nself generate",
     "short": "Generate type-safe client SDK types from the live Hasura schema",
     "hidden": false,
+    "group_id": "config",
     "flags": [
       "--env",
       "--lang",
@@ -1732,6 +1768,7 @@
     "path": "nself health",
     "short": "Health check management with continuous monitoring",
     "hidden": false,
+    "group_id": "observe",
     "flags": [
       "--env",
       "--interval",
@@ -1783,13 +1820,15 @@
     "name": "help-topics",
     "path": "nself help-topics",
     "short": "Browse help topics (quickstart, plugins, license, envs, doctor, errors)",
-    "hidden": false
+    "hidden": false,
+    "group_id": "account"
   },
   {
     "name": "infra",
     "path": "nself infra",
     "short": "Provision nSelf infrastructure via Terraform",
     "hidden": false,
+    "group_id": "deploy",
     "subcommands": [
       {
         "name": "apply",
@@ -1836,6 +1875,7 @@
     "path": "nself init",
     "short": "Initialize a new nSelf project",
     "hidden": false,
+    "group_id": "core",
     "flags": [
       "--cs-template",
       "--demo",
@@ -1863,6 +1903,7 @@
     "path": "nself k8s",
     "short": "Manage nSelf on Kubernetes via Helm",
     "hidden": false,
+    "group_id": "deploy",
     "subcommands": [
       {
         "name": "install",
@@ -1903,6 +1944,7 @@
     "path": "nself license",
     "short": "Manage license keys for nSelf product bundles",
     "hidden": false,
+    "group_id": "extend",
     "subcommands": [
       {
         "name": "add",
@@ -2058,6 +2100,7 @@
     "path": "nself login",
     "short": "Log in to your nSelf account",
     "hidden": false,
+    "group_id": "account",
     "flags": [
       "--force",
       "--no-browser"
@@ -2068,6 +2111,7 @@
     "path": "nself logout",
     "short": "Log out of your nSelf account",
     "hidden": false,
+    "group_id": "account",
     "flags": [
       "--all"
     ]
@@ -2077,6 +2121,7 @@
     "path": "nself logs",
     "short": "View and filter service logs",
     "hidden": false,
+    "group_id": "core",
     "flags": [
       "--all",
       "--compact",
@@ -2104,6 +2149,7 @@
     "path": "nself mail",
     "short": "Send transactional and broadcast email through the nSelf stack",
     "hidden": false,
+    "group_id": "advanced",
     "subcommands": [
       {
         "name": "broadcast",
@@ -2159,6 +2205,7 @@
     "path": "nself maintenance",
     "short": "Maintenance utilities: disk cleanup, scheduler",
     "hidden": false,
+    "group_id": "observe",
     "subcommands": [
       {
         "name": "disk-cleanup",
@@ -2189,6 +2236,7 @@
     "path": "nself man",
     "short": "Generate man pages for all nself commands",
     "hidden": false,
+    "group_id": "account",
     "flags": [
       "--output"
     ]
@@ -2198,6 +2246,7 @@
     "path": "nself mcp",
     "short": "Start the nSelf MCP server",
     "hidden": false,
+    "group_id": "extend",
     "flags": [
       "--no-mdns",
       "--port",
@@ -2209,6 +2258,7 @@
     "path": "nself migrate",
     "short": "Detect and migrate legacy artifacts to the current nSelf version",
     "hidden": false,
+    "group_id": "data",
     "flags": [
       "--from-bash"
     ],
@@ -2302,6 +2352,7 @@
     "path": "nself migrate-from-v099",
     "short": "Migrate v0.9.9 home-level state (license key, channel, ssh keys) to v1.x layout",
     "hidden": false,
+    "group_id": "advanced",
     "flags": [
       "--check",
       "--yes"
@@ -2312,6 +2363,7 @@
     "path": "nself model",
     "short": "Manage local AI models via Ollama",
     "hidden": false,
+    "group_id": "ai",
     "subcommands": [
       {
         "name": "benchmark",
@@ -2362,6 +2414,7 @@
     "path": "nself monitor",
     "short": "Monitoring stack management",
     "hidden": false,
+    "group_id": "observe",
     "subcommands": [
       {
         "name": "upgrade-dashboards",
@@ -2379,6 +2432,7 @@
     "path": "nself oauth",
     "short": "Manage OAuth provider tokens",
     "hidden": false,
+    "group_id": "account",
     "subcommands": [
       {
         "name": "refresh",
@@ -2398,6 +2452,7 @@
     "path": "nself ollama",
     "short": "Manage local Ollama LLM stack",
     "hidden": false,
+    "group_id": "ai",
     "subcommands": [
       {
         "name": "models",
@@ -2418,6 +2473,7 @@
     "path": "nself ops",
     "short": "Ops-profile deployment and management",
     "hidden": false,
+    "group_id": "deploy",
     "subcommands": [
       {
         "name": "deploy",
@@ -2436,6 +2492,7 @@
     "path": "nself pentest-kit",
     "short": "Penetration-test readiness kit (Business+)",
     "hidden": false,
+    "group_id": "advanced",
     "subcommands": [
       {
         "name": "credentials",
@@ -2474,6 +2531,7 @@
     "path": "nself pitr",
     "short": "Point-in-time recovery: enable, disable, status, base-backup, restore",
     "hidden": false,
+    "group_id": "data",
     "subcommands": [
       {
         "name": "base-backup",
@@ -2526,6 +2584,7 @@
     "path": "nself plugin",
     "short": "Manage nSelf plugins",
     "hidden": false,
+    "group_id": "extend",
     "subcommands": [
       {
         "name": "audit-tables",
@@ -2794,6 +2853,7 @@
     "path": "nself promote",
     "short": "Promote one environment to another (e.g. staging to prod)",
     "hidden": false,
+    "group_id": "deploy",
     "flags": [
       "--approve-id",
       "--confirm",
@@ -2817,6 +2877,7 @@
     "path": "nself queue",
     "short": "Manage async job queues (pg-boss)",
     "hidden": false,
+    "group_id": "data",
     "subcommands": [
       {
         "name": "cron",
@@ -2866,6 +2927,7 @@
     "path": "nself region",
     "short": "Manage multi-region nSelf deployments",
     "hidden": false,
+    "group_id": "deploy",
     "subcommands": [
       {
         "name": "add",
@@ -2906,6 +2968,7 @@
     "path": "nself release",
     "short": "Orchestrate the full release cascade for a version",
     "hidden": false,
+    "group_id": "deploy",
     "flags": [
       "--dry-run",
       "--json",
@@ -2919,6 +2982,7 @@
     "path": "nself release-check",
     "short": "Run pre-release gates for a version",
     "hidden": false,
+    "group_id": "deploy",
     "flags": [
       "--json",
       "--skip-ci",
@@ -2930,6 +2994,7 @@
     "path": "nself release-rollback",
     "short": "Roll back a release to prior version",
     "hidden": false,
+    "group_id": "deploy",
     "flags": [
       "--delete-tags",
       "--dry-run",
@@ -2941,6 +3006,7 @@
     "path": "nself release-status",
     "short": "Show running version vs latest across all release artifacts",
     "hidden": false,
+    "group_id": "deploy",
     "flags": [
       "--json",
       "--timeout"
@@ -2951,6 +3017,7 @@
     "path": "nself reset",
     "short": "Stop containers, remove all data volumes, and clean generated files",
     "hidden": false,
+    "group_id": "core",
     "flags": [
       "--no-monorepo",
       "--yes"
@@ -2961,6 +3028,7 @@
     "path": "nself restart",
     "short": "Smart restart with config change detection",
     "hidden": false,
+    "group_id": "core",
     "flags": [
       "--all",
       "--no-build",
@@ -2974,6 +3042,7 @@
     "path": "nself secrets",
     "short": "Manage encrypted project secrets (age encryption)",
     "hidden": false,
+    "group_id": "config",
     "flags": [
       "--env"
     ],
@@ -3088,6 +3157,7 @@
     "path": "nself security",
     "short": "Server security: audit, setup, and status",
     "hidden": false,
+    "group_id": "advanced",
     "subcommands": [
       {
         "name": "audit",
@@ -3117,6 +3187,7 @@
     "path": "nself self-heal",
     "short": "Run targeted self-healing routines for nSelf components",
     "hidden": false,
+    "group_id": "observe",
     "flags": [
       "--dry-run",
       "--jwt",
@@ -3129,6 +3200,7 @@
     "path": "nself sentry",
     "short": "ɳSentry ops: status, alerts, and observability",
     "hidden": false,
+    "group_id": "observe",
     "subcommands": [
       {
         "name": "alerts",
@@ -3201,6 +3273,7 @@
     "path": "nself sentry-server",
     "short": "Provision and manage ɳSentry ops servers",
     "hidden": false,
+    "group_id": "observe",
     "subcommands": [
       {
         "name": "provision",
@@ -3222,6 +3295,7 @@
     "path": "nself service",
     "short": "Manage optional services",
     "hidden": false,
+    "group_id": "config",
     "flags": [
       "--env"
     ],
@@ -3318,6 +3392,7 @@
     "path": "nself soak",
     "short": "Manage soak testing lifecycle",
     "hidden": false,
+    "group_id": "observe",
     "subcommands": [
       {
         "name": "abort",
@@ -3339,6 +3414,7 @@
     "path": "nself ssl",
     "short": "Manage SSL certificates",
     "hidden": false,
+    "group_id": "config",
     "subcommands": [
       {
         "name": "add",
@@ -3381,6 +3457,7 @@
     "path": "nself start",
     "short": "Boot your nSelf stack",
     "hidden": false,
+    "group_id": "core",
     "aliases": [
       "up"
     ],
@@ -3409,6 +3486,7 @@
     "path": "nself status",
     "short": "Show health status of all services",
     "hidden": false,
+    "group_id": "core",
     "flags": [
       "--deep",
       "--health-only",
@@ -3422,6 +3500,7 @@
     "path": "nself stop",
     "short": "Gracefully shut down all services or specific services",
     "hidden": false,
+    "group_id": "core",
     "aliases": [
       "down"
     ],
@@ -3440,6 +3519,7 @@
     "path": "nself telemetry",
     "short": "Manage CLI telemetry preferences",
     "hidden": false,
+    "group_id": "account",
     "subcommands": [
       {
         "name": "off",
@@ -3466,6 +3546,7 @@
     "path": "nself template",
     "short": "Browse and publish full-stack app templates",
     "hidden": false,
+    "group_id": "config",
     "subcommands": [
       {
         "name": "info",
@@ -3515,6 +3596,7 @@
     "path": "nself tenant",
     "short": "[PREVIEW] Tenant management: create, upgrade, suspend, destroy, audit",
     "hidden": false,
+    "group_id": "advanced",
     "subcommands": [
       {
         "name": "audit",
@@ -3569,6 +3651,7 @@
     "path": "nself trust",
     "short": "Set up local dev trust (DNS, SSL, port forwarding)",
     "hidden": false,
+    "group_id": "config",
     "flags": [
       "--project",
       "--skip-dns",
@@ -3594,6 +3677,7 @@
     "path": "nself uninstall",
     "short": "Remove nSelf project data and generated files",
     "hidden": false,
+    "group_id": "account",
     "flags": [
       "--keep-data",
       "--purge",
@@ -3605,6 +3689,7 @@
     "path": "nself update",
     "short": "Update the nSelf CLI and admin UI",
     "hidden": false,
+    "group_id": "account",
     "flags": [
       "--admin",
       "--check",
@@ -3630,6 +3715,7 @@
     "path": "nself upgrade",
     "short": "Upgrade the nSelf CLI (detects install method)",
     "hidden": false,
+    "group_id": "account",
     "flags": [
       "--binary-sha256",
       "--binary-url",
@@ -3644,6 +3730,7 @@
     "path": "nself urls",
     "short": "Display all service URLs with route conflict detection",
     "hidden": false,
+    "group_id": "core",
     "flags": [
       "--all",
       "--check-conflicts",
@@ -3657,6 +3744,7 @@
     "path": "nself verify-sbom",
     "short": "Verify the SBOM signature for a CLI release",
     "hidden": false,
+    "group_id": "advanced",
     "flags": [
       "--repo",
       "--version"
@@ -3667,6 +3755,7 @@
     "path": "nself version",
     "short": "Show version and system information",
     "hidden": false,
+    "group_id": "account",
     "flags": [
       "--json",
       "--short"
@@ -3677,6 +3766,7 @@
     "path": "nself waf",
     "short": "Manage the Web Application Firewall (Coraza + OWASP CRS)",
     "hidden": false,
+    "group_id": "advanced",
     "subcommands": [
       {
         "name": "enable",
@@ -3706,6 +3796,7 @@
     "path": "nself watchdog",
     "short": "Self-healing container watchdog with circuit breaker",
     "hidden": false,
+    "group_id": "observe",
     "subcommands": [
       {
         "name": "history",
@@ -3758,6 +3849,7 @@
     "path": "nself webhooks",
     "short": "Manage webhook processing and outbox",
     "hidden": false,
+    "group_id": "data",
     "subcommands": [
       {
         "name": "outbox",

@@ -46,6 +46,7 @@ func main() {
 	includeHidden := flag.Bool("hidden", false, "include hidden commands")
 	flag.Parse()
 
+	commands.ApplyCommandGroups()
 	root := commands.RootCmd
 	tree := collect(root, *depth, *includeHidden)
 

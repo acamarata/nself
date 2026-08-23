@@ -105,3 +105,109 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ---
 
 [[Home]] · [[CLI-Reference]] · [[Plugin-Overview]]
+
+<!-- BEGIN GENERATED:command-table -->
+
+## Complete index
+
+Generated from the cobra registration tree in `cmd/commands/`.
+Run `make cmd-inventory` to refresh. **Total top-level commands: 92**
+
+| Command | Short Description | Group | Subcommands |
+|---|---|---|---|
+| `nself account` | Manage your nSelf account, sessions, licenses, team, and devices | account | devices, licenses, login, logout, status, team, transfer |
+| `nself admin` | Manage the nSelf Admin dashboard | account | connect, health, logs, projects, start, stop |
+| `nself ai` | Manage the nSelf AI plugin and local LLM stack | ai | chat, local, pool |
+| `nself ai-studio` | Google AI Studio integration for local nSelf instances | ai | bridge |
+| `nself alerts` | Manage Prometheus alert rules and silences | observe | list, silence, test |
+| `nself api` | API versioning and deprecation tooling for operators | extend | changelog, deprecation-check, version |
+| `nself audit` | Run ecosystem audits (docs, origin, etc.) | observe | docs |
+| `nself backup` | Backup operations: create, list, restore, verify, prune, config, status, init-key | data | config, create, drill, init-key, list, prune, restore, restore-remote, resume, schedule, status, stream, verify |
+| `nself billing` | Billing operations: usage, invoice-preview, report, retry-event | account | invoice-preview, report, retry-event, usage |
+| `nself build` | Compose your infrastructure from .env | core | — |
+| `nself bundle` | Manage and inspect nSelf plugin bundles | extend | info, install, list, remove |
+| `nself ci` | Run the nself-ci gate suite and post a GitHub commit status | deploy | eval, forgejo, serve |
+| `nself claw` | Manage nClaw AI assistant | ai | chat, config, export, keys, mcp, memories, migrate, pair, prompt, proxy, session, status, topics, unlock |
+| `nself clean` | Remove generated artifacts (docker-compose.yml, nginx configs, build cache) | core | — |
+| `nself completion` | Generate shell completion scripts | account | — |
+| `nself config` | Manage project configuration | config | export, get, import, list, set, show, validate |
+| `nself costs` | Show estimated per-install operational costs | observe | — |
+| `nself db` | Database operations: migrations, backups, restore, seed, shell | data | backup, backup-sync, backup-sync-status, drift, drop, fk-index, hasura, lint, list, migrate, pgbouncer, pitr, reset, reset-checksum, restore, restore-drill, restore-drill-list, rls, seed, shell, soft-delete, verify-checksums |
+| `nself deploy` | Deploy the stack to a target environment | deploy | check-access, environments, health, logs, promote, rollback, status, web |
+| `nself dev` | Start development environment | core | — |
+| `nself dlq` | Manage dead-letter queues for nSelf plugins | data | replay |
+| `nself dns-setup` | Add project domains to /etc/hosts (run with sudo) | config | — |
+| `nself doctor` | Run comprehensive system diagnostics | core | — |
+| `nself dogfood` | Production dogfood audit and reporting | observe | audit, report |
+| `nself dr` | Disaster recovery operations: drill, promote-standby, reconfigure-dns, rollback, fence | deploy | drill, fence, promote-standby, reconfigure-dns, rollback |
+| `nself encryption` | Manage BYOK per-tenant encryption (Enterprise) | advanced | configure, key-events, rotate, status, verify |
+| `nself env` | Multi-environment management: switch, list, diff, copy | config | copy, diff, list, show, target, use |
+| `nself exec` | Execute a command inside a service container | core | — |
+| `nself feature` | Manage CLI-built-in feature flags | config | disable, enable, list, status |
+| `nself federation` | Manage GraphQL Federation (opt-in, requires NSELF_FEDERATION=true) | advanced | compose, introspect, status |
+| `nself flag` | Manage feature flags | config | disable, enable, get, history, kill, list, prune, set |
+| `nself functions` | Manage serverless functions | data | delete, deploy, invoke, list, logs |
+| `nself gateway` | Manage the nSelf AI gateway (nself-ai-gateway, port 3761) | ai | keys, quota, routes, status |
+| `nself gauth` | Manage Google OAuth tokens for nSelf AI services | ai | refresh, revoke, status |
+| `nself gdpr` | GDPR data portability and right-to-erasure (Art. 20, 17) | advanced | delete, export, forget, list-requests, status |
+| `nself generate` | Generate type-safe client SDK types from the live Hasura schema | config | — |
+| `nself health` | Health check management with continuous monitoring | observe | check, config, endpoint, history, service, watch |
+| `nself help-topics` | Browse help topics (quickstart, plugins, license, envs, doctor, errors) | account | — |
+| `nself infra` | Provision nSelf infrastructure via Terraform | deploy | apply, destroy, plan |
+| `nself init` | Initialize a new nSelf project | core | — |
+| `nself k8s` | Manage nSelf on Kubernetes via Helm | deploy | install, status, upgrade |
+| `nself license` | Manage license keys for nSelf product bundles | extend | add, clear, export, health, import, list, migrate, refresh, remove, restore, revalidate, revoke, set, show, simulate-offline, status, tail, upgrade, validate |
+| `nself login` | Log in to your nSelf account | account | — |
+| `nself logout` | Log out of your nSelf account | account | — |
+| `nself logs` | View and filter service logs | core | — |
+| `nself mail` | Send transactional and broadcast email through the nSelf stack | advanced | broadcast, dkim, send, status, templates |
+| `nself maintenance` | Maintenance utilities: disk cleanup, scheduler | observe | disk-cleanup, schedule, status |
+| `nself man` | Generate man pages for all nself commands | account | — |
+| `nself mcp` | Start the nSelf MCP server | extend | — |
+| `nself migrate` | Detect and migrate legacy artifacts to the current nSelf version | data | detect, firebase, from-bash, generate, rollback, run, supabase, watch |
+| `nself migrate-from-v099` | Migrate v0.9.9 home-level state (license key, channel, ssh keys) to v1.x layout | advanced | — |
+| `nself model` | Manage local AI models via Ollama | ai | benchmark, list, pull, remove, update |
+| `nself monitor` | Monitoring stack management | observe | upgrade-dashboards |
+| `nself oauth` | Manage OAuth provider tokens | account | refresh |
+| `nself ollama` | Manage local Ollama LLM stack | ai | models, status |
+| `nself ops` | Ops-profile deployment and management | deploy | deploy |
+| `nself pentest-kit` | Penetration-test readiness kit (Business+) | advanced | credentials, generate, remediation, status |
+| `nself pitr` | Point-in-time recovery: enable, disable, status, base-backup, restore | data | base-backup, disable, enable, restore, status |
+| `nself plugin` | Manage nSelf plugins | extend | audit-tables, compat-check, debug, dev, disable, enable, info, init, install, inventory, link, list, logs, marketplace, new, refresh, remove, search, start, status, stop, submit, test, unlink, update, updates |
+| `nself promote` | Promote one environment to another (e.g. staging to prod) | deploy | rollback |
+| `nself queue` | Manage async job queues (pg-boss) | data | cron, jobs, list, purge, retry |
+| `nself region` | Manage multi-region nSelf deployments | deploy | add, list, promote, status |
+| `nself release` | Orchestrate the full release cascade for a version | deploy | — |
+| `nself release-check` | Run pre-release gates for a version | deploy | — |
+| `nself release-rollback` | Roll back a release to prior version | deploy | — |
+| `nself release-status` | Show running version vs latest across all release artifacts | deploy | — |
+| `nself reset` | Stop containers, remove all data volumes, and clean generated files | core | — |
+| `nself restart` | Smart restart with config change detection | core | — |
+| `nself secrets` | Manage encrypted project secrets (age encryption) | config | audit, decrypt-on-deploy, edit, get, init, lint, list, list-schedules, rekey, retire, rotate, rotation-log, schedule, set, verify |
+| `nself security` | Server security: audit, setup, and status | advanced | audit, setup, status |
+| `nself self-heal` | Run targeted self-healing routines for nSelf components | observe | — |
+| `nself sentry` | ɳSentry ops: status, alerts, and observability | observe | alerts, incidents, login, logout, monitors, status, status-pages, whoami |
+| `nself sentry-server` | Provision and manage ɳSentry ops servers | observe | provision |
+| `nself service` | Manage optional services | config | add, configure, disable, enable, list, ps, restart, scale, start, stop, update, upgrade |
+| `nself soak` | Manage soak testing lifecycle | observe | abort |
+| `nself ssl` | Manage SSL certificates | config | add, renew, setup, status |
+| `nself start` | Boot your nSelf stack | core | — |
+| `nself status` | Show health status of all services | core | — |
+| `nself stop` | Gracefully shut down all services or specific services | core | — |
+| `nself telemetry` | Manage CLI telemetry preferences | account | off, on, status |
+| `nself template` | Browse and publish full-stack app templates | config | info, list, publish, update |
+| `nself tenant` | [PREVIEW] Tenant management: create, upgrade, suspend, destroy, audit | advanced | audit, create, destroy, suspend, upgrade |
+| `nself trust` | Set up local dev trust (DNS, SSL, port forwarding) | config | status |
+| `nself uninstall` | Remove nSelf project data and generated files | account | — |
+| `nself update` | Update the nSelf CLI and admin UI | account | images |
+| `nself upgrade` | Upgrade the nSelf CLI (detects install method) | account | — |
+| `nself urls` | Display all service URLs with route conflict detection | core | — |
+| `nself verify-sbom` | Verify the SBOM signature for a CLI release | advanced | — |
+| `nself version` | Show version and system information | account | — |
+| `nself waf` | Manage the Web Application Firewall (Coraza + OWASP CRS) | advanced | enable, mode, report |
+| `nself watchdog` | Self-healing container watchdog with circuit breaker | observe | history, reset, reset-breakers, status, test-alert |
+| `nself webhooks` | Manage webhook processing and outbox | data | outbox |
+
+<!-- END GENERATED:command-table -->
+---
+← [[Home]] | [[_Sidebar]]

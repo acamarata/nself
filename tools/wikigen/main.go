@@ -41,6 +41,7 @@ func main() {
 	report := flag.Bool("report", false, "list pages still carrying placeholder prose")
 	flag.Parse()
 
+	commands.ApplyCommandGroups()
 	cmds := topLevelCommands()
 	if len(cmds) == 0 {
 		fmt.Fprintln(os.Stderr, "no commands found")

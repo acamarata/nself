@@ -200,6 +200,10 @@ func invokedCommandPath(cmd *cobra.Command) string {
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main().
 func Execute() error {
+	// Group the command tree for help output. Done here, not in init(): every
+	// command's own init() must have registered it on RootCmd first.
+	ApplyCommandGroups()
+
 	// Product-alias shim: 'nsentry <args>' (symlinked binary) ≡ 'nself sentry <args>'.
 	normalizeInvokedBinary()
 
