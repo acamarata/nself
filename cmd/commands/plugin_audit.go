@@ -23,6 +23,8 @@ import (
 
 	"github.com/nself-org/cli/internal/audit"
 	"github.com/spf13/cobra"
+
+	"github.com/nself-org/cli/internal/errs"
 )
 
 var pluginAuditTablesCmd = &cobra.Command{
@@ -74,15 +76,16 @@ func runPluginAuditTables(cmd *cobra.Command, _ []string) error {
 		printAuditTable(report)
 	}
 
-	// Determine exit code: check for violations in priority order.
+	// Determine exit code: check for violations in priority order. The report
+	// is already printed, so these are silent status-only exits.
 	for _, t := range report.Tables {
 		if !t.HasSourceAccountID {
-			os.Exit(1)
+			return errs.Exit(1)
 		}
 	}
 	for _, t := range report.Tables {
 		if t.HasHasuraFilter == audit.HasuraFilterMissing {
-			os.Exit(2)
+			return errs.Exit(2)
 		}
 	}
 	return nil

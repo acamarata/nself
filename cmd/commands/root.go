@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/nself-org/cli/internal/cmdlog"
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/deprecation"
+	"github.com/nself-org/cli/internal/errs"
 	"github.com/nself-org/cli/internal/license"
 	"github.com/nself-org/cli/internal/observability"
 	"github.com/nself-org/cli/internal/plugin"
@@ -117,10 +119,13 @@ func init() {
 		finishLog := cmdlog.New(logDir).Begin(os.Args)
 		defer func() { finishLog(0, nil) }()
 
+		// `nself --version` prints and stops. Returning a silent exit-0 error
+		// rather than calling os.Exit keeps the single-exit-point rule and lets
+		// PersistentPostRunE flush any OTel spans first.
 		v, _ := cmd.Flags().GetBool("version")
 		if v {
 			fmt.Println(version.GetVersion())
-			os.Exit(0)
+			return errs.Exit(0)
 		}
 
 		// Source directory guard — prevent running nself commands inside
@@ -223,8 +228,11 @@ func Execute() error {
 					pluginArgs = os.Args[2:]
 				}
 				if err := plugin.ProxyCommand(cmdName, pluginArgs); err != nil {
+					// The message is printed here to preserve the exact
+					// "Plugin error: ..." wording; main() must not print it
+					// again, hence the silent exit error.
 					fmt.Fprintf(os.Stderr, "Plugin error: %v\n", err)
-					os.Exit(1)
+					return errs.Exit(1)
 				}
 				return nil
 			}
@@ -234,10 +242,12 @@ func Execute() error {
 	if err := RootCmd.Execute(); err != nil {
 		return err
 	}
-	// Read custom exit code set by commands (e.g. status).
+	// Some commands (status, health) succeed but request a non-zero status to
+	// report the state they found. Surface it as a silent exit error so main()
+	// stays the only os.Exit caller.
 	if ctx := RootCmd.Context(); ctx != nil {
 		if code, ok := ctx.Value(exitCodeKey).(int); ok && code != 0 {
-			os.Exit(code)
+			return errs.Exit(code)
 		}
 	}
 	return nil
@@ -289,7 +299,7 @@ func checkNotInSourceRepo() error {
 		return nil
 	}
 	for _, sig := range []string{"module nself", "github.com/nself-org/cli/cmd", "github.com/nself-org/cli/internal"} {
-		if contains(firstLine, sig) {
+		if strings.Contains(firstLine, sig) {
 			return fmt.Errorf(`cannot run nself commands inside the CLI source repository
 
 You are in: %s
@@ -318,24 +328,4 @@ func isSourceSafeCommand(name string) bool {
 		"update": true, "upgrade": true, "doctor": true, "nself": true,
 	}
 	return safe[name]
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && findSubstr(s, substr))
-}
-
-func findSubstr(s, sub string) bool {
-	for i := 0; i <= len(s)-len(sub); i++ {
-		if s[i:i+len(sub)] == sub {
-			return true
-		}
-	}
-	return false
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

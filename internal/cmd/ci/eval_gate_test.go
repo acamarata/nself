@@ -2,11 +2,12 @@ package ci
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"os/exec"
 	"testing"
+
+	"github.com/nself-org/cli/internal/errs"
 )
 
 // evalGateServer creates a test HTTP server that returns the given response for
@@ -41,88 +42,54 @@ func TestEvalGateExitCode_Cleared(t *testing.T) {
 	// Exit 0 means Execute returns nil.
 }
 
-// TestEvalGateExitCode_Blocked verifies exit 1 when gate is NOT cleared (regression).
-// We test this at the unit level via a subprocess to capture os.Exit.
-func TestEvalGateExitCode_Blocked(t *testing.T) {
-	if os.Getenv("TEST_EXIT_BLOCKED") == "1" {
-		srv := evalGateServer(t, http.StatusOK, map[string]interface{}{
-			"tier":            "semi-auto",
-			"cleared":         false,
-			"enforced":        true,
-			"blocking_suites": []string{"recall-quality-v1"},
-		})
-		cmd := newTestGateCmd()
-		cmd.SetArgs([]string{"--tier", "semi-auto", "--eval-url", srv.URL})
-		cmd.Execute() //nolint:errcheck
-		return
+// assertGateExitCode runs the gate command and asserts the exit code it
+// requests. Before CLI-R04 these three cases had to re-exec the test binary as
+// a subprocess, because runEvalGate called os.Exit directly and would have
+// killed the test process. The command now returns errs.Exit(code), so the code
+// is an ordinary value and the subprocess dance is gone.
+func assertGateExitCode(t *testing.T, args []string, want int) {
+	t.Helper()
+
+	cmd := newTestGateCmd()
+	cmd.SetArgs(args)
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatalf("expected a non-zero exit, got nil error")
 	}
 
-	// Rerun this test function as a subprocess to capture the os.Exit code.
-	subcmd := exec.Command(os.Args[0], "-test.run=TestEvalGateExitCode_Blocked")
-	subcmd.Env = append(os.Environ(), "TEST_EXIT_BLOCKED=1")
-	err := subcmd.Run()
-	if err == nil {
-		t.Fatal("expected non-zero exit but got exit 0")
+	var coder errs.ExitCoder
+	if !errors.As(err, &coder) {
+		t.Fatalf("error carries no exit code (%T): %v", err, err)
 	}
-	exitErr, ok := err.(*exec.ExitError)
-	if !ok {
-		t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
+	if coder.ExitCode() != want {
+		t.Errorf("exit code = %d; want %d", coder.ExitCode(), want)
 	}
-	if exitErr.ExitCode() != exitBelowTreshold {
-		t.Errorf("exit code = %d; want %d (exitBelowTreshold/regression)", exitErr.ExitCode(), exitBelowTreshold)
-	}
+}
+
+// TestEvalGateExitCode_Blocked verifies exit 1 when the gate is NOT cleared
+// (a regression).
+func TestEvalGateExitCode_Blocked(t *testing.T) {
+	srv := evalGateServer(t, http.StatusOK, map[string]interface{}{
+		"tier":            "semi-auto",
+		"cleared":         false,
+		"enforced":        true,
+		"blocking_suites": []string{"recall-quality-v1"},
+	})
+	assertGateExitCode(t, []string{"--tier", "semi-auto", "--eval-url", srv.URL}, exitBelowTreshold)
 }
 
 // TestEvalGateExitCode_Precondition verifies exit 3 when eval-gate returns 503.
 // A 503 means plugin-retrieval is down — this is NOT a regression (exit 3, not 1).
 func TestEvalGateExitCode_Precondition(t *testing.T) {
-	if os.Getenv("TEST_EXIT_PRECONDITION") == "1" {
-		srv := evalGateServer(t, http.StatusServiceUnavailable, map[string]interface{}{
-			"error": "service unavailable",
-		})
-		cmd := newTestGateCmd()
-		cmd.SetArgs([]string{"--tier", "semi-auto", "--eval-url", srv.URL})
-		cmd.Execute() //nolint:errcheck
-		return
-	}
-
-	subcmd := exec.Command(os.Args[0], "-test.run=TestEvalGateExitCode_Precondition")
-	subcmd.Env = append(os.Environ(), "TEST_EXIT_PRECONDITION=1")
-	err := subcmd.Run()
-	if err == nil {
-		t.Fatal("expected non-zero exit but got exit 0")
-	}
-	exitErr, ok := err.(*exec.ExitError)
-	if !ok {
-		t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
-	}
-	if exitErr.ExitCode() != exitPrecondition {
-		t.Errorf("exit code = %d; want %d (exitPrecondition, not regression)", exitErr.ExitCode(), exitPrecondition)
-	}
+	srv := evalGateServer(t, http.StatusServiceUnavailable, map[string]interface{}{
+		"error": "service unavailable",
+	})
+	assertGateExitCode(t, []string{"--tier", "semi-auto", "--eval-url", srv.URL}, exitPrecondition)
 }
 
 // TestEvalGateExitCode_InvalidTier verifies exit 2 for an unrecognised tier name.
 func TestEvalGateExitCode_InvalidTier(t *testing.T) {
-	if os.Getenv("TEST_EXIT_INVALID_TIER") == "1" {
-		cmd := newTestGateCmd()
-		cmd.SetArgs([]string{"--tier", "unknown-tier", "--eval-url", "http://unused:9999"})
-		cmd.Execute() //nolint:errcheck
-		return
-	}
-
-	subcmd := exec.Command(os.Args[0], "-test.run=TestEvalGateExitCode_InvalidTier")
-	subcmd.Env = append(os.Environ(), "TEST_EXIT_INVALID_TIER=1")
-	err := subcmd.Run()
-	if err == nil {
-		t.Fatal("expected non-zero exit but got exit 0")
-	}
-	exitErr, ok := err.(*exec.ExitError)
-	if !ok {
-		t.Fatalf("expected *exec.ExitError, got %T: %v", err, err)
-	}
-	if exitErr.ExitCode() != exitValidation {
-		t.Errorf("exit code = %d; want %d (exitValidation)", exitErr.ExitCode(), exitValidation)
-	}
+	assertGateExitCode(t, []string{"--tier", "unknown-tier", "--eval-url", "http://unused:9999"}, exitValidation)
 }
 
 // TestEvalGateExitCode_TierFlagCoverage verifies --tier flag is tested for all valid tiers.

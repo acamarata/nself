@@ -9,6 +9,8 @@ import (
 	"github.com/nself-org/cli/internal/ui"
 
 	"github.com/spf13/cobra"
+
+	"github.com/nself-org/cli/internal/errs"
 )
 
 var dogfoodCmd = &cobra.Command{
@@ -69,11 +71,12 @@ Exit codes:
 				report.PassCount, report.FailCount, report.WarnCount, report.SkipCount))
 		}
 
+		// The report above is the output; exit status alone conveys the verdict.
 		if report.FailCount > 0 {
-			os.Exit(1)
+			return errs.Exit(1)
 		}
 		if report.WarnCount > 0 {
-			os.Exit(2)
+			return errs.Exit(2)
 		}
 		return nil
 	},

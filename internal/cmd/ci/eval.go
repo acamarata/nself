@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/nself-org/cli/internal/errs"
 	"github.com/nself-org/cli/internal/eval"
 	"github.com/spf13/cobra"
 )
@@ -76,9 +77,11 @@ func runEval(cmd *cobra.Command, _ []string) error {
 	validateOnly, _ := cmd.Flags().GetBool("validate-only")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
+	// Exit codes here are a documented contract for CI wrappers, so they are
+	// preserved exactly; only the os.Exit call moves to main() (CLI-R04).
 	if suiteSlug == "" {
 		cmd.PrintErrln("error: --suite is required")
-		os.Exit(exitValidation)
+		return errs.Exit(exitValidation)
 	}
 
 	repoAbs, err := filepath.Abs(repoRoot)
@@ -133,7 +136,7 @@ func runValidateOnly(ctx context.Context, cmd *cobra.Command, client *eval.Clien
 	result, err := client.ValidateYAML(ctx, yamlContent)
 	if err != nil {
 		cmd.PrintErrf("error: %v\n", err)
-		os.Exit(exitValidation)
+		return errs.Exit(exitValidation)
 	}
 
 	if result.Valid {
@@ -142,8 +145,7 @@ func runValidateOnly(ctx context.Context, cmd *cobra.Command, client *eval.Clien
 	}
 
 	eval.WriteValidationErrors(cmd.OutOrStdout(), result.Errors)
-	os.Exit(exitValidation)
-	return nil
+	return errs.Exit(exitValidation)
 }
 
 // runSuite triggers the eval run and polls for completion.
@@ -153,7 +155,7 @@ func runSuite(ctx context.Context, cmd *cobra.Command, client *eval.Client, suit
 	queued, err := client.RunSuite(ctx, suiteSlug)
 	if err != nil {
 		cmd.PrintErrf("error: trigger eval: %v\n", err)
-		os.Exit(exitBelowTreshold)
+		return errs.Exit(exitBelowTreshold)
 	}
 
 	cmd.Printf("run queued: %s (polling...)\n", queued.RunID)
@@ -162,14 +164,14 @@ func runSuite(ctx context.Context, cmd *cobra.Command, client *eval.Client, suit
 	if err != nil {
 		if err == eval.ErrPreconditionNotMet {
 			cmd.PrintErrf("error: precondition not met — BGE-M3 or AI gateway unavailable\n")
-			os.Exit(exitPrecondition)
+			return errs.Exit(exitPrecondition)
 		}
 		if err == eval.ErrPollTimeout {
 			cmd.PrintErrf("error: run did not complete within 10 minutes\n")
-			os.Exit(exitBelowTreshold)
+			return errs.Exit(exitBelowTreshold)
 		}
 		cmd.PrintErrf("error: poll run: %v\n", err)
-		os.Exit(exitBelowTreshold)
+		return errs.Exit(exitBelowTreshold)
 	}
 
 	if writeErr := eval.WriteResult(cmd.OutOrStdout(), result, outputFmt, repoRoot); writeErr != nil {
@@ -177,7 +179,7 @@ func runSuite(ctx context.Context, cmd *cobra.Command, client *eval.Client, suit
 	}
 
 	if !result.Passed {
-		os.Exit(exitBelowTreshold)
+		return errs.Exit(exitBelowTreshold)
 	}
 	return nil
 }

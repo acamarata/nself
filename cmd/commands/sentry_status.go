@@ -20,6 +20,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/nself-org/cli/internal/errs"
 	"github.com/nself-org/cli/internal/httptimeout"
 	"github.com/nself-org/cli/internal/ui"
 	"github.com/spf13/cobra"
@@ -119,8 +120,7 @@ func runSentryStatus(cmd *cobra.Command, _ []string) error {
 	if token != "" {
 		u, err := url.Parse(rawURL)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "invalid --url %q: %v\n", rawURL, err)
-			os.Exit(1)
+			return fmt.Errorf("invalid --url %q: %w", rawURL, err)
 		}
 		q := u.Query()
 		q.Set("t", token)
@@ -134,7 +134,7 @@ func runSentryStatus(cmd *cobra.Command, _ []string) error {
 	page, err := fetchStatusPage(cmd.Context(), client, rawURL)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s %v\n", ui.C(ui.Red, ui.IconFailure), err)
-		os.Exit(1)
+		return errs.Exit(1)
 	}
 
 	// Compute aggregates.
@@ -173,12 +173,13 @@ func runSentryStatus(cmd *cobra.Command, _ []string) error {
 		}
 		data, err := json.MarshalIndent(out, "", "  ")
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "json marshal error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("json marshal error: %w", err)
 		}
 		fmt.Println(string(data))
 		if exitBad {
-			os.Exit(1)
+			// The JSON payload is the output; a duplicate message would
+			// corrupt it for machine consumers.
+			return errs.Exit(1)
 		}
 		return nil
 	}
@@ -220,7 +221,7 @@ func runSentryStatus(cmd *cobra.Command, _ []string) error {
 	fmt.Printf("\n%d components, %s\n", totalComponents, notOKLabel)
 
 	if exitBad {
-		os.Exit(1)
+		return errs.Exit(1)
 	}
 	return nil
 }

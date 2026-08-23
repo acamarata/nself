@@ -191,9 +191,3 @@ func verifySignature(secret, header string, body []byte) error {
 }
 
 // min returns the smaller of a and b (Go 1.21+ has builtin min; keep explicit for 1.22 compat).
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

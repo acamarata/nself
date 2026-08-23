@@ -10,7 +10,8 @@ import (
 )
 
 // ExitCodeError is returned when a plugin process exits with a non-zero code.
-// The caller (main) should call os.Exit with Code.
+// main() reads ExitCode() and mirrors the plugin's status; the message is not
+// printed, because the plugin already wrote its own output to the terminal.
 type ExitCodeError struct {
 	Code int
 }
@@ -18,6 +19,13 @@ type ExitCodeError struct {
 func (e *ExitCodeError) Error() string {
 	return fmt.Sprintf("plugin exited with code %d", e.Code)
 }
+
+// ExitCode satisfies the interface main() and errs.ExitCodeFor look for.
+func (e *ExitCodeError) ExitCode() int { return e.Code }
+
+// Silent reports that main() must not print this error: the plugin subprocess
+// inherited stdout/stderr and has already reported the failure itself.
+func (e *ExitCodeError) Silent() bool { return true }
 
 // pluginBinDir returns the directory where plugin binaries are installed.
 // This is ~/.nself/plugins/bin/ (or /tmp/.nself/plugins/bin/ as fallback).

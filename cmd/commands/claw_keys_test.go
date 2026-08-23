@@ -1,26 +1,28 @@
 // G1-T10: claw_keys --bootstrap headless-mode tests.
 //
-// Tests cover the validation gate (missing flags exit 2, bad tier exits 2,
-// bad email exits 2) and the happy-path POST against a fake server.
+// Tests cover the validation gate (missing flags, bad tier, bad email all exit
+// with bootstrapExitCode) and the happy-path POST against a fake server.
 //
-// We avoid invoking the cobra command directly because runClawKeysCreateBootstrap
-// calls os.Exit(2) on validation failure — instead we test in subprocess mode
-// (see TestBootstrapValidation_*) and exercise the network path via a
-// httptest.Server with the validation bypassed by setting the flags first.
+// These used to re-exec the test binary in subprocess mode because
+// runClawKeysCreateBootstrap called os.Exit(2) directly, which would have taken
+// the test process down with it. Since CLI-R04 the function returns
+// errs.Exit(bootstrapExitCode) instead, so the exit code is an ordinary value
+// the test can assert on in-process.
 
 package commands
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
 
+	"github.com/nself-org/cli/internal/errs"
 	"github.com/spf13/cobra"
 )
 
@@ -39,85 +41,70 @@ func TestBootstrap_ValidTiers(t *testing.T) {
 	}
 }
 
-// TestBootstrapValidation_MissingFlags re-execs the test binary with a special
-// env var (BOOTSTRAP_TEST_MODE) so we can observe the os.Exit(2) without
-// crashing the parent test process.
-func TestBootstrapValidation_MissingFlags(t *testing.T) {
-	if os.Getenv("BOOTSTRAP_TEST_MODE") == "missing-flags" {
-		// Child process: run the bootstrap path with empty flags.
-		clawKeysCreateBootstrap = true
-		clawKeysCreateName = "ci-key"
-		clawKeysCreateOwner = ""
-		clawKeysCreateTier = ""
-		clawKeysCreateMachineID = ""
-		_ = runClawKeysCreateBootstrap(nil)
-		// runClawKeysCreateBootstrap should have called os.Exit(2). If we
-		// reach here, exit 0 — the parent will see "did not exit 2" and fail.
-		os.Exit(0)
-	}
+// setBootstrapFlags sets the package-level bootstrap flag vars and restores
+// them afterwards, so one failing case cannot leak into the next.
+func setBootstrapFlags(t *testing.T, owner, tier, machineID string) {
+	t.Helper()
+	prevBootstrap, prevName := clawKeysCreateBootstrap, clawKeysCreateName
+	prevOwner, prevTier, prevMachine := clawKeysCreateOwner, clawKeysCreateTier, clawKeysCreateMachineID
+	t.Cleanup(func() {
+		clawKeysCreateBootstrap, clawKeysCreateName = prevBootstrap, prevName
+		clawKeysCreateOwner, clawKeysCreateTier, clawKeysCreateMachineID = prevOwner, prevTier, prevMachine
+	})
+	clawKeysCreateBootstrap = true
+	clawKeysCreateName = "ci-key"
+	clawKeysCreateOwner = owner
+	clawKeysCreateTier = tier
+	clawKeysCreateMachineID = machineID
+}
 
-	cmd := exec.Command(os.Args[0], "-test.run=TestBootstrapValidation_MissingFlags")
-	cmd.Env = append(os.Environ(), "BOOTSTRAP_TEST_MODE=missing-flags")
-	out, _ := cmd.CombinedOutput()
-	exitErr, ok := getExitErr(cmd)
-	if !ok || exitErr.ExitCode() != bootstrapExitCode {
-		t.Fatalf("expected exit code %d, got output: %s", bootstrapExitCode, string(out))
+// assertBootstrapRejects runs the bootstrap path and asserts it refuses with
+// bootstrapExitCode and prints the expected fragments on stderr.
+func assertBootstrapRejects(t *testing.T, wantFragments ...string) {
+	t.Helper()
+
+	stderr := captureStderr(t, func() {
+		err := runClawKeysCreateBootstrap(nil)
+		if err == nil {
+			t.Error("expected a validation error, got nil")
+			return
+		}
+		var coder errs.ExitCoder
+		if !errors.As(err, &coder) {
+			t.Errorf("error does not carry an exit code: %v", err)
+			return
+		}
+		if coder.ExitCode() != bootstrapExitCode {
+			t.Errorf("expected exit code %d, got %d", bootstrapExitCode, coder.ExitCode())
+		}
+	})
+
+	for _, want := range wantFragments {
+		if !strings.Contains(stderr, want) {
+			t.Errorf("expected stderr to contain %q, got: %s", want, stderr)
+		}
 	}
-	if !strings.Contains(string(out), "--owner-email") || !strings.Contains(string(out), "--tier") || !strings.Contains(string(out), "--machine-id") {
-		t.Errorf("expected stderr to list missing flags, got: %s", string(out))
-	}
+}
+
+func TestBootstrapValidation_MissingFlags(t *testing.T) {
+	setBootstrapFlags(t, "", "", "")
+	assertBootstrapRejects(t, "--owner-email", "--tier", "--machine-id")
 }
 
 func TestBootstrapValidation_InvalidTier(t *testing.T) {
-	if os.Getenv("BOOTSTRAP_TEST_MODE") == "bad-tier" {
-		clawKeysCreateBootstrap = true
-		clawKeysCreateName = "ci-key"
-		clawKeysCreateOwner = "ci@example.com"
-		clawKeysCreateTier = "bogus"
-		clawKeysCreateMachineID = "m1"
-		_ = runClawKeysCreateBootstrap(nil)
-		os.Exit(0)
-	}
-
-	cmd := exec.Command(os.Args[0], "-test.run=TestBootstrapValidation_InvalidTier")
-	cmd.Env = append(os.Environ(), "BOOTSTRAP_TEST_MODE=bad-tier")
-	out, _ := cmd.CombinedOutput()
-	exitErr, ok := getExitErr(cmd)
-	if !ok || exitErr.ExitCode() != bootstrapExitCode {
-		t.Fatalf("expected exit code %d, got output: %s", bootstrapExitCode, string(out))
-	}
-	if !strings.Contains(string(out), "invalid --tier") {
-		t.Errorf("expected 'invalid --tier' message, got: %s", string(out))
-	}
+	setBootstrapFlags(t, "ci@example.com", "bogus", "m1")
+	assertBootstrapRejects(t, "invalid --tier")
 }
 
 func TestBootstrapValidation_InvalidEmail(t *testing.T) {
-	if os.Getenv("BOOTSTRAP_TEST_MODE") == "bad-email" {
-		clawKeysCreateBootstrap = true
-		clawKeysCreateName = "ci-key"
-		clawKeysCreateOwner = "not-an-email"
-		clawKeysCreateTier = "owner"
-		clawKeysCreateMachineID = "m1"
-		_ = runClawKeysCreateBootstrap(nil)
-		os.Exit(0)
-	}
-
-	cmd := exec.Command(os.Args[0], "-test.run=TestBootstrapValidation_InvalidEmail")
-	cmd.Env = append(os.Environ(), "BOOTSTRAP_TEST_MODE=bad-email")
-	out, _ := cmd.CombinedOutput()
-	exitErr, ok := getExitErr(cmd)
-	if !ok || exitErr.ExitCode() != bootstrapExitCode {
-		t.Fatalf("expected exit code %d, got output: %s", bootstrapExitCode, string(out))
-	}
-	if !strings.Contains(string(out), "valid email") {
-		t.Errorf("expected 'valid email' message, got: %s", string(out))
-	}
+	setBootstrapFlags(t, "not-an-email", "owner", "m1")
+	assertBootstrapRejects(t, "valid email")
 }
 
 // TestBootstrap_HappyPath spins up a fake claw server, points the CLI's
 // server-URL config at it, and confirms that the bootstrap path emits the
 // raw key on stdout exactly as expected. We exercise the function directly
-// (no subprocess) since the validation passes and no os.Exit is triggered.
+// (no subprocess) since the validation passes.
 func TestBootstrap_HappyPath(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/claw/v1/api-keys/bootstrap" {
@@ -186,18 +173,4 @@ func captureLocalStdout(t *testing.T, fn func()) string {
 	_ = w.Close()
 	os.Stdout = orig
 	return <-done
-}
-
-// getExitErr extracts an *exec.ExitError from a finished cmd.
-func getExitErr(cmd *exec.Cmd) (*exec.ExitError, bool) {
-	if cmd.ProcessState == nil {
-		return nil, false
-	}
-	if cmd.ProcessState.Success() {
-		return nil, false
-	}
-	// On Unix, ProcessState.Sys() is *syscall.WaitStatus. We just need ExitCode().
-	// Use exec.ExitError which wraps ProcessState.
-	ee := &exec.ExitError{ProcessState: cmd.ProcessState}
-	return ee, true
 }

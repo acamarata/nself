@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+
+	"github.com/nself-org/cli/internal/errs"
 )
 
 var clawKeysCmd = &cobra.Command{
@@ -226,17 +228,20 @@ func runClawKeysCreateBootstrap(cmd *cobra.Command) error {
 	if machineID == "" {
 		missing = append(missing, "--machine-id")
 	}
+	// --bootstrap is consumed by provisioning scripts that branch on the
+	// dedicated bootstrapExitCode, so the code is preserved exactly; only the
+	// os.Exit call moves to main() via a silent ExitError.
 	if len(missing) > 0 {
 		fmt.Fprintf(os.Stderr, "claw_keys: --bootstrap requires %s\n", strings.Join(missing, ", "))
-		os.Exit(bootstrapExitCode)
+		return errs.Exit(bootstrapExitCode)
 	}
 	if !validBootstrapTiers[tier] {
 		fmt.Fprintf(os.Stderr, "claw_keys: invalid --tier %q (allowed: owner|plus|claw|chat|media|family|pro|enterprise)\n", tier)
-		os.Exit(bootstrapExitCode)
+		return errs.Exit(bootstrapExitCode)
 	}
 	if !strings.Contains(owner, "@") {
 		fmt.Fprintf(os.Stderr, "claw_keys: --owner-email must be a valid email address\n")
-		os.Exit(bootstrapExitCode)
+		return errs.Exit(bootstrapExitCode)
 	}
 
 	baseURL := clawServerURL()

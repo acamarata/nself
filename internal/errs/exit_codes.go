@@ -8,6 +8,8 @@
 // new one.
 package errs
 
+import "errors"
+
 // Canonical exit codes. Must match the contract documented in
 // .claude/docs/standards/exit-codes.md and surfaced via 'nself --help' in
 // the EXIT CODES section.
@@ -53,6 +55,13 @@ func ExitCodeFor(err error) int {
 		return ExitOK
 	}
 
+	// An explicit ExitError (or anything else exposing ExitCode) wins over
+	// classification: the command already decided its exit status.
+	var coder interface{ ExitCode() int }
+	if errors.As(err, &coder) {
+		return coder.ExitCode()
+	}
+
 	// Classify by sentinel error matching. Order matters: most specific
 	// first.
 	switch {
@@ -75,7 +84,7 @@ func isAuthError(err error) bool {
 		ErrLicenseExpired,
 		ErrLicenseNetworkUnavailable,
 	} {
-		if errorsIs(err, target) {
+		if errors.Is(err, target) {
 			return true
 		}
 	}
@@ -100,7 +109,7 @@ func isInfraError(err error) bool {
 		ErrBackupRestoreFailed,
 		ErrWALArchiveFailed,
 	} {
-		if errorsIs(err, target) {
+		if errors.Is(err, target) {
 			return true
 		}
 	}
@@ -116,7 +125,7 @@ func isInfraError(err error) bool {
 // onto a sentinel in this package via wrapping with %w against
 // ErrDestructiveBlocked.
 func isDestructiveBlocked(err error) bool {
-	return errorsIs(err, ErrDestructiveBlocked)
+	return errors.Is(err, ErrDestructiveBlocked)
 }
 
 // ErrDestructiveBlocked is the package-level sentinel that command glue can
@@ -131,21 +140,3 @@ type sentinelErr string
 func (e sentinelErr) Error() string { return string(e) }
 
 func sentinel(s string) error { return sentinelErr(s) }
-
-// errorsIs is a tiny stdlib bridge so this file does not need to import
-// "errors" directly — keeps the file self-contained for code review.
-func errorsIs(err, target error) bool {
-	for cur := err; cur != nil; {
-		if cur == target {
-			return true
-		}
-		// errors.Is semantics via Unwrap
-		type unwrapper interface{ Unwrap() error }
-		if u, ok := cur.(unwrapper); ok {
-			cur = u.Unwrap()
-			continue
-		}
-		break
-	}
-	return false
-}

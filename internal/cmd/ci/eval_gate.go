@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
+	"github.com/nself-org/cli/internal/errs"
 	"github.com/nself-org/cli/internal/eval"
 	"github.com/spf13/cobra"
 )
@@ -64,9 +64,11 @@ func runEvalGate(cmd *cobra.Command, _ []string) error {
 	evalURL, _ := cmd.Flags().GetString("eval-url")
 	sourceAccount, _ := cmd.Flags().GetString("source-account")
 
+	// Exit codes here are a documented contract for CI wrappers, so they are
+	// preserved exactly; only the os.Exit call moves to main() (CLI-R04).
 	if !isValidTier(tier) {
 		cmd.PrintErrf("error: invalid tier %q — valid values: %s\n", tier, strings.Join(validTiers, ", "))
-		os.Exit(exitValidation)
+		return errs.Exit(exitValidation)
 	}
 
 	client := &eval.Client{
@@ -83,17 +85,17 @@ func runEvalGate(cmd *cobra.Command, _ []string) error {
 		if isPreconditionError(err) {
 			cmd.PrintErrf("Precondition not met: %v\n", err)
 			cmd.PrintErrf("hint: ensure plugin-retrieval and nself-ai-gateway are running.\n")
-			os.Exit(exitPrecondition)
+			return errs.Exit(exitPrecondition)
 		}
 		// Any other HTTP/infra error — treat as infra failure (exit 2, not regression).
 		cmd.PrintErrf("error: get gate status: %v\n", err)
-		os.Exit(exitValidation)
+		return errs.Exit(exitValidation)
 	}
 
 	eval.WriteGateStatus(cmd.OutOrStdout(), gs, true)
 
 	if !gs.Cleared {
-		os.Exit(exitBelowTreshold)
+		return errs.Exit(exitBelowTreshold)
 	}
 	return nil
 }
