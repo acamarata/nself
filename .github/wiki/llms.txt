@@ -950,9 +950,8 @@ nself mcp [flags]
 
 Flags:
 
-- `--no-mdns` (default false) — Disable mDNS service advertising
-- `--port` (default 3825) — Port for SSE transport
-- `--transport` (default stdio) — Transport: stdio or sse
+- `--port` (default 3825) — Port for the sse/http transports
+- `--transport` (default stdio) — Transport: stdio, sse, or http
 
 Full page: [[cmd-mcp]]
 

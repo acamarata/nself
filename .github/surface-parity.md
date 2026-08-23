@@ -19,25 +19,25 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself alerts` | observe | yes | no | n/a | n/a (see below) |
 | `nself api` | extend | yes | no | n/a | n/a (see below) |
 | `nself audit` | observe | yes | no | n/a | n/a (see below) |
-| `nself backup` | data | yes | no | n/a | n/a (see below) |
+| `nself backup` | data | yes | yes | n/a | n/a (see below) |
 | `nself billing` | account | yes | no | n/a | n/a (see below) |
-| `nself build` | core | yes | no | undocumented: NSELF_PROFILE | n/a (see below) |
+| `nself build` | core | yes | yes | undocumented: NSELF_PROFILE | n/a (see below) |
 | `nself bundle` | extend | yes | no | n/a | n/a (see below) |
 | `nself ci` | deploy | yes | no | undocumented: NSELF_FORGEJO_ADMIN_PASSWORD, NSELF_FORGEJO_ADMIN_USER | n/a (see below) |
 | `nself claw` | ai | yes | no | undocumented: CLAW_PROXY_ALLOWED_ORIGINS, NSELF_AICC_URL, NSELF_CLAW_API_KEY, NSELF_CLAW_SERVER, NSELF_EXTERNAL_URL, PLUGIN_CLAW_INTERNAL_URL | n/a (see below) |
 | `nself clean` | core | yes | no | n/a | n/a (see below) |
 | `nself completion` | account | yes | no | n/a | n/a (see below) |
-| `nself config` | config | yes | no | n/a | n/a (see below) |
+| `nself config` | config | yes | yes | n/a | n/a (see below) |
 | `nself costs` | observe | yes | no | undocumented: HETZNER_SERVER_TYPE | n/a (see below) |
-| `nself db` | data | yes | no | n/a | n/a (see below) |
-| `nself deploy` | deploy | yes | no | undocumented: NSELF_DEPLOY_ENV, NSELF_DEPLOY_HOST_, NSELF_FEATURE_BLUE_GREEN_DEPLOY, VERCEL_TOKEN | n/a (see below) |
+| `nself db` | data | yes | yes | n/a | n/a (see below) |
+| `nself deploy` | deploy | yes | yes | undocumented: NSELF_DEPLOY_ENV, NSELF_DEPLOY_HOST_, NSELF_FEATURE_BLUE_GREEN_DEPLOY, VERCEL_TOKEN | n/a (see below) |
 | `nself dev` | core | yes | no | n/a | n/a (see below) |
 | `nself dlq` | data | yes | no | n/a | n/a (see below) |
 | `nself doctor` | core | yes | yes | undocumented: NSELF_PING_API_URL | n/a (see below) |
 | `nself dogfood` | observe | yes | no | n/a | n/a (see below) |
 | `nself dr` | deploy | yes | no | n/a | n/a (see below) |
 | `nself encryption` | advanced | yes | no | undocumented: BYOK_PLUGIN_URL, NSELF_API_URL, NSELF_TENANT_ID | n/a (see below) |
-| `nself env` | config | yes | no | n/a | n/a (see below) |
+| `nself env` | config | yes | yes | n/a | n/a (see below) |
 | `nself exec` | core | yes | no | n/a | n/a (see below) |
 | `nself federation` | advanced | yes | no | n/a | n/a (see below) |
 | `nself flags` | config | yes | no | n/a | n/a (see below) |
@@ -50,7 +50,7 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself help-topics` | account | yes | no | n/a | n/a (see below) |
 | `nself infra` | deploy | yes | no | undocumented: HCLOUD_TOKEN, HETZNER_NSELF_TOKEN | n/a (see below) |
 | `nself init` | core | yes | no | undocumented: NSELF_LICENSE_KEY | n/a (see below) |
-| `nself install` | extend | yes | no | n/a | n/a (see below) |
+| `nself install` | extend | yes | yes | n/a | n/a (see below) |
 | `nself k8s` | deploy | yes | no | undocumented: NSELF_PLUGIN_LICENSE_KEY | n/a (see below) |
 | `nself license` | extend | yes | no | undocumented: NSELF_LICENSE_SKIP_VERIFY, NSELF_PING_API_URL | n/a (see below) |
 | `nself login` | account | yes | no | n/a | n/a (see below) |
@@ -59,43 +59,43 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself mail` | advanced | yes | no | undocumented: NSELF_PING_API_URL | n/a (see below) |
 | `nself maintenance` | observe | yes | no | n/a | n/a (see below) |
 | `nself man` | account | yes | no | n/a | n/a (see below) |
-| `nself mcp` | extend | yes | no | undocumented: HASURA_GRAPHQL_URL, NSELF_HASURA_ADMIN_SECRET, NSELF_HASURA_GRAPHQL_URL, NSENTRY_STATUS_URL, POSTGRES_URL | n/a (see below) |
-| `nself migrate` | data | yes | no | undocumented: NSELF_AI_ENDPOINT, NSELF_MIGRATION_AUTO_APPLY, NSELF_PROFILE, NSELF_SUPABASE_SKIP | n/a (see below) |
+| `nself mcp` | extend | yes | no | undocumented: HASURA_GRAPHQL_URL, INTEGRATION, NSELF_HASURA_ADMIN_SECRET, NSELF_HASURA_GRAPHQL_URL, NSENTRY_STATUS_URL, POSTGRES_URL | n/a (see below) |
+| `nself migrate` | data | yes | yes | undocumented: NSELF_AI_ENDPOINT, NSELF_MIGRATION_AUTO_APPLY, NSELF_PROFILE, NSELF_SUPABASE_SKIP | n/a (see below) |
 | `nself model` | ai | yes | no | undocumented: NSELF_OLLAMA_DEFAULT_MODEL, NSELF_OLLAMA_HOST, NSELF_OLLAMA_TIMEOUT_SECONDS, PLUGIN_AI_OLLAMA_URL | n/a (see below) |
 | `nself monitor` | observe | yes | no | n/a | n/a (see below) |
 | `nself oauth` | account | yes | no | n/a | n/a (see below) |
 | `nself ops` | deploy | yes | no | n/a | n/a (see below) |
 | `nself pentest-kit` | advanced | yes | no | n/a | n/a (see below) |
-| `nself plugin` | extend | yes | no | undocumented: GOPATH, NSELF_LICENSE_SKIP_VERIFY, NSELF_LOCAL_URL, NSELF_MARKETPLACE_URL, NSELF_PING_URL, NSELF_PLUGIN_CACHE, NSELF_PLUGIN_DIR, NSELF_PLUGIN_LICENSE_KEY, NSELF_PLUGIN_REGISTRY | n/a (see below) |
+| `nself plugin` | extend | yes | yes | undocumented: GOPATH, NSELF_LICENSE_SKIP_VERIFY, NSELF_LOCAL_URL, NSELF_MARKETPLACE_URL, NSELF_PING_URL, NSELF_PLUGIN_CACHE, NSELF_PLUGIN_DIR, NSELF_PLUGIN_LICENSE_KEY, NSELF_PLUGIN_REGISTRY | n/a (see below) |
 | `nself promote` | deploy | yes | no | n/a | n/a (see below) |
 | `nself queue` | data | yes | no | n/a | n/a (see below) |
 | `nself region` | deploy | yes | no | n/a | n/a (see below) |
 | `nself release` | deploy | yes | no | undocumented: GITHUB_TOKEN, NSELF_VERSION | n/a (see below) |
 | `nself remove` | extend | yes | no | n/a | n/a (see below) |
 | `nself reset` | core | yes | no | n/a | n/a (see below) |
-| `nself restart` | core | yes | no | n/a | n/a (see below) |
+| `nself restart` | core | yes | yes | n/a | n/a (see below) |
 | `nself secrets` | config | yes | no | undocumented: EDITOR | n/a (see below) |
 | `nself security` | advanced | yes | no | n/a | n/a (see below) |
 | `nself self-heal` | observe | yes | no | n/a | n/a (see below) |
 | `nself sentry` | observe | yes | yes | undocumented: HCLOUD_TOKEN, HETZNER_NSELF_TOKEN, NSELF_DEPLOY_HOST_OPS, NSENTRY_PRIVATE_TOKEN, OPS_DEPLOY_HOST, STATUS_PAGE_PRIVATE_TOKEN | n/a (see below) |
 | `nself sentry-server` | observe | yes | no | n/a | n/a (see below) |
-| `nself service` | config | yes | no | n/a | n/a (see below) |
+| `nself service` | config | yes | yes | n/a | n/a (see below) |
 | `nself soak` | observe | yes | no | n/a | n/a (see below) |
 | `nself ssl` | config | yes | no | n/a | n/a (see below) |
-| `nself start` | core | yes | no | undocumented: AI_AUTO_INSTALL, NSELF_PROFILE, NSELF_SKIP_DB_INIT | n/a (see below) |
+| `nself start` | core | yes | yes | undocumented: AI_AUTO_INSTALL, NSELF_PROFILE, NSELF_SKIP_DB_INIT | n/a (see below) |
 | `nself status` | core | yes | yes | n/a | n/a (see below) |
-| `nself stop` | core | yes | no | n/a | n/a (see below) |
+| `nself stop` | core | yes | yes | n/a | n/a (see below) |
 | `nself telemetry` | account | yes | no | undocumented: NSELF_TELEMETRY, NSELF_TELEMETRY_OPT_OUT | n/a (see below) |
 | `nself template` | config | yes | no | undocumented: NSELF_TEMPLATE_REGISTRY_URL | n/a (see below) |
 | `nself tenant` | advanced | yes | no | n/a | n/a (see below) |
 | `nself trust` | config | yes | no | n/a | n/a (see below) |
 | `nself update` | account | yes | no | n/a | n/a (see below) |
 | `nself upgrade` | account | yes | no | n/a | n/a (see below) |
-| `nself urls` | core | yes | no | n/a | n/a (see below) |
+| `nself urls` | core | yes | yes | n/a | n/a (see below) |
 | `nself verify-sbom` | advanced | yes | no | n/a | n/a (see below) |
 | `nself version` | account | yes | no | undocumented: BENCH_RESULTS_FILE | n/a (see below) |
 | `nself waf` | advanced | yes | no | n/a | n/a (see below) |
 | `nself watchdog` | observe | yes | no | undocumented: NSELF_ENV | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 85 commands. Missing wiki page: 0. No MCP tool: 81. Env vars found but undocumented: 30.
+Total: 85 commands. Missing wiki page: 0. No MCP tool: 67. Env vars found but undocumented: 30.

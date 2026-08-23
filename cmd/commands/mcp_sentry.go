@@ -36,6 +36,7 @@ func registerSentryMCPTools(s *server.MCPServer) {
 	s.AddTool(
 		mcp.NewTool("sentry_monitors_list",
 			mcp.WithDescription("List ɳSentry uptime monitors for the authenticated tenant (id, name, url, kind, interval, status)"),
+			mcp.WithReadOnlyHintAnnotation(true),
 		),
 		mcpSentryMonitorsListHandler(),
 	)
@@ -47,6 +48,9 @@ func registerSentryMCPTools(s *server.MCPServer) {
 			mcp.WithString("name", mcp.Description("Display name (defaults to the URL)")),
 			mcp.WithString("kind", mcp.Description("Monitor kind: http, tcp, or ping (default http)")),
 			mcp.WithNumber("interval_seconds", mcp.Description("Check interval in seconds (default 60; tier floors apply)")),
+			mcp.WithReadOnlyHintAnnotation(false),
+			mcp.WithDestructiveHintAnnotation(false),
+			mcp.WithIdempotentHintAnnotation(false),
 		),
 		mcpSentryMonitorsAddHandler(),
 	)
@@ -55,6 +59,7 @@ func registerSentryMCPTools(s *server.MCPServer) {
 		mcp.NewTool("sentry_incidents_list",
 			mcp.WithDescription("List ɳSentry incidents, optionally filtered by status (open, acknowledged, resolved)"),
 			mcp.WithString("status", mcp.Description("Status filter: open, acknowledged, or resolved (empty = all)")),
+			mcp.WithReadOnlyHintAnnotation(true),
 		),
 		mcpSentryIncidentsListHandler(),
 	)
@@ -63,6 +68,9 @@ func registerSentryMCPTools(s *server.MCPServer) {
 		mcp.NewTool("sentry_incidents_ack",
 			mcp.WithDescription("Acknowledge an open ɳSentry incident by id"),
 			mcp.WithString("id", mcp.Required(), mcp.Description("Incident id")),
+			mcp.WithReadOnlyHintAnnotation(false),
+			mcp.WithDestructiveHintAnnotation(false),
+			mcp.WithIdempotentHintAnnotation(true),
 		),
 		mcpSentryIncidentsAckHandler(),
 	)
@@ -71,6 +79,7 @@ func registerSentryMCPTools(s *server.MCPServer) {
 		mcp.NewTool("sentry_status",
 			mcp.WithDescription("Fetch the ɳSentry public status page summary (overall status + per-component health)"),
 			mcp.WithString("url", mcp.Description("Status JSON endpoint (default https://status.nself.org/status.json or NSENTRY_STATUS_URL)")),
+			mcp.WithReadOnlyHintAnnotation(true),
 		),
 		mcpSentryStatusHandler(),
 	)
