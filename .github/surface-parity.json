@@ -1,0 +1,833 @@
+{
+  "generated_by": "tools/parity",
+  "rows": [
+    {
+      "name": "account",
+      "path": "nself account",
+      "group_id": "account",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: NSELF_NO_BROWSER",
+      "openapi": "n/a"
+    },
+    {
+      "name": "admin",
+      "path": "nself admin",
+      "group_id": "account",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: ADMIN_PORT",
+      "openapi": "n/a"
+    },
+    {
+      "name": "ai",
+      "path": "nself ai",
+      "group_id": "ai",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: AI_DEFAULT_MODEL, OLLAMA_BASE_URL, OLLAMA_HOST, PLUGIN_AI_INTERNAL_URL, PLUGIN_INTERNAL_SECRET",
+      "openapi": "n/a"
+    },
+    {
+      "name": "ai-studio",
+      "path": "nself ai-studio",
+      "group_id": "ai",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "alerts",
+      "path": "nself alerts",
+      "group_id": "observe",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "api",
+      "path": "nself api",
+      "group_id": "extend",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "audit",
+      "path": "nself audit",
+      "group_id": "observe",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "backup",
+      "path": "nself backup",
+      "group_id": "data",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "billing",
+      "path": "nself billing",
+      "group_id": "account",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "build",
+      "path": "nself build",
+      "group_id": "core",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: NSELF_PROFILE",
+      "openapi": "n/a"
+    },
+    {
+      "name": "bundle",
+      "path": "nself bundle",
+      "group_id": "extend",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "ci",
+      "path": "nself ci",
+      "group_id": "deploy",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: NSELF_FORGEJO_ADMIN_PASSWORD, NSELF_FORGEJO_ADMIN_USER",
+      "openapi": "n/a"
+    },
+    {
+      "name": "claw",
+      "path": "nself claw",
+      "group_id": "ai",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: CLAW_PROXY_ALLOWED_ORIGINS, NSELF_AICC_URL, NSELF_CLAW_API_KEY, NSELF_CLAW_SERVER, NSELF_EXTERNAL_URL, PLUGIN_CLAW_INTERNAL_URL",
+      "openapi": "n/a"
+    },
+    {
+      "name": "clean",
+      "path": "nself clean",
+      "group_id": "core",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "completion",
+      "path": "nself completion",
+      "group_id": "account",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "config",
+      "path": "nself config",
+      "group_id": "config",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "costs",
+      "path": "nself costs",
+      "group_id": "observe",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: HETZNER_SERVER_TYPE",
+      "openapi": "n/a"
+    },
+    {
+      "name": "db",
+      "path": "nself db",
+      "group_id": "data",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "deploy",
+      "path": "nself deploy",
+      "group_id": "deploy",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: NSELF_DEPLOY_ENV, NSELF_DEPLOY_HOST_, NSELF_FEATURE_BLUE_GREEN_DEPLOY, VERCEL_TOKEN",
+      "openapi": "n/a"
+    },
+    {
+      "name": "dev",
+      "path": "nself dev",
+      "group_id": "core",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "dlq",
+      "path": "nself dlq",
+      "group_id": "data",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "dns-setup",
+      "path": "nself dns-setup",
+      "group_id": "config",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "doctor",
+      "path": "nself doctor",
+      "group_id": "core",
+      "wiki_page": true,
+      "mcp_tool": true,
+      "env_vars": "undocumented: NSELF_PING_API_URL",
+      "openapi": "n/a"
+    },
+    {
+      "name": "dogfood",
+      "path": "nself dogfood",
+      "group_id": "observe",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "dr",
+      "path": "nself dr",
+      "group_id": "deploy",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "encryption",
+      "path": "nself encryption",
+      "group_id": "advanced",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: BYOK_PLUGIN_URL, NSELF_API_URL, NSELF_TENANT_ID",
+      "openapi": "n/a"
+    },
+    {
+      "name": "env",
+      "path": "nself env",
+      "group_id": "config",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "exec",
+      "path": "nself exec",
+      "group_id": "core",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "feature",
+      "path": "nself feature",
+      "group_id": "config",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "federation",
+      "path": "nself federation",
+      "group_id": "advanced",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "flag",
+      "path": "nself flag",
+      "group_id": "config",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "functions",
+      "path": "nself functions",
+      "group_id": "data",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "gateway",
+      "path": "nself gateway",
+      "group_id": "ai",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "gauth",
+      "path": "nself gauth",
+      "group_id": "ai",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: GAUTH_PORT, GAUTH_URL",
+      "openapi": "n/a"
+    },
+    {
+      "name": "gdpr",
+      "path": "nself gdpr",
+      "group_id": "advanced",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "documented",
+      "openapi": "n/a"
+    },
+    {
+      "name": "generate",
+      "path": "nself generate",
+      "group_id": "config",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: NSELF_HASURA_PROD_ADMIN_SECRET, NSELF_HASURA_PROD_URL, NSELF_HASURA_STAGING_ADMIN_SECRET, NSELF_HASURA_STAGING_URL",
+      "openapi": "n/a"
+    },
+    {
+      "name": "health",
+      "path": "nself health",
+      "group_id": "observe",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "help-topics",
+      "path": "nself help-topics",
+      "group_id": "account",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "infra",
+      "path": "nself infra",
+      "group_id": "deploy",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: HCLOUD_TOKEN, HETZNER_NSELF_TOKEN",
+      "openapi": "n/a"
+    },
+    {
+      "name": "init",
+      "path": "nself init",
+      "group_id": "core",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: NSELF_LICENSE_KEY",
+      "openapi": "n/a"
+    },
+    {
+      "name": "k8s",
+      "path": "nself k8s",
+      "group_id": "deploy",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: NSELF_PLUGIN_LICENSE_KEY",
+      "openapi": "n/a"
+    },
+    {
+      "name": "license",
+      "path": "nself license",
+      "group_id": "extend",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: NSELF_LICENSE_SKIP_VERIFY, NSELF_PING_API_URL",
+      "openapi": "n/a"
+    },
+    {
+      "name": "login",
+      "path": "nself login",
+      "group_id": "account",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "logout",
+      "path": "nself logout",
+      "group_id": "account",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "logs",
+      "path": "nself logs",
+      "group_id": "core",
+      "wiki_page": true,
+      "mcp_tool": true,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "mail",
+      "path": "nself mail",
+      "group_id": "advanced",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: NSELF_PING_API_URL",
+      "openapi": "n/a"
+    },
+    {
+      "name": "maintenance",
+      "path": "nself maintenance",
+      "group_id": "observe",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "man",
+      "path": "nself man",
+      "group_id": "account",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "mcp",
+      "path": "nself mcp",
+      "group_id": "extend",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: HASURA_GRAPHQL_URL, NSELF_HASURA_ADMIN_SECRET, NSELF_HASURA_GRAPHQL_URL, NSENTRY_STATUS_URL, POSTGRES_URL",
+      "openapi": "n/a"
+    },
+    {
+      "name": "migrate",
+      "path": "nself migrate",
+      "group_id": "data",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: NSELF_AI_ENDPOINT, NSELF_MIGRATION_AUTO_APPLY, NSELF_PROFILE, NSELF_SUPABASE_SKIP",
+      "openapi": "n/a"
+    },
+    {
+      "name": "migrate-from-v099",
+      "path": "nself migrate-from-v099",
+      "group_id": "advanced",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "model",
+      "path": "nself model",
+      "group_id": "ai",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: NSELF_OLLAMA_DEFAULT_MODEL, NSELF_OLLAMA_HOST, NSELF_OLLAMA_TIMEOUT_SECONDS, PLUGIN_AI_OLLAMA_URL",
+      "openapi": "n/a"
+    },
+    {
+      "name": "monitor",
+      "path": "nself monitor",
+      "group_id": "observe",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "oauth",
+      "path": "nself oauth",
+      "group_id": "account",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "ollama",
+      "path": "nself ollama",
+      "group_id": "ai",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: NSELF_OLLAMA_DEFAULT_MODEL, NSELF_OLLAMA_HOST, NSELF_OLLAMA_TIMEOUT_SECONDS, PLUGIN_AI_OLLAMA_URL",
+      "openapi": "n/a"
+    },
+    {
+      "name": "ops",
+      "path": "nself ops",
+      "group_id": "deploy",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "pentest-kit",
+      "path": "nself pentest-kit",
+      "group_id": "advanced",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "pitr",
+      "path": "nself pitr",
+      "group_id": "data",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: NSELF_PITR_EXPERIMENTAL",
+      "openapi": "n/a"
+    },
+    {
+      "name": "plugin",
+      "path": "nself plugin",
+      "group_id": "extend",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: GOPATH, NSELF_LICENSE_SKIP_VERIFY, NSELF_LOCAL_URL, NSELF_MARKETPLACE_URL, NSELF_PING_URL, NSELF_PLUGIN_CACHE, NSELF_PLUGIN_DIR, NSELF_PLUGIN_LICENSE_KEY, NSELF_PLUGIN_REGISTRY",
+      "openapi": "n/a"
+    },
+    {
+      "name": "promote",
+      "path": "nself promote",
+      "group_id": "deploy",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "queue",
+      "path": "nself queue",
+      "group_id": "data",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "region",
+      "path": "nself region",
+      "group_id": "deploy",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "release",
+      "path": "nself release",
+      "group_id": "deploy",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: GITHUB_TOKEN, NSELF_VERSION",
+      "openapi": "n/a"
+    },
+    {
+      "name": "release-check",
+      "path": "nself release-check",
+      "group_id": "deploy",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "release-rollback",
+      "path": "nself release-rollback",
+      "group_id": "deploy",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "release-status",
+      "path": "nself release-status",
+      "group_id": "deploy",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "reset",
+      "path": "nself reset",
+      "group_id": "core",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "restart",
+      "path": "nself restart",
+      "group_id": "core",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "secrets",
+      "path": "nself secrets",
+      "group_id": "config",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: EDITOR",
+      "openapi": "n/a"
+    },
+    {
+      "name": "security",
+      "path": "nself security",
+      "group_id": "advanced",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "self-heal",
+      "path": "nself self-heal",
+      "group_id": "observe",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "sentry",
+      "path": "nself sentry",
+      "group_id": "observe",
+      "wiki_page": true,
+      "mcp_tool": true,
+      "env_vars": "undocumented: HCLOUD_TOKEN, HETZNER_NSELF_TOKEN, NSELF_DEPLOY_HOST_OPS, NSENTRY_PRIVATE_TOKEN, OPS_DEPLOY_HOST, STATUS_PAGE_PRIVATE_TOKEN",
+      "openapi": "n/a"
+    },
+    {
+      "name": "sentry-server",
+      "path": "nself sentry-server",
+      "group_id": "observe",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "service",
+      "path": "nself service",
+      "group_id": "config",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "soak",
+      "path": "nself soak",
+      "group_id": "observe",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "ssl",
+      "path": "nself ssl",
+      "group_id": "config",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "start",
+      "path": "nself start",
+      "group_id": "core",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: AI_AUTO_INSTALL, NSELF_PROFILE, NSELF_SKIP_DB_INIT",
+      "openapi": "n/a"
+    },
+    {
+      "name": "status",
+      "path": "nself status",
+      "group_id": "core",
+      "wiki_page": true,
+      "mcp_tool": true,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "stop",
+      "path": "nself stop",
+      "group_id": "core",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "telemetry",
+      "path": "nself telemetry",
+      "group_id": "account",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: NSELF_TELEMETRY, NSELF_TELEMETRY_OPT_OUT",
+      "openapi": "n/a"
+    },
+    {
+      "name": "template",
+      "path": "nself template",
+      "group_id": "config",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: NSELF_TEMPLATE_REGISTRY_URL",
+      "openapi": "n/a"
+    },
+    {
+      "name": "tenant",
+      "path": "nself tenant",
+      "group_id": "advanced",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "trust",
+      "path": "nself trust",
+      "group_id": "config",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "uninstall",
+      "path": "nself uninstall",
+      "group_id": "account",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "update",
+      "path": "nself update",
+      "group_id": "account",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "upgrade",
+      "path": "nself upgrade",
+      "group_id": "account",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "urls",
+      "path": "nself urls",
+      "group_id": "core",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "verify-sbom",
+      "path": "nself verify-sbom",
+      "group_id": "advanced",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "version",
+      "path": "nself version",
+      "group_id": "account",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: BENCH_RESULTS_FILE",
+      "openapi": "n/a"
+    },
+    {
+      "name": "waf",
+      "path": "nself waf",
+      "group_id": "advanced",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "n/a",
+      "openapi": "n/a"
+    },
+    {
+      "name": "watchdog",
+      "path": "nself watchdog",
+      "group_id": "observe",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: NSELF_ENV",
+      "openapi": "n/a"
+    },
+    {
+      "name": "webhooks",
+      "path": "nself webhooks",
+      "group_id": "data",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "undocumented: NSELF_WEBHOOK_OUTBOX_DIR",
+      "openapi": "n/a"
+    }
+  ]
+}
