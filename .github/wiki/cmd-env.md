@@ -15,11 +15,25 @@ nself env <subcommand> [flags]
 <!-- BEGIN PROSE:description -->
 `nself env` manages multiple environments (dev, staging, prod) on a single project. Each environment gets its own Docker project name, network, volume namespace, and port range, so they can coexist on one host without conflicts.
 
-`env use <name>` switches the active environment. After switching, run `nself build` so the generated `docker-compose.yml` and nginx config reflect the new environment's `.env.<name>` cascade. `env list` shows all environments with the active one marked. `env show` prints the resolved config for the current environment with secrets redacted. `env diff a b` compares two environments side-by-side. `env copy from to` scaffolds a new environment from an existing one as the starting template.
+`env use <name>` switches the active environment. After switching, run `nself build` so the generated `docker-compose.yml` and nginx config reflect the new environment's `.env.<name>` cascade. `env list` shows all environments with the active one marked. `env show` prints the resolved config for the current environment with secrets redacted. `env diff a b` compares two environments side-by-side. `env copy from to` scaffolds a new environment from an existing one as the starting template. `env explain [VAR]` shows the effective `.env` cascade — see below.
 
 The active environment is stored in a project-local marker (`.env.active` or equivalent) so subsequent commands like `nself start`, `nself logs`, and `nself db` all target the right stack.
 
-The `env` subcommands take no flags beyond positional arguments. Use `--help` on any subcommand to confirm.
+Most `env` subcommands take no flags beyond positional arguments; `env explain` takes `--reveal`. Use `--help` on any subcommand to confirm.
+
+## env explain
+
+`nself env explain` shows the `.env` cascade actually in effect for the current project (later file wins):
+
+```
+.env → .env.{dev|staging|prod} → .env.secrets → .env.local
+```
+
+`.env` is the shared, committed base. Exactly one of `.env.dev`/`.env.staging`/`.env.prod` loads, matching `ENV`. `.env.secrets` never ships in git. `.env.local` is your personal override and always wins. `.env.ai` no longer exists as a cascade layer — its content is folded into `.env.secrets` (see [[Config-Env-Vars]]).
+
+With no argument, `env explain` lists every file in load order with whether it exists and which one wins ties. With a `VAR` argument, it lists every existing file that sets `VAR`, the value each one sets, and which file wins — values are redacted by default; pass `--reveal` to see them.
+
+Setting `NSELF_LEGACY_ENV_ORDER=1` restores the pre-CLI-R18 order (`.env.dev → .env.{staging|prod} → .env.secrets → .env.local → .env → .env.ai`) for exactly one minor version, printing a warning on every use. `env explain` reflects whichever order is active. Run `nself migrate` to move a project permanently off the escape hatch — it detects any variable whose effective value would change under the reorder and fixes it automatically wherever that's unambiguously safe, or flags it for manual review otherwise.
 ## env target
 
 > Manage the multi-server inventory stored in `.nself/control-plane.yaml`.
@@ -199,6 +213,7 @@ environments:
 |------|-------------|
 | `copy` | Scaffold a new environment from an existing one |
 | `diff` | Compare two environment configs side-by-side |
+| `explain` | Show the effective .env cascade and which file wins |
 | `list` | List available environments |
 | `show` | Show current environment config (secrets redacted) |
 | `target` | Manage control-plane server targets |
@@ -225,6 +240,15 @@ nself env diff dev prod
 # Scaffold a new "qa" environment from staging
 nself env copy staging qa
 nself env use qa
+
+# See the full cascade in effect
+nself env explain
+
+# See which file wins for one variable (redacted)
+nself env explain POSTGRES_PASSWORD
+
+# Reveal the actual winning value
+nself env explain POSTGRES_PASSWORD --reveal
 ```
 
 ---
@@ -236,6 +260,8 @@ nself env use qa
 - [[cmd-build]], regenerate compose for the active environment
 - [[cmd-promote]], promote one environment to another
 - [[cmd-secrets]], environment-scoped secrets
+- [[cmd-migrate]], move a project to the CLI-R18 cascade order
+- [[Config-Env-Vars]], full cascade reference and every supported variable
 - [[Commands]], full command index
 <!-- END PROSE:see-also -->
 

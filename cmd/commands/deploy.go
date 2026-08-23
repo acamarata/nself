@@ -984,10 +984,10 @@ func remoteDeployPush(ctx context.Context, workdir, host, target string, jsonOut
 	// Gap #13 fix: the file that used to be rsynced here (.env.<target> alone,
 	// e.g. .env.staging) is only ONE layer of the cascade that config.Load
 	// actually merged to produce the docker-compose.yml being pushed
-	// alongside it (.env.dev -> .env.<target> -> .env.secrets -> .env.local
-	// -> .env -> .env.ai). Pushing just one layer left the remote's env file
-	// mismatched with values baked into the compose file (wrong POSTGRES_DB,
-	// wrong ports, etc.) whenever an earlier/later layer set them.
+	// alongside it (CLI-R18 canonical order: .env -> .env.<target> ->
+	// .env.secrets -> .env.local). Pushing just one layer left the remote's
+	// env file mismatched with values baked into the compose file (wrong
+	// POSTGRES_DB, wrong ports, etc.) whenever an earlier/later layer set them.
 	//
 	// Write a merged snapshot containing every value config.Load resolved
 	// for this deploy, and push that as .env.<target> instead of the raw

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/nself-org/cli/internal/errs"
@@ -149,12 +150,14 @@ func Initialize(opts Options) (*Result, error) {
 		filesCreated = append(filesCreated, fullFiles...)
 	}
 
-	// P88 Sprint 01 T-01-09: write .env.ai (AI tier config + master secret).
-	// O_EXCL: preserved across re-runs — the master secret must never rotate.
-	if created, err := writeEnvAI(opts.WorkDir); err != nil {
-		return nil, fmt.Errorf("writing .env.ai: %w", err)
-	} else if created {
-		filesCreated = append(filesCreated, ".env.ai")
+	// P88 Sprint 01 T-01-09 / CLI-R18: fold AI tier config (+ master secret)
+	// into .env.secrets rather than a separate .env.ai cascade layer.
+	// Anti-clobber: preserved across re-runs — the master secret must never
+	// rotate once written.
+	if created, err := writeAIConfig(opts.WorkDir); err != nil {
+		return nil, fmt.Errorf("writing AI config: %w", err)
+	} else if created && !slices.Contains(filesCreated, ".env.secrets") {
+		filesCreated = append(filesCreated, ".env.secrets")
 	}
 
 	// Append to .gitignore.

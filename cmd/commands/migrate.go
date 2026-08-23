@@ -117,22 +117,30 @@ func runMigrate(cmd *cobra.Command, args []string) error {
 	}
 
 	artifacts := migration.Detect(cwd)
-
 	if len(artifacts) == 0 {
 		ui.Success("No v1 artifacts detected. This project is ready for nSelf v2.")
-		return nil
+	} else {
+		fmt.Fprintf(cmd.ErrOrStderr(), "\n%s %s\n\n", ui.C(ui.Yellow, ui.IconWarning), ui.C(ui.Bold, "Legacy nSelf v1 artifacts detected:"))
+
+		tbl := ui.NewTable("Path", "Description", "Action")
+		for _, a := range artifacts {
+			tbl.AddRow(a.Path, a.Description, a.Action)
+		}
+		tbl.Render()
+
+		fmt.Println()
+		ui.Warn(fmt.Sprintf("%d v1 artifact(s) found. Review the table above and migrate each item.", len(artifacts)))
 	}
 
-	fmt.Fprintf(cmd.ErrOrStderr(), "\n%s %s\n\n", ui.C(ui.Yellow, ui.IconWarning), ui.C(ui.Bold, "Legacy nSelf v1 artifacts detected:"))
-
-	tbl := ui.NewTable("Path", "Description", "Action")
-	for _, a := range artifacts {
-		tbl.AddRow(a.Path, a.Description, a.Action)
+	// CLI-R18: auto-detect and fix .env cascade-order drift. Unlike the v1
+	// artifact scan above, this is safe to fix automatically wherever the
+	// old effective value can be preserved unambiguously — see
+	// internal/migrate/env_order.go for exactly which shapes qualify.
+	envReport, err := migratebash.Migrate(cwd)
+	if err != nil {
+		return fmt.Errorf("checking .env cascade order: %w", err)
 	}
-	tbl.Render()
-
-	fmt.Println()
-	ui.Warn(fmt.Sprintf("%d v1 artifact(s) found. Review the table above and migrate each item.", len(artifacts)))
+	printEnvOrderSummary(cmd, envReport)
 
 	return nil
 }

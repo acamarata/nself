@@ -308,11 +308,18 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	}
 
 	// ── AI auto-install (T-05-05) ──────────────────────────────────
-	// If AI_AUTO_INSTALL=true (default in .env.ai), run doctor --ai --yes
-	// --skip-pool to at least get Ollama running before the stack boots.
+	// If AI_AUTO_INSTALL=true (default in the AI config block), run doctor
+	// --ai --yes --skip-pool to at least get Ollama running before the stack
+	// boots.
+	//
+	// CLI-R18: the AI config block (and NSELF_MASTER_SECRET) used to live in
+	// a dedicated .env.ai file, and its mere existence gated this block.
+	// .env.ai is now folded into .env.secrets, so the gate is
+	// NSELF_MASTER_SECRET presence in the resolved environment — the same
+	// signal ("zero-config AI was set up for this project"), just read from
+	// the cascade instead of the filesystem.
 	if aiAutoInstall := os.Getenv("AI_AUTO_INSTALL"); aiAutoInstall == "" || strings.EqualFold(aiAutoInstall, "true") {
-		envAIPath := filepath.Join(projectDir, ".env.ai")
-		if _, err := os.Stat(envAIPath); err == nil {
+		if os.Getenv("NSELF_MASTER_SECRET") != "" {
 			if !ollamaHealthy(ctx) {
 				ui.Info("AI_AUTO_INSTALL: setting up local AI...")
 				_ = runDoctorAI(ctx, doctorAIFlags{

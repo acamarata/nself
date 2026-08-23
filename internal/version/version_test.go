@@ -61,3 +61,34 @@ func TestBuildDate_Overridable(t *testing.T) {
 		t.Errorf("expected GetBuildDate() = 2026-01-01 after override, got %q", GetBuildDate())
 	}
 }
+
+// TestNextMinor verifies the escape-hatch removal-version arithmetic used by
+// NSELF_LEGACY_ENV_ORDER (CLI-R18): patch resets to 0, minor increments.
+func TestNextMinor(t *testing.T) {
+	cases := []struct {
+		in   string
+		want string
+	}{
+		{"1.2.7", "1.3.0"},
+		{"1.2.0", "1.3.0"},
+		{"0.9.9", "0.10.0"},
+		{"2.0.0", "2.1.0"},
+	}
+	for _, c := range cases {
+		if got := NextMinor(c.in); got != c.want {
+			t.Errorf("NextMinor(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
+// TestNextMinor_UnparseableReturnsUnchanged verifies that a version string
+// that isn't three dot-separated integers is returned as-is rather than
+// panicking or producing a garbage value.
+func TestNextMinor_UnparseableReturnsUnchanged(t *testing.T) {
+	cases := []string{"", "1.2", "1.2.3.4", "a.b.c", "v1.2.3"}
+	for _, c := range cases {
+		if got := NextMinor(c); got != c {
+			t.Errorf("NextMinor(%q) = %q, want unchanged %q", c, got, c)
+		}
+	}
+}

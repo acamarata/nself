@@ -1,64 +1,65 @@
-// Package setup — .env.ai generator for P88 Zero-Config AI (Sprint 01, T-01-09).
-//
-// .env.ai is the canonical home for AI-tier configuration and the master secret
-// used to encrypt OAuth refresh tokens and pooled GCP API keys. It is written
-// once by `nself init` and must never be overwritten by subsequent runs — the
-// master secret is irrecoverable and all encrypted material would become
-// unreadable. Spec: p88-block-a-zero-config-ai-spec.md §8.1 / §8.3 / §8.5.
 package setup
 
+// envai.go — AI-tier config block, folded into .env.secrets (CLI-R18).
+//
+// Purpose: Write the AI-tier config vars (AI_* + NSELF_MASTER_SECRET) that
+//          used to live in a dedicated .env.ai cascade layer. CLI-R18 (GATE
+//          B, 2026-08-23) eliminated .env.ai entirely: the vars now live
+//          inside .env.secrets, the file they always belonged with (never
+//          committed, host-local, already outranks bare .env under the new
+//          cascade order).
+// Inputs:  projectDir — the nSelf working directory.
+// Outputs: writeAIConfig creates or extends projectDir/.env.secrets.
+// Constraints: Must never regenerate NSELF_MASTER_SECRET once one exists —
+//              it is the KEK for OAuth/API-key encryption; regenerating it
+//              makes all previously-encrypted material unreadable. Written
+//              file must be mode 0600 (P15 regression: leaked secrets at
+//              0644). Spec: p88-block-a-zero-config-ai-spec.md §8.1/§8.3/§8.5
+//              (original .env.ai design; CLI-R18 supersedes only the file
+//              location, not the content or the anti-clobber guarantee).
+// SPORT:   cli/internal/setup — CLI-R18 env cascade canon.
+
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/base64"
-	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 )
 
-// envAITemplate is the exact content written to .env.ai on first init.
-// Values match spec §8.1 verbatim. NSELF_MASTER_SECRET is replaced with a
-// fresh 32-byte random string at generation time.
-const envAITemplate = `# .env.ai — P88 Zero-Config AI configuration
-#
-# This file is written once by "nself init" and MUST NOT be edited by hand
-# unless you understand the implications. NSELF_MASTER_SECRET is the KEK
-# that protects OAuth refresh tokens and pooled GCP API keys — losing or
-# changing it after keys have been stored will make them unreadable.
-#
-# Load order: appended to the env cascade after .env.computed so AI_* vars
-# always land in the plugin-ai process environment at startup.
-
-# ----- AI profile -----
+// envAIBlock is the AI-tier config block appended to .env.secrets on first
+// init (or on upgrade, via the migration shim in internal/migrate). Values
+// match the original .env.ai template verbatim. NSELF_MASTER_SECRET is
+// replaced with a fresh 32-byte random string at generation time.
+const envAIBlock = `
+# ----- AI profile (CLI-R18: folded from the retired .env.ai cascade layer) -----
+# Written once by "nself init" and MUST NOT be edited by hand unless you
+# understand the implications. NSELF_MASTER_SECRET is the KEK that protects
+# OAuth refresh tokens and pooled GCP API keys — losing or changing it after
+# keys have been stored will make them unreadable.
 AI_PROFILE=auto
 AI_AUTO_INSTALL=true
-
-# ----- Local (Ollama) models -----
 AI_DEFAULT_MODEL=gemma2:2b
 AI_EMBEDDING_MODEL=nomic-embed-text
-
-# ----- Pool (zero-config GCP) -----
 AI_POOL_AUTO_PROVISION=true
 AI_BACKGROUND_LOCAL_ONLY=true
-
-# ----- Budgets (0 = unlimited) -----
 AI_DAILY_BUDGET_USD=0
 AI_MONTHLY_BUDGET_USD=0
-
-# ----- Per-tier timeouts (ms, 0 = no cap) -----
 AI_TIMEOUT_LOCAL_MS=0
 AI_TIMEOUT_OAUTH_MS=0
 AI_TIMEOUT_POOL_MS=0
 AI_TIMEOUT_PAID_MS=0
-
-# ----- Optional: bring-your-own OAuth client (empty = use nself-hosted app) -----
 AI_POOL_OAUTH_CLIENT_ID=
 AI_POOL_OAUTH_CLIENT_SECRET=
-
-# ----- Master secret (KEK) — DO NOT REGENERATE -----
 NSELF_MASTER_SECRET=%s
 `
+
+// masterSecretMarker is the line prefix used to detect whether the AI config
+// block (and, critically, an existing NSELF_MASTER_SECRET) has already been
+// written to .env.secrets — the anti-clobber guard that used to be provided
+// by .env.ai's O_EXCL create.
+const masterSecretMarker = "NSELF_MASTER_SECRET="
 
 // generateMasterSecret returns a base64url-encoded 32-byte value (256 bits of
 // entropy). No padding, URL-safe alphabet — safe inside .env without quoting.
@@ -71,51 +72,47 @@ func generateMasterSecret() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(buf), nil
 }
 
-// writeEnvAI creates projectDir/.env.ai with perm 0600. It uses O_EXCL so a
-// pre-existing .env.ai is preserved (returning ok=false, err=nil). The master
-// secret is freshly generated per invocation from system entropy — verified
-// unique across runs by sprint acceptance criteria.
+// writeAIConfig ensures projectDir/.env.secrets carries the AI-tier config
+// block. It creates .env.secrets (mode 0600) if it does not exist yet, or
+// appends the block to it if it exists but has no NSELF_MASTER_SECRET yet.
+// If NSELF_MASTER_SECRET is already present, the file is left untouched —
+// this is the anti-clobber guarantee .env.ai used to provide via O_EXCL.
 //
 // Returns:
 //
-//	ok=true  — file created
-//	ok=false — file already existed (not an error; caller should continue)
+//	ok=true  — block appended (file created or existing file extended)
+//	ok=false — NSELF_MASTER_SECRET already present; nothing written
 //	err      — any other I/O or entropy failure
-func writeEnvAI(projectDir string) (ok bool, err error) {
-	path := filepath.Join(projectDir, ".env.ai")
+func writeAIConfig(projectDir string) (ok bool, err error) {
+	path := filepath.Join(projectDir, ".env.secrets")
+
+	if existing, readErr := os.ReadFile(path); readErr == nil {
+		if bytes.Contains(existing, []byte(masterSecretMarker)) {
+			// Already present — preserve and signal caller.
+			return false, nil
+		}
+	}
 
 	secret, err := generateMasterSecret()
 	if err != nil {
 		return false, fmt.Errorf("generate master secret: %w", err)
 	}
-	content := fmt.Sprintf(envAITemplate, secret)
+	block := fmt.Sprintf(envAIBlock, secret)
 
-	// O_EXCL: fail if the file already exists. This is the core anti-clobber
-	// guarantee — once NSELF_MASTER_SECRET is on disk, init must never touch
-	// it again. Mode 0600: owner read/write only (spec §8.3).
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
-		if errors.Is(err, fs.ErrExist) {
-			// Already present — preserve and signal caller.
-			return false, nil
-		}
-		return false, fmt.Errorf("open .env.ai: %w", err)
+		return false, fmt.Errorf("open .env.secrets: %w", err)
 	}
 	defer f.Close()
 
-	if _, werr := f.WriteString(content); werr != nil {
-		// Best-effort cleanup of a partially-written file.
-		_ = os.Remove(path)
-		return false, fmt.Errorf("write .env.ai: %w", werr)
+	if _, werr := f.WriteString(block); werr != nil {
+		return false, fmt.Errorf("write AI config to .env.secrets: %w", werr)
 	}
 
 	// Double-check perm (umask can narrow but never widen O_CREATE mode).
 	if err := os.Chmod(path, 0600); err != nil {
 		// Non-fatal on platforms where Chmod is a no-op, but surface the error.
-		return true, fmt.Errorf("chmod .env.ai 0600: %w", err)
+		return true, fmt.Errorf("chmod .env.secrets 0600: %w", err)
 	}
 	return true, nil
 }
-
-// (.env.ai is added to .gitignore via the shared gitignoreEntries list in
-// setup.go — no separate helper needed.)
