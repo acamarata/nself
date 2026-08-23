@@ -27,11 +27,13 @@
 //
 // Constraints: read-only against everything except its own two output files.
 //
-//	No OpenAPI route source exists in this repo (no internal/apidocs,
-//	no openapi.go anywhere) — that column is always "n/a", explained
-//	in the generated file's header instead of invented. Idempotent:
-//	running twice with no source changes produces byte-identical
-//	output (see internal/repoqa's drift test).
+//	The OpenAPI Route column is always "n/a": internal/apidocs exists
+//	and is wired into `nself build` (internal/build/orchestrator.go),
+//	but it documents the generated backend's HTTP surface, not the
+//	CLI's own commands — see openapi.go in this package for the full
+//	investigation and citations. Idempotent: running twice with no
+//	source changes produces byte-identical output (see internal/repoqa's
+//	drift test).
 package main
 
 import (
@@ -118,7 +120,7 @@ func buildMatrix() ([]Row, error) {
 		}
 		row.EnvVars = scoreEnvVars(vars, envDoc)
 
-		row.OpenAPI = "n/a"
+		row.OpenAPI = openAPIColumnValue
 
 		rows = append(rows, row)
 	}
