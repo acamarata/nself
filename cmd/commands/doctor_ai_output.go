@@ -1,0 +1,125 @@
+package commands
+
+// Purpose: terminal I/O helpers for the AI wizard: yes/no prompts, per-step
+// status lines, the final banner, and the getTotalMemoryMBFallback probe.
+// Inputs are wizard results/timings; outputs are printed text or a memory
+// size in MB.
+// Constraints: split out of doctor_ai.go (CLI-R12) as a pure move, no behavior change.
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"os/exec"
+	"runtime"
+	"strings"
+	"time"
+
+	"github.com/nself-org/cli/internal/installer"
+	"github.com/nself-org/cli/internal/ui"
+)
+
+func promptYesNo(defaultYes bool) bool {
+	reader := bufio.NewReader(os.Stdin)
+	line, _ := reader.ReadString('\n')
+	line = strings.TrimSpace(strings.ToLower(line))
+	if line == "" {
+		return defaultYes
+	}
+	return line == "y" || line == "yes"
+}
+
+func printWizardLine(status, step, msg string) {
+	var icon string
+	switch status {
+	case "ok":
+		icon = ui.C(ui.Green, ui.IconSuccess)
+	case "skip":
+		icon = ui.C(ui.Dim, "-")
+	case "warn":
+		icon = ui.C(ui.Yellow, ui.IconWarning)
+	case "fail":
+		icon = ui.C(ui.Red, ui.IconFailure)
+	}
+	fmt.Printf("  %s [%s] %s\n", icon, step, msg)
+}
+
+func printWizardBanner(results []wizardStepResult, elapsed time.Duration) {
+	fmt.Println()
+	ui.Separator()
+	fmt.Println()
+
+	for _, r := range results {
+		var marker string
+		switch r.Status {
+		case "ok":
+			marker = ui.C(ui.Green, ui.IconSuccess)
+		case "skipped":
+			marker = ui.C(ui.Dim, "-")
+		case "warn":
+			marker = ui.C(ui.Yellow, ui.IconWarning)
+		case "fail":
+			marker = ui.C(ui.Red, ui.IconFailure)
+		}
+		fmt.Printf("  %s %s: %s", marker, r.Step, r.Message)
+		if r.Elapsed != "" {
+			fmt.Printf(" (%s)", r.Elapsed)
+		}
+		fmt.Println()
+	}
+
+	fmt.Println()
+	overall := summaryStatus(results)
+	if overall == "ok" {
+		ui.Success(fmt.Sprintf("Setup complete in %s", elapsed))
+	} else if overall == "partial" {
+		ui.Warn(fmt.Sprintf("Setup partially complete in %s", elapsed))
+	} else {
+		ui.Error(fmt.Sprintf("Setup failed after %s", elapsed))
+	}
+
+	fmt.Println()
+	fmt.Println("  Next steps:")
+	fmt.Printf("    %s nself start           %s Boot the stack\n", ui.C(ui.Bold, ui.IconArrow), ui.C(ui.Dim, ""))
+	fmt.Printf("    %s nself ai local health  %s Check Ollama status\n", ui.C(ui.Bold, ui.IconArrow), ui.C(ui.Dim, ""))
+	fmt.Printf("    %s nself ai pool status   %s Check Gemini pool\n", ui.C(ui.Bold, ui.IconArrow), ui.C(ui.Dim, ""))
+	fmt.Printf("    %s localhost:3021          %s Admin UI\n", ui.C(ui.Bold, ui.IconArrow), ui.C(ui.Dim, ""))
+	fmt.Println()
+}
+
+func summaryStatus(results []wizardStepResult) string {
+	hasFail := false
+	hasOK := false
+	for _, r := range results {
+		if r.Status == "fail" {
+			hasFail = true
+		}
+		if r.Status == "ok" {
+			hasOK = true
+		}
+	}
+	if hasFail && hasOK {
+		return "partial"
+	}
+	if hasFail {
+		return "fail"
+	}
+	return "ok"
+}
+
+// getTotalMemoryMB is defined in doctor_sysinfo_*.go (platform-specific).
+// We use exec as a fallback if the function isn't available.
+func getTotalMemoryMBFallback() (int, error) {
+	switch runtime.GOOS {
+	case "darwin":
+		out, err := exec.Command("sysctl", "-n", "hw.memsize").Output()
+		if err != nil {
+			return 0, err
+		}
+		var bytes int64
+		fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &bytes)
+		return int(bytes / 1024 / 1024), nil
+	default:
+		return installer.MemAvailableMB()
+	}
+}
