@@ -150,6 +150,7 @@ func listInstalled(pluginDir string) ([]PluginInfo, error) {
 			Category:  m.Category,
 			Installed: true,
 			Running:   running,
+			UpdatedAt: m.UpdatedAt,
 		})
 	}
 
@@ -194,6 +195,7 @@ func listFromRegistry(pluginDir string) ([]PluginInfo, error) {
 			Installed:     installed,
 			Running:       running,
 			PublishStatus: m.PublishStatus,
+			UpdatedAt:     m.UpdatedAt,
 		})
 	}
 

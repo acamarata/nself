@@ -185,11 +185,19 @@ func (c *registryHTTPClient) fetchFromURL(ctx context.Context, url string) (*Reg
 // registry formats. The Plugins field is kept as raw JSON so we can
 // detect whether it is an object or an array.
 type registryEnvelope struct {
-	Version     string          `json:"version"`
-	LastUpdated string          `json:"lastUpdated"`
-	GeneratedAt string          `json:"generated_at"`
-	Tier        string          `json:"tier"`
-	Plugins     json.RawMessage `json:"plugins"`
+	Version     string `json:"version"`
+	LastUpdated string `json:"lastUpdated"`
+	GeneratedAt string `json:"generated_at"`
+	// FetchedAt is the live registry's snapshot timestamp (RFC3339), present
+	// on the plugins.nself.org Cloudflare Worker response as of 2026-08-23
+	// (CLI-R16 inspection: `curl https://plugins.nself.org/registry.json`).
+	// It is registry-wide, not per-plugin — the live payload does not carry
+	// a per-plugin last-updated field. PluginManifest.UpdatedAt (below) is
+	// plumbing for if/when the registry adds one; it is not populated by
+	// today's live data.
+	FetchedAt string          `json:"fetchedAt"`
+	Tier      string          `json:"tier"`
+	Plugins   json.RawMessage `json:"plugins"`
 }
 
 // pluginImplementation holds the nested implementation block present in the
@@ -257,6 +265,11 @@ type pluginEntry struct {
 	APIEndpoints json.RawMessage `json:"apiEndpoints,omitempty"`
 	// Compat holds CLI and service version constraints.
 	Compat *CompatBlock `json:"compat,omitempty"`
+	// UpdatedAt is a per-plugin freshness timestamp (CLI-R16). Not present on
+	// the live plugins.nself.org registry as of 2026-08-23 — kept as forward
+	// plumbing so `nself plugin list --detailed` picks it up the moment the
+	// registry starts sending it, without another code change.
+	UpdatedAt string `json:"updated_at,omitempty"`
 }
 
 // parseAPIEndpoints converts the raw apiEndpoints JSON value from either the
@@ -353,13 +366,13 @@ func parseRegistryJSON(data []byte) (*Registry, error) {
 	}
 
 	if len(env.Plugins) == 0 {
-		return &Registry{}, nil
+		return &Registry{FetchedAt: env.FetchedAt}, nil
 	}
 
 	// Detect format by the first non-whitespace byte.
 	trimmed := strings.TrimSpace(string(env.Plugins))
 	if len(trimmed) == 0 || trimmed == "null" {
-		return &Registry{}, nil
+		return &Registry{FetchedAt: env.FetchedAt}, nil
 	}
 
 	var plugins []PluginManifest
@@ -396,7 +409,24 @@ func parseRegistryJSON(data []byte) (*Registry, error) {
 		return nil, fmt.Errorf("unexpected registry plugins format (starts with %q)", string(trimmed[0]))
 	}
 
-	return &Registry{Plugins: plugins}, nil
+	return &Registry{Plugins: plugins, FetchedAt: env.FetchedAt}, nil
+}
+
+// RegistryFetchedAt returns the top-level "fetchedAt" snapshot timestamp from
+// the most recently cached registry response, or "" when no cache exists or
+// the cached registry didn't carry one (CLI-R16). It reads the on-disk cache
+// only — no network call — so it is safe to call right after a List/Fetch
+// that already populated the cache in the same command invocation.
+func RegistryFetchedAt() string {
+	data, err := os.ReadFile(filepath.Join(defaultCacheDir(), registryCacheFile))
+	if err != nil {
+		return ""
+	}
+	reg, err := parseRegistryJSON(data)
+	if err != nil {
+		return ""
+	}
+	return reg.FetchedAt
 }
 
 func entryToManifest(e pluginEntry) PluginManifest {
@@ -446,6 +476,7 @@ func entryToManifest(e pluginEntry) PluginManifest {
 		PublishStatus:   e.PublishStatus,
 		AuthorPublicKey: e.AuthorPublicKey,
 		Signature:       e.Signature,
+		UpdatedAt:       e.UpdatedAt,
 	}
 }
 
@@ -510,8 +541,9 @@ func (c *registryHTTPClient) writeCache(reg *Registry) error {
 // round-trips through the array format consistently.
 func (r Registry) MarshalJSON() ([]byte, error) {
 	type envelope struct {
-		Version string        `json:"version"`
-		Plugins []pluginEntry `json:"plugins"`
+		Version   string        `json:"version"`
+		FetchedAt string        `json:"fetchedAt,omitempty"`
+		Plugins   []pluginEntry `json:"plugins"`
 	}
 	entries := make([]pluginEntry, 0, len(r.Plugins))
 	for _, p := range r.Plugins {
@@ -551,10 +583,12 @@ func (r Registry) MarshalJSON() ([]byte, error) {
 			Dependencies:    rawDeps,
 			APIEndpoints:    rawEPs,
 			Compat:          p.Compat,
+			UpdatedAt:       p.UpdatedAt,
 		})
 	}
 	return json.Marshal(envelope{
-		Version: "1.0.0",
-		Plugins: entries,
+		Version:   "1.0.0",
+		FetchedAt: r.FetchedAt,
+		Plugins:   entries,
 	})
 }

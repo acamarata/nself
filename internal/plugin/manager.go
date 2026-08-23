@@ -23,6 +23,7 @@ type PluginInfo struct {
 	Installed     bool
 	Running       bool
 	PublishStatus string // S58-T01: "experimental"|"planned"|"beta"|"stable"|"deprecated"|"eol" — from registry
+	UpdatedAt     string // CLI-R16: per-plugin freshness, empty when the source (registry entry or local plugin.json) doesn't carry one
 }
 
 // InstalledPluginInfo is a richer view of an installed plugin used by the
