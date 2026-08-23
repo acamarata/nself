@@ -101,18 +101,35 @@ jobs:
             echo "$CHANGED" | grep -qE "$1"
           }
 
-          # Commands / flags
-          if matches '^cli/(cmd|internal/commands)/'; then
-            if ! matches '^(cli/\.wiki/commands/|\.claude/docs/sport/F02-COMMAND-INVENTORY\.md|\.claude/docs/reference/cli-commands\.md|web/docs/content/cli/)'; then
-              rows="${rows}- commands/flags changed without cli/.wiki/commands/ or F02-COMMAND-INVENTORY.md update\n"
+          # Commands / flags.
+          #
+          # These patterns were written for a monorepo checkout where this repo
+          # sits under cli/. Inside the cli repo itself the paths have no cli/
+          # prefix and .wiki/ does not exist (the wiki lives in .github/wiki/),
+          # so the rule matched nothing and silently passed on every change.
+          # Since CLI-R08 the command pages are GENERATED, and the real gate is
+          # the wiki-generated job in this workflow plus the committed
+          # .github/command-inventory.json, which CI diffs. Point the rule at
+          # the artifacts that actually exist.
+          if matches '^(cli/)?(cmd|internal/commands)/'; then
+            if ! matches '^((cli/)?\.github/wiki/cmd-|(cli/)?\.github/command-inventory\.json|(cli/)?\.github/wiki/Commands\.md|\.claude/docs/sport/F02-COMMAND-INVENTORY\.md|web/docs/content/cli/)'; then
+              rows="${rows}- commands/flags changed without a .github/wiki/cmd-*.md or command-inventory.json update (run: make cmd-inventory && make wiki-commands)\n"
               missing=1
             fi
           fi
 
-          # Env vars
-          if matches '(^|/)\.env\.example$|^cli/internal/env/'; then
-            if ! matches '(\.claude/docs/sport/F09-ENV-VAR-INVENTORY\.md|cli/\.wiki/reference/env-vars\.md|\.github/wiki/reference/env-vars\.md|\.github/wiki/Config-Env-Vars\.md|web/docs/content/reference/env-vars)'; then
-              rows="${rows}- env vars changed without F09-ENV-VAR-INVENTORY.md or env-vars reference update\n"
+          # Env vars.
+          #
+          # The .env.example clause deliberately does NOT match test fixtures.
+          # cmd/commands/.env.example is a tracked fixture, not a user-facing
+          # template, and a test that rewrites it should be fixed rather than
+          # papered over with a docs edit.
+          if matches '(^|/)\.env\.example$|^(cli/)?internal/(env|config)/'; then
+            if matches '^(cli/)?cmd/commands/\.env\.example$'; then
+              echo "::warning::cmd/commands/.env.example changed — that is a test fixture. If a test rewrote it, fix the test; do not commit the churn."
+            fi
+            if ! matches '(\.claude/docs/sport/F09-ENV-VAR-INVENTORY\.md|(cli/)?\.github/wiki/reference/env-vars\.md|(cli/)?\.github/wiki/Config-Env-Vars\.md|web/docs/content/reference/env-vars)'; then
+              rows="${rows}- env vars changed without F09-ENV-VAR-INVENTORY.md or .github/wiki/Config-Env-Vars.md update\n"
               missing=1
             fi
           fi

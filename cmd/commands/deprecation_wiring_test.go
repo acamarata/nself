@@ -41,13 +41,29 @@ func captureStderr(t *testing.T, fn func()) string {
 	return out
 }
 
+// runFromScratchDir points the test at an empty temp directory before it
+// executes a real command.
+//
+// These tests drive RootCmd.Execute for commands like `start`, and they have to
+// disable the source-repo guard to do it. That combination is dangerous: with
+// the guard off and the working directory inside cmd/commands, a command that
+// finds a project marker there will happily write generated files into the
+// source tree. That is exactly how the tracked cmd/commands/.env.example
+// fixture was rewritten during CLI-R03 and swept into a commit. Chdir'ing to a
+// temp dir first makes the guard irrelevant rather than merely bypassed.
+func runFromScratchDir(t *testing.T) {
+	t.Helper()
+	t.Setenv("NSELF_ALLOW_SOURCE_DIR", "1")
+	t.Chdir(t.TempDir())
+}
+
 // TestDeprecatedAliasWarns is the regression guard for CLI-R03's second defect.
 // `up` is a cobra alias of startCmd, so cmd.CommandPath() reports "nself start".
 // Keying the registry lookup on CommandPath meant the warning could never fire
 // for an aliased spelling — the exact mechanism every CLI-R09/R19 rename relies
 // on. invokedCommandPath keys on what the user actually typed instead.
 func TestDeprecatedAliasWarns(t *testing.T) {
-	t.Setenv("NSELF_ALLOW_SOURCE_DIR", "1")
+	runFromScratchDir(t)
 
 	out := captureStderr(t, func() {
 		RootCmd.SetArgs([]string{"up"})
@@ -65,7 +81,7 @@ func TestDeprecatedAliasWarns(t *testing.T) {
 // TestCanonicalSpellingDoesNotWarn is the other half: warning on the canonical
 // name would make every correct `nself start` noisy.
 func TestCanonicalSpellingDoesNotWarn(t *testing.T) {
-	t.Setenv("NSELF_ALLOW_SOURCE_DIR", "1")
+	runFromScratchDir(t)
 
 	out := captureStderr(t, func() {
 		RootCmd.SetArgs([]string{"start"})
@@ -79,7 +95,7 @@ func TestCanonicalSpellingDoesNotWarn(t *testing.T) {
 
 // TestNoDeprecationWarningsFlagSuppresses verifies the scripted-use escape hatch.
 func TestNoDeprecationWarningsFlagSuppresses(t *testing.T) {
-	t.Setenv("NSELF_ALLOW_SOURCE_DIR", "1")
+	runFromScratchDir(t)
 
 	out := captureStderr(t, func() {
 		RootCmd.SetArgs([]string{"up", "--no-deprecation-warnings"})

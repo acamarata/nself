@@ -30,6 +30,13 @@ jobs:
       - name: gofmt check
         run: bash scripts/ci/gofmt-check.sh
 
+      # A duplicate mapping key (two `if:` on one step) parses fine in most YAML
+      # tooling but GitHub rejects the whole file, reporting only "this run
+      # likely failed because of a workflow file issue". Catch it here instead
+      # of burning a push cycle.
+      - name: workflow YAML lint
+        run: bash scripts/ci/workflow-lint.sh
+
   ci:
     name: Vet, Build & Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
