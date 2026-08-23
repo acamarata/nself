@@ -1,10 +1,8 @@
 # nself generate
 
-**Generate type-safe client SDK types from the live Hasura schema.**
-
-Introspects the running ɳSelf Hasura GraphQL endpoint and emits typed client code
-for TypeScript, Dart, Swift, Kotlin, and Python. One command keeps all SDK consumers
-in sync with the database schema. No hand-maintained type files.
+<!-- BEGIN PROSE:summary -->
+> Generate type-safe client SDK types from the live Hasura schema.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
@@ -12,17 +10,14 @@ in sync with the database schema. No hand-maintained type files.
 nself generate [flags]
 ```
 
-## Flags
+## Description
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--lang` | `all` | Comma-separated target languages: `typescript`, `dart`, `swift`, `kotlin`, `python`, or `all` |
-| `--out` | `./generated` | Output directory |
-| `--env` | `local` | Target environment: `local`, `staging`, or `prod` |
-| `--watch` | false | Re-run every 30 seconds on schema change |
-| `--operations` | `src/**/*.graphql` | Path to `.graphql` operation files for query/mutation/subscription types |
-| `--no-hooks` | false | Skip React hooks generation (TypeScript only) |
-| `--pydantic` | true | Emit Pydantic v2 models (Python only) |
+<!-- BEGIN PROSE:description -->
+**Generate type-safe client SDK types from the live Hasura schema.**
+
+Introspects the running ɳSelf Hasura GraphQL endpoint and emits typed client code
+for TypeScript, Dart, Swift, Kotlin, and Python. One command keeps all SDK consumers
+in sync with the database schema. No hand-maintained type files.
 
 ## Output structure
 
@@ -74,25 +69,6 @@ export NSELF_HASURA_PROD_ADMIN_SECRET=<secret>
 nself generate --env prod
 ```
 
-## Examples
-
-```bash
-# Generate all languages against the local stack
-nself generate
-
-# TypeScript and Dart only
-nself generate --lang typescript,dart
-
-# TypeScript against staging, custom output dir
-nself generate --env staging --lang typescript --out ./src/generated
-
-# Watch mode: regenerate every 30s when schema changes
-nself generate --watch
-
-# Skip React hooks (useful for non-React TypeScript projects)
-nself generate --lang typescript --no-hooks
-```
-
 ## Example output
 
 ```
@@ -131,3 +107,49 @@ See [SDK reference](https://nself.org/docs/sdks/) for full usage.
 ---
 
 [[Home]] | [[Commands]] | [[Changelog]]
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--env`, `-e` | `local` | Target environment: local\|staging\|prod |
+| `--lang`, `-l` | `all` | Comma-separated target languages: typescript,dart,swift,kotlin,python,all |
+| `--no-hooks` | `false` | Skip React hooks generation (TypeScript only) |
+| `--operations` | `src/**/*.graphql` | Path to .graphql operation files |
+| `--out`, `-o` | `./generated` | Output directory |
+| `--pydantic` | `true` | Emit Pydantic v2 models (Python only) |
+| `--watch` | `false` | Re-run on schema change (polls every 30s) |
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Examples
+
+<!-- BEGIN PROSE:examples -->
+```bash
+# Generate all languages against the local stack
+nself generate
+
+# TypeScript and Dart only
+nself generate --lang typescript,dart
+
+# TypeScript against staging, custom output dir
+nself generate --env staging --lang typescript --out ./src/generated
+
+# Watch mode: regenerate every 30s when schema changes
+nself generate --watch
+
+# Skip React hooks (useful for non-React TypeScript projects)
+nself generate --lang typescript --no-hooks
+```
+<!-- END PROSE:examples -->
+
+## See Also
+
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
+
+← [[Commands]] | [[Home]] →

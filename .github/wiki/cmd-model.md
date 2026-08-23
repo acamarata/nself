@@ -1,6 +1,8 @@
 # nself model
 
-> List, pull, remove, update, and benchmark local AI models via Ollama.
+<!-- BEGIN PROSE:summary -->
+> Manage local AI models via Ollama.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
@@ -10,107 +12,264 @@ nself model <subcommand> [flags]
 
 ## Description
 
-`nself model` manages AI models stored in the local Ollama model registry. It covers the full model lifecycle: browsing what is installed, downloading new models, removing models to reclaim disk space, re-pulling for the latest weights, and running a repeatable latency and throughput benchmark.
+<!-- BEGIN PROSE:description -->
+**Manage local AI models via Ollama.**
 
-All subcommands talk to the Ollama API. The host is resolved from `NSELF_OLLAMA_HOST`, falling back to `PLUGIN_AI_OLLAMA_URL`, and defaulting to `http://localhost:11434`. The Ollama plugin must be installed and the stack running:
+The `model` command provides a focused surface for day-to-day local model operations: list
+what is installed, pull new models, remove ones you no longer need, update to the latest
+tag, and benchmark inference speed.
 
-```bash
+All subcommands talk to the Ollama API. Ollama must be running:
+
 nself plugin install ollama
 nself start
+
+---
+
+---
+## nself model list
+
+```
+nself model list [--json]
 ```
 
-## Subcommands
+Show every model currently downloaded in the local Ollama store.
 
-| Subcommand | Description |
-|------------|-------------|
-| `list` | Show all pulled models with name, size, and modification date |
-| `pull` | Download a model from the Ollama registry |
-| `remove` | Delete a model from the local store to free disk space |
-| `update` | Re-pull a model to pick up the latest tag version |
-| `benchmark` | Run a standard prompt N times and report tok/s and p99 latency |
+### Flags
 
-## Flags
+| Flag | Description |
+|------|-------------|
+| `--json` | Emit JSON array instead of formatted table |
 
-### `nself model list`
+### Output columns
+
+| Column | Description |
+|--------|-------------|
+| NAME | Ollama tag (e.g. `llama3.2:3b`) |
+| SIZE | Compressed disk size |
+| MODIFIED | Date last pulled or updated |
+| (tag) | `[default]` when the model matches `NSELF_OLLAMA_DEFAULT_MODEL` |
+
+### Examples
+
+```bash
+nself model list
+
+nself model list --json | jq '.[].name'
+```
+
+```
+NAME                                        SIZE  MODIFIED
+------------------------------------------------------------------------
+gemma-3-4b                               2.5 GB  2026-04-01    [default]
+llama3.2:3b                              1.9 GB  2026-04-10
+```
+
+---
+
+## nself model pull
+
+```
+nself model pull <model>
+```
+
+Download a model from the Ollama library. Model names follow the Ollama tag format:
+
+| Format | Example |
+|--------|---------|
+| `<name>` | `llama3.2` (latest tag) |
+| `<name>:<tag>` | `llama3.2:3b` (specific size/quant) |
+
+Common models and approximate hardware requirements:
+
+| Model | Size | Min RAM | Notes |
+|-------|------|---------|-------|
+| `gemma-3-4b` | ~2.5 GB | 4 GB | Good for CPU-only inference |
+| `llama3.2:3b` | ~2.0 GB | 4 GB | Fast general chat |
+| `llama3.2:7b` | ~4.7 GB | 8 GB | Higher quality |
+| `mistral` | ~4.1 GB | 8 GB | Strong instruct model |
+
+### Examples
+
+```bash
+nself model pull gemma-3-4b
+nself model pull llama3.2:3b
+nself model pull mistral
+```
+
+```
+Pulling llama3.2:3b...
+Model llama3.2:3b ready.
+```
+
+---
+
+## nself model remove
+
+```
+nself model remove <model>
+nself model rm <model>
+nself model delete <model>
+```
+
+Delete a downloaded model from the local Ollama store. The disk space is freed immediately.
+
+### Examples
+
+```bash
+nself model remove gemma-3-4b
+nself model rm llama3.2:7b
+```
+
+```
+Removed gemma-3-4b.
+```
+
+---
+
+## nself model update
+
+```
+nself model update <model>
+```
+
+Re-pull a model to pick up the newest weights for its tag. Ollama only downloads layers
+that have changed, so updates are incremental.
+
+### Examples
+
+```bash
+nself model update gemma-3-4b
+```
+
+```
+Updating gemma-3-4b...
+Pulling gemma-3-4b...
+Model gemma-3-4b ready.
+```
+
+---
+
+## nself model benchmark
+
+```
+nself model benchmark <model> [--runs N] [--prompt "..."] [--json]
+```
+
+Send a standard prompt to the model N times and report:
+
+| Metric | Description |
+|--------|-------------|
+| `avg latency` | Mean response time across all successful runs |
+| `p99 latency` | 99th-percentile response time |
+| `tok/s` | Average tokens per second (total tokens / total elapsed) |
+| `total tokens` | Sum of response tokens across all runs |
+| `errors` | Count of failed inference calls |
+
+The default prompt is: `Explain what a Merkle tree is in two sentences.`
+
+### Flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--json` | false | Emit JSON output instead of the table |
+| `--runs` | `5` | Number of inference runs |
+| `--prompt` | (Merkle tree question) | Custom prompt string |
+| `--json` | off | Emit JSON output |
 
-### `nself model pull`
+### Examples
 
-No flags beyond the required positional argument.
+```bash
+# Basic benchmark
+nself model benchmark gemma-3-4b
 
-### `nself model remove`
+# 20-run benchmark for a stable p99
+nself model benchmark llama3.2:3b --runs 20
 
-Aliases: `rm`, `delete`. No flags beyond the required positional argument.
+# Custom prompt
+nself model benchmark mistral --prompt "Summarize TCP in one sentence."
 
-### `nself model update`
+# JSON output for scripting
+nself model benchmark gemma-3-4b --json | jq '.avg_tok_s'
+```
 
-No flags beyond the required positional argument.
+```
+Benchmarking gemma-3-4b  (5 runs)...
 
-### `nself model benchmark`
+  Model:        gemma-3-4b
+  Runs:         5 / 5 succeeded
+  Avg latency:  1842 ms
+  p99 latency:  2103 ms
+  Tok/s:        14.2
+  Total tokens: 143
+  Elapsed:      9.21s
+```
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--prompt` | `""` | Custom prompt to use (default: Merkle tree question) |
-| `--runs` | `5` | Number of inference runs (higher = more stable p99) |
-| `--json` | false | Emit JSON output |
+### JSON schema
+
+```json
+{
+  "model":        "gemma-3-4b",
+  "runs":         5,
+  "avg_tok_s":    14.2,
+  "p99_ms":       2103.0,
+  "total_tokens": 143,
+  "errors":       0
+}
+```
+
+---
 
 ## Environment variables
 
-| Variable | Description |
-|----------|-------------|
-| `NSELF_OLLAMA_HOST` | Full base URL for the Ollama API (e.g. `http://localhost:11434`) |
-| `PLUGIN_AI_OLLAMA_URL` | Alternative URL shared with the `nself ai` command tree |
-| `NSELF_OLLAMA_DEFAULT_MODEL` | Model name marked as `[default]` in `nself model list` |
-| `NSELF_OLLAMA_TIMEOUT_SECONDS` | Request timeout in seconds (default: 120) |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NSELF_OLLAMA_HOST` | `http://localhost:11434` | Ollama API base URL |
+| `PLUGIN_AI_OLLAMA_URL` | `http://localhost:11434` | Fallback if `NSELF_OLLAMA_HOST` is unset |
+| `NSELF_OLLAMA_TIMEOUT_SECONDS` | `120` | Per-request timeout in seconds |
+| `NSELF_OLLAMA_DEFAULT_MODEL` | (unset) | Model name highlighted as default in `list` |
+
+---
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `benchmark` | Run a standard prompt and report tokens/s + p99 latency |
+| `list` | List all pulled Ollama models |
+| `pull` | Pull (download) a model from the Ollama registry |
+| `remove` | Remove a pulled model from Ollama to free disk space |
+| `update` | Re-pull a model to fetch the latest version of its tag |
+<!-- END GENERATED:subcommands -->
 
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
 ```bash
-# List all downloaded models
 nself model list
-
-# List as JSON for scripting
-nself model list --json
-
-# Pull the gemma-3-4b model (good for CPU-only machines)
-nself model pull gemma-3-4b
-
-# Pull a specific tag
-nself model pull llama3.2:3b
-
-# Remove a model to free disk
-nself model remove gemma-3-4b
-nself model rm llama3.2:3b
-
-# Re-pull to pick up updated weights
-nself model update llama3.2:3b
-
-# Benchmark with the default prompt (5 runs)
-nself model benchmark llama3.2:3b
-
-# Benchmark with a custom prompt and more runs
-nself model benchmark llama3.2:3b --prompt "Explain backpressure in 3 sentences." --runs 20
-
-# Benchmark output as JSON
-nself model benchmark llama3.2:3b --json
+  nself model pull llama3.2:3b
+  nself model remove gemma-3-4b
+  nself model update llama3.2:3b
+  nself model benchmark llama3.2:3b
 ```
-
-## Common models
-
-| Model | Size | Notes |
-|-------|------|-------|
-| `gemma-3-4b` | ~2.5 GB | Good for CPU-only inference |
-| `llama3.2:3b` | ~2.0 GB | Fast general chat |
-| `llama3.2:7b` | ~4.7 GB | Higher quality, needs 8 GB RAM |
-| `mistral` | ~4.1 GB | Good instruct model |
+<!-- END PROSE:examples -->
 
 ## See Also
 
-- [[cmd-ai]] — AI assistant commands (uses the default model)
-- [[cmd-claw]] — ɳClaw plugin management
-- [[Plugin-Overview]] — list of AI plugins
+<!-- BEGIN PROSE:see-also -->
+- [[cmd-ollama]], manage the Ollama service container (install, status)
+- [[cmd-ai]], manage models via the `nself-ai-gateway` registry
+- [[cmd-plugin]], install and manage ɳSelf plugins
+- [[Home]]
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

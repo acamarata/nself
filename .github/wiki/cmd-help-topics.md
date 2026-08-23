@@ -1,15 +1,18 @@
 # nself help-topics
 
+<!-- BEGIN PROSE:summary -->
 > Browse built-in help topics for common nSelf tasks.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
-```bash
-nself help-topics [topic]
+```
+nself help-topics [topic] [flags]
 ```
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself help-topics` provides quick access to built-in guides covering common nSelf workflows. Running the command without a topic argument prints the full topic index. Pass a topic name to display the article for that topic.
 
 This command is a local reference that works without a network connection. For the full documentation site, visit [nself.org/docs](https://nself.org/docs).
@@ -25,12 +28,20 @@ This command is a local reference that works without a network connection. For t
 | `doctor` | Diagnose and fix common issues |
 | `errors` | Error code reference (E001–E399) |
 
+This command has no flags.
+<!-- END PROSE:description -->
+
 ## Flags
 
-This command has no flags.
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
 
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
 ```bash
 # Print the full topic index
 nself help-topics
@@ -65,12 +76,15 @@ nself help-topics doctor
 # Read the error code reference
 nself help-topics errors
 ```
+<!-- END PROSE:examples -->
 
 ## See Also
 
+<!-- BEGIN PROSE:see-also -->
 - [[cmd-doctor]] — run the nSelf diagnostics suite
 - [[cmd-license]] — manage license keys
 - [[cmd-plugin]] — manage the plugin catalog
 - [[cmd-init]] — initialise a new nSelf project
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

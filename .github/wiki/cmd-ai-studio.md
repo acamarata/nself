@@ -1,16 +1,18 @@
 # nself ai-studio
 
+<!-- BEGIN PROSE:summary -->
 > Google AI Studio integration for local nSelf instances via a secure Cloudflare Tunnel.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
 ```
 nself ai-studio <subcommand> [flags]
-nself ai-studio bridge [flags]
 ```
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself ai-studio` connects a local nSelf Postgres instance to Google AI Studio so Gemini models can query your schema without any cloud deployment of your data.
 
 The only current subcommand is `bridge`, which starts a local HTTP proxy and opens an ephemeral Cloudflare Tunnel (trycloudflare.com, no account required). The tunnel URL is printed to stdout; you paste it into AI Studio as a custom connector. The proxy sits between AI Studio and your Hasura GraphQL endpoint and enforces schema read-only access: no mutations, DDL, or DML pass through.
@@ -21,21 +23,28 @@ The bridge auto-closes when the idle timeout expires or on Ctrl-C. The `cloudfla
 
 Passing `--dry-run` prints what would happen without starting the proxy or opening a tunnel.
 
+### `ai-studio bridge`
+<!-- END PROSE:description -->
+
 ## Flags
 
-### `ai-studio bridge`
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
 
-| Flag | Short | Type | Default | Description |
-|------|-------|------|---------|-------------|
-| `--port` | `–` | int | `8890` | Local proxy port |
-| `--no-context` | `–` | bool | false | Disable `X-Nself-Schema-Context` header injection |
-| `--dry-run` | `–` | bool | false | Print tunnel info without starting the proxy |
-| `--idle-timeout` | `–` | int | `30` | Auto-close tunnel after N minutes of inactivity |
-| `--ip-allowlist` | `–` | string | `""` | Comma-separated CIDRs to restrict tunnel access (default: unrestricted) |
-| `--region` | `–` | string | `auto` | Cloudflare tunnel region |
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `bridge` | Start a secure AI Studio bridge via Cloudflare Tunnel |
+<!-- END GENERATED:subcommands -->
 
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
 ```bash
 # Start the bridge with defaults
 nself ai-studio bridge
@@ -70,12 +79,15 @@ nself ai-studio bridge --idle-timeout 60
 # Route the tunnel through a specific region
 nself ai-studio bridge --region eu
 ```
+<!-- END PROSE:examples -->
 
 ## See Also
 
+<!-- BEGIN PROSE:see-also -->
 - [cmd-start.md](cmd-start.md) — start the nSelf stack the bridge connects to
 - [cmd-doctor.md](cmd-doctor.md) — verify your local nSelf environment
 - [cmd-plugin.md](cmd-plugin.md) — install and manage plugins
 - [cmd-flag.md](cmd-flag.md) — runtime feature-flag plugin management
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

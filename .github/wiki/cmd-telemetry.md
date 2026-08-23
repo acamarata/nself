@@ -1,6 +1,8 @@
 # nself telemetry
 
+<!-- BEGIN PROSE:summary -->
 > Manage CLI telemetry opt-in/out preferences.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
@@ -8,16 +10,9 @@
 nself telemetry <subcommand> [flags]
 ```
 
-## Subcommands
-
-| Subcommand | Description |
-|-----------|-------------|
-| `status` | Show the current telemetry opt-out state |
-| `off` | Opt out of telemetry (writes to `~/.nself/config.toml`) |
-| `on` | Opt in to telemetry (writes to `~/.nself/config.toml`) |
-
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself telemetry` manages your preference for CLI usage telemetry.
 
 **v1.1.1 ships the opt-in telemetry client.** Collection is OFF by default; you must explicitly opt in. The client collects only anonymous aggregate data (CLI version, platform, architecture, command counts) for usage analysis. All collection respects your stored preference.
@@ -32,8 +27,47 @@ See [Privacy Policy](https://nself.org/legal/privacy) for full details.
 
 The environment variable always wins. Use it for CI/CD pipelines or shared servers where you do not want to modify the config file.
 
+## Config File Format
+
+Preferences are stored in `~/.nself/config.toml`:
+
+```toml
+[telemetry]
+enabled = false
+```
+
+This file is shared with other ɳSelf user-level settings. It is created automatically when you run `nself telemetry off` or `nself telemetry on`.
+
+## Privacy
+
+All security features in ɳSelf are free. When telemetry ships in v1.1.0, it will be:
+
+- Opt-in only
+- Anonymous (no personal data, no project names, no IP addresses stored)
+- Transparent (exact fields documented in the Privacy Policy before collection begins)
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `off` | Disable telemetry (writes to ~/.nself/config.toml) |
+| `on` | Enable telemetry (writes to ~/.nself/config.toml) |
+| `status` | Show current telemetry state and anonymous install-ID |
+<!-- END GENERATED:subcommands -->
+
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
 ```bash
 # Check current status
 nself telemetry status
@@ -67,24 +101,13 @@ Source:    config
 v1.1.1: opt-in telemetry client active. Anonymous aggregate data only.
 Privacy policy: https://nself.org/legal/privacy
 ```
+<!-- END PROSE:examples -->
 
-## Config File Format
+## See Also
 
-Preferences are stored in `~/.nself/config.toml`:
-
-```toml
-[telemetry]
-enabled = false
-```
-
-This file is shared with other ɳSelf user-level settings. It is created automatically when you run `nself telemetry off` or `nself telemetry on`.
-
-## Privacy
-
-All security features in ɳSelf are free. When telemetry ships in v1.1.0, it will be:
-
-- Opt-in only
-- Anonymous (no personal data, no project names, no IP addresses stored)
-- Transparent (exact fields documented in the Privacy Policy before collection begins)
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

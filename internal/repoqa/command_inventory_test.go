@@ -64,14 +64,14 @@ func TestPublishedCommandCountMatchesBinary(t *testing.T) {
 		t.Fatal("inventory is empty")
 	}
 
-	wiki, err := os.ReadFile(filepath.Join(root, ".github", "wiki", "COMMANDS.md"))
+	wiki, err := os.ReadFile(filepath.Join(root, ".github", "wiki", "Commands.md"))
 	if err != nil {
 		t.Fatalf("read wiki index: %v", err)
 	}
 
 	want := "**Total top-level commands: " + strconv.Itoa(len(entries)) + "**"
 	if !strings.Contains(string(wiki), want) {
-		t.Fatalf(".github/wiki/COMMANDS.md does not state %q — run `make cmd-inventory`", want)
+		t.Fatalf(".github/wiki/Commands.md does not state %q — run `make cmd-inventory`", want)
 	}
 
 	// Every inventory entry must have a row in the index.

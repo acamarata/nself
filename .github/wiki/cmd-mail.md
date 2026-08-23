@@ -1,15 +1,18 @@
 # nself mail
 
+<!-- BEGIN PROSE:summary -->
 > Send transactional and broadcast email through the nSelf stack.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
 ```
-nself mail <subcommand>
+nself mail <subcommand> [flags]
 ```
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself mail` wraps the mux + Postmark plugins. ping_api proxies each call to the running stack, so the Postmark plugin must be installed and a valid license key must be configured.
 
 The command is license-gated. The Postmark plugin ships with the nClaw bundle and ɳSelf+. Without a configured key, the command exits with code `2` and points at `nself license add`.
@@ -21,20 +24,8 @@ The command is license-gated. The Postmark plugin ships with the nClaw bundle an
 | `NSELF_PING_API_URL` | `https://ping.nself.org` | ping_api base URL |
 | `NSELF_LICENSE_KEY` (or `NSELF_PLUGIN_LICENSE_KEY`, `NSELF_LICENSE_KEY_1`..`NSELF_LICENSE_KEY_10`) | — | License token sent as `Authorization: Bearer <key>` |
 
-## Subcommands
-
-| Subcommand | Description |
-|---|---|
-| `send` | Send a single transactional email via the mux pipeline |
-| `broadcast` | Send a broadcast to a list using a saved Postmark template |
-| `status` | Query delivery status for a previously sent message |
-| `templates list` | List Postmark templates registered with nSelf |
-| `dkim verify` | Verify the DKIM record for a domain |
-
 All subcommands accept `--json` for machine-readable output.
-
 ---
-
 ## nself mail send
 
 Send a single transactional email through the mux pipeline.
@@ -209,3 +200,43 @@ Record:   v=DKIM1; k=rsa; p=...
 - [[cmd-license]] — Manage license keys for paid bundles
 - [nself.org/docs/mail](https://nself.org/docs/mail) — Full mail user guide
 - [[Home]]
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `broadcast` | Send a broadcast to a list using a saved template |
+| `dkim` | Manage DKIM verification |
+| `send` | Send a single transactional email |
+| `status` | Query delivery status for a sent message |
+| `templates` | Manage Postmark templates |
+<!-- END GENERATED:subcommands -->
+
+## Examples
+
+<!-- BEGIN PROSE:examples -->
+<!-- TODO(docs): needs human prose -->
+
+```bash
+nself mail
+```
+<!-- END PROSE:examples -->
+
+## See Also
+
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
+
+← [[Commands]] | [[Home]] →

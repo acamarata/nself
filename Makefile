@@ -12,7 +12,7 @@ LDFLAGS := -s -w \
 	-X $(MODULE)/internal/license.licensePubKeyHex=$(NSELF_LICENSE_PUBKEY_HEX)
 BUILDFLAGS := -trimpath
 
-.PHONY: build clean test vet install cross dist verify-prod sport-f21 sport-f02 cmd-inventory core-services sbom man fmt fmt-check
+.PHONY: build clean test vet install cross dist verify-prod sport-f21 sport-f02 cmd-inventory core-services wiki-commands wiki-check sbom man fmt fmt-check
 
 verify-prod:
 	@bash scripts/prod-verify/p87-verification.sh
@@ -34,6 +34,18 @@ sport-f02: cmd-inventory
 ## compose service catalog. Set NSELF_SPORT_DIR to also refresh SPORT F08.
 core-services:
 	@bash scripts/sport/generate-core-services.sh
+
+## wiki-commands — CLI-R08. Regenerate one wiki page per top-level command, plus
+## the sidebar index and llms.txt. Human prose inside PROSE blocks is preserved;
+## only the cobra-derived parts are rewritten. Use -report to list pages that
+## still carry placeholder prose.
+wiki-commands:
+	@CGO_ENABLED=0 go run -mod=vendor ./tools/wikigen -report
+
+## wiki-check — verify the wiki is current and every [[link]] resolves.
+wiki-check:
+	@CGO_ENABLED=0 go run -mod=vendor ./tools/wikigen -check
+	@bash scripts/ci/wiki-link-audit.sh
 
 ## Q04 — SBOM generation (local dev target)
 ## Requires: syft (https://github.com/anchore/syft)

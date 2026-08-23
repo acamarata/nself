@@ -48,6 +48,6 @@ No special configuration needed. The dashboard reads from the existing persona s
 
 ## Related
 
-- [[Feature-ɳClaw]] -- ɳClaw overview
+- [[Feature-nClaw]] -- ɳClaw overview
 - [[Feature-Memory-Rooms]] -- Memory organization
 - [[Feature-Image-Generation]] -- Image generation

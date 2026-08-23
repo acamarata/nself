@@ -1,6 +1,8 @@
 # nself doctor
 
+<!-- BEGIN PROSE:summary -->
 > Run full system diagnostics.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
@@ -10,30 +12,12 @@ nself doctor [flags]
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself doctor` checks everything ɳSelf needs to function correctly and reports issues with actionable fix suggestions. It covers infrastructure prerequisites (Docker, Docker Compose, Git), Docker daemon health and permissions, disk and memory availability, network connectivity, configuration correctness, running container health, and plugin schema placement.
 
 Run `nself doctor` when something is not working as expected, before deploying to a new environment, or as part of an automated health check pipeline. The `--fix` flag enables automatic remediation of common problems.
 
 The `--deep` flag runs all 12 subsystem checks including open port analysis, weak cipher detection, exposed service bindings, container-level security, and a CIS container benchmark subset. The deep scan runs without a license key: all hardening checks are free by design.
-
-## Flags
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--full` | false | Run all checks including network and memory (slower) |
-| `--deep` | false | Run all 12 subsystem checks: host, docker, postgres, hasura, nginx, ssl, ping, plugins, license, monitoring, backups, security |
-| `--verbose` | false | Detailed diagnostics output |
-| `--json` | false | JSON output |
-| `--fix` | false | Auto-fix safe issues where a fix command is available |
-| `--only <section>` | — | Run only one subsystem check section (see Subsections below) |
-| `--check-legacy` | false | Scan this host for stale v0.9 global paths and print cleanup instructions. Exits with non-zero if any are found. See below. |
-| `--install-check` | false | Run the 6-stage onboarding funnel check. Invoked automatically by the Homebrew post-install hook; safe to run at any time. Exits 0 when all 6 stages pass. See below. |
-| `--ai` | false | Run the AI first-run wizard: install Ollama, set up Gemini pool, verify |
-| `--yes` | false | Non-interactive mode: accept all defaults (for CI/scripts, used with `--ai`) |
-| `--skip-ollama` | false | Skip local Ollama installation step (used with `--ai`) |
-| `--skip-pool` | false | Skip Gemini pool setup step (used with `--ai`) |
-| `--headless` | false | Print OAuth URL instead of opening a browser, for SSH or headless servers (used with `--ai`) |
-| `--help`, `-h` | — | Show help |
 
 ## Exit Codes
 
@@ -299,9 +283,36 @@ When `--json` is passed, the command writes a single JSON object to stdout and p
 ```
 
 Status values: `pass`, `warn`, `fail`, `critical`.
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--ai` | `false` | Run the AI first-run wizard (install Ollama, setup Gemini pool, verify) |
+| `--alerts` | `false` | Check monitoring alert rules are loaded |
+| `--check-legacy` | `false` | Scan host for v0.9 stale paths (global scan, not per-project) |
+| `--deep` | `false` | Alias for --full (run all checks) |
+| `--fix` | `false` | Auto-fix safe issues |
+| `--format` | `""` | Output format: json, text (default text) |
+| `--full` | `false` | Run all checks including network and memory (slower) |
+| `--headless` | `false` | Print OAuth URL instead of opening browser (for SSH/headless servers) |
+| `--install-check` | `false` | Run 6-stage onboarding funnel check (used by Homebrew post-install hook) |
+| `--json` | `false` | JSON output |
+| `--only` | `""` | Run only a specific subsystem check (host, docker, postgres, hasura, nginx, ssl, ping, plugins, license, monitoring, backups, security) |
+| `--section` | `""` | Run only a specific section (system, core, backups, license, plugins, monitoring, security) |
+| `--skip-ollama` | `false` | Skip local Ollama installation step |
+| `--skip-pool` | `false` | Skip Gemini pool setup step |
+| `--skip` | `—` | Skip specific check sections |
+| `--verbose` | `false` | Detailed diagnostics |
+| `--yes` | `false` | Non-interactive mode: accept all defaults (for CI/scripts) |
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
 
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
 ```bash
 # Quick diagnostic
 nself doctor
@@ -333,5 +344,13 @@ nself doctor --ai
 # First-run AI wizard, non-interactive
 nself doctor --ai --yes
 ```
+<!-- END PROSE:examples -->
+
+## See Also
+
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

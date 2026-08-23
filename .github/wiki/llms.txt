@@ -1,0 +1,1775 @@
+# nSelf CLI
+
+> Self-hosted backend platform. One Go binary orchestrates Postgres, Hasura,
+> auth and nginx; everything beyond the core is a plugin.
+
+Generated from the cobra command tree — do not hand edit.
+Regenerate with `make wiki-commands`.
+
+The golden path is three commands:
+
+```bash
+nself init    # write .env
+nself build   # generate docker-compose + nginx
+nself start   # boot the stack
+```
+
+## Commands (92)
+
+### nself account
+
+Manage your nSelf account, sessions, licenses, team, and devices
+
+```
+nself account <subcommand> [flags]
+```
+
+Subcommands:
+
+- `devices` — List and revoke registered devices
+- `licenses` — List and manage account licenses
+- `login` — Log in to your nSelf account
+- `logout` — Log out of your nSelf account
+- `status` — Show current account summary
+- `team` — Manage team members
+- `transfer` — Transfer a license to another account
+
+Full page: [[cmd-account]]
+
+### nself admin
+
+Manage the nSelf Admin dashboard
+
+```
+nself admin [subcommand] <subcommand> [flags]
+```
+
+Subcommands:
+
+- `connect` — Connect to a remote nSelf Admin via SSH tunnel
+- `health` — Check Admin service liveness
+- `logs` — Tail Admin container logs
+- `projects` — Manage multi-project admin configuration
+- `start` — Start the Admin service
+- `stop` — Stop the Admin container
+
+Full page: [[cmd-admin]]
+
+### nself ai
+
+Manage the nSelf AI plugin and local LLM stack
+
+```
+nself ai <subcommand> [flags]
+```
+
+Subcommands:
+
+- `chat` — Send a quick chat message to the local AI
+- `local` — Manage local Ollama runtime and models
+- `pool` — Manage the Gemini API key pool (auto-provisioned + manual)
+
+Full page: [[cmd-ai]]
+
+### nself ai-studio
+
+Google AI Studio integration for local nSelf instances
+
+```
+nself ai-studio <subcommand> [flags]
+```
+
+Subcommands:
+
+- `bridge` — Start a secure AI Studio bridge via Cloudflare Tunnel
+
+Full page: [[cmd-ai-studio]]
+
+### nself alerts
+
+Manage Prometheus alert rules and silences
+
+```
+nself alerts <subcommand> [flags]
+```
+
+Subcommands:
+
+- `list` — List all configured alert rules
+- `silence` — Silence an alert for a specified duration
+- `test` — Fire a synthetic test alert
+
+Full page: [[cmd-alerts]]
+
+### nself api
+
+API versioning and deprecation tooling for operators
+
+```
+nself api <subcommand> [flags]
+```
+
+Subcommands:
+
+- `changelog` — Print the deprecation sunset calendar for a plugin
+- `deprecation-check` — Check for deprecated API usage in this install
+- `version` — Show API version for every surface observable from this install
+
+Full page: [[cmd-api]]
+
+### nself audit
+
+Run ecosystem audits (docs, origin, etc.)
+
+```
+nself audit <subcommand> [flags]
+```
+
+Subcommands:
+
+- `docs` — Run the quarterly documentation audit
+
+Full page: [[cmd-audit]]
+
+### nself backup
+
+Backup operations: create, list, restore, verify, prune, config, status, init-key
+
+```
+nself backup <subcommand> [flags]
+```
+
+Subcommands:
+
+- `config` — View backup configuration
+- `create` — Create a new backup
+- `drill` — Run a DR drill: restore latest backup into scratch DB and measure RTO
+- `init-key` — Generate age encryption keypair for backups
+- `list` — List available backups
+- `prune` — Remove old backups by retention policy
+- `restore` — Restore from a backup
+- `restore-remote` — Restore a backup directly from a remote URL
+- `resume` — Resume an interrupted streaming backup
+- `schedule` — Schedule recurring streaming backups via systemd timers
+- `status` — Show backup subsystem status
+- `stream` — Stream an encrypted backup directly to a remote destination
+- `verify` — Verify backup integrity
+
+Full page: [[cmd-backup]]
+
+### nself billing
+
+Billing operations: usage, invoice-preview, report, retry-event
+
+```
+nself billing <subcommand> [flags]
+```
+
+Subcommands:
+
+- `invoice-preview` — Preview next Stripe invoice (requires STRIPE_SECRET_KEY)
+- `report` — Generate billing report across tenants
+- `retry-event` — Re-enqueue a failed Stripe outbox event
+- `usage` — Show usage metrics for a tenant
+
+Full page: [[cmd-billing]]
+
+### nself build
+
+Compose your infrastructure from .env
+
+```
+nself build [flags]
+```
+
+Flags:
+
+- `--allow-insecure` (default false) — Allow insecure config (dev only)
+- `--allow-legacy` (default false) — Bypass v0.9 artifact check and proceed with WARNING (not recommended)
+- `--check` (default false) — Validate only, don't build
+- `--debug` (default false) — Enable debug mode
+- `--force` (default false) — Force rebuild all components
+- `--no-auto-redis` (default false) — Disable automatic Redis enablement when a BullMQ-backed plugin is detected
+- `--no-cache` (default false) — Disable build cache
+- `--no-migration-check` (default false) — Skip v1 artifact detection (for automation/CI)
+- `--no-monorepo` (default false) — Disable automatic monorepo backend detection
+- `--profile` (default "") — Service profile: curated subset of services to include in docker-compose.yml.
+  app (default) — full service set, identical to pre-profile behaviour.
+  ops           — observability + CI server: postgres, hasura, auth, nginx,
+                  monitoring stack; excludes minio, mailpit, admin, functions, search.
+Overrides NSELF_PROFILE env var. Valid values: app, ops.
+- `--quiet` (default false) — Suppress non-error output (for CI use)
+- `--security-report` (default false) — Generate security analysis
+- `--verbose` (default false) — Show environment cascade
+
+Full page: [[cmd-build]]
+
+### nself bundle
+
+Manage and inspect nSelf plugin bundles
+
+```
+nself bundle <subcommand> [flags]
+```
+
+Subcommands:
+
+- `info` — Show bundle details, plugins, and license status
+- `install` — Install every plugin in a bundle (license-gated, atomic rollback on failure)
+- `list` — List all available nSelf plugin bundles
+- `remove` — Remove every plugin in a bundle
+
+Full page: [[cmd-bundle]]
+
+### nself ci
+
+Run the nself-ci gate suite and post a GitHub commit status
+
+```
+nself ci [repo-root] <subcommand> [flags]
+```
+
+Subcommands:
+
+- `eval` — Run eval-gate suite or validate an eval-set YAML
+- `forgejo` — Show Forgejo server + runner health (ops profile)
+- `serve` — Start the nself-ci webhook listener daemon (port 3845)
+
+Flags:
+
+- `--check` (default false) — Run gates only; do not post a GitHub commit status
+- `--no-gitleaks` (default false) — Skip the gitleaks secret scan
+- `--no-status` (default false) — Alias for --check
+- `--owner` (default "") — GitHub owner (default: from git remote)
+- `--repo` (default "") — GitHub repo name (default: from git remote)
+- `--sha` (default "") — Commit SHA to report on (default: HEAD)
+- `--verbose` (default false) — Print each gate command before running
+
+Full page: [[cmd-ci]]
+
+### nself claw
+
+Manage nClaw AI assistant
+
+```
+nself claw <subcommand> [flags]
+```
+
+Subcommands:
+
+- `chat` — Start an interactive chat session with nClaw
+- `config` — Show or modify nClaw CLI configuration
+- `export` — Export all nClaw data
+- `keys` — Manage API keys
+- `mcp` — Start an MCP server for nClaw
+- `memories` — List or search memories
+- `migrate` — Apply pending claw schema migrations
+- `pair` — Generate a pairing code for nClaw clients
+- `prompt` — Send a single prompt to nClaw and print the response
+- `proxy` — Start a local OpenAI-compatible proxy
+- `session` — Manage Claude Code PTY sessions
+- `status` — Show nClaw server status and health
+- `topics` — List or search topics
+- `unlock` — Temporarily unlock the web UI for first-time account setup
+
+Full page: [[cmd-claw]]
+
+### nself clean
+
+Remove generated artifacts (docker-compose.yml, nginx configs, build cache)
+
+```
+nself clean [flags]
+```
+
+Full page: [[cmd-clean]]
+
+### nself completion
+
+Generate shell completion scripts
+
+```
+nself completion [bash|zsh|fish|powershell] [flags]
+```
+
+Full page: [[cmd-completion]]
+
+### nself config
+
+Manage project configuration
+
+```
+nself config <subcommand> [flags]
+```
+
+Subcommands:
+
+- `export` — Export current config to a file or stdout
+- `get` — Get a single configuration value
+- `import` — Import config from a file into .env
+- `list` — List all known config keys with current values
+- `set` — Update a configuration value (writes to .env)
+- `show` — Show all config key=value pairs (masked by default)
+- `validate` — Validate configuration against all registered rules
+
+Flags:
+
+- `--env` (default "") — Target environment (reads .env.{env})
+- `--json` (default false) — JSON output
+- `--reveal` (default false) — Show secret values in plaintext
+
+Full page: [[cmd-config]]
+
+### nself costs
+
+Show estimated per-install operational costs
+
+```
+nself costs [flags]
+```
+
+Flags:
+
+- `--format` (default table) — Output format: table|json
+- `--server-type` (default "") — Hetzner server type (e.g. cx23, cax11). Auto-detected from HETZNER_SERVER_TYPE env var if unset.
+
+Full page: [[cmd-costs]]
+
+### nself db
+
+Database operations: migrations, backups, restore, seed, shell
+
+```
+nself db <subcommand> [flags]
+```
+
+Subcommands:
+
+- `backup` — Create pg_dump backup
+- `backup-sync` — Sync local backups to remote storage (cross-region)
+- `backup-sync-status` — Show cross-region backup sync status
+- `drift` — Schema drift detection: scan np_* tables for Theme 25 column compliance
+- `drop` — Drop the project database (DESTRUCTIVE)
+- `fk-index` — Audit and create indexes for foreign key columns
+- `hasura` — Hasura metadata operations
+- `lint` — Check RLS policies on tenant-scoped tables
+- `list` — List databases in the project Postgres instance
+- `migrate` — Manage database migrations
+- `pgbouncer` — PgBouncer connection pooler operations
+- `pitr` — Point-in-time recovery: status, enable, test, restore
+- `reset` — Drop and recreate database (DESTRUCTIVE)
+- `reset-checksum` — Reset stored checksum for a migration (dangerous)
+- `restore` — Restore from backup
+- `restore-drill` — Run a non-destructive restore drill
+- `restore-drill-list` — List past restore drill results
+- `rls` — Row-Level Security management: audit, apply, rollback
+- `seed` — Database seeding: run, list, verify, graph
+- `shell` — Open psql interactive shell
+- `soft-delete` — Manage soft-delete (deleted_at) patterns across tables
+- `verify-checksums` — Verify migration file checksums against stored values
+
+Full page: [[cmd-db]]
+
+### nself deploy
+
+Deploy the stack to a target environment
+
+```
+nself deploy [target] <subcommand> [flags]
+```
+
+Subcommands:
+
+- `check-access` — Verify access to configured deploy targets (deprecated: use 'nself env target probe')
+- `environments` — List configured deploy environments and server capabilities
+- `health` — Run health checks against a target deployment
+- `logs` — Show deployment logs for a target
+- `promote` — Promote a canary deploy to 100% green traffic
+- `rollback` — Roll back the last deployment for a target
+- `status` — Show deployment status for a target
+- `web` — Build web apps locally and deploy prebuilt output to Vercel
+
+Flags:
+
+- `--canary` (default 0) — Start a canary deploy at N%% traffic to green (0 = full flip)
+- `--dry-run` (default false) — Preview the deploy without executing
+- `--env` (default "") — Target environment: local|staging|prod (overrides positional arg; required env vars: NSELF_DEPLOY_HOST, NSELF_DEPLOY_USER, NSELF_DEPLOY_KEY_PATH)
+- `--exclude-frontends` (default false) — Exclude frontend apps from the deploy
+- `--follow` (default false) — Stream container logs after deploy until Ctrl-C (staging/prod only)
+- `--force` (default false) — Skip confirmation prompts (prod requires --confirm or --force)
+- `--force-migration` (default false) — Force deploy even with backward-incompatible migrations (disables canary)
+- `--include-frontends` (default false) — Include frontend apps in the deploy
+- `--json` (default false) — Emit JSON output
+- `--rolling` (default false) — Alias for --strategy=rolling
+- `--server` (default "") — Deploy to a specific server only (name from control-plane inventory)
+- `--skip-canary` (default false) — Skip canary phase and flip directly to 100% green
+- `--skip-health` (default false) — Skip post-deploy health checks
+- `--strategy` (default rolling) — Deploy strategy: rolling|blue-green|canary|preview
+- `--yes` (default false) — Skip prod confirmation prompt (alias for --force)
+
+Full page: [[cmd-deploy]]
+
+### nself dev
+
+Start development environment
+
+```
+nself dev [flags]
+```
+
+Flags:
+
+- `--hot` (default false) — Enable plugin hot-reload on source changes
+
+Full page: [[cmd-dev]]
+
+### nself dlq
+
+Manage dead-letter queues for nSelf plugins
+
+```
+nself dlq <subcommand> [flags]
+```
+
+Subcommands:
+
+- `replay` — Re-enqueue DLQ rows for a plugin
+
+Full page: [[cmd-dlq]]
+
+### nself dns-setup
+
+Add project domains to /etc/hosts (run with sudo)
+
+```
+nself dns-setup [flags]
+```
+
+Flags:
+
+- `--dry-run` (default false) — Print entries that would be added without writing
+- `--project` (default "") — Path to nself project directory (useful when running with sudo)
+
+Full page: [[cmd-dns-setup]]
+
+### nself doctor
+
+Run comprehensive system diagnostics
+
+```
+nself doctor [flags]
+```
+
+Flags:
+
+- `--ai` (default false) — Run the AI first-run wizard (install Ollama, setup Gemini pool, verify)
+- `--alerts` (default false) — Check monitoring alert rules are loaded
+- `--check-legacy` (default false) — Scan host for v0.9 stale paths (global scan, not per-project)
+- `--deep` (default false) — Alias for --full (run all checks)
+- `--fix` (default false) — Auto-fix safe issues
+- `--format` (default "") — Output format: json, text (default text)
+- `--full` (default false) — Run all checks including network and memory (slower)
+- `--headless` (default false) — Print OAuth URL instead of opening browser (for SSH/headless servers)
+- `--install-check` (default false) — Run 6-stage onboarding funnel check (used by Homebrew post-install hook)
+- `--json` (default false) — JSON output
+- `--only` (default "") — Run only a specific subsystem check (host, docker, postgres, hasura, nginx, ssl, ping, plugins, license, monitoring, backups, security)
+- `--section` (default "") — Run only a specific section (system, core, backups, license, plugins, monitoring, security)
+- `--skip` (default []) — Skip specific check sections
+- `--skip-ollama` (default false) — Skip local Ollama installation step
+- `--skip-pool` (default false) — Skip Gemini pool setup step
+- `--verbose` (default false) — Detailed diagnostics
+- `--yes` (default false) — Non-interactive mode: accept all defaults (for CI/scripts)
+
+Full page: [[cmd-doctor]]
+
+### nself dogfood
+
+Production dogfood audit and reporting
+
+```
+nself dogfood <subcommand> [flags]
+```
+
+Subcommands:
+
+- `audit` — Run comprehensive dogfood audit (21 checks)
+- `report` — Show the latest dogfood audit report
+
+Full page: [[cmd-dogfood]]
+
+### nself dr
+
+Disaster recovery operations: drill, promote-standby, reconfigure-dns, rollback, fence
+
+```
+nself dr <subcommand> [flags]
+```
+
+Subcommands:
+
+- `drill` — Execute a DR drill
+- `fence` — Set read-only flag in Redis for split-brain prevention
+- `promote-standby` — Promote warm standby to primary
+- `reconfigure-dns` — Update DNS records to point to new primary
+- `rollback` — Demote promoted standby and resync from original primary
+
+Full page: [[cmd-dr]]
+
+### nself encryption
+
+Manage BYOK per-tenant encryption (Enterprise)
+
+```
+nself encryption <subcommand> [flags]
+```
+
+Subcommands:
+
+- `configure` — Configure a KMS provider for BYOK encryption
+- `key-events` — List the key event audit trail
+- `rotate` — Rotate data encryption keys
+- `status` — Show BYOK configuration and last verification
+- `verify` — Test KMS connectivity (wrap+unwrap round-trip)
+
+Full page: [[cmd-encryption]]
+
+### nself env
+
+Multi-environment management: switch, list, diff, copy
+
+```
+nself env <subcommand> [flags]
+```
+
+Subcommands:
+
+- `copy` — Scaffold a new environment from an existing one
+- `diff` — Compare two environment configs side-by-side
+- `list` — List available environments
+- `show` — Show current environment config (secrets redacted)
+- `target` — Manage control-plane server targets
+- `use` — Switch active environment
+
+Full page: [[cmd-env]]
+
+### nself exec
+
+Execute a command inside a service container
+
+```
+nself exec [FLAGS] <SERVICE> [COMMAND...] [flags]
+```
+
+Flags:
+
+- `--env` (default []) — Set environment variables (KEY=VALUE)
+- `--no-tty` (default false) — Disable pseudo-TTY allocation
+- `--user` (default "") — Run command as this user
+- `--workdir` (default "") — Working directory inside the container
+
+Full page: [[cmd-exec]]
+
+### nself feature
+
+Manage CLI-built-in feature flags
+
+```
+nself feature <subcommand> [flags]
+```
+
+Subcommands:
+
+- `disable` — Disable a feature flag (records an override)
+- `enable` — Enable a feature flag (records an override)
+- `list` — List all registered feature flags with effective state
+- `status` — Show the effective state for a single flag
+
+Full page: [[cmd-feature]]
+
+### nself federation
+
+Manage GraphQL Federation (opt-in, requires NSELF_FEDERATION=true)
+
+```
+nself federation <subcommand> [flags]
+```
+
+Subcommands:
+
+- `compose` — Re-compose supergraph schema from installed plugin subgraphs
+- `introspect` — Print the full supergraph schema to stdout
+- `status` — Show subgraph health and schema composition status
+
+Full page: [[cmd-federation]]
+
+### nself flag
+
+Manage feature flags
+
+```
+nself flag <subcommand> [flags]
+```
+
+Subcommands:
+
+- `disable` — Disable a feature flag
+- `enable` — Enable a feature flag
+- `get` — Get a single feature flag
+- `history` — Show audit log for a feature flag
+- `kill` — Kill-switch a feature flag (emergency disable with required reason)
+- `list` — List all feature flags
+- `prune` — List (or delete) stale feature flags
+- `set` — Update a feature flag's enabled state and/or rollout percentage
+
+Full page: [[cmd-flag]]
+
+### nself functions
+
+Manage serverless functions
+
+```
+nself functions <subcommand> [flags]
+```
+
+Subcommands:
+
+- `delete` — Delete a deployed function
+- `deploy` — Deploy a function from a file or directory
+- `invoke` — Invoke a deployed function
+- `list` — List deployed functions
+- `logs` — Stream logs for a function
+
+Full page: [[cmd-functions]]
+
+### nself gateway
+
+Manage the nSelf AI gateway (nself-ai-gateway, port 3761)
+
+```
+nself gateway <subcommand> [flags]
+```
+
+Subcommands:
+
+- `keys` — Manage AI provider keys
+- `quota` — Show AI request quota usage
+- `routes` — List gateway routing rules
+- `status` — Health-check all three AI services
+
+Full page: [[cmd-gateway]]
+
+### nself gauth
+
+Manage Google OAuth tokens for nSelf AI services
+
+```
+nself gauth <subcommand> [flags]
+```
+
+Subcommands:
+
+- `refresh` — Force-refresh a Google OAuth access token for an account
+- `revoke` — Revoke and remove a stored Google OAuth refresh token
+- `status` — Show token expiry for all provisioned gauth accounts
+
+Full page: [[cmd-gauth]]
+
+### nself gdpr
+
+GDPR data portability and right-to-erasure (Art. 20, 17)
+
+```
+nself gdpr <subcommand> [flags]
+```
+
+Subcommands:
+
+- `delete` — Delete or anonymize all data for a user (GDPR Art. 17 erasure)
+- `export` — Export all data for a user (GDPR Art. 20 portability)
+- `forget` — Alias for 'delete' — right to be forgotten (GDPR Art. 17)
+- `list-requests` — List all GDPR requests
+- `status` — Show the status of a GDPR request
+
+Full page: [[cmd-gdpr]]
+
+### nself generate
+
+Generate type-safe client SDK types from the live Hasura schema
+
+```
+nself generate [flags]
+```
+
+Flags:
+
+- `--env` (default local) — Target environment: local|staging|prod
+- `--lang` (default all) — Comma-separated target languages: typescript,dart,swift,kotlin,python,all
+- `--no-hooks` (default false) — Skip React hooks generation (TypeScript only)
+- `--operations` (default src/**/*.graphql) — Path to .graphql operation files
+- `--out` (default ./generated) — Output directory
+- `--pydantic` (default true) — Emit Pydantic v2 models (Python only)
+- `--watch` (default false) — Re-run on schema change (polls every 30s)
+
+Full page: [[cmd-generate]]
+
+### nself health
+
+Health check management with continuous monitoring
+
+```
+nself health [subcommand] <subcommand> [flags]
+```
+
+Subcommands:
+
+- `check` — Run all health checks
+- `config` — Show health check settings
+- `endpoint` — Check an HTTP endpoint
+- `history` — Show last 20 health checks
+- `service` — Check a single service
+- `watch` — Continuous health monitoring
+
+Flags:
+
+- `--env` (default "") — Environment to load config for
+- `--interval` (default 10) — Watch interval in seconds
+- `--json` (default false) — Output in JSON format
+- `--quiet` (default false) — Only output on failure
+- `--retries` (default 3) — Retry count on failure
+- `--timeout` (default 30) — Check timeout in seconds
+
+Full page: [[cmd-health]]
+
+### nself help-topics
+
+Browse help topics (quickstart, plugins, license, envs, doctor, errors)
+
+```
+nself help-topics [topic] [flags]
+```
+
+Full page: [[cmd-help-topics]]
+
+### nself infra
+
+Provision nSelf infrastructure via Terraform
+
+```
+nself infra <subcommand> [flags]
+```
+
+Subcommands:
+
+- `apply` — Provision nSelf infrastructure via Terraform
+- `destroy` — Destroy nSelf infrastructure
+- `plan` — Show the Terraform plan for the given provider
+
+Full page: [[cmd-infra]]
+
+### nself init
+
+Initialize a new nSelf project
+
+```
+nself init [flags]
+```
+
+Flags:
+
+- `--cs-template` (default "") — Scaffold a custom service at init time: specify language (go, node, python, rust, other)
+- `--demo` (default false) — Auto-configure with all services enabled
+- `--domain` (default "") — Base domain (skips interactive domain selection, e.g. myapp.dev)
+- `--dry-run` (default false) — Print files that would be written without writing them (clone templates only)
+- `--fast` (default false) — Skip advanced options, use smart defaults
+- `--force` (default false) — Overwrite existing configuration
+- `--full` (default false) — Create all environment files (.env.dev, .env.staging, .env.prod, .env.secrets)
+- `--interactive` (default false) — Explicitly enable interactive wizard
+- `--list-presets` (default false) — List all available project presets and exit
+- `--name` (default "") — Project name (sets PROJECT_NAME in generated .env)
+- `--no-pgvector` (default false) — Skip pgvector extension and RAG scaffold tables (sets PGVECTOR_ENABLED=false)
+- `--no-seed` (default false) — Skip seed data when scaffolding a clone template
+- `--non-interactive` (default false) — Use all defaults without prompts
+- `--preset` (default "") — Use a project-type preset: b2b-saas, mobile-backend, ai-assistant, community-forum, media-hosting, dev, sentry, nclaw-app
+- `--profile` (default "") — Resource profile: 'tiny' for small VPS (Postgres+nginx only)
+- `--quiet` (default false) — Suppress output messages
+- `--skip-validation` (default false) — Skip configuration validation
+- `--template` (default "") — Use a built-in, clone, or marketplace template (e.g. airbnb-clone, go, rust)
+- `--wizard` (default false) — Run the full 10-step interactive wizard
+
+Full page: [[cmd-init]]
+
+### nself k8s
+
+Manage nSelf on Kubernetes via Helm
+
+```
+nself k8s <subcommand> [flags]
+```
+
+Subcommands:
+
+- `install` — Install nSelf on a Kubernetes cluster
+- `status` — Show the Helm release status
+- `upgrade` — Upgrade the nSelf Helm release
+
+Full page: [[cmd-k8s]]
+
+### nself license
+
+Manage license keys for nSelf product bundles
+
+```
+nself license <subcommand> [flags]
+```
+
+Subcommands:
+
+- `add` — Add one or more license keys
+- `clear` — Remove all saved license keys
+- `export` — Export signed license cache for air-gap transfer
+- `health` — Validate format, ping server, and report cache integrity
+- `import` — Import a previously exported license cache file
+- `list` — Show all configured licenses (alias for status)
+- `migrate` — Migrate legacy license key to a nSelf account
+- `refresh` — Force-refresh license validation against ping.nself.org
+- `remove` — Remove a license key by value or product name
+- `restore` — Reactivate dormant plugins with a new license key
+- `revalidate` — Force a fresh validation against ping.nself.org and update the cache
+- `revoke` — Mark local license as revoked and wipe the stored key
+- `set` — Replace all keys with a single key
+- `show` — Display license tier, bundles, plugins, and cache expiry
+- `simulate-offline` — Simulate being offline for N days (testing only)
+- `status` — Show all configured licenses and plugin coverage
+- `tail` — Stream live license validation events from ping_api
+- `upgrade` — Open pricing page in browser
+- `validate` — Validate key against ping.nself.org
+
+Full page: [[cmd-license]]
+
+### nself login
+
+Log in to your nSelf account
+
+```
+nself login [flags]
+```
+
+Flags:
+
+- `--force` (default false) — Log in even if already logged in (replaces existing session)
+- `--no-browser` (default false) — Print the login URL instead of opening a browser
+
+Full page: [[cmd-login]]
+
+### nself logout
+
+Log out of your nSelf account
+
+```
+nself logout [flags]
+```
+
+Flags:
+
+- `--all` (default false) — Revoke all active sessions, not just the current one
+
+Full page: [[cmd-logout]]
+
+### nself logs
+
+View and filter service logs
+
+```
+nself logs [SERVICE] [flags]
+```
+
+Flags:
+
+- `--all` (default false) — Show last 100 lines
+- `--compact` (default false) — Compact output: [service] message
+- `--errors` (default false) — Show only errors
+- `--follow` (default false) — Follow log output (live)
+- `--grep` (default "") — Regex pattern filter
+- `--json` (default false) — Structured JSON output per line
+- `--level` (default "") — Filter by level (error, warn)
+- `--more` (default false) — Show last 50 lines
+- `--no-color` (default false) — Disable colored output
+- `--plain` (default false) — Plain output (no highlighting, for piping)
+- `--quiet` (default false) — Filter out noise (healthchecks)
+- `--search` (default "") — Search pattern (regex)
+- `--service` (default []) — Filter by service name (repeatable)
+- `--since` (default "") — Show logs since (e.g. 1h, 30m, or RFC3339)
+- `--status` (default false) — Show service status overview
+- `--summary` (default false) — Show recent errors by service
+- `--tail` (default 10) — Number of lines to show
+- `--top` (default false) — Show most active services
+- `--until` (default "") — Show logs until (e.g. 1h or RFC3339)
+
+Full page: [[cmd-logs]]
+
+### nself mail
+
+Send transactional and broadcast email through the nSelf stack
+
+```
+nself mail <subcommand> [flags]
+```
+
+Subcommands:
+
+- `broadcast` — Send a broadcast to a list using a saved template
+- `dkim` — Manage DKIM verification
+- `send` — Send a single transactional email
+- `status` — Query delivery status for a sent message
+- `templates` — Manage Postmark templates
+
+Full page: [[cmd-mail]]
+
+### nself maintenance
+
+Maintenance utilities: disk cleanup, scheduler
+
+```
+nself maintenance <subcommand> [flags]
+```
+
+Subcommands:
+
+- `disk-cleanup` — Free disk space: Docker prune, log rotation, journal vacuum
+- `schedule` — Install or remove the daily disk-cleanup timer
+- `status` — Show daily cleanup scheduler status
+
+Full page: [[cmd-maintenance]]
+
+### nself man
+
+Generate man pages for all nself commands
+
+```
+nself man [flags]
+```
+
+Flags:
+
+- `--output` (default man) — Directory to write man pages into
+
+Full page: [[cmd-man]]
+
+### nself mcp
+
+Start the nSelf MCP server
+
+```
+nself mcp [flags]
+```
+
+Flags:
+
+- `--no-mdns` (default false) — Disable mDNS service advertising
+- `--port` (default 3825) — Port for SSE transport
+- `--transport` (default stdio) — Transport: stdio or sse
+
+Full page: [[cmd-mcp]]
+
+### nself migrate
+
+Detect and migrate legacy artifacts to the current nSelf version
+
+```
+nself migrate <subcommand> [flags]
+```
+
+Subcommands:
+
+- `detect` — Detect v1 artifacts in the current project
+- `firebase` — Generate nSelf migration artifacts from a Firebase export
+- `from-bash` — Migrate a v0.9.9 Bash-era project to the current nSelf CLI
+- `generate` — Generate a SQL migration from a natural-language description
+- `rollback` — Restore a v1 backup created by migrate run
+- `run` — Migrate v1 project to v2
+- `supabase` — Migrate a Supabase project to nSelf
+- `watch` — Watch model files and propose SQL migrations on change
+
+Flags:
+
+- `--from-bash` (default false) — Migrate from a v0.9.9 Bash-era project (alias for: nself migrate from-bash)
+
+Full page: [[cmd-migrate]]
+
+### nself migrate-from-v099
+
+Migrate v0.9.9 home-level state (license key, channel, ssh keys) to v1.x layout
+
+```
+nself migrate-from-v099 [flags]
+```
+
+Flags:
+
+- `--check` (default false) — Detect legacy state without migrating
+- `--yes` (default false) — Skip the confirmation prompt (non-interactive)
+
+Full page: [[cmd-migrate-from-v099]]
+
+### nself model
+
+Manage local AI models via Ollama
+
+```
+nself model <subcommand> [flags]
+```
+
+Subcommands:
+
+- `benchmark` — Run a standard prompt and report tokens/s + p99 latency
+- `list` — List all pulled Ollama models
+- `pull` — Pull (download) a model from the Ollama registry
+- `remove` — Remove a pulled model from Ollama to free disk space
+- `update` — Re-pull a model to fetch the latest version of its tag
+
+Full page: [[cmd-model]]
+
+### nself monitor
+
+Monitoring stack management
+
+```
+nself monitor <subcommand> [flags]
+```
+
+Subcommands:
+
+- `upgrade-dashboards` — Upgrade Grafana dashboards to the latest bundled versions
+
+Full page: [[cmd-monitor]]
+
+### nself oauth
+
+Manage OAuth provider tokens
+
+```
+nself oauth <subcommand> [flags]
+```
+
+Subcommands:
+
+- `refresh` — Trigger immediate OAuth token refresh for a provider
+
+Full page: [[cmd-oauth]]
+
+### nself ollama
+
+Manage local Ollama LLM stack
+
+```
+nself ollama <subcommand> [flags]
+```
+
+Subcommands:
+
+- `models` — Manage Ollama models
+- `status` — Show Ollama service status and default model
+
+Full page: [[cmd-ollama]]
+
+### nself ops
+
+Ops-profile deployment and management
+
+```
+nself ops <subcommand> [flags]
+```
+
+Subcommands:
+
+- `deploy` — Deploy with the ops profile to the ops server
+
+Full page: [[cmd-ops]]
+
+### nself pentest-kit
+
+Penetration-test readiness kit (Business+)
+
+```
+nself pentest-kit <subcommand> [flags]
+```
+
+Subcommands:
+
+- `credentials` — Create pentest role and test credentials in Hasura
+- `generate` — Generate pentest scope document
+- `remediation` — Import pentest findings from a structured report
+- `status` — Show open pentest findings by severity
+
+Full page: [[cmd-pentest-kit]]
+
+### nself pitr
+
+Point-in-time recovery: enable, disable, status, base-backup, restore
+
+```
+nself pitr <subcommand> [flags]
+```
+
+Subcommands:
+
+- `base-backup` — Take a manual pg_basebackup snapshot now
+- `disable` — Stop WAL archiving (removes PITR config snippet)
+- `enable` — Configure WAL archiving and enable PITR
+- `restore` — Restore database to a specific point in time
+- `status` — Show PITR retention window, segment count, and latest WAL timestamp
+
+Full page: [[cmd-pitr]]
+
+### nself plugin
+
+Manage nSelf plugins
+
+```
+nself plugin <subcommand> [flags]
+```
+
+Subcommands:
+
+- `audit-tables` — Audit np_* table row counts and multi-tenant isolation compliance
+- `compat-check` — Check installed plugins against the current CLI version
+- `debug` — Attach a dlv debugger to a running plugin process
+- `dev` — Start a plugin in development mode with hot-reload
+- `disable` — Disable a plugin (excluded from compose on next build)
+- `enable` — Re-enable a previously disabled plugin
+- `info` — Show detailed plugin information
+- `init` — Scaffold a new plugin project
+- `install` — Install one or more plugins (license check for pro)
+- `inventory` — List installed plugins with version, tier, and status
+- `link` — Register a local plugin directory as a shadow override
+- `list` — List available and installed plugins
+- `logs` — Tail logs from a plugin container
+- `marketplace` — Browse the nSelf plugin marketplace
+- `new` — Scaffold a new plugin project (deprecated: use 'init')
+- `refresh` — Force refresh the registry cache
+- `remove` — Remove a plugin
+- `search` — Search plugins by name, description, or tag
+- `start` — Start a plugin service
+- `status` — Show plugin status
+- `stop` — Stop a plugin service
+- `submit` — Validate a plugin for submission to the registry
+- `test` — Run a plugin's test suite (unit + smoke install/uninstall)
+- `unlink` — Remove a local plugin shadow, restoring the registry version
+- `update` — Update a specific plugin or all plugins
+- `updates` — Check for available plugin updates
+
+Full page: [[cmd-plugin]]
+
+### nself promote
+
+Promote one environment to another (e.g. staging to prod)
+
+```
+nself promote <source> <target> [flags]
+```
+
+Subcommands:
+
+- `rollback` — Rollback to pre-promotion backup
+
+Flags:
+
+- `--approve-id` (default "") — Approval ticket ID
+- `--confirm` (default "") — Confirmation target (required for prod)
+- `--dry-run` (default false) — Preview changes without applying
+- `--json` (default false) — JSON output
+
+Full page: [[cmd-promote]]
+
+### nself queue
+
+Manage async job queues (pg-boss)
+
+```
+nself queue <subcommand> [flags]
+```
+
+Subcommands:
+
+- `cron` — Manage scheduled cron jobs
+- `jobs` — List jobs in a queue
+- `list` — List all queues with job counts
+- `purge` — Purge completed/dead jobs older than specified duration
+- `retry` — Retry a failed or dead job
+
+Full page: [[cmd-queue]]
+
+### nself region
+
+Manage multi-region nSelf deployments
+
+```
+nself region <subcommand> [flags]
+```
+
+Subcommands:
+
+- `add` — Add a replica region
+- `list` — List configured regions
+- `promote` — Promote a replica to primary (failover)
+- `status` — Show replication and routing status for all regions
+
+Full page: [[cmd-region]]
+
+### nself release
+
+Orchestrate the full release cascade for a version
+
+```
+nself release <version> [flags]
+```
+
+Flags:
+
+- `--dry-run` (default false) — Log all steps without executing them
+- `--json` (default false) — Output results as JSON
+- `--release-notes` (default "") — Path to release notes file (markdown)
+- `--skip-check` (default false) — Skip pre-release gate (release-check)
+- `--skip-plugins-pro` (default false) — Skip plugins-pro tag (use when not releasing plugins-pro)
+
+Full page: [[cmd-release]]
+
+### nself release-check
+
+Run pre-release gates for a version
+
+```
+nself release-check <version> [flags]
+```
+
+Flags:
+
+- `--json` (default false) — Output results as JSON
+- `--skip-ci` (default false) — Skip GitHub CI check (use in offline environments)
+- `--skip-security` (default false) — Skip security CVE scan
+
+Full page: [[cmd-release-check]]
+
+### nself release-rollback
+
+Roll back a release to prior version
+
+```
+nself release-rollback <version> <prior-version> [flags]
+```
+
+Flags:
+
+- `--delete-tags` (default false) — Also delete git tags (DESTRUCTIVE — requires explicit flag)
+- `--dry-run` (default false) — Log rollback steps without executing
+- `--json` (default false) — Output as JSON
+
+Full page: [[cmd-release-rollback]]
+
+### nself release-status
+
+Show running version vs latest across all release artifacts
+
+```
+nself release-status [flags]
+```
+
+Flags:
+
+- `--json` (default false) — Output as JSON
+- `--timeout` (default 30s) — HTTP timeout per artifact check
+
+Full page: [[cmd-release-status]]
+
+### nself reset
+
+Stop containers, remove all data volumes, and clean generated files
+
+```
+nself reset [flags]
+```
+
+Flags:
+
+- `--no-monorepo` (default false) — Disable automatic monorepo backend detection
+- `--yes` (default false) — Skip confirmation prompt (for CI/CD)
+
+Full page: [[cmd-reset]]
+
+### nself restart
+
+Smart restart with config change detection
+
+```
+nself restart [SERVICES...] [flags]
+```
+
+Flags:
+
+- `--all` (default false) — Full restart: stop all + start all
+- `--no-build` (default false) — Alias for --skip-build
+- `--skip-build` (default false) — Skip image rebuild
+- `--smart` (default true) — Detect changes, only restart affected (default)
+- `--verbose` (default false) — Detailed output
+
+Full page: [[cmd-restart]]
+
+### nself secrets
+
+Manage encrypted project secrets (age encryption)
+
+```
+nself secrets <subcommand> [flags]
+```
+
+Subcommands:
+
+- `audit` — Report secrets that haven't been rotated in >90 days
+- `decrypt-on-deploy` — Output decrypted secrets as KEY=VALUE for CI/CD
+- `edit` — Open decrypted secrets in $EDITOR, re-encrypt on save
+- `get` — Get a secret value
+- `init` — Generate age key and set up .secrets/ directory
+- `lint` — Check for plaintext secrets in git-tracked files
+- `list` — List all secrets for an environment
+- `list-schedules` — List all rotation schedule statuses (alias for: secrets schedule)
+- `rekey` — Re-encrypt all secrets, removing a team member's key
+- `retire` — Retire the _PREVIOUS variant of a dual-window rotated secret
+- `rotate` — Rotate a secret to a new value
+- `rotation-log` — Show rotation event log
+- `schedule` — Add a rotation schedule or show all schedule statuses
+- `set` — Set a secret value (prompts if value not provided)
+- `verify` — Verify that a named secret exists in the store
+
+Flags:
+
+- `--env` (default dev) — Environment (dev, staging, prod)
+
+Full page: [[cmd-secrets]]
+
+### nself security
+
+Server security: audit, setup, and status
+
+```
+nself security <subcommand> [flags]
+```
+
+Subcommands:
+
+- `audit` — Run a read-only security audit
+- `setup` — Apply baseline server hardening
+- `status` — Show current security posture
+
+Full page: [[cmd-security]]
+
+### nself self-heal
+
+Run targeted self-healing routines for nSelf components
+
+```
+nself self-heal [flags]
+```
+
+Flags:
+
+- `--dry-run` (default false) — Show what would be repaired without making any changes
+- `--jwt` (default false) — Rotate the HASURA_GRAPHQL_JWT_SECRET and update the rotation log
+- `--no-print` (default false) — Suppress printing the new JWT key to stdout
+- `--to-file` (default "") — Write the new JWT key to this file path (mode 0600) instead of stdout
+
+Full page: [[cmd-self-heal]]
+
+### nself sentry
+
+ɳSentry ops: status, alerts, and observability
+
+```
+nself sentry <subcommand> [flags]
+```
+
+Subcommands:
+
+- `alerts` — Manage ɳSentry alert channels
+- `incidents` — Manage ɳSentry incidents
+- `login` — Authenticate the CLI with ɳSentry (SaaS or self-hosted)
+- `logout` — Remove the stored ɳSentry API key
+- `monitors` — Manage ɳSentry uptime monitors
+- `status` — Fetch and display the ɳSentry status page
+- `status-pages` — Manage ɳSentry status pages
+- `whoami` — Show the authenticated ɳSentry account, tier, and quota usage
+
+Full page: [[cmd-sentry]]
+
+### nself sentry-server
+
+Provision and manage ɳSentry ops servers
+
+```
+nself sentry-server <subcommand> [flags]
+```
+
+Subcommands:
+
+- `provision` — Provision an ops/sentry server for a project
+
+Full page: [[cmd-sentry-server]]
+
+### nself service
+
+Manage optional services
+
+```
+nself service <subcommand> [flags]
+```
+
+Subcommands:
+
+- `add` — Scaffold a custom service (CS_N slot) into the current project
+- `configure` — Configure service settings (e.g. email provider presets)
+- `disable` — Disable an optional service
+- `enable` — Enable an optional service
+- `list` — List all optional services with enabled/disabled status
+- `ps` — Show status of all nSelf stack services
+- `restart` — Restart a named nSelf service
+- `scale` — Set the replica count for a named service
+- `start` — Start a named nSelf service
+- `stop` — Stop a named nSelf service (container preserved)
+- `update` — Pull the latest image for a service and restart it
+- `upgrade` — Pin a service to a specific image version
+
+Flags:
+
+- `--env` (default "") — Target environment (reads .env.{env})
+
+Full page: [[cmd-service]]
+
+### nself soak
+
+Manage soak testing lifecycle
+
+```
+nself soak <subcommand> [flags]
+```
+
+Subcommands:
+
+- `abort` — Abort a running soak and roll back to a prior version
+
+Full page: [[cmd-soak]]
+
+### nself ssl
+
+Manage SSL certificates
+
+```
+nself ssl <subcommand> [flags]
+```
+
+Subcommands:
+
+- `add` — Provision an SSL certificate for a single domain
+- `renew` — Reload nginx and optionally renew certificates
+- `setup` — Set up SSL certificates via DNS-01 challenge
+- `status` — Show SSL certificate status
+
+Full page: [[cmd-ssl]]
+
+### nself start
+
+Boot your nSelf stack
+
+```
+nself start [flags]
+```
+
+Flags:
+
+- `--allow-legacy` (default false) — Bypass v0.9 artifact check and proceed with WARNING (not recommended)
+- `--clean-start` (default false) — Remove all containers before starting
+- `--debug` (default false) — Show debug information
+- `--embedded-pg` (default false) — Boot PostgreSQL via embedded pglite/wasmtime — no Docker postgres container required; pgvector included
+- `--force-recreate` (default false) — Alias for --fresh
+- `--fresh` (default false) — Force recreate all containers
+- `--profile` (default "") — Service profile passed to an automatic rebuild when the compose file is stale.
+  app (default) — full service set.
+  ops           — observability + CI server (postgres, hasura, auth, nginx, monitoring).
+Overrides NSELF_PROFILE env var. Has no effect when --skip-build is set.
+- `--quick` (default false) — Quick start (timeout=30, required=60%)
+- `--quiet` (default false) — Suppress progress output (for CI; preserves --json output)
+- `--skip-build` (default false) — Skip automatic rebuild detection
+- `--skip-db-init` (default false) — Skip database migrations and seed; bring up Postgres+Hasura+hasura-auth only. Intended for CI/E2E environments.
+- `--skip-health-checks` (default false) — Skip health validation after startup
+- `--skip-plugins` (default false) — Start base stack only, skip all plugin compose files
+- `--skip-port-check` (default false) — Skip port availability check
+- `--timeout` (default 120) — Health check timeout in seconds (range: 30-600)
+- `--verbose` (default false) — Show detailed Docker output
+- `--watch` (default false) — Enable health auto-restart: poll services and restart unhealthy containers
+
+Full page: [[cmd-start]]
+
+### nself status
+
+Show health status of all services
+
+```
+nself status [SERVICE] [flags]
+```
+
+Flags:
+
+- `--deep` (default false) — Deep health aggregator (verbose + metrics + resource usage)
+- `--health-only` (default false) — Show only health status
+- `--json` (default false) — JSON output
+- `--metrics` (default false) — Show performance metrics
+- `--verbose` (default false) — Show resource usage, uptime
+
+Full page: [[cmd-status]]
+
+### nself stop
+
+Gracefully shut down all services or specific services
+
+```
+nself stop [SERVICES...] [flags]
+```
+
+Flags:
+
+- `--graceful` (default 30) — Graceful shutdown timeout in seconds
+- `--no-monorepo` (default false) — Disable automatic monorepo backend detection
+- `--remove-images` (default false) — Alias for --rmi
+- `--remove-orphans` (default false) — Remove orphaned containers
+- `--rmi` (default false) — Remove Docker images
+- `--verbose` (default false) — Show detailed output
+- `--volumes` (default false) — Remove volumes (WARNING: deletes data)
+
+Full page: [[cmd-stop]]
+
+### nself telemetry
+
+Manage CLI telemetry preferences
+
+```
+nself telemetry <subcommand> [flags]
+```
+
+Subcommands:
+
+- `off` — Disable telemetry (writes to ~/.nself/config.toml)
+- `on` — Enable telemetry (writes to ~/.nself/config.toml)
+- `status` — Show current telemetry state and anonymous install-ID
+
+Full page: [[cmd-telemetry]]
+
+### nself template
+
+Browse and publish full-stack app templates
+
+```
+nself template <subcommand> [flags]
+```
+
+Subcommands:
+
+- `info` — Show detail for a single template
+- `list` — List available app templates
+- `publish` — Submit a template to the nSelf registry
+- `update` — Apply incremental migrations for the installed template
+
+Full page: [[cmd-template]]
+
+### nself tenant
+
+[PREVIEW] Tenant management: create, upgrade, suspend, destroy, audit
+
+```
+nself tenant <subcommand> [flags]
+```
+
+Subcommands:
+
+- `audit` — Query tenant audit log
+- `create` — Create a new tenant
+- `destroy` — Hard-delete a tenant (DESTRUCTIVE)
+- `suspend` — Suspend a tenant
+- `upgrade` — Change a tenant's plan
+
+Full page: [[cmd-tenant]]
+
+### nself trust
+
+Set up local dev trust (DNS, SSL, port forwarding)
+
+```
+nself trust <subcommand> [flags]
+```
+
+Subcommands:
+
+- `status` — Show trusted cert CAs, last rotation date, and expiry warnings
+
+Flags:
+
+- `--project` (default "") — Path to nself project directory (allows running from any cwd)
+- `--skip-dns` (default false) — Skip dnsmasq and /etc/resolver setup
+- `--skip-ports` (default false) — Skip port forwarding setup
+- `--skip-ssl` (default false) — Skip mkcert CA and certificate generation
+- `--status` (default false) — Show current trust status and exit
+- `--undo` (default false) — Print instructions to undo all trust changes
+
+Full page: [[cmd-trust]]
+
+### nself uninstall
+
+Remove nSelf project data and generated files
+
+```
+nself uninstall [flags]
+```
+
+Flags:
+
+- `--keep-data` (default false) — Keep database volumes (default behaviour)
+- `--purge` (default false) — Remove everything including database volumes (DESTRUCTIVE)
+- `--yes` (default false) — Skip confirmation prompts
+
+Full page: [[cmd-uninstall]]
+
+### nself update
+
+Update the nSelf CLI and admin UI
+
+```
+nself update <subcommand> [flags]
+```
+
+Subcommands:
+
+- `images` — Refresh Docker image digests from registries
+
+Flags:
+
+- `--admin` (default false) — Only update the admin UI
+- `--check` (default false) — Check for updates without installing
+- `--cli` (default false) — Only update the CLI binary
+- `--force` (default false) — Force update even if already up to date
+- `--restart` (default false) — Restart services after update
+- `--version` (default "") — Download a specific version (e.g. v1.2.3)
+
+Full page: [[cmd-update]]
+
+### nself upgrade
+
+Upgrade the nSelf CLI (detects install method)
+
+```
+nself upgrade [flags]
+```
+
+Flags:
+
+- `--binary-sha256` (default "") — Operator-supplied SHA-256 digest for --binary-url (skips checksums.txt fetch)
+- `--binary-url` (default "") — Install from a specific binary URL (HTTPS only; .tar.gz/.tgz; operator use)
+- `--channel` (default "") — Release channel: stable or canary
+- `--check` (default false) — Check for updates without installing
+- `--rollback` (default false) — Revert to the previously installed version
+- `--version` (default "") — Upgrade to a specific version (e.g. 1.2.3)
+
+Full page: [[cmd-upgrade]]
+
+### nself urls
+
+Display all service URLs with route conflict detection
+
+```
+nself urls [flags]
+```
+
+Flags:
+
+- `--all` (default false) — Show all routes including internal
+- `--check-conflicts` (default false) — Check for route conflicts
+- `--diff` (default "") — Compare URLs between environments
+- `--env` (default "") — Show URLs for specific environment
+- `--json` (default false) — JSON output
+
+Full page: [[cmd-urls]]
+
+### nself verify-sbom
+
+Verify the SBOM signature for a CLI release
+
+```
+nself verify-sbom [flags]
+```
+
+Flags:
+
+- `--repo` (default nself-org/cli) — GitHub repo (owner/name)
+- `--version` (default "") — Release version to verify (e.g. v1.0.9)
+
+Full page: [[cmd-verify-sbom]]
+
+### nself version
+
+Show version and system information
+
+```
+nself version [flags]
+```
+
+Flags:
+
+- `--json` (default false) — Print version info as JSON
+- `--short` (default false) — Print version number only
+
+Full page: [[cmd-version]]
+
+### nself waf
+
+Manage the Web Application Firewall (Coraza + OWASP CRS)
+
+```
+nself waf <subcommand> [flags]
+```
+
+Subcommands:
+
+- `enable` — Enable the WAF in detection mode
+- `mode` — Set WAF enforcement mode
+- `report` — Show recent WAF events
+
+Full page: [[cmd-waf]]
+
+### nself watchdog
+
+Self-healing container watchdog with circuit breaker
+
+```
+nself watchdog <subcommand> [flags]
+```
+
+Subcommands:
+
+- `history` — Show watchdog event history
+- `reset` — Reset a specific service circuit breaker (including PERMANENT_OPEN)
+- `reset-breakers` — Reset all tripped circuit breakers to closed state
+- `status` — Show watchdog status and circuit breaker states
+- `test-alert` — Send a test alert through all configured channels (TG + email)
+
+Full page: [[cmd-watchdog]]
+
+### nself webhooks
+
+Manage webhook processing and outbox
+
+```
+nself webhooks <subcommand> [flags]
+```
+
+Subcommands:
+
+- `outbox` — Manage the webhook durable outbox queue
+
+Full page: [[cmd-webhooks]]
+

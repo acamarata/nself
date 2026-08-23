@@ -1,61 +1,53 @@
 # nself queue
 
+<!-- BEGIN PROSE:summary -->
 > Manage async job queues (pg-boss).
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
 ```
-nself queue <subcommand> [flags] [args]
+nself queue <subcommand> [flags]
 ```
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself queue` inspects and manages the async job system that runs on top of `pg-boss` in your project's Postgres. Use it to list queues with pending/active/failed/dead counts, drill into individual jobs, retry failed jobs, purge old jobs by age, and list scheduled cron jobs.
 
 `queue list` summarizes every queue. `queue jobs <queue>` paginates jobs in a single queue, optionally filtered by `--state` (pending, active, failed, dead). `queue retry <job-id>` re-enqueues a job. `queue purge <queue>` deletes completed/dead jobs older than `--older-than` (default 30 days) to keep the queue table lean.
 
 `queue cron list` enumerates registered cron schedules so operators can confirm that scheduled tasks (digests, backups, exports, license refreshes) are wired correctly.
 
-## Subcommands
-
-| Name | Description |
-|------|-------------|
-| `list` | List all queues with job counts |
-| `jobs <queue>` | List jobs in a queue |
-| `retry <job-id>` | Retry a failed or dead job |
-| `purge <queue>` | Purge completed/dead jobs older than specified duration |
-| `cron list` | List scheduled cron jobs |
+### `queue list`
+### `queue jobs <queue>`
+### `queue purge <queue>`
+### `queue cron list`
+<!-- END PROSE:description -->
 
 ## Flags
 
-### `queue list`
-
+<!-- BEGIN GENERATED:flags -->
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--json` | false | JSON output |
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
 
-### `queue jobs <queue>`
+## Subcommands
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--state` | `""` | Filter by state (`pending`, `active`, `failed`, `dead`) |
-| `--limit` | `50` | Maximum jobs to return |
-| `--json` | false | JSON output |
-
-### `queue purge <queue>`
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--older-than` | `720h` | Purge jobs older than duration (default 30d) |
-
-### `queue cron list`
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--json` | false | JSON output |
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `cron` | Manage scheduled cron jobs |
+| `jobs` | List jobs in a queue |
+| `list` | List all queues with job counts |
+| `purge` | Purge completed/dead jobs older than specified duration |
+| `retry` | Retry a failed or dead job |
+<!-- END GENERATED:subcommands -->
 
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
 ```bash
 # Summarize every queue
 nself queue list
@@ -72,12 +64,15 @@ nself queue purge export --older-than 168h
 # List all scheduled cron jobs
 nself queue cron list
 ```
+<!-- END PROSE:examples -->
 
 ## See Also
 
+<!-- BEGIN PROSE:see-also -->
 - [[cmd-webhooks]], webhook outbox
 - [[cmd-watchdog]], self-healing watchdog
 - [[cmd-status]], service health
 - [[Commands]], full command index
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

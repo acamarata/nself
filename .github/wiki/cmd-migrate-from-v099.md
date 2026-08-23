@@ -1,6 +1,8 @@
 # nself migrate-from-v099
 
+<!-- BEGIN PROSE:summary -->
 > Migrate v0.9.9 home-level state (license key, update channel, SSH keys) to the v1.x layout.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
@@ -10,6 +12,7 @@ nself migrate-from-v099 [flags]
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself migrate-from-v099` is a one-time migration command for operators who ran the
 v0.9.9 Bash-era CLI and are upgrading to v1.x.
 
@@ -43,13 +46,6 @@ After the command completes, re-validate your license:
 ```bash
 nself license verify
 ```
-
-## Flags
-
-| Flag | Short | Type | Default | Description |
-|------|-------|------|---------|-------------|
-| `--yes` | | bool | `false` | Skip the confirmation prompt (for non-interactive / CI use) |
-| `--check` | | bool | `false` | Detect legacy state and report what would migrate, without making any changes |
 
 ## Breaking Changes
 
@@ -92,9 +88,21 @@ The output lists each artifact found and the action that would be taken:
 
 Artifacts not recognised by the migration shim are placed in the backup directory and left
 in the renamed legacy directory. They are never deleted.
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--check` | `false` | Detect legacy state without migrating |
+| `--yes` | `false` | Skip the confirmation prompt (non-interactive) |
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
 
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
 Detect legacy state without making any changes — run this first to see what would be migrated:
 
 ```bash
@@ -131,11 +139,14 @@ Confirm the legacy directory was renamed and a backup was created:
 ```bash
 ls ~/.nself/ | grep v099
 ```
+<!-- END PROSE:examples -->
 
 ## See Also
 
+<!-- BEGIN PROSE:see-also -->
 - [cmd-migrate.md](cmd-migrate.md) — `nself migrate from-bash` for per-project Bash-era artifacts
 - [cmd-license.md](cmd-license.md) — manage and verify license keys
 - [cmd-update.md](cmd-update.md) — update the CLI binary
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

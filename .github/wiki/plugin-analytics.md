@@ -71,4 +71,4 @@ GET  /ready                      Readiness probe
 
 ## Related
 
-[[plugin-overview|Plugin Overview]] · [[Home]]
+[[Plugin-Overview|Plugin Overview]] · [[Home]]

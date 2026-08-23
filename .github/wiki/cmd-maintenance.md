@@ -1,5 +1,18 @@
 # nself maintenance
 
+<!-- BEGIN PROSE:summary -->
+> Maintenance utilities: disk cleanup, scheduler.
+<!-- END PROSE:summary -->
+
+## Synopsis
+
+```
+nself maintenance <subcommand> [flags]
+```
+
+## Description
+
+<!-- BEGIN PROSE:description -->
 **Free disk space and schedule automatic daily cleanup.**
 
 The `maintenance` command group provides tools for keeping your ɳSelf host
@@ -111,10 +124,43 @@ warn  Disk space  57.7 GB free — disk is 72% full — run `nself maintenance s
 Enable the daily timer to keep the warning from recurring.
 
 ---
+<!-- END PROSE:description -->
 
-## See also
+## Flags
 
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `disk-cleanup` | Free disk space: Docker prune, log rotation, journal vacuum |
+| `schedule` | Install or remove the daily disk-cleanup timer |
+| `status` | Show daily cleanup scheduler status |
+<!-- END GENERATED:subcommands -->
+
+## Examples
+
+<!-- BEGIN PROSE:examples -->
+<!-- TODO(docs): needs human prose -->
+
+```bash
+nself maintenance
+```
+<!-- END PROSE:examples -->
+
+## See Also
+
+<!-- BEGIN PROSE:see-also -->
 - [[cmd-doctor.md]], full system diagnostics
 - [[cmd-plugin-logs.md]], view plugin log output
 
 [[Home]]
+<!-- END PROSE:see-also -->
+
+← [[Commands]] | [[Home]] →

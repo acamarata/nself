@@ -1,6 +1,8 @@
 # nself api
 
+<!-- BEGIN PROSE:summary -->
 > API versioning and deprecation tooling for operators.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
@@ -10,141 +12,160 @@ nself api <subcommand> [flags]
 
 ## Description
 
-`nself api` provides tooling to inspect and validate API version state across all observable surfaces in a running ɳSelf install. Operators use it to check API surface versions before upgrades and to detect deprecated API usage before clients are affected.
+<!-- BEGIN PROSE:description -->
+**API versioning and deprecation tooling for operators.**
 
-## Subcommands
-
-| Subcommand | Description |
-|------------|-------------|
-| `version` | Show API version for every surface observable from this install |
-| `deprecation-check` | Check for deprecated API usage in this install (G6) |
-| `changelog` | Show the deprecation calendar and sunset dates for a plugin (G9) |
+Operator commands for the ɳSelf API versioning baseline (v1.0.9).
+The long-term support contract guarantees backward compatibility through 2027-04-17.
 
 ---
+## nself api version
 
-### nself api version
+Show the API version for every surface reachable from this install.
 
 ```
-nself api version [flags]
+nself api version [--surface <name>] [--json] [--timeout <seconds>]
 ```
 
-Reports the current API version for every observable surface (Hasura, Auth, Storage, Functions, etc.) in the running ɳSelf stack. Use this after an upgrade to confirm all surfaces are on the expected version.
+**What it probes:**
+- `cli`, this binary's version
+- `ping_api`, version probed from `ping.nself.org/version`
+- `marketplace`, version probed from `plugins.nself.org/health` headers
+- `sdk`, per-installed-plugin SDK version from `plugin.json` `apiVersion` field
+- `hasura`, local Hasura running status (if stack is running)
 
-**Flags:**
+### Flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--surface` | (all) | Filter output to a specific surface name |
-| `--json` | false | Print output as JSON |
-| `--timeout` | `10s` | HTTP timeout for surface probes |
-| `--help`, `-h` | — | Show help |
+| `--surface` | (all) | Filter to a single surface: `cli`, `ping_api`, `marketplace`, `sdk`, `hasura` |
+| `--json` | false | Output as JSON instead of table |
+| `--timeout` | 5 | HTTP probe timeout in seconds |
 
-**Example:**
+### Examples
 
 ```bash
-# Check all API versions
+# Show all surfaces
 nself api version
 
-# JSON output for CI
-nself api version --json
+# Filter to ping_api surface only
+nself api version --surface ping_api
 
-# Check only the Hasura surface
-nself api version --surface hasura
+# JSON output for scripting
+nself api version --json
+```
+
+### Example output
+
+```
+Surface                        Version         Deprecated   EOL Date
+------------------------------------------------------------------------
+cli                            1.0.9           no           -
+ping_api                       1.0.9           no           -
+marketplace                    v1              no           -
+hasura                         running (version via `nself status --json`)  no  -
 ```
 
 ---
 
-### nself api deprecation-check
+## nself api deprecation-check
+
+Walk installed plugins and CLI command tree to find any deprecated API usage.
 
 ```
-nself api deprecation-check [flags]
+nself api deprecation-check [--json]
 ```
 
-Probes the plugin deprecation registry for deprecated API usage. Reports endpoints that are deprecated or approaching removal. Exits non-zero if any BREAKING entries are found (entries with no `deprecated_in` grace period), making it suitable for CI gates.
+Cross-references the central deprecation registry at `.claude/docs/api-deprecations.md`
+(mirrored publicly at `nself.org/docs/api/deprecations/`).
 
-**Flags:**
+At v1.0.9 baseline, the registry is empty. This command exits 0 with "0 deprecations
+found" at baseline.
+
+When future deprecations are added, this command will report:
+
+```
+[ping_api] /license/old-endpoint (deprecated since v1.1.0, EOL 2028-06-01)
+  Migration: https://nself.org/docs/api/deprecations/ping-api-license-old-endpoint
+```
+
+### Flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--plugin` | (all) | Filter check to a specific plugin name |
-| `--strict` | false | Exit non-zero if any BREAKING entries found (used by CI gate) |
-| `--json` | false | Print findings as JSON |
-| `--help`, `-h` | — | Show help |
+| `--json` | false | Output as JSON instead of human-readable |
 
-**Example:**
+### Examples
 
 ```bash
-# Check all plugins for deprecated API usage
+# Check for deprecated API usage
 nself api deprecation-check
 
-# Check a specific plugin
-nself api deprecation-check --plugin ai
-
-# CI-safe strict mode (exits 1 on any BREAKING entry)
-nself api deprecation-check --strict --json
-
-# JSON output for automated tooling
+# JSON output
 nself api deprecation-check --json
 ```
 
+### Example output (v1.0.9 baseline)
+
+```
+0 deprecations found. Your install is clean against the v1.0.9 LTS baseline.
+
+  Registry: .claude/docs/api-deprecations.md (no entries at v1.0.9)
+  LTS window: 2026-04-17 → 2027-04-17
+```
+
 ---
 
-### nself api changelog
+## long-term support Commitment
 
-```
-nself api changelog <plugin> [flags]
-```
+ɳSelf v1.0.9 is an long-term support release. Every surface listed in `nself api version` is
+backward-compatible through 2027-04-17. Breaking changes during this window require:
 
-Shows the deprecation calendar for a plugin: all deprecated endpoints, when each was deprecated, when it will be removed, and any Sunset header dates. Use this to plan client migrations before removal dates.
+1. A `BREAKING-CHANGE-OK` annotation in the PR
+2. A maintainer (not PR author) approval label
+3. An entry in the deprecation registry with at least 6 months notice
 
-**Arguments:**
+See [API Deprecations](https://nself.org/docs/api/deprecations/) and
+`.claude/docs/operations/breaking-change-policy.md` for details.
 
-| Argument | Description |
-|----------|-------------|
-| `<plugin>` | Plugin name (e.g. `ai`, `mux`, `claw`) |
+---
 
-**Flags:**
+[[Home]] | [[Commands]] | [[Changelog]]
+<!-- END PROSE:description -->
 
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--json` | false | Print output as JSON |
 | `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
 
-**Example:**
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `changelog` | Print the deprecation sunset calendar for a plugin |
+| `deprecation-check` | Check for deprecated API usage in this install |
+| `version` | Show API version for every surface observable from this install |
+<!-- END GENERATED:subcommands -->
+
+## Examples
+
+<!-- BEGIN PROSE:examples -->
+<!-- TODO(docs): needs human prose -->
 
 ```bash
-# Show deprecation calendar for the ai plugin
-nself api changelog ai
-
-# JSON output for automated tooling
-nself api changelog ai --json
-
-# Show calendar for the mux plugin
-nself api changelog mux
+nself api
 ```
-
-**Output:**
-
-```
-Plugin: ai  (API v1.3.0)
-Deprecated endpoints: 0
-All endpoints are current. No action needed.
-```
-
-When deprecated endpoints exist:
-
-```
-Plugin: ai  (API v1.3.0)
-Deprecated endpoints: 1
-
-  Endpoint        deprecated_in  removed_in  sunset
-  /v1/complete    v1.2.0         v2.0.0      Sat, 01 Jan 2027 00:00:00 GMT
-  Replacement: POST /v2/complete
-  Reason: Unified completion API with streaming support
-```
+<!-- END PROSE:examples -->
 
 ## See Also
 
-- [[cmd-version]], CLI version information
-- [[cmd-doctor]], Full system diagnostics
-- [[cmd-status]], Live service health
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
+
+← [[Commands]] | [[Home]] →

@@ -1,46 +1,50 @@
 # nself admin
 
+<!-- BEGIN PROSE:summary -->
 > Manage the ɳSelf Admin UI: open, start, stop, inspect logs, or health-check.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
 ```
-nself admin [subcommand] [flags]
+nself admin [subcommand] <subcommand> [flags]
 ```
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself admin` manages the local ɳSelf Admin dashboard at `http://localhost:3021`. With no subcommand, it opens the dashboard in your default browser. Use subcommands to control the Admin container lifecycle directly.
 
 The Admin UI is a local-only web interface (Docker container) on your machine. It is not a hosted service.
 
-## Subcommands
-
-| Subcommand | Description |
-|------------|-------------|
-| _(none)_ | Open the Admin UI in your default browser |
-| `start` | Start the Admin service (enables, builds, boots if not running) |
-| `stop` | Stop the Admin container gracefully |
-| `logs` | Tail Admin container logs |
-| `health` | Check Admin liveness via HTTP probe on `/health` |
+### `stop`
+### `logs`
+<!-- END PROSE:description -->
 
 ## Flags
 
-### `stop`
-
+<!-- BEGIN GENERATED:flags -->
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--force` | false | Skip graceful drain and force-stop |
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
 
-### `logs`
+## Subcommands
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--follow` | false | Stream logs continuously |
-| `--tail` | 100 | Number of recent lines to show |
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `connect` | Connect to a remote ɳSelf Admin via SSH tunnel |
+| `health` | Check Admin service liveness |
+| `logs` | Tail Admin container logs |
+| `projects` | Manage multi-project admin configuration |
+| `start` | Start the Admin service |
+| `stop` | Stop the Admin container |
+<!-- END GENERATED:subcommands -->
 
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
 ```bash
 # Open the Admin UI in your browser
 nself admin
@@ -63,5 +67,13 @@ nself admin logs --follow
 # Check Admin health
 nself admin health
 ```
+<!-- END PROSE:examples -->
+
+## See Also
+
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

@@ -1,101 +1,233 @@
 # nself account
 
-> Manage your ɳSelf account: session status, team membership, licenses, devices, and ownership transfer.
+<!-- BEGIN PROSE:summary -->
+> Manage your ɳSelf account, sessions, licenses, team, and devices.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
-```bash
-nself account [subcommand] [flags]
-nself account status
-nself account team
-nself account licenses
-nself account devices
-nself account transfer <new-owner-email>
+```
+nself account <subcommand> [flags]
 ```
 
 ## Description
 
-`nself account` provides a read-only view into your authenticated session and account state. When invoked with no subcommand it prints the same output as `nself account status`.
+<!-- BEGIN PROSE:description -->
+**Authenticate with your ɳSelf account and manage credentials.**
 
-Authentication state is stored in `~/.nself/auth.json`. Use `nself login` to establish a session and `nself logout` to clear it. The `account` command reads this file and optionally queries the auth server to verify token freshness.
+These three commands handle the full CLI authentication lifecycle: log in,
+view account details, manage licenses, and log out.
 
-## Subcommands
+Credentials are stored at `~/.nself/auth.json` (permissions: 0600). The
+auth server is `api.nself.org`. Override with `NSELF_AUTH_SERVER_URL` for
+testing or self-hosted deployments.
+
+---
+
+## nself login
+
+Log in to your ɳSelf account using the device authorization flow.
+
+```
+nself login [--no-browser] [--force]
+```
+
+The command opens your browser to `nself.org/auth/cli?code=XXXX-YYYY`.
+Confirm the short code matches, click Authorize, and the CLI stores your
+session token automatically.
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--no-browser` | Print the login URL instead of opening a browser |
+| `--force` | Log in even if already logged in (replaces the existing session) |
+
+### Examples
+
+```bash
+# Standard login — opens browser automatically
+nself login
+
+# Headless environment (CI, SSH)
+nself login --no-browser
+
+# Re-authenticate (token rotation, tier change)
+nself login --force
+```
+
+### Output
+
+```
+ℹ Contacting nSelf auth server...
+
+» Your login code: ABCD-WXYZ
+» Open: https://nself.org/auth/cli?code=ABCD-WXYZ
+
+Browser opened. Waiting for authorization...
+.
+✓ Logged in as user@example.com (pro).
+Bundles: [nclaw]
+```
+
+### Files written
+
+| Path | Mode | Contents |
+|------|------|----------|
+| `~/.nself/auth.json` | 0600 | Access token, session token, email, tier, bundles |
+
+---
+
+## nself logout
+
+Revoke the current session and delete local credentials.
+
+```
+nself logout [--all]
+```
+
+The command calls `POST /auth/signout` on the auth server to revoke the
+session, then deletes `~/.nself/auth.json`. If the server is unreachable,
+local credentials are still deleted.
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--all` | Revoke every active session (useful when a device is lost or shared) |
+
+### Examples
+
+```bash
+# Log out the current session
+nself logout
+
+# Revoke all sessions (lost device, security incident)
+nself logout --all
+```
+
+### Output
+
+```
+✓ Logged out.
+```
+
+---
+
+## nself account
+
+View account details and manage licenses linked to your account.
+
+```
+nself account <subcommand>
+```
+
+### Subcommands
 
 | Subcommand | Description |
-|------------|-------------|
-| `status` | Show session status, tier, MFA state, and email verification |
-| `login` | Authenticate and write auth token (alias for `nself login`) |
-| `logout` | Clear saved credentials (alias for `nself logout`) |
-| `team` | List team members and their roles (Pro+ required) |
-| `licenses` | Show all license keys associated with this account |
-| `devices` | List devices with active sessions for this account |
-| `transfer` | Transfer project ownership to another account |
+|-----------|-------------|
+| `show` | Print email, tier, MFA status, and bundles |
+| `licenses list` | List active licenses linked to this account |
+
+---
+
+### nself account show
+
+Print live account info from the auth server. Falls back to cached data
+from `~/.nself/auth.json` if the server is unreachable.
+
+```
+nself account show
+```
+
+**Example output:**
+
+```
+Email:          user@example.com
+Name:           Ali S
+Tier:           pro
+Email verified: yes
+MFA:            enabled
+Bundles:        nclaw, nchat
+Token expires:  2026-07-01T00:00:00Z
+```
+
+---
+
+### nself account licenses list
+
+List all licenses linked to your account, with seat usage and expiry.
+
+```
+nself account licenses list
+```
+
+**Example output:**
+
+```
++----------+---------+------+--------+-------+------------+
+| ID       | Product | Tier | Bundles| Seats | Expires    |
++----------+---------+------+--------+-------+------------+
+| a1b2c3d4 | nSelf   | pro  | nclaw  | 1/5   | 2027-04-01 |
++----------+---------+------+--------+-------+------------+
+```
+
+---
+
+## Environment variables
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `NSELF_AUTH_SERVER_URL` | `https://api.nself.org` | Override auth server base URL |
+| `NSELF_CLI_AUTH_URL` | `https://nself.org/auth/cli` | Override device auth page URL |
+
+---
+
+## Related commands
+
+- `nself license set <key>`, activate a plugin license key (existing flow)
+- `nself license list`, list locally configured license keys
+
+[[Home]] | [[Commands]] | [[Plugin-Overview]]
+<!-- END PROSE:description -->
 
 ## Flags
 
-### `account status`
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--json` | bool | false | Emit status as JSON |
+## Subcommands
 
-### `account team`
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--json` | bool | false | Emit team list as JSON |
-
-### `account transfer`
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--yes` | bool | false | Skip confirmation prompt |
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `devices` | List and revoke registered devices |
+| `licenses` | List and manage account licenses |
+| `login` | Log in to your ɳSelf account |
+| `logout` | Log out of your ɳSelf account |
+| `status` | Show current account summary |
+| `team` | Manage team members |
+| `transfer` | Transfer a license to another account |
+<!-- END GENERATED:subcommands -->
 
 ## Examples
 
-```bash
-# Check login status
-nself account status
-```
+<!-- BEGIN PROSE:examples -->
+<!-- TODO(docs): needs human prose -->
 
 ```bash
-# List team members
-nself account team
+nself account
 ```
-
-```bash
-# View all license keys on this account
-nself account licenses
-```
-
-```bash
-# List active device sessions
-nself account devices
-```
-
-```bash
-# Transfer project ownership (prompts for confirmation)
-nself account transfer newowner@example.com
-```
-
-```bash
-# JSON output for scripting
-nself account status --json
-```
-
-## Exit Codes
-
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | Authenticated but server error or malformed response |
-| 2 | Not authenticated — run `nself login` |
+<!-- END PROSE:examples -->
 
 ## See Also
 
-- [[cmd-login.md]] — establish a session
-- [[cmd-logout.md]] — clear credentials
-- [[cmd-license.md]] — manage license keys
-- [[Licensing-Guide.md]] — license tiers and pricing
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

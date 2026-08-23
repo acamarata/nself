@@ -1,29 +1,23 @@
 # nself oauth
 
+<!-- BEGIN PROSE:summary -->
 > Manage OAuth provider tokens for ɳSelf plugins.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
 ```
-nself oauth <subcommand>
-nself oauth refresh <provider> [flags]
-nself oauth refresh --all [flags]
+nself oauth <subcommand> [flags]
 ```
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself oauth` manages OAuth provider tokens. Use `nself oauth refresh` to trigger
 an immediate token refresh outside the scheduled cron window, for example after
 a provider outage or a B-21-style token expiry incident.
 
-## Subcommands
-
-| Subcommand | Description |
-|---|---|
-| `refresh` | Trigger immediate OAuth token refresh for a provider |
-
 ---
-
 ## nself oauth refresh
 
 Force an immediate OAuth token refresh outside the cron schedule.
@@ -69,3 +63,39 @@ nself oauth refresh --all
 
 - [Observability](https://nself.org/docs/operations/observability), oauth_token_refresh_total metric
 - [google plugin](https://nself.org/docs/plugins/google), Google OAuth configuration
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `refresh` | Trigger immediate OAuth token refresh for a provider |
+<!-- END GENERATED:subcommands -->
+
+## Examples
+
+<!-- BEGIN PROSE:examples -->
+<!-- TODO(docs): needs human prose -->
+
+```bash
+nself oauth
+```
+<!-- END PROSE:examples -->
+
+## See Also
+
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
+
+← [[Commands]] | [[Home]] →

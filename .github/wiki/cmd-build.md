@@ -1,6 +1,8 @@
 # nself build
 
+<!-- BEGIN PROSE:summary -->
 > Generate `docker-compose.yml`, nginx configs, and SSL certificates from `.env`.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
@@ -10,28 +12,12 @@ nself build [flags]
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself build` reads your `.env` cascade and generates all infrastructure configuration files: a `docker-compose.yml` with every enabled service, nginx reverse-proxy configs, and SSL certificates. It must be run after `nself init` and after any configuration change before restarting services.
 
 The build pipeline loads configuration from `.env.dev` → `.env.{ENV}` → `.env.secrets` → `.env.local` → `.env`, merges plugin configurations from `~/.nself/plugins/`, and applies security validation (password strength, no wildcard CORS in production, port binding checks). The result is a single `docker-compose.yml` that includes core services, optional services, monitoring, custom services (CS_1–CS_10), and any installed plugins.
 
 By default, `nself build` is smart-cached: it compares `.env` modification time against `docker-compose.yml` and skips regeneration when nothing has changed. Use `--force` to override the cache.
-
-## Flags
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--force`, `-f` | false | Force rebuild all components, ignore cache |
-| `--check` | false | Validate configuration only , do not write any files |
-| `--verbose`, `-v` | false | Show environment cascade during build |
-| `--quiet`, `-q` | false | Suppress non-error output (CI use) |
-| `--no-cache` | false | Disable build cache |
-| `--debug` | false | Enable debug mode |
-| `--allow-insecure` | false | Allow insecure configuration (dev only) |
-| `--security-report` | false | Generate a security analysis after build |
-| `--no-migration-check` | false | Skip v0.9 artifact detection (automation/CI) |
-| `--allow-legacy` | false | Bypass v0.9 artifact check and proceed with WARNING (not recommended). Use only as a temporary workaround while running `nself migrate`. |
-| `--no-monorepo` | false | Disable automatic monorepo backend detection |
-| `--help`, `-h` | — | Show help |
 
 ## Declared plugins (nself.yaml)
 
@@ -102,9 +88,32 @@ services.<name>: can't set distinct values on 'pids_limit' and 'deploy.resources
 The generator uses the `deploy.resources.limits.pids` form exclusively. The `pids_limit` top-level field is never emitted. This form is also valid on Compose v3.4+ and v4, so generated files work across all current Docker Compose versions.
 
 Each long-running service gets a default pids limit of 100 to prevent fork-bomb attacks. Services that need more (such as postgres under high concurrency) override this in their configuration.
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--allow-insecure` | `false` | Allow insecure config (dev only) |
+| `--allow-legacy` | `false` | Bypass v0.9 artifact check and proceed with WARNING (not recommended) |
+| `--check` | `false` | Validate only, don't build |
+| `--debug` | `false` | Enable debug mode |
+| `--force`, `-f` | `false` | Force rebuild all components |
+| `--no-auto-redis` | `false` | Disable automatic Redis enablement when a BullMQ-backed plugin is detected |
+| `--no-cache` | `false` | Disable build cache |
+| `--no-migration-check` | `false` | Skip v1 artifact detection (for automation/CI) |
+| `--no-monorepo` | `false` | Disable automatic monorepo backend detection |
+| `--profile` | `""` | Service profile: curated subset of services to include in docker-compose.yml.   app (default) — full service set, identical to pre-profile behaviour.   ops           — observability + CI server: postgres, hasura, auth, nginx,                   monitoring stack; excludes minio, mailpit, admin, functions, search. Overrides NSELF_PROFILE env var. Valid values: app, ops. |
+| `--quiet`, `-q` | `false` | Suppress non-error output (for CI use) |
+| `--security-report` | `false` | Generate security analysis |
+| `--verbose`, `-v` | `false` | Show environment cascade |
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
 
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
 ```bash
 # Standard build
 nself build
@@ -127,5 +136,13 @@ nself build --security-report
 # Rebuild for a specific environment
 nself build --force --verbose
 ```
+<!-- END PROSE:examples -->
+
+## See Also
+
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

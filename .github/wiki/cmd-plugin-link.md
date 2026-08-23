@@ -49,7 +49,7 @@ nself plugin unlink ai
 ## See Also
 
 - [[cmd-plugin-dev]] — Start a plugin in development mode
-- [[cmd-plugin-install]] — Install a plugin from the registry
+- [[Plugin-Install]] — Install a plugin from the registry
 - [[cmd-plugin-test]] — Run a plugin's test suite
 
 ← [[Commands]] | [[Home]] →

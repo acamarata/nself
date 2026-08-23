@@ -171,7 +171,7 @@ Note: `plugins-pro` is a private repository. Source access is granted to ɳSelf+
 
 - [[plugin-cloudflare]] — Cloudflare DNS, Workers, and Pages management
 - [[plugin-object-storage]] — S3-compatible object storage for CDN origin content
-- [[Pricing]] — tier comparison
-- [[Plugins]] — full plugin index
+- [[Plugin-Licensing]] — tier comparison
+- [[Plugin-Overview]] — full plugin index
 
-← [[Plugins]] | [[Home]] →
+← [[Plugin-Overview]] | [[Home]] →

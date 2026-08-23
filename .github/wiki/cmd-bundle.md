@@ -1,125 +1,240 @@
 # nself bundle
 
-> List, inspect, install, and remove ɳSelf plugin bundles.
+<!-- BEGIN PROSE:summary -->
+> Manage and inspect ɳSelf plugin bundles.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
-```bash
+```
 nself bundle <subcommand> [flags]
-nself bundle list
-nself bundle info <bundle>
-nself bundle install <bundle>
-nself bundle remove <bundle>
 ```
 
 ## Description
 
-`nself bundle` manages plugin bundles. A bundle is a named collection of paid plugins sold together under a single subscription. Installing a bundle activates its plugins for the life of the subscription.
+<!-- BEGIN PROSE:description -->
+**Inspect and manage nSelf plugin bundles.**
 
-The six current bundles are:
+Bundles group related pro plugins into a single purchase. Each paid bundle costs
+$0.99/mo or $9.99/yr. ɳSelf+ ($3.99/mo or $39.99/yr) includes all six paid bundles.
 
-| Bundle | Slug | Plugins |
-|--------|------|---------|
-| ɳClaw | `nclaw` | AI assistant + memory + BYOK + claw-web + claw-news + claw-budget |
-| ɳChat | `nchat` | Chat + e2ee + moderation + invitations + realtime + push |
-| ɳFamily | `nfamily` | Family social + gedcom + calendar + tasks + photos + home |
-| ɳTV | `ntv` | IPTV + EPG + streaming + retro-gaming + rom-discovery + media-processing |
-| ClawDE | `clawde` | Dev environment + github-runner + mlflow + feature-flags + webhooks + compliance |
-| ɳSentry | `nsentry` | Monitoring + alerting + anomaly + SLO + synthetic + RUM + crash + oncall |
+Activate a bundle by setting a license key:
 
-ɳSelf+ (`nself-plus`) grants access to all six bundles at the ɳSelf+ price.
+nself license set <key>
 
-Bundle membership is authoritative at SPORT F06. Use `nself bundle list` for the live, CLI-computed list.
+---
 
-`nself bundle install sentry` is a slug alias for `nsentry` (added v1.2.3): it resolves to the same ɳSentry bundle but never appears in `nself bundle list` or shell completions — those always show the canonical `nsentry` slug.
+## nself bundle list
 
-## Subcommands
+List all available bundles with pricing and plugin counts.
 
-| Subcommand | Description |
-|------------|-------------|
-| `list` | Show all bundles, their plugins, and installation status |
-| `info <bundle>` | Full detail for one bundle: plugins, pricing, requirements |
-| `install <bundle>` | Install all plugins in a bundle (requires valid license) |
-| `remove <bundle>` | Uninstall all plugins in a bundle (stops running plugin services) |
+```
+nself bundle list [--installed] [--json]
+```
 
-## Flags
+### Flags
 
-### `bundle list`
+| Flag | Description |
+|------|-------------|
+| `--installed` | Show only bundles with at least one active plugin on this machine |
+| `--json` | Output a machine-readable JSON array (used by the admin/ marketplace UI) |
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--json` | bool | false | Emit bundle list as JSON |
-| `--installed` | bool | false | Show only installed bundles |
-
-### `bundle info`
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--json` | bool | false | Emit info as JSON |
-
-### `bundle install`
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--key <key>` | string | — | License key to use (overrides `~/.nself/license/key`) |
-| `--dry-run` | bool | false | Show what would be installed without installing |
-
-### `bundle remove`
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--yes` | bool | false | Skip confirmation |
-| `--keep-data` | bool | false | Stop services but preserve plugin data volumes |
-
-## Examples
+### Examples
 
 ```bash
-# List all available bundles
+# Show all bundles
 nself bundle list
+
+# Show only bundles with plugins already installed
+nself bundle list --installed
+
+# Machine-readable output for scripting
+nself bundle list --json
 ```
 
+### Output columns (table mode)
+
+| Column | Description |
+|--------|-------------|
+| Slug | CLI identifier used in `bundle info / install / remove` |
+| Name | Display name (ɳClaw, ɳChat, etc.) |
+| Price | $0.99/mo or $9.99/yr (paid); FREE (ɳTask); $3.99/mo (ɳSelf+) |
+| Plugin count | Number of plugins in the bundle |
+
+---
+
+## nself bundle info \<name\>
+
+Show full details for one bundle: plugin membership, pricing, and your current
+license status.
+
+```
+nself bundle info <name> [--json]
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `name` | Bundle slug (nclaw, nchat, ntv, nfamily, clawde, nsentry, ntask, nself-plus) |
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--json` | Output a machine-readable JSON object with all fields |
+
+### Output fields (table mode)
+
+- **Bundle / Price:** display name and pricing tier
+- **License:** active, inactive, or not-set based on local license cache (no network call)
+- **Plugins:** full member list with installed marker (`✓`)
+- **Install:** one-line hint to activate and install
+
+### JSON output fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `slug` | string | CLI identifier |
+| `name` | string | Display name |
+| `price` | string | Human-readable price |
+| `description` | string | Optional note (omitted when empty) |
+| `plugins` | array | Plugin slug list |
+| `plugin_count` | int | Number of plugins |
+| `license_status` | string | Current license status |
+| `install_hint` | string | One-line install instruction |
+
+### Examples
+
 ```bash
-# See which plugins are in the ɳClaw bundle
+# Human-readable output
 nself bundle info nclaw
+
+# Machine-readable JSON
+nself bundle info nclaw --json
+
+# Unknown bundle exits 1 and suggests nself bundle list
+nself bundle info bad-name
 ```
 
-```bash
-# Install ɳClaw (requires nclaw or nself-plus license)
-nself bundle install nclaw
-```
-
-```bash
-# `sentry` is a slug alias for `nsentry` (v1.2.3+) — both install the same bundle
-nself bundle install sentry
-```
-
-```bash
-# Preview what would be removed without removing
-nself bundle remove nchat --dry-run
-```
-
-```bash
-# Remove the ɳTV bundle and keep data volumes
-nself bundle remove ntv --keep-data
-```
-
-## Exit Codes
+### Exit codes
 
 | Code | Meaning |
 |------|---------|
 | 0 | Success |
-| 1 | Error (license invalid, network failure, plugin error) |
-| 2 | Unknown bundle name |
+| 1 | Bundle not found — run `nself bundle list` for valid names |
 
-## Idempotency
+---
 
-`bundle install` is idempotent: running it twice produces no error if all plugins are already installed at the correct version. `bundle remove` is also idempotent: removing an already-removed bundle returns exit code 0.
+## nself bundle install \<name\>
+
+Install every plugin in a bundle in a single transaction. License validation runs
+for each plugin before any filesystem change. On failure, all plugins installed in
+this invocation are rolled back.
+
+```
+nself bundle install <name> [--dry-run] [--force] [--strict] [--channel <channel>]
+```
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--dry-run` | Print planned actions without installing |
+| `--force` | Bypass license validation (logged as license-bypass) |
+| `--strict` | Fail if any plugin in the bundle is missing from the registry |
+| `--channel` | Release channel: stable (default), beta, or canary |
+
+### Examples
+
+```bash
+nself bundle install nclaw
+nself bundle install nsentry --channel beta
+nself bundle install nchat --dry-run
+```
+
+---
+
+## nself bundle remove \<name\>
+
+Remove every plugin in a bundle. Plugin data (schema/tables) is dropped by
+default; pass `--keep-data` to preserve it for later reinstall.
+
+```
+nself bundle remove <name> [--dry-run] [--keep-data]
+```
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--dry-run` | Print planned actions without removing |
+| `--keep-data` | Preserve plugin schema and tables on remove |
+
+### Examples
+
+```bash
+nself bundle remove nclaw
+nself bundle remove ntv --keep-data
+nself bundle remove nchat --dry-run
+```
+
+---
+
+## Bundle catalog
+
+| Slug | Display name | Price | Status |
+|------|-------------|-------|--------|
+| `nclaw` | ɳClaw | $0.99/mo or $9.99/yr | active |
+| `nchat` | ɳChat | $0.99/mo or $9.99/yr | active |
+| `ntv` | ɳTV | $0.99/mo or $9.99/yr | active |
+| `nfamily` | ɳFamily | $0.99/mo or $9.99/yr | planned v1.1.0 |
+| `clawde` | ClawDE | $0.99/mo or $9.99/yr | planned v1.1.0 |
+| `nsentry` | ɳSentry | $0.99/mo or $9.99/yr | planned v1.1.0 |
+| `ntask` | ɳTask | FREE | active |
+| `nself-plus` | ɳSelf+ | $3.99/mo or $39.99/yr | active |
+
+Buy or manage subscriptions at: https://nself.org/pricing
+
+---
+
+[[Commands]] | [[Plugin-Overview]] | [[Home]]
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `info` | Show bundle details, plugins, and license status |
+| `install` | Install every plugin in a bundle (license-gated, atomic rollback on failure) |
+| `list` | List all available ɳSelf plugin bundles |
+| `remove` | Remove every plugin in a bundle |
+<!-- END GENERATED:subcommands -->
+
+## Examples
+
+<!-- BEGIN PROSE:examples -->
+<!-- TODO(docs): needs human prose -->
+
+```bash
+nself bundle
+```
+<!-- END PROSE:examples -->
 
 ## See Also
 
-- [[cmd-license.md]] — manage license keys
-- [[cmd-plugin.md]] — install individual plugins
-- [[Licensing-Guide.md]] — bundle pricing and tiers
-- [[Plugin-Overview.md]] — full plugin catalog
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

@@ -12,6 +12,33 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  # CLI-R08: the wiki is generated from the cobra tree, so a command can no
+  # longer ship without a page, a sidebar entry and an llms.txt row. This job
+  # fails when the committed pages are stale or when any [[link]] dangles.
+  wiki-generated:
+    name: wiki is generated and links resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Wiki pages are current
+        run: CGO_ENABLED=0 go run -mod=vendor ./tools/wikigen -check
+
+      - name: Wiki links resolve
+        run: bash scripts/ci/wiki-link-audit.sh
+
+      - name: Command inventory is current
+        run: |
+          CGO_ENABLED=0 go run -mod=vendor ./tools/cmdinventory -format json -depth 2 > /tmp/inventory.json
+          diff -u .github/command-inventory.json /tmp/inventory.json
+
   doc-sync:
     runs-on: ubuntu-latest
     steps:

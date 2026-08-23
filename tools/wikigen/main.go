@@ -1,0 +1,150 @@
+// Command wikigen generates one wiki page per top-level CLI command.
+//
+// Purpose: the wiki had cmd-*.md pages for most but not all commands, written by
+// hand at different times, so flag tables and subcommand lists drifted from the
+// binary and new commands shipped undocumented. Everything cobra already knows
+// (title, synopsis, flags with defaults, subcommands, nav) is now generated; the
+// parts that need a human (description, examples, see-also) live in PROSE blocks
+// that regeneration never touches.
+//
+// Pages live at the wiki root, not in commands/: GitHub Wiki flattens the
+// namespace, so .github/wiki/cmd-db.md and .github/wiki/commands/cmd-db.md would
+// be the same published page.
+//
+// Inputs: -dir (wiki commands directory), -check (verify, write nothing),
+// -report (list pages still carrying placeholder prose).
+//
+// Outputs: cmd-<name>.md per command; exit 1 under -check when stale.
+//
+// Constraints: never discards human prose. A page's PROSE blocks are read back
+// and re-emitted verbatim; pages predating the markers have their Description,
+// Examples and See Also sections migrated into blocks.
+package main
+
+import (
+	"flag"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"github.com/nself-org/cli/cmd/commands"
+	"github.com/spf13/cobra"
+)
+
+func main() {
+	dir := flag.String("dir", ".github/wiki", "wiki directory holding cmd-*.md pages")
+	sidebar := flag.String("sidebar", ".github/wiki/_Sidebar.md", "wiki sidebar to keep complete")
+	llms := flag.String("llms", ".github/wiki/llms.txt", "AI-consumable single-file command reference")
+	check := flag.Bool("check", false, "verify pages are current; write nothing")
+	report := flag.Bool("report", false, "list pages still carrying placeholder prose")
+	flag.Parse()
+
+	cmds := topLevelCommands()
+	if len(cmds) == 0 {
+		fmt.Fprintln(os.Stderr, "no commands found")
+		os.Exit(1)
+	}
+
+	if err := os.MkdirAll(*dir, 0o755); err != nil {
+		fmt.Fprintf(os.Stderr, "mkdir %s: %v\n", *dir, err)
+		os.Exit(1)
+	}
+
+	var stale, placeholders []string
+	pagesWritten := 0
+	auxWritten := 0
+
+	for _, c := range cmds {
+		path := filepath.Join(*dir, pageName(c.Name()))
+		existing := readExisting(*dir, c.Name())
+		page := renderPage(c, existing)
+
+		if hasPlaceholder(page) {
+			placeholders = append(placeholders, pageName(c.Name()))
+		}
+
+		current, err := os.ReadFile(path)
+		if err == nil && string(current) == page {
+			continue
+		}
+		if *check {
+			stale = append(stale, pageName(c.Name()))
+			continue
+		}
+		if err := os.WriteFile(path, []byte(page), 0o644); err != nil {
+			fmt.Fprintf(os.Stderr, "write %s: %v\n", path, err)
+			os.Exit(1)
+		}
+		pagesWritten++
+	}
+
+	sidebarChanged, err := writeSidebar(*sidebar, cmds, *check)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+	if sidebarChanged {
+		if *check {
+			stale = append(stale, filepath.Base(*sidebar))
+		} else {
+			auxWritten++
+		}
+	}
+
+	llmsChanged, err := writeLLMsTxt(*llms, cmds, *check)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+	if llmsChanged {
+		if *check {
+			stale = append(stale, filepath.Base(*llms))
+		} else {
+			auxWritten++
+		}
+	}
+
+	if *check {
+		if len(stale) > 0 {
+			fmt.Fprintf(os.Stderr, "%d wiki command page(s) are stale — run `make wiki-commands`:\n  %s\n",
+				len(stale), strings.Join(stale, "\n  "))
+			os.Exit(1)
+		}
+		fmt.Printf("All %d wiki command pages are current.\n", len(cmds))
+	} else {
+		fmt.Printf("%d command pages checked, %d written, %d already current; %d index file(s) updated.\n",
+			len(cmds), pagesWritten, len(cmds)-pagesWritten, auxWritten)
+	}
+
+	if *report {
+		sort.Strings(placeholders)
+		fmt.Printf("\n%d of %d pages still need human prose:\n", len(placeholders), len(cmds))
+		for _, p := range placeholders {
+			fmt.Println("  " + p)
+		}
+	}
+}
+
+// topLevelCommands returns the visible top-level commands, sorted by name.
+func topLevelCommands() []*cobra.Command {
+	var out []*cobra.Command
+	for _, c := range commands.RootCmd.Commands() {
+		if c.Hidden || c.Name() == "help" {
+			continue
+		}
+		out = append(out, c)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name() < out[j].Name() })
+	return out
+}
+
+// pageName is the canonical filename for a command page.
+func pageName(cmd string) string { return "cmd-" + cmd + ".md" }
+
+// legacyPageNames lists the filenames a page may have had before the naming
+// convention settled on cmd-<name>.md, newest first.
+func legacyPageNames(cmd string) []string {
+	return []string{cmd + ".md"}
+}

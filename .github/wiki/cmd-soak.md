@@ -1,28 +1,23 @@
 # nself soak
 
+<!-- BEGIN PROSE:summary -->
 > Manage soak testing lifecycle for ɳSelf environments.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
 ```
-nself soak <subcommand>
-nself soak abort --rollback <version> [flags]
+nself soak <subcommand> [flags]
 ```
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself soak` provides lifecycle management for soak tests. The `abort` subcommand
 lets you stop an active soak and roll back to a prior version in a single command,
 replacing the previous PCI + 5-minute human workflow.
 
-## Subcommands
-
-| Subcommand | Description |
-|---|---|
-| `abort` | Abort a running soak and roll back to a prior version |
-
 ---
-
 ## nself soak abort
 
 Abort an active soak on a target environment and roll back to the specified version.
@@ -76,3 +71,39 @@ nself soak abort --rollback v1.0.8 --env prod --prod-i-mean-it --yes
 
 - [nself deploy rollback](cmd-deploy.md), underlying rollback mechanism
 - [Observability](https://nself.org/docs/operations/observability), post-rollback metrics
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `abort` | Abort a running soak and roll back to a prior version |
+<!-- END GENERATED:subcommands -->
+
+## Examples
+
+<!-- BEGIN PROSE:examples -->
+<!-- TODO(docs): needs human prose -->
+
+```bash
+nself soak
+```
+<!-- END PROSE:examples -->
+
+## See Also
+
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
+
+← [[Commands]] | [[Home]] →

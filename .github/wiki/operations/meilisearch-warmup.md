@@ -74,6 +74,6 @@ unset MEILISEARCH_WARMUP_QUERIES
 
 ## Related
 
-- [[Operations-Overview]]
+- [[Architecture]]
 - [[cmd-start]]
 - [[Home]]

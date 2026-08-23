@@ -1,6 +1,8 @@
 # nself k8s
 
+<!-- BEGIN PROSE:summary -->
 > Deploy and manage nSelf on any Kubernetes cluster using the official Helm chart.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
@@ -10,6 +12,7 @@ nself k8s <subcommand> [flags]
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself k8s` deploys and manages the nSelf stack on Kubernetes via the official Helm chart,
 published at `https://charts.nself.org`.
 
@@ -29,39 +32,9 @@ be installed at deploy time via `--plugins`; a valid license key must be availab
 
 `helm` must be installed and available in `PATH`. Install from [helm.sh](https://helm.sh).
 
-## Subcommands
-
-| Subcommand | Description |
-|------------|-------------|
-| `install` | Install nSelf on a Kubernetes cluster |
-| `upgrade` | Upgrade the nSelf Helm release to the latest chart version |
-| `status` | Show the Helm release status |
-
-## Flags
-
 ### install
-
-| Flag | Short | Type | Default | Description |
-|------|-------|------|---------|-------------|
-| `--domain` | | string | | Domain for the nSelf deployment (required) |
-| `--cluster` | | string | | Path to kubeconfig (defaults to `KUBECONFIG` env or `~/.kube/config`) |
-| `--release` | | string | `nself` | Helm release name |
-| `--plugins` | | string | | Comma-separated list of plugins to install at deploy time |
-
 ### upgrade
-
-| Flag | Short | Type | Default | Description |
-|------|-------|------|---------|-------------|
-| `--cluster` | | string | | Path to kubeconfig |
-| `--release` | | string | `nself` | Helm release name |
-
 ### status
-
-| Flag | Short | Type | Default | Description |
-|------|-------|------|---------|-------------|
-| `--cluster` | | string | | Path to kubeconfig |
-| `--release` | | string | `nself` | Helm release name |
-
 ## Helm Chart Specifics
 
 The chart is published under the `nself` repository alias at `https://charts.nself.org`. The
@@ -80,9 +53,29 @@ The upgrade path uses `--reuse-values`, so previously set values persist across 
 unless explicitly overridden with `--set` passed directly to `helm`. To override values
 not exposed as CLI flags, run `helm upgrade` directly against the `nself/nself` chart using
 the same release name.
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `install` | Install ɳSelf on a Kubernetes cluster |
+| `status` | Show the Helm release status |
+| `upgrade` | Upgrade the ɳSelf Helm release |
+<!-- END GENERATED:subcommands -->
 
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
 Install nSelf on a cluster with the default release name, pointing at a domain:
 
 ```bash
@@ -125,11 +118,14 @@ Upgrade a specific release using a non-default kubeconfig:
 ```bash
 nself k8s upgrade --release myapp-nself --cluster ~/.kube/prod.yaml
 ```
+<!-- END PROSE:examples -->
 
 ## See Also
 
+<!-- BEGIN PROSE:see-also -->
 - [cmd-start.md](cmd-start.md) — start the nSelf stack on a local or VPS deployment
 - [cmd-init.md](cmd-init.md) — initialise a new nSelf project
 - [cmd-plugin.md](cmd-plugin.md) — manage plugins after the stack is running
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

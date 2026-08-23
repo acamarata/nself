@@ -1,6 +1,8 @@
 # nself db
 
-> Database operations: migrations, backups, restore, seed, and shell.
+<!-- BEGIN PROSE:summary -->
+> Database operations: migrations, backups, restore, seed, shell.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
@@ -10,112 +12,254 @@ nself db <subcommand> [flags]
 
 ## Description
 
-`nself db` provides a complete interface for interacting with the PostgreSQL database in your ɳSelf stack. It covers the full database lifecycle: migrations, seeding, backup and restore, an interactive shell, and Hasura metadata management.
+<!-- BEGIN PROSE:description -->
+Database operations: migrations, backups, restore, seed, and shell.
 
-All operations target the PostgreSQL container managed by ɳSelf. The `shell` subcommand opens an interactive `psql` session inside the container. The `backup` and `restore` subcommands use `pg_dump` and `pg_restore` and produce SQL dump files that are compatible with standard PostgreSQL tooling.
+---
+## db migrate
 
-The `hasura` subgroup controls Hasura metadata, useful for applying tracked tables and permissions from version-controlled metadata files without opening the Hasura Console.
+```bash
+nself db migrate <subcommand> [flags]
+```
 
-## Subcommands
+### Flags (persistent)
 
-| Subcommand | Description |
-|------------|-------------|
-| `migrate up` | Apply pending migrations |
-| `migrate down` | Revert the last migration |
-| `migrate status` | Show migration status |
-| `migrate create <name>` | Create a new migration file |
-| `seed [file]` | Run seed data (default seed file if not specified) |
-| `backup [file]` | Create a `pg_dump` backup (timestamped filename if omitted) |
-| `backup list` | List available backups with size and date |
-| `restore <file>` | Restore database from a backup file |
-| `shell` | Open interactive `psql` shell in the PostgreSQL container |
-| `drop` | Drop the project database , **DESTRUCTIVE** |
-| `reset` | Drop and recreate the database , **DESTRUCTIVE** |
-| `hasura console` | Open the Hasura Console in browser |
-| `hasura metadata apply` | Apply Hasura metadata from files |
-| `hasura metadata export` | Export Hasura metadata to files |
-| `hasura metadata reload` | Reload the metadata cache |
+| Flag | Description |
+|---|---|
+| `--plugin <name>` | Scope migration operations to a specific plugin |
 
-## Flags
+### db migrate up
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--plugin` | `""` | Migrate a specific plugin schema (for `migrate` subcommands) |
-| `--migration-dir` | auto-detect | Directory of `.sql` migrations (for `migrate up` and `migrate status`). Auto-detect order: `hasura/migrations/default`, `hasura/migrations`, `migrations`, `postgres/migrations` |
-| `--force`, `-f` | false | Skip confirmation prompt (for `reset`) |
-| `--yes` | false | Skip confirmation prompt (for `drop`, `reset`, `restore`) |
-| `--overwrite` | false | Allow overwriting existing data (for `restore`) |
-| `--format` | `""` | Output format: `table` (default) or `json` (for `backup list`) |
-| `--help`, `-h` | — | Show help |
+Apply all pending migrations in lexicographic order.
 
-## Examples
+```bash
+nself db migrate up [--dry-run] [--migration-dir <path>] [--plugin <name>]
+```
+
+| Flag | Description |
+|---|---|
+| `--dry-run` | List pending migrations without applying them |
+| `--migration-dir <path>` | Apply all `.sql` files in `<path>` in lexicographic order, skipping already-applied files |
+
+**Examples:**
 
 ```bash
 # Apply all pending migrations
 nself db migrate up
 
-# Apply migrations for a specific plugin
-nself db migrate up --plugin ai
+# Preview pending migrations
+nself db migrate up --dry-run
 
-# Revert the last migration
-nself db migrate down
-
-# Check migration status
-nself db migrate status
-
-# Check status for a non-standard migrations layout
-nself db migrate status --migration-dir postgres/migrations
-
-# Create a new migration file
-nself db migrate create add_users_table
-
-# Run default seed data
-nself db seed
-
-# Run a specific seed file
-nself db seed seeds/dev.sql
-
-# Create a timestamped backup
-nself db backup
-
-# Backup to a specific file
-nself db backup /tmp/backup-2026-03-28.sql
-
-# Restore from a backup
-nself db restore /tmp/backup-2026-03-28.sql
-
-# Open an interactive psql shell
-nself db shell
-
-# Drop the project database (interactive confirmation)
-nself db drop
-
-# Drop without confirmation (CI)
-nself db drop --yes
-
-# Drop and recreate database (interactive confirmation)
-nself db reset
-
-# Drop and recreate without confirmation (CI)
-nself db reset --force
-
-# List available backups (table format)
-nself db backup list
-
-# List available backups in JSON format
-nself db backup list --format json
-
-# Open Hasura Console
-nself db hasura console
-
-# Apply Hasura metadata
-nself db hasura metadata apply
-
-# Export Hasura metadata
-nself db hasura metadata export
-
-# Reload metadata cache
-nself db hasura metadata reload
+# Apply external directory of SQL files (G-008)
+nself db migrate up --migration-dir /path/to/plugin/migrations
 ```
+
+### db migrate apply
+
+Apply a single SQL migration file by path (G-008).
+
+```bash
+nself db migrate apply --file <path>
+```
+
+| Flag | Required | Description |
+|---|---|---|
+| `--file <path>` | yes | Path to the `.sql` migration file to apply |
+
+**Double-apply protection:** if the file's filename is already recorded in `schema_versions`, the command prints `already applied: <filename> (skipped)` and exits cleanly with code 0. It does not re-execute the SQL.
+
+**Checksum tracking:** the SHA-256 checksum of the file is stored in `nself_ops.migrations` for audit purposes.
+
+**Non-transactional detection:** SQL files containing `CREATE INDEX CONCURRENTLY`, `DROP INDEX CONCURRENTLY`, `REINDEX CONCURRENTLY`, or `ALTER TYPE` are run outside a transaction automatically.
+
+**Examples:**
+
+```bash
+# Apply a specific external RLS migration
+nself db migrate apply --file /path/to/plugin/rls_policy.sql
+
+# Apply a migration from a plugin's migration directory
+nself db migrate apply --file ~/.nself/plugins/claw/migrations/20240115_rls.sql
+```
+
+**Use case:** plugin-claw external RLS migrations can be applied via CLI without requiring `nself db shell` as a workaround.
+
+### db migrate down
+
+Revert the most recently applied migration.
+
+```bash
+nself db migrate down
+```
+
+Looks for a corresponding `.down.sql` file next to the original migration.
+
+### db migrate status
+
+Show applied and pending migrations.
+
+```bash
+nself db migrate status
+```
+
+Reports: migration name, status (applied/pending), and timestamp for applied migrations.
+
+### db migrate create
+
+Create a new migration file pair (up + down).
+
+```bash
+nself db migrate create <name>
+```
+
+Creates `migrations/<timestamp>_<name>.sql` and `migrations/<timestamp>_<name>.down.sql`.
+
+Name must be lowercase alphanumeric with underscores or hyphens only.
+
+---
+
+## db seed
+
+Run seed data for the current environment.
+
+```bash
+nself db seed [file]
+nself db seed run [--env <env>] [--fixture <name>] [--reset]
+nself db seed list
+nself db seed verify [--fixture <name>]
+nself db seed graph
+```
+
+---
+
+## db backup
+
+```bash
+nself db backup [file]
+nself db backup list [--format table|json]
+```
+
+---
+
+## db restore
+
+```bash
+nself db restore <file> [--overwrite] [--yes]
+```
+
+---
+
+## db shell
+
+Open an interactive psql shell inside the project's Postgres container.
+
+```bash
+nself db shell
+```
+
+---
+
+## db drop
+
+Drop the project database. This is destructive and irreversible.
+
+```bash
+nself db drop [--yes]
+```
+
+---
+
+## db reset
+
+Drop and recreate the project database from scratch.
+
+```bash
+nself db reset [--force] [--yes]
+```
+
+---
+
+## db lint
+
+Audit database schema and RLS policies.
+
+```bash
+nself db lint [--format table|json] [--rls] [--metric] [--matrix] [--remediate]
+```
+
+---
+
+## db hasura
+
+Hasura metadata operations.
+
+```bash
+nself db hasura console
+nself db hasura metadata apply
+nself db hasura metadata export
+nself db hasura metadata reload
+nself db hasura diff
+nself db hasura validate
+```
+
+---
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `backup` | Create pg_dump backup |
+| `backup-sync` | Sync local backups to remote storage (cross-region) |
+| `backup-sync-status` | Show cross-region backup sync status |
+| `drift` | Schema drift detection: scan np_* tables for Theme 25 column compliance |
+| `drop` | Drop the project database (DESTRUCTIVE) |
+| `fk-index` | Audit and create indexes for foreign key columns |
+| `hasura` | Hasura metadata operations |
+| `lint` | Check RLS policies on tenant-scoped tables |
+| `list` | List databases in the project Postgres instance |
+| `migrate` | Manage database migrations |
+| `pgbouncer` | PgBouncer connection pooler operations |
+| `pitr` | Point-in-time recovery: status, enable, test, restore |
+| `reset` | Drop and recreate database (DESTRUCTIVE) |
+| `reset-checksum` | Reset stored checksum for a migration (dangerous) |
+| `restore` | Restore from backup |
+| `restore-drill` | Run a non-destructive restore drill |
+| `restore-drill-list` | List past restore drill results |
+| `rls` | Row-Level Security management: audit, apply, rollback |
+| `seed` | Database seeding: run, list, verify, graph |
+| `shell` | Open psql interactive shell |
+| `soft-delete` | Manage soft-delete (deleted_at) patterns across tables |
+| `verify-checksums` | Verify migration file checksums against stored values |
+<!-- END GENERATED:subcommands -->
+
+## Examples
+
+<!-- BEGIN PROSE:examples -->
+<!-- TODO(docs): needs human prose -->
+
+```bash
+nself db
+```
+<!-- END PROSE:examples -->
+
+## See Also
+
+<!-- BEGIN PROSE:see-also -->
+- [[Architecture]] — stack overview including migration engine
+- [[cmd-plugin-dev]] — plugin development, including plugin-specific migrations
+- [[cmd-backup]] — full backup subcommand reference
+
+[[Home]]
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

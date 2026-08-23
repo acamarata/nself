@@ -1,15 +1,18 @@
 # nself release
 
+<!-- BEGIN PROSE:summary -->
 > Orchestrate a full versioned release across all nSelf distribution surfaces.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
-```bash
+```
 nself release <version> [flags]
 ```
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself release` runs the 12-step release cascade that publishes a new nSelf version
 to every distribution surface in sequence. Each step is verified before the next
 begins. Pass `--dry-run` to rehearse the full cascade without making any external
@@ -22,16 +25,6 @@ starts the 48-hour soak timer and dispatches post-release PCI messages.
 
 Run `nself release-check <version>` first to validate pre-flight conditions, or
 pass `--skip-check` to bypass that gate.
-
-## Flags
-
-| Flag | Short | Type | Default | Description |
-|------|-------|------|---------|-------------|
-| `--dry-run` | `–` | bool | `false` | Run all steps in simulation mode without external mutations |
-| `--json` | `–` | bool | `false` | Emit structured JSON output instead of human-readable progress |
-| `--skip-check` | `–` | bool | `false` | Skip the release-check pre-flight gate (step 0) |
-| `--skip-plugins-pro` | `–` | bool | `false` | Skip the plugins-pro tagging step (step 2) |
-| `--release-notes` | `–` | string | `""` | Path to a markdown file used as the GitHub Release body |
 
 ## Release Cascade
 
@@ -52,17 +45,24 @@ The release runs 13 ordered steps (0-12):
 | 10 | SPORT regen and changelog PR against `main` |
 | 11 | 48-hour soak timer starts; release is marked active |
 | 12 | Post-release PCIs dispatched to plugin and web agents |
+<!-- END PROSE:description -->
 
-## Subcommands
+## Flags
 
-| Subcommand | Description |
-|------------|-------------|
-| `release-check` | [Pre-flight validation](cmd-release-check.md) |
-| `release-rollback` | [Roll back to a prior release](cmd-release-rollback.md) |
-| `release-status` | [View release pipeline status](cmd-release-status.md) |
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--dry-run` | `false` | Log all steps without executing them |
+| `--json` | `false` | Output results as JSON |
+| `--release-notes` | `""` | Path to release notes file (markdown) |
+| `--skip-check` | `false` | Skip pre-release gate (release-check) |
+| `--skip-plugins-pro` | `false` | Skip plugins-pro tag (use when not releasing plugins-pro) |
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
 
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
 ```bash
 # Rehearse a release without touching any external services
 nself release v1.2.0 --dry-run
@@ -73,13 +73,16 @@ nself release v1.2.0 --release-notes ./notes/v1.2.0.md
 # Release, skipping the pre-flight gate (run check separately first)
 nself release v1.2.0 --skip-check
 ```
+<!-- END PROSE:examples -->
 
 ## See Also
 
+<!-- BEGIN PROSE:see-also -->
 - [[cmd-release-check]], pre-flight validation before releasing
 - [[cmd-release-status]], check which surfaces are live after release
 - [[cmd-release-rollback]], revert distribution surfaces to a prior version
 - [[cmd-soak]], manage the 48-hour post-release soak window
 - [[cmd-deploy]], deploy individual environments outside the release cascade
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

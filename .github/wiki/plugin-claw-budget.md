@@ -1,6 +1,6 @@
 # Plugin: claw-budget
 
-Token budget tracking and cost controls for AI assistant sessions. Integrates with [[nself-ai-gateway]] and [[plugin-claw]] to enforce per-user, per-session, and per-tenant spending limits on LLM API calls.
+Token budget tracking and cost controls for AI assistant sessions. Integrates with [[plugin-nself-ai-gateway]] and [[plugin-claw]] to enforce per-user, per-session, and per-tenant spending limits on LLM API calls.
 
 ## Overview
 
@@ -63,13 +63,13 @@ All endpoints are also available via Hasura GraphQL subscriptions for real-time 
 
 ## Integration with AI Plugins
 
-claw-budget automatically hooks into [[nself-ai-gateway]] and [[plugin-claw]] when all three are installed. No additional configuration is needed. The budget enforcement middleware intercepts requests at the AI gateway level, before they reach the LLM provider.
+claw-budget automatically hooks into [[plugin-nself-ai-gateway]] and [[plugin-claw]] when all three are installed. No additional configuration is needed. The budget enforcement middleware intercepts requests at the AI gateway level, before they reach the LLM provider.
 
 If claw-budget is installed without nself-ai-gateway, it operates in tracking-only mode: it records usage via the GraphQL API but does not intercept or block requests.
 
 ## See Also
 
-- [[nself-ai-gateway]], provider key vault and request routing (port 3761)
+- [[plugin-nself-ai-gateway]], provider key vault and request routing (port 3761)
 - [[plugin-claw]], autonomous AI assistant engine
 - [[Plugin-Licensing]], license tiers and pricing
 - [[Plugin-Overview]], all plugins by category

@@ -33,7 +33,7 @@ echo "Generating $OUT ..."
   echo
   echo "---"
   echo
-  echo "[[Home]] · [[COMMANDS]] · [[Config-Optional-Services]]"
+  echo "[[Home]] · [[Commands]] · [[Config-Optional-Services]]"
 } > "$OUT"
 
 if [ -n "${NSELF_SPORT_DIR:-}" ] && [ -d "${NSELF_SPORT_DIR}" ]; then

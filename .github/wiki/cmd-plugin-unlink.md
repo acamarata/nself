@@ -32,6 +32,6 @@ nself plugin unlink my-plugin
 
 - [[cmd-plugin-link]] — Register a local plugin directory as a shadow override
 - [[cmd-plugin-dev]] — Start a plugin in development mode
-- [[cmd-plugin-status]] — Show status of a plugin
+- [[cmd-plugin]] — Show status of a plugin
 
 ← [[Commands]] | [[Home]] →

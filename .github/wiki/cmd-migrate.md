@@ -1,15 +1,18 @@
 # nself migrate
 
+<!-- BEGIN PROSE:summary -->
 > Detect and migrate ɳSelf v0.9.x projects to the current v1.x format.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
 ```
-nself migrate [subcommand] [flags]
+nself migrate <subcommand> [flags]
 ```
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself migrate` detects and migrates v0.9.x project artifacts to the current v1.x format. Running `nself migrate` without a subcommand performs a detection scan, the same as `nself migrate detect`, and reports which v0.9 artifacts are present.
 
 The `run` subcommand performs the full automated migration: it stops running containers, backs up the current project state to `.nself/backup/{timestamp}/`, moves nginx configs from the flat `nginx/` layout to `nginx/sites/` (v1 layout), regenerates `docker-compose.yml`, and prints a summary of every change made. The migration is idempotent: running it on an already-migrated project exits cleanly with no changes.
@@ -19,22 +22,6 @@ After migration, the CLI prints the exact `nself plugin install` commands for ev
 If anything goes wrong, use `nself migrate rollback` to restore from the automatic backup.
 
 > **Note:** `nself migrate` manages v0.9→v1 project migration. For database schema migrations within a v1 project, see [[cmd-db]].
-
-## Subcommands
-
-| Subcommand | Description |
-|------------|-------------|
-| `detect` | Detect v0.9 artifacts in the current project and print a summary |
-| `run` | Full v0.9→v1 migration: stop containers, backup, move configs, regenerate |
-| `rollback` | Restore from the most recent migration backup |
-
-## Flags
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--backup` | `""` | Specific backup timestamp to restore (for `rollback`, e.g. `20260417-143022`) |
-| `--list` | false | List available backups with timestamps and sizes (for `rollback`) |
-| `--help`, `-h` | — | Show help |
 
 ## Plugin re-install warning
 
@@ -62,9 +49,35 @@ A v0.9 test fixture lives at `internal/migration/testdata/v0.9-fixture/`. The Gi
 ```bash
 go test -mod=vendor -run TestE2E ./internal/migration/...
 ```
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--from-bash` | `false` | Migrate from a v0.9.9 Bash-era project (alias for: nself migrate from-bash) |
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `detect` | Detect v1 artifacts in the current project |
+| `firebase` | Generate ɳSelf migration artifacts from a Firebase export |
+| `from-bash` | Migrate a v0.9.9 Bash-era project to the current ɳSelf CLI |
+| `generate` | Generate a SQL migration from a natural-language description |
+| `rollback` | Restore a v1 backup created by migrate run |
+| `run` | Migrate v1 project to v2 |
+| `supabase` | Migrate a Supabase project to ɳSelf |
+| `watch` | Watch model files and propose SQL migrations on change |
+<!-- END GENERATED:subcommands -->
 
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
 ```bash
 # Scan for v0.9 artifacts (non-destructive)
 nself migrate
@@ -84,5 +97,13 @@ nself migrate rollback --backup 20260417-143022
 ```
 
 See [[Upgrade-From-v0.9]] for the full step-by-step migration guide.
+<!-- END PROSE:examples -->
+
+## See Also
+
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

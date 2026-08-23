@@ -18,7 +18,7 @@
 **Windows native binaries** (`windows-amd64.zip`, `windows-arm64.zip`) ship from v1.1.0 onward.
 Download from [GitHub Releases](https://github.com/nself-org/cli/releases/latest) or use the
 PowerShell installer. WSL2 remains the simplest path if Docker Desktop is already running.
-See [[install/windows-native]] for native install and [[install/windows-wsl2]] for WSL2.
+See [[windows-wsl2]] for native install and [[install/windows-wsl2]] for WSL2.
 
 ## Platform Guides
 
@@ -66,7 +66,7 @@ extract, and add the directory to your `PATH`. Or use the PowerShell installer:
 irm https://install.nself.org/install.ps1 | iex
 ```
 
-See [[install/windows-native]] for the full guide including SHA-256 verification and PATH setup.
+See [[windows-wsl2]] for the full guide including SHA-256 verification and PATH setup.
 
 ### Windows (WSL2)
 

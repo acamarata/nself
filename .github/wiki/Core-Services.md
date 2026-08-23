@@ -40,4 +40,4 @@ nself service list --core
 
 ---
 
-[[Home]] · [[COMMANDS]] · [[Config-Optional-Services]]
+[[Home]] · [[Commands]] · [[Config-Optional-Services]]

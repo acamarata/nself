@@ -1,6 +1,8 @@
 # nself sentry
 
+<!-- BEGIN PROSE:summary -->
 > Operate ɳSentry monitoring from the CLI: monitors, incidents, status pages, and alert channels against the hosted SaaS or a self-hosted bundle.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
@@ -10,6 +12,7 @@ nself sentry <subcommand> [flags]
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself sentry` is the CLI surface for ɳSentry. The `status` subcommand reads a public
 status page. Every other subcommand talks to the ɳSentry REST API, either the hosted
 SaaS at `https://api.sentry.nself.org` (default) or a self-hosted/local sentry bundle.
@@ -53,27 +56,43 @@ Every cloud subcommand accepts `--json` for script and AI-agent consumption. The
 operations are also exposed as MCP tools by [[cmd-mcp]] (`sentry_monitors_list`,
 `sentry_monitors_add`, `sentry_incidents_list`, `sentry_incidents_ack`, `sentry_status`).
 
+Common to all cloud subcommands:
+`monitors add` flags:
+## Tier Quotas
+
+| | Free | Sentry Bundle | ɳSelf+ |
+|---|---|---|---|
+| Monitors | 10 at 5-min | 50 at 1-min | 100 at 30s |
+| Status pages | 1 | 3 | 10 |
+| API/CLI/MCP | read-only | full | full |
+<!-- END PROSE:description -->
+
 ## Flags
 
-Common to all cloud subcommands:
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--api-url` | string | `https://api.sentry.nself.org` | ɳSentry API base URL |
-| `--api-key` | string | stored key | ɳSentry API key (`nsk_*`) |
-| `--json` | bool | `false` | Output JSON instead of tables |
+## Subcommands
 
-`monitors add` flags:
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--url` | string | (required) | Target URL or host to monitor |
-| `--name` | string | the URL | Display name |
-| `--kind` | string | `http` | Monitor kind: `http`, `tcp`, or `ping` |
-| `--interval` | duration | `60s` | Check interval (tier floors: free 5m, bundle 1m, ɳSelf+ 30s) |
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `alerts` | Manage ɳSentry alert channels |
+| `incidents` | Manage ɳSentry incidents |
+| `login` | Authenticate the CLI with ɳSentry (SaaS or self-hosted) |
+| `logout` | Remove the stored ɳSentry API key |
+| `monitors` | Manage ɳSentry uptime monitors |
+| `status` | Fetch and display the ɳSentry status page |
+| `status-pages` | Manage ɳSentry status pages |
+| `whoami` | Show the authenticated ɳSentry account, tier, and quota usage |
+<!-- END GENERATED:subcommands -->
 
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
 ```bash
 # Log in to the hosted SaaS
 nself sentry login --api-key nsk_abc123...
@@ -110,19 +129,14 @@ nself init --preset sentry && nself build && nself start
 nself sentry login --api-url http://localhost:3848 --api-key nsk_dev_local_0000000000000000
 nself sentry monitors add --url https://example.com
 ```
-
-## Tier Quotas
-
-| | Free | Sentry Bundle | ɳSelf+ |
-|---|---|---|---|
-| Monitors | 10 at 5-min | 50 at 1-min | 100 at 30s |
-| Status pages | 1 | 3 | 10 |
-| API/CLI/MCP | read-only | full | full |
+<!-- END PROSE:examples -->
 
 ## See Also
 
+<!-- BEGIN PROSE:see-also -->
 - [[cmd-mcp]] — MCP server with the `sentry_*` tools for AI agents
 - [[cmd-init]] — `--preset sentry` for the local-first dev stack
 - [[cmd-doctor]] — nSelf diagnostics
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

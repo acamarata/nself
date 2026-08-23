@@ -1,23 +1,18 @@
 # nself deploy
 
+<!-- BEGIN PROSE:summary -->
 > Deploy the stack to a target environment (local, staging, production).
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
 ```
-nself deploy [target] [flags]
-nself deploy --env <target> [flags]
-nself deploy environments
-nself deploy status [--env <target>] [--blue-green] [--server <name>]
-nself deploy rollback [target]
-nself deploy promote
-nself deploy logs [target] [--server <name>]
-nself deploy health [target] [--server <name>] [--json]
-nself deploy check-access   # deprecated: use 'nself env target probe'
+nself deploy [target] <subcommand> [flags]
 ```
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself deploy` builds your stack and deploys it to a target environment using a per-service
 sequenced rolling restart. It chains `nself build` then restarts services in dependency order
 (postgres → hasura → auth → storage → plugins), waiting for each service to pass a health check
@@ -56,7 +51,7 @@ Targets accept both short and long forms:
 The `--strategy=blue-green` and `--strategy=canary` flags still fall back to rolling for backwards
 compatibility with existing scripts. Use `--canary N` to activate the implemented blue/green path.
 
-See [[deploy-strategies]] for the full per-strategy behavior spec and downtime expectations.
+See [[cmd-deploy]] for the full per-strategy behavior spec and downtime expectations.
 
 ## Blue/Green Canary Deploy (Y17)
 
@@ -162,29 +157,6 @@ SSH key defaults to `~/.ssh/id_ed25519`. Override with `NSELF_DEPLOY_SSH_KEY`.
 Agent forwarding is disabled by default. The CLI uses
 `-o ForwardAgent=no -o StrictHostKeyChecking=accept-new` for all SSH connections.
 
-## Flags
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--strategy` | `rolling` | Deploy strategy: `rolling`, `blue-green`, `canary`, `preview` |
-| `--dry-run` | false | Preview the deploy without executing. With `--server` or a `control-plane.yaml`, prints the per-server topology plan (capability, role, action). |
-| `--force` | false | Skip confirmation prompts (required for prod when not dry-run) |
-| `--rolling` | false | Alias for `--strategy=rolling` |
-| `--skip-health` | false | Skip post-deploy health checks (visible warning emitted) |
-| `--include-frontends` | false | Include frontend apps in the deploy |
-| `--exclude-frontends` | false | Exclude frontend apps from the deploy |
-| `--json` | false | Emit structured JSON output |
-| `--env` | — | Target environment: `local`, `staging`, or `prod`. Takes priority over the positional argument. Required env vars for remote targets: `NSELF_DEPLOY_HOST`, `NSELF_DEPLOY_USER`, `NSELF_DEPLOY_KEY_PATH` |
-| `--server` | — | Deploy to a specific server only (name from control-plane inventory). Activates the pipeline path even without a `control-plane.yaml`. |
-| `--follow` | false | Stream container logs after deploy until Ctrl-C (staging and prod only) |
-| `--yes` | false | Skip the production confirmation prompt (alias for `--force`) |
-| `--canary` | `0` | Start a canary deploy at N% traffic to green (Y17; requires `NSELF_FEATURE_BLUE_GREEN_DEPLOY=true`) |
-| `--skip-canary` | false | Skip canary phase and flip directly to 100% green |
-| `--force-migration` | false | Force deploy even with backward-incompatible migrations (disables canary) |
-| `--help`, `-h` | — | Show help |
-
-## Subcommands
-
 - `nself deploy environments`, list all environments and per-server SSH capabilities (JSON)
 - `nself deploy status [--blue-green] [--server <name>]`, report current deploy state; `--server` filters to one server; `--blue-green` adds slot info
 - `nself deploy rollback [target]`, roll back the last deployment (see below)
@@ -192,19 +164,14 @@ Agent forwarding is disabled by default. The CLI uses
 - `nself deploy logs [target] [--server <name>]`, tail Docker logs; `--server` streams logs from a specific server via SSH
 - `nself deploy health [target] [--server <name>] [--json]`, run `nself doctor`; `--server` runs doctor over SSH on that server
 - `nself deploy check-access` **(deprecated)**, verify `NSELF_DEPLOY_HOST_*` values resolve — use `nself env target probe` instead
-
 ### nself deploy environments
-
 Lists every environment defined in `.nself/control-plane.yaml` (or synthesized from
 `NSELF_DEPLOY_HOST_<TARGET>` env vars) and the resolved SSH capability of each server.
 No key material appears in the output.
-
 ```bash
 nself deploy environments
 ```
-
 Output:
-
 ```json
 {
   "environments": [
@@ -234,25 +201,13 @@ Output:
   ]
 }
 ```
-
 Capability values:
-
-| Value | Meaning |
-|---|---|
-| `manage` | Full SSH and Docker access — server will receive deploys |
-| `read-only` | SSH succeeds but Docker commands are not permitted |
-| `hidden` | No SSH host configured — server is omitted from deploy pipeline |
-
 The `reason` field appears only when capability is not `manage`.
-
 This command fixes a latent Admin 500 error: the Admin UI calls this endpoint to populate the
 server-selector before starting a deploy.
-
 ### nself deploy status --server
-
 When `--server <name>` is passed and `.nself/control-plane.yaml` exists, the output includes
 a per-server capability section alongside the existing state:
-
 ```json
 {
   "target": "staging",
@@ -275,37 +230,25 @@ a per-server capability section alongside the existing state:
   ]
 }
 ```
-
 ### nself deploy logs --server
-
 Streams logs from a specific server over SSH:
-
 ```bash
 nself deploy logs staging --server staging-app
 ```
-
 The SSH connection uses `BatchMode=yes -o ForwardAgent=no -o StrictHostKeyChecking=accept-new`.
 Key material is never logged.
-
 ### nself deploy health --server
-
 Runs `nself doctor` on a specific server over SSH and streams the output:
-
 ```bash
 nself deploy health staging --server staging-app
 nself deploy health staging --server staging-app --json
 ```
-
 With `--json`, the remote `nself doctor --json` is called and the structured output is passed
 through to stdout.
-
 ### nself deploy check-access (deprecated)
-
 **Deprecated.** Use `nself env target probe` for per-server SSH capability resolution.
-
 `check-access` continues to work for backward compatibility. When `.nself/control-plane.yaml`
 is present, it probes all servers and emits a deprecation warning, then outputs:
-
 ```json
 {
   "servers": [
@@ -315,10 +258,8 @@ is present, it probes all servers and emits a deprecation warning, then outputs:
   "all_ok": true
 }
 ```
-
 Without a `control-plane.yaml`, it falls back to the legacy `NSELF_DEPLOY_HOST_*` env-var check
 with the same JSON schema.
-
 ## Rollback
 
 `nself deploy rollback` is wired to the last `nself promote` tag. Every `nself promote <src> <target>`
@@ -364,61 +305,6 @@ and the specific service name is reported:
 
 Use `--skip-health` as a break-glass escape hatch. A visible warning is always emitted when used.
 
-## Examples
-
-```bash
-# Local build + rolling restart (positional form)
-nself deploy local
-
-# Local build + rolling restart (flag form)
-nself deploy --env local
-
-# List all environments and per-server SSH capabilities
-nself deploy environments
-
-# Staging dry-run — shows what would happen without executing
-nself deploy staging --dry-run
-
-# Staging dry-run with topology plan (when control-plane.yaml exists)
-nself deploy staging --dry-run --server staging-app
-
-# Staging dry-run using --env flag
-nself deploy --env staging --dry-run
-
-# Deploy to a single server only
-nself deploy staging --server staging-app
-
-# Staging deploy with JSON output
-nself deploy staging --json
-
-# Production deploy (rolling)
-nself deploy production --force
-
-# Production deploy using --env, skipping the confirmation prompt via --yes
-nself deploy --env prod --yes
-
-# Production deploy and stream logs until Ctrl-C
-nself deploy --env prod --force --follow
-
-# Production deploy with explicit strategy (blue-green falls back to rolling with warning)
-nself deploy production --strategy=blue-green --force
-
-# Roll back to the last promoted state
-nself deploy rollback prod
-
-# Per-server status (requires control-plane.yaml)
-nself deploy status --server staging-app
-
-# Stream logs from a specific server
-nself deploy logs staging --server staging-app
-
-# Run doctor on a specific server
-nself deploy health staging --server staging-app --json
-
-# Check SSH access (deprecated — use 'nself env target probe' instead)
-nself deploy check-access
-```
-
 ## Output format
 
 When `--json` is set, the command writes a structured result:
@@ -442,7 +328,7 @@ When `--json` is set, the command writes a structured result:
 ```
 
 Human output uses the same step vocabulary (`done`, `failed`, `skipped`, `running`, `pending`,
-`unhealthy`) inside `[...]` brackets so [[Admin|admin]]'s deploy API route can parse it without
+`unhealthy`) inside `[...]` brackets so the Admin UI's deploy API route can parse it without
 a separate protocol.
 
 ## Environment variables
@@ -495,6 +381,111 @@ configure an nginx static page via `nginx/conf.d/`.
 - [[cmd-build|nself build]], generates `docker-compose.yml` and nginx configs
 - [[cmd-start|nself start]], boot the stack with health checks
 - [[cmd-promote|nself promote]], promote env-to-env with rollback support
-- [[cmd-env-target|nself env target]], probe SSH capability and manage per-server access (`nself deploy check-access` replacement)
-- [[deploy-strategies]], full per-strategy spec and downtime expectations
+- [[cmd-env|nself env target]], probe SSH capability and manage per-server access (`nself deploy check-access` replacement)
+- [[cmd-deploy]], full per-strategy spec and downtime expectations
 - [[Home]]
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--canary` | `0` | Start a canary deploy at N%% traffic to green (0 = full flip) |
+| `--dry-run` | `false` | Preview the deploy without executing |
+| `--env` | `""` | Target environment: local\|staging\|prod (overrides positional arg; required env vars: NSELF_DEPLOY_HOST, NSELF_DEPLOY_USER, NSELF_DEPLOY_KEY_PATH) |
+| `--exclude-frontends` | `false` | Exclude frontend apps from the deploy |
+| `--follow` | `false` | Stream container logs after deploy until Ctrl-C (staging/prod only) |
+| `--force-migration` | `false` | Force deploy even with backward-incompatible migrations (disables canary) |
+| `--force` | `false` | Skip confirmation prompts (prod requires --confirm or --force) |
+| `--include-frontends` | `false` | Include frontend apps in the deploy |
+| `--json` | `false` | Emit JSON output |
+| `--rolling` | `false` | Alias for --strategy=rolling |
+| `--server` | `""` | Deploy to a specific server only (name from control-plane inventory) |
+| `--skip-canary` | `false` | Skip canary phase and flip directly to 100% green |
+| `--skip-health` | `false` | Skip post-deploy health checks |
+| `--strategy` | `rolling` | Deploy strategy: rolling\|blue-green\|canary\|preview |
+| `--yes` | `false` | Skip prod confirmation prompt (alias for --force) |
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `check-access` | Verify access to configured deploy targets (deprecated: use 'nself env target probe') |
+| `environments` | List configured deploy environments and server capabilities |
+| `health` | Run health checks against a target deployment |
+| `logs` | Show deployment logs for a target |
+| `promote` | Promote a canary deploy to 100% green traffic |
+| `rollback` | Roll back the last deployment for a target |
+| `status` | Show deployment status for a target |
+| `web` | Build web apps locally and deploy prebuilt output to Vercel |
+<!-- END GENERATED:subcommands -->
+
+## Examples
+
+<!-- BEGIN PROSE:examples -->
+```bash
+# Local build + rolling restart (positional form)
+nself deploy local
+
+# Local build + rolling restart (flag form)
+nself deploy --env local
+
+# List all environments and per-server SSH capabilities
+nself deploy environments
+
+# Staging dry-run — shows what would happen without executing
+nself deploy staging --dry-run
+
+# Staging dry-run with topology plan (when control-plane.yaml exists)
+nself deploy staging --dry-run --server staging-app
+
+# Staging dry-run using --env flag
+nself deploy --env staging --dry-run
+
+# Deploy to a single server only
+nself deploy staging --server staging-app
+
+# Staging deploy with JSON output
+nself deploy staging --json
+
+# Production deploy (rolling)
+nself deploy production --force
+
+# Production deploy using --env, skipping the confirmation prompt via --yes
+nself deploy --env prod --yes
+
+# Production deploy and stream logs until Ctrl-C
+nself deploy --env prod --force --follow
+
+# Production deploy with explicit strategy (blue-green falls back to rolling with warning)
+nself deploy production --strategy=blue-green --force
+
+# Roll back to the last promoted state
+nself deploy rollback prod
+
+# Per-server status (requires control-plane.yaml)
+nself deploy status --server staging-app
+
+# Stream logs from a specific server
+nself deploy logs staging --server staging-app
+
+# Run doctor on a specific server
+nself deploy health staging --server staging-app --json
+
+# Check SSH access (deprecated — use 'nself env target probe' instead)
+nself deploy check-access
+```
+<!-- END PROSE:examples -->
+
+## See Also
+
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
+
+← [[Commands]] | [[Home]] →

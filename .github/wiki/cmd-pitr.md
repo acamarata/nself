@@ -1,113 +1,170 @@
 # nself pitr
 
-> Point-in-time recovery (PITR) operations: enable WAL archiving, create base backups, and restore to any point in your retention window.
+<!-- BEGIN PROSE:summary -->
+> Point-in-time recovery: enable, disable, status, base-backup, restore.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
-```bash
+```
 nself pitr <subcommand> [flags]
-nself pitr enable
-nself pitr disable
-nself pitr status
-nself pitr base-backup
-nself pitr restore --to <timestamp>
 ```
 
 ## Description
 
-`nself pitr` manages Postgres point-in-time recovery. PITR is built on WAL (Write-Ahead Log) archiving: Postgres ships WAL segments to a configured remote destination continuously; a base backup provides the starting point for any restore.
+<!-- BEGIN PROSE:description -->
+Point-in-time recovery (PITR) via continuous WAL archiving.
 
-With PITR enabled you can restore your database to any second within the retention window, not just to a named backup snapshot.
+PITR archives PostgreSQL write-ahead log segments so that any second within the
+retention window can be used as a restore target. A scheduled base backup
+(`pg_basebackup`) combined with a stream of WAL segments lets you recover to
+any point in the past, not just the last full backup.
 
-Note: `nself db pitr` provides the same subcommands as part of the `db` command tree. `nself pitr` is the top-level alias. Both are fully supported.
+---
 
-## Subcommands
+### pitr enable
+Configure PostgreSQL for continuous WAL archiving and write the PITR config
+snippet.
+```bash
+nself pitr enable --to s3://my-bucket/pitr
+nself pitr enable --to s3://my-bucket/pitr --encrypt-recipient age1abc... --retention-days 14
+```
+Writes `.nself/pitr/postgresql.conf.d/pitr.conf`. Mount this file into the
+PostgreSQL container to activate WAL archiving. Sets `wal_level = logical`
+(satisfies both PITR and CDC logical replication, no separate setting needed).
+**Flags:**
+---
+### pitr disable
+Remove the PITR config snippet. WAL archiving stops on the next container restart.
+```bash
+nself pitr disable
+```
+---
+### pitr status
+Show the current retention window, WAL segment count, and the latest archived WAL timestamp.
+```bash
+nself pitr status
+```
+**Output:**
+```
+Base backups:    3
+WAL segments:    1440
+Oldest restore:  2026-04-15T02:00:00Z
+Latest WAL:      2026-04-22T15:28:34Z
+```
+---
+### pitr base-backup
+Take a manual base backup right now using `pg_basebackup`. Useful before
+maintenance windows or major schema changes.
+```bash
+nself pitr base-backup
+nself pitr base-backup --encrypt-recipient age1abc...
+```
+The backup is recorded in `~/.nself/wal-catalog.json`.
+**Flags:**
+---
+### pitr restore
+Restore the PostgreSQL database to a specific point in time.
+```bash
+nself pitr restore --to 2026-04-22T15:30:00Z
+nself pitr restore --to "30 minutes ago"
+nself pitr restore --to "2 hours ago"
+```
+Steps performed:
+1. Locate the latest base backup before the target time in `~/.nself/wal-catalog.json`.
+2. Fetch and (if encrypted) decrypt the base backup.
+3. Write `recovery_target_time` configuration to `.nself/pitr/recovery.conf`.
+4. Stop the PostgreSQL container, apply recovery config, restart.
+5. Poll until `pg_is_in_recovery()` returns false (up to 5 minutes).
+**Flags:**
+**Supported time formats:**
+---
+## Configuration
 
-| Subcommand | Description |
-|------------|-------------|
-| `enable` | Enable WAL archiving and PITR infrastructure |
-| `disable` | Disable WAL archiving (retains existing archives) |
-| `status` | Show PITR status: archiving state, last WAL segment, retention |
-| `base-backup` | Trigger a base backup to the configured WAL archive destination |
-| `restore` | Restore to a specific timestamp from the WAL archive |
+PITR behaviour is controlled by environment variables in `.env` / `.env.prod`:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NSELF_PITR_ENABLED` | `false` | Enable WAL archiving |
+| `NSELF_PITR_DESTINATION` | — | Destination URL (uses B44 drivers) |
+| `NSELF_PITR_RETENTION_DAYS` | `7` | WAL retention window in days |
+| `NSELF_PITR_BASE_BACKUP_SCHEDULE` | `0 2 * * *` | Cron for daily base backup |
+| `NSELF_PITR_ENCRYPT_RECIPIENT` | — | age public key for WAL encryption |
+| `NSELF_PITR_WAL_ARCHIVE_TIMEOUT` | `60` | `archive_timeout` in seconds |
+
+---
+
+## WAL Catalog
+
+`~/.nself/wal-catalog.json` tracks base backup timestamps and WAL segment
+metadata. The restore command uses this catalog to find the right base backup
+and segments for a given target time. It is updated automatically by
+`nself pitr base-backup` and by the WAL archive command.
+
+---
+
+## Encryption
+
+When `--encrypt-recipient` is specified, WAL segments and base backups are
+encrypted with [age](https://github.com/FiloSottile/age) before being written
+to the destination. To restore, provide the corresponding identity file:
+
+```bash
+nself pitr restore --to "30 minutes ago" --identity ~/.config/nself/myproject-age.key
+```
+
+Generate a keypair with `nself backup init-key`.
+
+---
+
+## Relation to nself db pitr
+
+`nself db pitr` is a lower-level command that inspects the live Postgres
+`archive_mode` and `pg_stat_archiver` settings. `nself pitr` is the
+higher-level PITR workflow: it manages the WAL catalog, base backups, retention,
+and full restore orchestration.
+
+---
+<!-- END PROSE:description -->
 
 ## Flags
 
-### `pitr enable`
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--destination` | string | — | WAL archive destination (e.g. `s3:bucket/wal`) |
-| `--retention` | string | `7d` | WAL archive retention window |
-| `--dry-run` | bool | false | Show what would change without enabling |
+## Subcommands
 
-### `pitr status`
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--json` | bool | false | Emit status as JSON |
-
-### `pitr base-backup`
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--label` | string | auto | Base backup label |
-| `--compress` | bool | true | Compress the base backup |
-
-### `pitr restore`
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--to` | string | — | Target timestamp (ISO-8601: `2026-01-15T02:30:00Z`) |
-| `--dry-run` | bool | false | Validate restore path without applying |
-| `--yes` | bool | false | Skip confirmation prompt |
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `base-backup` | Take a manual pg_basebackup snapshot now |
+| `disable` | Stop WAL archiving (removes PITR config snippet) |
+| `enable` | Configure WAL archiving and enable PITR |
+| `restore` | Restore database to a specific point in time |
+| `status` | Show PITR retention window, segment count, and latest WAL timestamp |
+<!-- END GENERATED:subcommands -->
 
 ## Examples
 
-```bash
-# Enable PITR with S3 WAL archiving
-nself pitr enable --destination s3:my-bucket/wal
-```
+<!-- BEGIN PROSE:examples -->
+<!-- TODO(docs): needs human prose -->
 
 ```bash
-# Check PITR status
-nself pitr status
+nself pitr
 ```
-
-```bash
-# Create a base backup before a major migration
-nself pitr base-backup --label pre-migration-2026-01-15
-```
-
-```bash
-# Restore to a specific second (staging only; not for production)
-nself pitr restore --to 2026-01-15T02:30:00Z
-```
-
-```bash
-# Preview what a restore would do without applying
-nself pitr restore --to 2026-01-15T02:30:00Z --dry-run
-```
-
-## Exit Codes
-
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | Error (archiving not configured, destination unreachable, invalid timestamp) |
-| 2 | PITR not enabled — run `nself pitr enable` first |
-
-## Safety Notes
-
-- Run `nself pitr base-backup` on staging, never on production, unless you have confirmed a DR scenario.
-- `nself pitr restore` requires a database stop. Use `--dry-run` first to verify the archive is intact and the target timestamp is reachable.
-- WAL archiving adds I/O. For projects under 10 GB total data, the overhead is negligible. For larger projects, tune `--retention` to control archive storage cost.
+<!-- END PROSE:examples -->
 
 ## See Also
 
-- [[cmd-backup.md]] — scheduled full/streaming backups
-- [[cmd-dr.md]] — full disaster-recovery workflows
-- [[cmd-db.md]] — database operations including `db pitr`
-- [[Guide-Backup-Restore.md]] — backup and restore how-to guide
+<!-- BEGIN PROSE:see-also -->
+- [[cmd-backup]], full and metadata backups
+- [[cmd-backup]], restore from a pg_dump backup
+- [Point-in-Time Recovery Guide](https://nself.org/docs/guides/point-in-time-recovery)
+
+[[Home]]
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

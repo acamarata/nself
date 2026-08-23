@@ -1,6 +1,8 @@
 # nself mcp
 
+<!-- BEGIN PROSE:summary -->
 > Start the nSelf MCP server and expose infrastructure tools to Claude Code and other MCP clients.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
@@ -10,6 +12,7 @@ nself mcp [flags]
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself mcp` starts a [Model Context Protocol](https://modelcontextprotocol.io) server that
 exposes nSelf infrastructure operations as tools. MCP clients (including Claude Code) can
 then call those tools directly, without leaving their coding environment.
@@ -40,58 +43,6 @@ Pass `--no-mdns` to suppress this.
 
 `nself mcp` must be run from inside a directory that contains an nSelf project (i.e. one
 initialised by `nself init`). The server exits immediately if no project is found.
-
-## Flags
-
-| Flag | Short | Type | Default | Description |
-|------|-------|------|---------|-------------|
-| `--transport` | `-t` | string | `stdio` | Transport mode: `stdio` or `sse` |
-| `--port` | `-p` | int | `3825` | Port for SSE transport |
-| `--no-mdns` | | bool | `false` | Disable mDNS service advertising |
-
-## Examples
-
-```bash
-# Run as a Claude Code MCP server using stdio (recommended)
-nself mcp
-```
-
-```bash
-# Run as an SSE server for browser-based clients
-nself mcp --transport sse
-```
-
-```bash
-# Run SSE on a custom port
-nself mcp --transport sse --port 4000
-```
-
-```bash
-# Run without mDNS advertising (e.g. in CI)
-nself mcp --no-mdns
-```
-
-```bash
-# Run SSE on a custom port without mDNS
-nself mcp --transport sse --port 4000 --no-mdns
-```
-
-### Claude Code configuration
-
-Add the following to your project's `.claude/settings.json`:
-
-```json
-{
-  "mcpServers": {
-    "nself": {
-      "command": "nself",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-Claude Code will start `nself mcp` automatically and connect over stdio.
 
 ## ɳSentry Tools: AI Agents Operate Monitoring
 
@@ -160,11 +111,71 @@ The check is case-insensitive and strips leading SQL comments (`-- ...`) so that
 comment-prefix bypasses are also blocked.
 
 For blocked statement types, run `nself db migrate` directly from the CLI.
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--no-mdns` | `false` | Disable mDNS service advertising |
+| `--port`, `-p` | `3825` | Port for SSE transport |
+| `--transport`, `-t` | `stdio` | Transport: stdio or sse |
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Examples
+
+<!-- BEGIN PROSE:examples -->
+```bash
+# Run as a Claude Code MCP server using stdio (recommended)
+nself mcp
+```
+
+```bash
+# Run as an SSE server for browser-based clients
+nself mcp --transport sse
+```
+
+```bash
+# Run SSE on a custom port
+nself mcp --transport sse --port 4000
+```
+
+```bash
+# Run without mDNS advertising (e.g. in CI)
+nself mcp --no-mdns
+```
+
+```bash
+# Run SSE on a custom port without mDNS
+nself mcp --transport sse --port 4000 --no-mdns
+```
+
+### Claude Code configuration
+
+Add the following to your project's `.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "nself": {
+      "command": "nself",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Claude Code will start `nself mcp` automatically and connect over stdio.
+<!-- END PROSE:examples -->
 
 ## See Also
 
+<!-- BEGIN PROSE:see-also -->
 - [[cmd-doctor]] — run the nSelf diagnostics suite
 - [[cmd-plugin]] — manage the plugin catalog
 - [[cmd-start]] — start the nSelf stack
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

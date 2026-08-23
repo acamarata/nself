@@ -93,6 +93,6 @@ Export your knowledge graph in two formats:
 
 ## Related
 
-- [[Feature-ɳClaw]] -- ɳClaw overview
+- [[Feature-nClaw]] -- ɳClaw overview
 - [[Feature-Agent-Dashboard]] -- Agent metrics
 - [[Feature-Image-Generation]] -- Image generation

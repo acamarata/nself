@@ -1,30 +1,25 @@
 # nself dlq
 
+<!-- BEGIN PROSE:summary -->
 > Manage dead-letter queues for ɳSelf plugins.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
 ```
-nself dlq <subcommand>
-nself dlq replay <plugin> [flags]
+nself dlq <subcommand> [flags]
 ```
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself dlq` manages dead-letter queues (DLQ) for ɳSelf plugins. DLQs accumulate
 rows that failed processing (e.g. mux gmail rows that could not be delivered).
 
 Use `nself dlq replay` after fixing the upstream bug to re-enqueue failed rows
 without manually manipulating the database.
 
-## Subcommands
-
-| Subcommand | Description |
-|---|---|
-| `replay` | Re-enqueue DLQ rows for a plugin back to the work queue |
-
 ---
-
 ## nself dlq replay
 
 Re-enqueue dead-letter queue rows for the named plugin.
@@ -78,3 +73,39 @@ nself dlq replay mux --filter status=quarantined --max-rows 50
 
 - [Observability](https://nself.org/docs/operations/observability), DLQ metrics (S41-T02)
 - [mux plugin](https://nself.org/docs/plugins/mux), mux DLQ schema
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `replay` | Re-enqueue DLQ rows for a plugin |
+<!-- END GENERATED:subcommands -->
+
+## Examples
+
+<!-- BEGIN PROSE:examples -->
+<!-- TODO(docs): needs human prose -->
+
+```bash
+nself dlq
+```
+<!-- END PROSE:examples -->
+
+## See Also
+
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
+
+← [[Commands]] | [[Home]] →
