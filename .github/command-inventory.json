@@ -3265,6 +3265,7 @@
         "short": "List all optional services with enabled/disabled status",
         "hidden": false,
         "flags": [
+          "--core",
           "--json"
         ]
       },

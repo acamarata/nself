@@ -81,3 +81,28 @@ func TestPublishedCommandCountMatchesBinary(t *testing.T) {
 		}
 	}
 }
+
+// TestCoreServicesPageIsCurrent fails when .github/wiki/Core-Services.md no
+// longer matches internal/compose's catalog (CLI-R07). The page is generated so
+// that the published required/optional split cannot drift from the generator
+// the way SPORT F02's command count did.
+func TestCoreServicesPageIsCurrent(t *testing.T) {
+	root := repoRoot(t)
+
+	committed, err := os.ReadFile(filepath.Join(root, ".github", "wiki", "Core-Services.md"))
+	if err != nil {
+		t.Fatalf("read Core-Services.md: %v (run `make core-services`)", err)
+	}
+
+	gen := exec.Command("go", "run", "-mod=vendor", "./tools/servicecatalog", "-format", "markdown")
+	gen.Dir = root
+	gen.Env = append(os.Environ(), "CGO_ENABLED=0")
+	live, err := gen.Output()
+	if err != nil {
+		t.Fatalf("regenerate catalog: %v", err)
+	}
+
+	if !strings.Contains(string(committed), strings.TrimSpace(string(live))) {
+		t.Fatal("core-services page is stale — run `make core-services` and commit the result")
+	}
+}

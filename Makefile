@@ -12,7 +12,7 @@ LDFLAGS := -s -w \
 	-X $(MODULE)/internal/license.licensePubKeyHex=$(NSELF_LICENSE_PUBKEY_HEX)
 BUILDFLAGS := -trimpath
 
-.PHONY: build clean test vet install cross dist verify-prod sport-f21 sport-f02 cmd-inventory sbom man fmt fmt-check
+.PHONY: build clean test vet install cross dist verify-prod sport-f21 sport-f02 cmd-inventory core-services sbom man fmt fmt-check
 
 verify-prod:
 	@bash scripts/prod-verify/p87-verification.sh
@@ -29,6 +29,11 @@ cmd-inventory:
 	@bash scripts/sport/generate-f02.sh
 
 sport-f02: cmd-inventory
+
+## core-services — CLI-R07. Regenerate .github/wiki/Core-Services.md from the
+## compose service catalog. Set NSELF_SPORT_DIR to also refresh SPORT F08.
+core-services:
+	@bash scripts/sport/generate-core-services.sh
 
 ## Q04 — SBOM generation (local dev target)
 ## Requires: syft (https://github.com/anchore/syft)

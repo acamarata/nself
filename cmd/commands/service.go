@@ -16,6 +16,8 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
+
+	"github.com/nself-org/cli/internal/compose"
 )
 
 // versionPattern validates service version strings: semver, tags like "latest",
@@ -82,7 +84,18 @@ After enabling or disabling a service, run 'nself build' to apply changes.`,
 var serviceListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all optional services with enabled/disabled status",
-	RunE:  runServiceList,
+	Long: `List optional services and whether this project has them enabled.
+
+With --core, list the nSelf service catalog instead: which services every stack
+requires, which are opt-in, the environment variable that enables each one, and
+the pinned default image. This reads the compose catalog, not your .env, so it
+works outside a project directory.
+
+Examples:
+  nself service list
+  nself service list --core
+  nself service list --core --json`,
+	RunE: runServiceList,
 }
 
 var serviceEnableCmd = &cobra.Command{
@@ -243,6 +256,7 @@ Examples:
 func init() {
 	serviceCmd.PersistentFlags().String("env", "", "Target environment (reads .env.{env})")
 	serviceListCmd.Flags().Bool("json", false, "Output as JSON array")
+	serviceListCmd.Flags().Bool("core", false, "List the service catalog (required vs optional) instead of this project's status")
 
 	// service add flags
 	serviceAddCmd.Flags().String("template", "go", "Service template: go, node, python, static, rust, other")
@@ -518,6 +532,14 @@ type serviceStatusRow struct {
 func runServiceList(cmd *cobra.Command, args []string) error {
 	envFlag, _ := cmd.Flags().GetString("env")
 	jsonOut, _ := cmd.Flags().GetBool("json")
+	coreOnly, _ := cmd.Flags().GetBool("core")
+
+	// --core answers "what does a minimal nSelf stack contain?" from the
+	// compose catalog rather than from the project's .env, so it works before
+	// `nself init` and gives the docs a machine-readable source (CLI-R07).
+	if coreOnly {
+		return printServiceCatalog(jsonOut)
+	}
 
 	envFile, err := resolveEnvFile(envFlag)
 	if err != nil {
@@ -826,4 +848,47 @@ func runServiceScale(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("replicas must be an integer, got %q", args[1])
 	}
 	return service.Scale(cmd.Context(), args[0], replicas)
+}
+
+// catalogRow is the JSON shape of one `nself service list --core` row.
+type catalogRow struct {
+	Service      string `json:"service"`
+	Tier         string `json:"tier"`
+	Purpose      string `json:"purpose"`
+	EnableEnv    string `json:"enable_env,omitempty"`
+	VersionEnv   string `json:"version_env"`
+	DefaultImage string `json:"default_image"`
+}
+
+// printServiceCatalog renders the required/optional service catalog. It is the
+// published form of internal/compose's catalog — the same data the generated
+// wiki page is built from, so the CLI and the docs cannot disagree.
+func printServiceCatalog(jsonOut bool) error {
+	entries := compose.ServiceCatalog()
+	rows := make([]catalogRow, 0, len(entries))
+	for _, e := range entries {
+		rows = append(rows, catalogRow{
+			Service:      e.Name,
+			Tier:         string(e.Tier),
+			Purpose:      e.Purpose,
+			EnableEnv:    e.EnableEnv,
+			VersionEnv:   e.VersionEnv,
+			DefaultImage: e.DefaultImage,
+		})
+	}
+
+	if jsonOut {
+		return ui.PrintJSON(rows)
+	}
+
+	tbl := ui.NewTable("SERVICE", "TIER", "ENABLE_ENV", "DEFAULT_IMAGE", "PURPOSE")
+	for _, r := range rows {
+		enable := r.EnableEnv
+		if enable == "" {
+			enable = "— (always on)"
+		}
+		tbl.AddRow(r.Service, r.Tier, enable, r.DefaultImage, r.Purpose)
+	}
+	tbl.Render()
+	return nil
 }
