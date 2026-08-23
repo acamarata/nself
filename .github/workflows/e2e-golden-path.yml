@@ -71,6 +71,9 @@ jobs:
       - name: Run golden-path smoke
         env:
           NSELF_PLUGIN_LICENSE_KEY_OWNER: ${{ secrets.NSELF_PLUGIN_LICENSE_KEY_OWNER }}
+          # A cold runner needs longer than the 60s local default to pull and
+          # boot postgres + hasura + auth + nginx (CLI-R05).
+          GOLDEN_PATH_HEALTH_TIMEOUT: "240"
         run: bash scripts/golden-path.sh
 
       - name: Clean up docker state
@@ -125,18 +128,20 @@ jobs:
           echo "Archived: ${RESULT_FILE}"
           cat "${RESULT_FILE}"
 
-      - name: Commit archived result
-        if: always() && github.event_name == 'schedule'
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .github/golden-path-results/
-          if git diff --cached --quiet; then
-            echo "Nothing to commit"
-          else
-            git commit -m "chore(e2e): archive golden-path result $(date -u +%Y-%m-%d)"
-            git push
-          fi
+      # CLI-R05: this step used to `git push` the archived result straight to
+      # main. That can never succeed — main requires the "Vet, Build & Test"
+      # status check, so the bot push is rejected by the protected-branch hook
+      # and the job goes red even when the smoke test itself passed. The result
+      # is kept as a build artifact instead, which needs no write access to the
+      # default branch.
+      - name: Upload archived result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-path-result-${{ github.run_id }}
+          path: .github/golden-path-results/
+          if-no-files-found: warn
+          retention-days: 90
 
       - name: Summarise result
         if: always()
