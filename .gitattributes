@@ -1,3 +1,16 @@
+# Line endings. Without this, a Windows checkout converts every text file to
+# CRLF, which makes `gofmt -l` report the whole tree as unformatted and makes
+# byte-comparison of generated artifacts fail. The repo's canonical form is LF
+# everywhere; Go tooling emits LF on every platform.
+* text=auto eol=lf
+*.go text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
+*.txt text eol=lf
+
 # nSelf standard .gitattributes
 # LFS prevention rules - these file types should only exist in GitHub Releases,
 # never tracked in git history. Added to prevent accidental tracking of binaries.

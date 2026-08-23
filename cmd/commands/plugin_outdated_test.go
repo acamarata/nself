@@ -84,7 +84,7 @@ func TestPluginOutdatedRegistered(t *testing.T) {
 // exits 0 with a plain message (and an empty JSON array under --json).
 func TestPluginOutdated_NoneInstalled(t *testing.T) {
 	t.Setenv("NSELF_PLUGIN_DIR", t.TempDir())
-	t.Setenv("HOME", t.TempDir())
+	setPluginTestHome(t, t.TempDir())
 
 	run, stdout := newOutdatedTestCmd(t, false)
 	if err := run(); err != nil {
@@ -101,7 +101,7 @@ func TestPluginOutdated_AllCurrent(t *testing.T) {
 	pluginDir := t.TempDir()
 	writeInstalledPlugin(t, pluginDir, "demo-plugin", "1.0.0")
 	t.Setenv("NSELF_PLUGIN_DIR", pluginDir)
-	t.Setenv("HOME", t.TempDir())
+	setPluginTestHome(t, t.TempDir())
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -127,7 +127,7 @@ func TestPluginOutdated_ReportsOutdatedAndExitsOne(t *testing.T) {
 	pluginDir := t.TempDir()
 	writeInstalledPlugin(t, pluginDir, "demo-plugin", "1.0.0")
 	t.Setenv("NSELF_PLUGIN_DIR", pluginDir)
-	t.Setenv("HOME", t.TempDir())
+	setPluginTestHome(t, t.TempDir())
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -161,7 +161,7 @@ func TestPluginOutdated_JSONOutput(t *testing.T) {
 	pluginDir := t.TempDir()
 	writeInstalledPlugin(t, pluginDir, "demo-plugin", "1.0.0")
 	t.Setenv("NSELF_PLUGIN_DIR", pluginDir)
-	t.Setenv("HOME", t.TempDir())
+	setPluginTestHome(t, t.TempDir())
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -183,4 +183,16 @@ func TestPluginOutdated_JSONOutput(t *testing.T) {
 	if len(rows) != 1 || rows[0].Name != "demo-plugin" || rows[0].Installed != "1.0.0" || rows[0].Latest != "2.0.0" {
 		t.Errorf("unexpected JSON rows: %+v", rows)
 	}
+}
+
+// setPluginTestHome points os.UserHomeDir at dir on every platform.
+//
+// os.UserHomeDir reads $HOME on Unix but %USERPROFILE% on Windows, so a test
+// that sets only HOME silently exercises the developer's real home directory
+// on Windows — which is how these tests passed locally and failed on the
+// windows-2022 runner.
+func setPluginTestHome(t *testing.T, dir string) {
+	t.Helper()
+	t.Setenv("HOME", dir)
+	t.Setenv("USERPROFILE", dir)
 }
