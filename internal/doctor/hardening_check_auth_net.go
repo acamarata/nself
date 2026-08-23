@@ -4,22 +4,21 @@ package doctor
 //
 // Purpose: SEC-HARDENING-02 (rate-limit env vars set), SEC-HARDENING-03 (MFA
 //          brute-force throttle), SEC-HARDENING-04 (SSRF guard imported by all
-//          outbound-HTTP plugins), SEC-HARDENING-05 (JWT_PUBLIC_KEYS has ≥2 keys),
-//          SEC-HARDENING-06 (nginx rate-limit zones for /auth/login and /api/).
+//          outbound-HTTP plugins), SEC-HARDENING-05 (JWT_PUBLIC_KEYS has ≥2 keys).
 // Inputs:  projectDir string for env-file reads and filesystem traversal.
-//          ctx context.Context for docker exec fallback in SEC-HARDENING-06.
 // Outputs: CheckResult for each check — pass/warn/fail with remediation hint.
 // Constraints: pluginHasSSRFGuard reads ssrfGuardSymbols from ssrf.go in the
 //              same package — no import needed. rateLimitEnvKeys and
 //              outboundHTTPPlugins are package-level vars so tests can override
 //              them without touching the function under test.
+//              SEC-HARDENING-06 (nginx rate-limit zones) lives in
+//              hardening_check_nginx_zones.go — split out (CLI-R12) as a pure
+//              move from this file.
 // SPORT:   cli/internal/doctor — decomposed from hardening_check.go (T-E2-06).
 
 import (
-	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -221,103 +220,4 @@ func countJWTKeys(val string) int {
 		}
 	}
 	return count
-}
-
-// ─── SEC-HARDENING-06: Nginx rate-limit zones for /auth/login + /api/ ────────
-
-func checkHardeningNginxRateZones(ctx context.Context, projectDir string) CheckResult {
-	const checkID = "SEC-HARDENING-06"
-
-	// Search nginx/conf.d/ and nginx/sites/ for limit_req_zone + limit_req directives
-	// covering the two required paths.
-	nginxDirs := []string{
-		filepath.Join(projectDir, "nginx", "conf.d"),
-		filepath.Join(projectDir, "nginx", "sites"),
-		filepath.Join(projectDir, "nginx", "nginx.conf"),
-	}
-
-	hasAuthZone := false
-	hasAPIZone := false
-
-	for _, root := range nginxDirs {
-		info, err := os.Stat(root)
-		if err != nil {
-			continue
-		}
-
-		var files []string
-		if info.IsDir() {
-			entries, err := os.ReadDir(root)
-			if err != nil {
-				continue
-			}
-			for _, e := range entries {
-				if !e.IsDir() {
-					files = append(files, filepath.Join(root, e.Name()))
-				}
-			}
-		} else {
-			files = []string{root}
-		}
-
-		for _, f := range files {
-			data, err := os.ReadFile(f)
-			if err != nil {
-				continue
-			}
-			content := string(data)
-			if strings.Contains(content, "/auth/login") && strings.Contains(content, "limit_req") {
-				hasAuthZone = true
-			}
-			if strings.Contains(content, "/api/") && strings.Contains(content, "limit_req") {
-				hasAPIZone = true
-			}
-		}
-	}
-
-	// Fallback: inspect nginx container config if local files not found.
-	if !hasAuthZone || !hasAPIZone {
-		cmd := exec.CommandContext(ctx, "docker", "exec", "nself_nginx",
-			"grep", "-r", "limit_req", "/etc/nginx/")
-		out, err := cmd.Output()
-		if err == nil {
-			content := string(out)
-			if strings.Contains(content, "auth/login") {
-				hasAuthZone = true
-			}
-			if strings.Contains(content, "/api/") {
-				hasAPIZone = true
-			}
-		}
-	}
-
-	switch {
-	case hasAuthZone && hasAPIZone:
-		return CheckResult{
-			Section: hardeningSection,
-			Name:    checkID,
-			Status:  "pass",
-			Message: "SEC-HARDENING-06: nginx rate-limit zones set for /auth/login and /api/",
-		}
-	case !hasAuthZone && !hasAPIZone:
-		return CheckResult{
-			Section: hardeningSection,
-			Name:    checkID,
-			Status:  "fail",
-			Message: "SEC-HARDENING-06: nginx missing rate-limit zones for /auth/login and /api/ — add limit_req_zone directives",
-			FixCmd:  "See nself.org/docs/security/nginx-rate-limiting",
-		}
-	default:
-		missing := "/api/"
-		if !hasAuthZone {
-			missing = "/auth/login"
-		}
-		return CheckResult{
-			Section: hardeningSection,
-			Name:    checkID,
-			Status:  "warn",
-			Message: fmt.Sprintf("SEC-HARDENING-06: nginx rate-limit zone missing for %s — add limit_req_zone directive", missing),
-			FixCmd:  "See nself.org/docs/security/nginx-rate-limiting",
-		}
-	}
 }
