@@ -37,7 +37,7 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself dogfood` | observe | yes | no | n/a | n/a (see below) |
 | `nself dr` | deploy | yes | no | n/a | n/a (see below) |
 | `nself encryption` | advanced | yes | no | undocumented: BYOK_PLUGIN_URL, NSELF_API_URL, NSELF_TENANT_ID | n/a (see below) |
-| `nself env` | config | yes | no | n/a | n/a (see below) |
+| `nself env` | config | yes | no | documented | n/a (see below) |
 | `nself exec` | core | yes | no | n/a | n/a (see below) |
 | `nself federation` | advanced | yes | no | n/a | n/a (see below) |
 | `nself flags` | config | yes | no | n/a | n/a (see below) |

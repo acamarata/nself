@@ -81,9 +81,14 @@ func printCascadeOverview(cascade []config.CascadeFile, activeEnv string, legacy
 	tbl := ui.NewTable("Precedence", "File", "Exists", "Note")
 	last := len(cascade) - 1
 	for i, f := range cascade {
-		precedence := fmt.Sprintf("%d of %d (lowest)", i+1, len(cascade))
-		if i == last {
-			precedence = fmt.Sprintf("%d of %d (highest)", i+1, len(cascade))
+		// Only the first and last rows carry a qualifier; labelling every
+		// middle row "(lowest)" said the opposite of what the table means.
+		precedence := fmt.Sprintf("%d of %d", i+1, len(cascade))
+		switch i {
+		case 0:
+			precedence += " (lowest)"
+		case last:
+			precedence += " (highest)"
 		}
 		exists := "no"
 		if f.Exists {

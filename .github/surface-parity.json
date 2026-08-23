@@ -232,7 +232,7 @@
       "group_id": "config",
       "wiki_page": true,
       "mcp_tool": false,
-      "env_vars": "n/a",
+      "env_vars": "documented",
       "openapi": "n/a (see below)"
     },
     {
