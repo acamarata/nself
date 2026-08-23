@@ -12,7 +12,7 @@ LDFLAGS := -s -w \
 	-X $(MODULE)/internal/license.licensePubKeyHex=$(NSELF_LICENSE_PUBKEY_HEX)
 BUILDFLAGS := -trimpath
 
-.PHONY: build clean test vet install cross dist verify-prod sport-f21 sport-f02 cmd-inventory core-services wiki-commands wiki-check sbom man fmt fmt-check
+.PHONY: build clean test vet install cross dist verify-prod sport-f21 sport-f02 cmd-inventory core-services wiki-commands wiki-check parity sbom man fmt fmt-check
 
 verify-prod:
 	@bash scripts/prod-verify/p87-verification.sh
@@ -46,6 +46,14 @@ wiki-commands:
 wiki-check:
 	@CGO_ENABLED=0 go run -mod=vendor ./tools/wikigen -check
 	@bash scripts/ci/wiki-link-audit.sh
+
+## parity — CLI-R17. Regenerate the four-surface parity matrix (wiki page, MCP
+## tool, env var docs, OpenAPI route) for every top-level command. Writes
+## .github/surface-parity.md and .github/surface-parity.json. internal/repoqa
+## asserts the committed copies match; run this after adding, renaming, or
+## removing a command, an MCP tool, or an env var.
+parity:
+	@CGO_ENABLED=0 go run -mod=vendor ./tools/parity
 
 ## Q04 — SBOM generation (local dev target)
 ## Requires: syft (https://github.com/anchore/syft)
