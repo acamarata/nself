@@ -36,7 +36,9 @@ After `nself reset`, run `nself build` to regenerate configuration and `nself st
 <!-- BEGIN GENERATED:flags -->
 | Flag | Default | Description |
 |------|---------|-------------|
+| `--keep-data` | `false` | Remove containers and generated files but keep database volumes |
 | `--no-monorepo` | `false` | Disable automatic monorepo backend detection |
+| `--purge` | `false` | Remove everything including database volumes (DESTRUCTIVE) |
 | `--yes` | `false` | Skip confirmation prompt (for CI/CD) |
 | `--help`, `-h` | — | Show help |
 <!-- END GENERATED:flags -->

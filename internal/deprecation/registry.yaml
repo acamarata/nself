@@ -119,6 +119,17 @@ items:
     docs_url: "https://nself.org/docs/cli/flags"
     phase: 1
 
+  # CLI-R19. `uninstall` stays registered (hidden) rather than being rewritten:
+  # bare `uninstall` keeps database volumes while bare `reset` removes them, so
+  # a blanket redirect would turn a safe habit into data loss. The replacement
+  # named here is the flag that matches what `uninstall` actually did.
+  - name: "nself uninstall"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself reset --keep-data (or --purge for the full wipe)"
+    docs_url: "https://nself.org/docs/cli/reset"
+    phase: 1
+
 # =============================================================================
 # Plugin API versioning — G2 (api_version), G4 (deprecated_endpoints + removal)
 # =============================================================================

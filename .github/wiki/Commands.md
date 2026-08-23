@@ -111,7 +111,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 84**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 85**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -153,6 +153,7 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 84**
 | `nself help-topics` | Browse help topics (quickstart, plugins, license, envs, doctor, errors) | account | — |
 | `nself infra` | Provision nSelf infrastructure via Terraform | deploy | apply, destroy, plan |
 | `nself init` | Initialize a new nSelf project | core | — |
+| `nself install` | Install a plugin or bundle | extend | — |
 | `nself k8s` | Manage nSelf on Kubernetes via Helm | deploy | install, status, upgrade |
 | `nself license` | Manage license keys for nSelf product bundles | extend | add, clear, export, health, import, list, migrate, refresh, remove, restore, revalidate, revoke, set, show, simulate-offline, status, tail, upgrade, validate |
 | `nself login` | Log in to your nSelf account | account | — |
@@ -173,6 +174,7 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 84**
 | `nself queue` | Manage async job queues (pg-boss) | data | cron, jobs, list, purge, retry |
 | `nself region` | Manage multi-region nSelf deployments | deploy | add, list, promote, status |
 | `nself release` | Orchestrate the full release cascade for a version | deploy | check, rollback, status |
+| `nself remove` | Remove an installed plugin or bundle | extend | — |
 | `nself reset` | Stop containers, remove all data volumes, and clean generated files | core | — |
 | `nself restart` | Smart restart with config change detection | core | — |
 | `nself secrets` | Manage encrypted project secrets (age encryption) | config | audit, decrypt-on-deploy, edit, get, init, lint, list, list-schedules, rekey, retire, rotate, rotation-log, schedule, set, verify |
@@ -190,7 +192,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 84**
 | `nself template` | Browse and publish full-stack app templates | config | info, list, publish, update |
 | `nself tenant` | [PREVIEW] Tenant management: create, upgrade, suspend, destroy, audit | advanced | audit, create, destroy, suspend, upgrade |
 | `nself trust` | Set up local dev trust (DNS, SSL, port forwarding) | config | dns, status |
-| `nself uninstall` | Remove nSelf project data and generated files | account | — |
 | `nself update` | Update the nSelf CLI and admin UI | account | images |
 | `nself upgrade` | Upgrade the nSelf CLI (detects install method) | account | — |
 | `nself urls` | Display all service URLs with route conflict detection | core | — |

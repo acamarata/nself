@@ -33,16 +33,14 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself deploy` | deploy | yes | no | undocumented: NSELF_DEPLOY_ENV, NSELF_DEPLOY_HOST_, NSELF_FEATURE_BLUE_GREEN_DEPLOY, VERCEL_TOKEN | n/a |
 | `nself dev` | core | yes | no | n/a | n/a |
 | `nself dlq` | data | yes | no | n/a | n/a |
-| `nself dns-setup` | config | yes | no | n/a | n/a |
 | `nself doctor` | core | yes | yes | undocumented: NSELF_PING_API_URL | n/a |
 | `nself dogfood` | observe | yes | no | n/a | n/a |
 | `nself dr` | deploy | yes | no | n/a | n/a |
 | `nself encryption` | advanced | yes | no | undocumented: BYOK_PLUGIN_URL, NSELF_API_URL, NSELF_TENANT_ID | n/a |
 | `nself env` | config | yes | no | n/a | n/a |
 | `nself exec` | core | yes | no | n/a | n/a |
-| `nself feature` | config | yes | no | n/a | n/a |
 | `nself federation` | advanced | yes | no | n/a | n/a |
-| `nself flag` | config | yes | no | n/a | n/a |
+| `nself flags` | config | yes | no | n/a | n/a |
 | `nself functions` | data | yes | no | n/a | n/a |
 | `nself gateway` | ai | yes | no | n/a | n/a |
 | `nself gauth` | ai | yes | no | undocumented: GAUTH_PORT, GAUTH_URL | n/a |
@@ -52,6 +50,7 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself help-topics` | account | yes | no | n/a | n/a |
 | `nself infra` | deploy | yes | no | undocumented: HCLOUD_TOKEN, HETZNER_NSELF_TOKEN | n/a |
 | `nself init` | core | yes | no | undocumented: NSELF_LICENSE_KEY | n/a |
+| `nself install` | extend | yes | no | n/a | n/a |
 | `nself k8s` | deploy | yes | no | undocumented: NSELF_PLUGIN_LICENSE_KEY | n/a |
 | `nself license` | extend | yes | no | undocumented: NSELF_LICENSE_SKIP_VERIFY, NSELF_PING_API_URL | n/a |
 | `nself login` | account | yes | no | n/a | n/a |
@@ -62,22 +61,17 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself man` | account | yes | no | n/a | n/a |
 | `nself mcp` | extend | yes | no | undocumented: HASURA_GRAPHQL_URL, NSELF_HASURA_ADMIN_SECRET, NSELF_HASURA_GRAPHQL_URL, NSENTRY_STATUS_URL, POSTGRES_URL | n/a |
 | `nself migrate` | data | yes | no | undocumented: NSELF_AI_ENDPOINT, NSELF_MIGRATION_AUTO_APPLY, NSELF_PROFILE, NSELF_SUPABASE_SKIP | n/a |
-| `nself migrate-from-v099` | advanced | yes | no | n/a | n/a |
 | `nself model` | ai | yes | no | undocumented: NSELF_OLLAMA_DEFAULT_MODEL, NSELF_OLLAMA_HOST, NSELF_OLLAMA_TIMEOUT_SECONDS, PLUGIN_AI_OLLAMA_URL | n/a |
 | `nself monitor` | observe | yes | no | n/a | n/a |
 | `nself oauth` | account | yes | no | n/a | n/a |
-| `nself ollama` | ai | yes | no | undocumented: NSELF_OLLAMA_DEFAULT_MODEL, NSELF_OLLAMA_HOST, NSELF_OLLAMA_TIMEOUT_SECONDS, PLUGIN_AI_OLLAMA_URL | n/a |
 | `nself ops` | deploy | yes | no | n/a | n/a |
 | `nself pentest-kit` | advanced | yes | no | n/a | n/a |
-| `nself pitr` | data | yes | no | undocumented: NSELF_PITR_EXPERIMENTAL | n/a |
 | `nself plugin` | extend | yes | no | undocumented: GOPATH, NSELF_LICENSE_SKIP_VERIFY, NSELF_LOCAL_URL, NSELF_MARKETPLACE_URL, NSELF_PING_URL, NSELF_PLUGIN_CACHE, NSELF_PLUGIN_DIR, NSELF_PLUGIN_LICENSE_KEY, NSELF_PLUGIN_REGISTRY | n/a |
 | `nself promote` | deploy | yes | no | n/a | n/a |
 | `nself queue` | data | yes | no | n/a | n/a |
 | `nself region` | deploy | yes | no | n/a | n/a |
 | `nself release` | deploy | yes | no | undocumented: GITHUB_TOKEN, NSELF_VERSION | n/a |
-| `nself release-check` | deploy | yes | no | n/a | n/a |
-| `nself release-rollback` | deploy | yes | no | n/a | n/a |
-| `nself release-status` | deploy | yes | no | n/a | n/a |
+| `nself remove` | extend | yes | no | n/a | n/a |
 | `nself reset` | core | yes | no | n/a | n/a |
 | `nself restart` | core | yes | no | n/a | n/a |
 | `nself secrets` | config | yes | no | undocumented: EDITOR | n/a |
@@ -95,7 +89,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself template` | config | yes | no | undocumented: NSELF_TEMPLATE_REGISTRY_URL | n/a |
 | `nself tenant` | advanced | yes | no | n/a | n/a |
 | `nself trust` | config | yes | no | n/a | n/a |
-| `nself uninstall` | account | yes | no | n/a | n/a |
 | `nself update` | account | yes | no | n/a | n/a |
 | `nself upgrade` | account | yes | no | n/a | n/a |
 | `nself urls` | core | yes | no | n/a | n/a |
@@ -105,4 +98,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself watchdog` | observe | yes | no | undocumented: NSELF_ENV | n/a |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a |
 
-Total: 92 commands. Missing wiki page: 0. No MCP tool: 88. Env vars found but undocumented: 32.
+Total: 85 commands. Missing wiki page: 0. No MCP tool: 81. Env vars found but undocumented: 30.

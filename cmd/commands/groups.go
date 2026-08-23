@@ -108,6 +108,8 @@ var commandGroupAssignments = map[string]string{
 
 	// Plugins & Extensions.
 	"plugin":  groupExtend,
+	"install": groupExtend,
+	"remove":  groupExtend,
 	"bundle":  groupExtend,
 	"license": groupExtend,
 	"mcp":     groupExtend,
@@ -129,7 +131,6 @@ var commandGroupAssignments = map[string]string{
 	"admin":       groupAccount,
 	"update":      groupAccount,
 	"upgrade":     groupAccount,
-	"uninstall":   groupAccount,
 	"version":     groupAccount,
 	"completion":  groupAccount,
 	"man":         groupAccount,

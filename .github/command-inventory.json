@@ -1864,6 +1864,20 @@
     ]
   },
   {
+    "name": "install",
+    "path": "nself install",
+    "short": "Install a plugin or bundle",
+    "hidden": false,
+    "group_id": "extend",
+    "aliases": [
+      "add"
+    ],
+    "flags": [
+      "--force",
+      "--yes"
+    ]
+  },
+  {
     "name": "k8s",
     "path": "nself k8s",
     "short": "Manage nSelf on Kubernetes via Helm",
@@ -2908,13 +2922,28 @@
     ]
   },
   {
+    "name": "remove",
+    "path": "nself remove",
+    "short": "Remove an installed plugin or bundle",
+    "hidden": false,
+    "group_id": "extend",
+    "aliases": [
+      "rm"
+    ],
+    "flags": [
+      "--yes"
+    ]
+  },
+  {
     "name": "reset",
     "path": "nself reset",
     "short": "Stop containers, remove all data volumes, and clean generated files",
     "hidden": false,
     "group_id": "core",
     "flags": [
+      "--keep-data",
       "--no-monorepo",
+      "--purge",
       "--yes"
     ]
   },
@@ -3575,18 +3604,6 @@
           "--project"
         ]
       }
-    ]
-  },
-  {
-    "name": "uninstall",
-    "path": "nself uninstall",
-    "short": "Remove nSelf project data and generated files",
-    "hidden": false,
-    "group_id": "account",
-    "flags": [
-      "--keep-data",
-      "--purge",
-      "--yes"
     ]
   },
   {

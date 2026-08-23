@@ -371,6 +371,12 @@ var errorHarnessCases = []errorHarnessCase{
 	// ── flag ───────────────────────────────────────────────────────────────
 	// CLI-R09 renamed `flag` to `flags`; `flag` stays as a cobra alias, so both
 	// spellings are exercised here.
+	// CLI-R19 install/remove sugar.
+	{"install", []string{"install"}, "(a) missing required arg"},
+	{"install", []string{"install", "waf", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"remove", []string{"remove"}, "(a) missing required arg"},
+	{"remove", []string{"remove", "waf", "--no-such-flag-xyz"}, "(b) invalid flag"},
+
 	{"flags", []string{"flags"}, "(a) no project dir"},
 	{"flags", []string{"flags", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"flags", []string{"flag"}, "(c) legacy alias still routes"},

@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (84)
+## Commands (85)
 
 ### nself account
 
@@ -768,6 +768,21 @@ Flags:
 
 Full page: [[cmd-init]]
 
+### nself install
+
+Install a plugin or bundle
+
+```
+nself install <name> [name...] [flags]
+```
+
+Flags:
+
+- `--force` (default false) — Reinstall even when the plugin is already present
+- `--yes` (default false) — Skip confirmation prompts (required for third-party URL installs in CI)
+
+Full page: [[cmd-install]]
+
 ### nself k8s
 
 Manage nSelf on Kubernetes via Helm
@@ -1164,6 +1179,20 @@ Flags:
 
 Full page: [[cmd-release]]
 
+### nself remove
+
+Remove an installed plugin or bundle
+
+```
+nself remove <name> [flags]
+```
+
+Flags:
+
+- `--yes` (default false) — Skip confirmation prompts
+
+Full page: [[cmd-remove]]
+
 ### nself reset
 
 Stop containers, remove all data volumes, and clean generated files
@@ -1174,7 +1203,9 @@ nself reset [flags]
 
 Flags:
 
+- `--keep-data` (default false) — Remove containers and generated files but keep database volumes
 - `--no-monorepo` (default false) — Disable automatic monorepo backend detection
+- `--purge` (default false) — Remove everything including database volumes (DESTRUCTIVE)
 - `--yes` (default false) — Skip confirmation prompt (for CI/CD)
 
 Full page: [[cmd-reset]]
@@ -1502,22 +1533,6 @@ Flags:
 - `--undo` (default false) — Print instructions to undo all trust changes
 
 Full page: [[cmd-trust]]
-
-### nself uninstall
-
-Remove nSelf project data and generated files
-
-```
-nself uninstall [flags]
-```
-
-Flags:
-
-- `--keep-data` (default false) — Keep database volumes (default behaviour)
-- `--purge` (default false) — Remove everything including database volumes (DESTRUCTIVE)
-- `--yes` (default false) — Skip confirmation prompts
-
-Full page: [[cmd-uninstall]]
 
 ### nself update
 

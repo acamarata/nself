@@ -54,8 +54,15 @@ func ProxyCommand(cmdName string, args []string) error {
 
 	path := candidate
 	if _, err := os.Stat(path); err != nil {
-		slog.Warn("plugin binary not found", "command", cmdName, "plugin", pluginBinary, "install_hint", "nself plugin install "+cmdName)
-		return fmt.Errorf("plugin binary not found: %s", pluginBinary)
+		// CLI-R19: an unknown command is the moment a user most needs to be told
+		// how to get it. The message is the actionable one — `nself install X` —
+		// and it goes to the returned error, not only to a slog warning that a
+		// normal terminal never shows.
+		slog.Warn("plugin binary not found",
+			"command", cmdName, "plugin", pluginBinary,
+			"install_hint", "nself install "+cmdName)
+		return fmt.Errorf("unknown command %q, and no plugin named %q is installed.\n\nIf this is an nSelf plugin, install it with:\n  nself install %s",
+			cmdName, cmdName, cmdName)
 	}
 
 	// Prepare the command
