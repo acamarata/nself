@@ -2408,45 +2408,6 @@
     ]
   },
   {
-    "name": "pentest-kit",
-    "path": "nself pentest-kit",
-    "short": "Penetration-test readiness kit (Business+)",
-    "hidden": false,
-    "group_id": "advanced",
-    "subcommands": [
-      {
-        "name": "credentials",
-        "path": "nself pentest-kit credentials",
-        "short": "Create pentest role and test credentials in Hasura",
-        "hidden": false
-      },
-      {
-        "name": "generate",
-        "path": "nself pentest-kit generate",
-        "short": "Generate pentest scope document",
-        "hidden": false,
-        "flags": [
-          "--output-dir"
-        ]
-      },
-      {
-        "name": "remediation",
-        "path": "nself pentest-kit remediation",
-        "short": "Import pentest findings from a structured report",
-        "hidden": false,
-        "flags": [
-          "--import"
-        ]
-      },
-      {
-        "name": "status",
-        "path": "nself pentest-kit status",
-        "short": "Show open pentest findings by severity",
-        "hidden": false
-      }
-    ]
-  },
-  {
     "name": "plugin",
     "path": "nself plugin",
     "short": "Manage nSelf plugins",

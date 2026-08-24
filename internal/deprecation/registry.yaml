@@ -183,6 +183,18 @@ items:
     docs_url: "https://nself.org/docs/plugins/audit"
     phase: 1
 
+  # CLI-R11 thin-core extraction. Live on the proxy path, same as the entries
+  # above. This is the first PAID (Business+ tier) extraction in this batch:
+  # the plugin at plugins-pro/paid/pentest-kit/ still gates on the same
+  # requirePentestKit() license check, just reimplemented locally since
+  # internal/license is unreachable across the module boundary.
+  - name: "nself pentest-kit"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install pentest-kit"
+    docs_url: "https://nself.org/docs/plugins/pentest-kit"
+    phase: 1
+
 # =============================================================================
 # Plugin API versioning — G2 (api_version), G4 (deprecated_endpoints + removal)
 # =============================================================================

@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (82)
+## Commands (81)
 
 ### nself account
 
@@ -1013,23 +1013,6 @@ Subcommands:
 - `deploy` — Deploy with the ops profile to the ops server
 
 Full page: [[cmd-ops]]
-
-### nself pentest-kit
-
-Penetration-test readiness kit (Business+)
-
-```
-nself pentest-kit <subcommand> [flags]
-```
-
-Subcommands:
-
-- `credentials` — Create pentest role and test credentials in Hasura
-- `generate` — Generate pentest scope document
-- `remediation` — Import pentest findings from a structured report
-- `status` — Show open pentest findings by severity
-
-Full page: [[cmd-pentest-kit]]
 
 ### nself plugin
 

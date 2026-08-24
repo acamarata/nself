@@ -279,7 +279,7 @@
 
 <!-- BEGIN GENERATED:command-list -->
 
-**All commands (82)**
+**All commands (81)**
 
 - _A:_ [[cmd-account]] · [[cmd-admin]] · [[cmd-ai]] · [[cmd-ai-studio]] · [[cmd-alerts]] · [[cmd-api]]
 - _B:_ [[cmd-backup]] · [[cmd-billing]] · [[cmd-build]] · [[cmd-bundle]]
@@ -294,7 +294,7 @@
 - _L:_ [[cmd-license]] · [[cmd-login]] · [[cmd-logout]] · [[cmd-logs]]
 - _M:_ [[cmd-mail]] · [[cmd-maintenance]] · [[cmd-man]] · [[cmd-mcp]] · [[cmd-migrate]] · [[cmd-model]] · [[cmd-monitor]]
 - _O:_ [[cmd-oauth]] · [[cmd-ops]]
-- _P:_ [[cmd-pentest-kit]] · [[cmd-plugin]] · [[cmd-promote]]
+- _P:_ [[cmd-plugin]] · [[cmd-promote]]
 - _Q:_ [[cmd-queue]]
 - _R:_ [[cmd-region]] · [[cmd-release]] · [[cmd-remove]] · [[cmd-reset]] · [[cmd-restart]]
 - _S:_ [[cmd-secrets]] · [[cmd-security]] · [[cmd-self-heal]] · [[cmd-sentry]] · [[cmd-sentry-server]] · [[cmd-service]] · [[cmd-ssl]] · [[cmd-start]] · [[cmd-status]] · [[cmd-stop]]

@@ -438,12 +438,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"model ollama", []string{"model", "ollama", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"model ollama", []string{"model", "ollama", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── pentest-kit ────────────────────────────────────────────────────────
-	// pentest-kit root returns cmd.Help() (nil) — soft case.
-	{"pentest-kit", []string{"pentest-kit"}, "(a) shows help (no project required)"},
-	{"pentest-kit", []string{"pentest-kit", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"pentest-kit", []string{"pentest-kit", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── pitr ───────────────────────────────────────────────────────────────
 	// pitr root returns cmd.Help() (nil) — soft case.
 	{"backup pitr", []string{"backup", "pitr"}, "(a) shows help (no project required)"},

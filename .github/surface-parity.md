@@ -63,7 +63,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself monitor` | observe | yes | no | n/a | n/a (see below) |
 | `nself oauth` | account | yes | no | n/a | n/a (see below) |
 | `nself ops` | deploy | yes | no | n/a | n/a (see below) |
-| `nself pentest-kit` | advanced | yes | no | n/a | n/a (see below) |
 | `nself plugin` | extend | yes | yes | undocumented: GOPATH, NSELF_LICENSE_SKIP_VERIFY, NSELF_LOCAL_URL, NSELF_MARKETPLACE_URL, NSELF_PING_URL, NSELF_PLUGIN_CACHE, NSELF_PLUGIN_DIR, NSELF_PLUGIN_LICENSE_KEY, NSELF_PLUGIN_REGISTRY | n/a (see below) |
 | `nself promote` | deploy | yes | no | n/a | n/a (see below) |
 | `nself queue` | data | yes | no | n/a | n/a (see below) |
@@ -95,4 +94,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself watchdog` | observe | yes | no | undocumented: NSELF_ENV | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 82 commands. Missing wiki page: 0. No MCP tool: 64. Env vars found but undocumented: 30.
+Total: 81 commands. Missing wiki page: 0. No MCP tool: 63. Env vars found but undocumented: 30.
