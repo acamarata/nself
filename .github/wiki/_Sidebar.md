@@ -15,13 +15,13 @@
 **Commands**
 - [[Commands]], Overview
 - _Lifecycle:_ [[cmd-init]] · [[cmd-build]] · [[cmd-start]] · [[cmd-stop]] · [[cmd-restart]] · [[cmd-dev]]
-- _Monitoring:_ [[cmd-status]] · [[cmd-logs]] · [[cmd-health]] · [[cmd-urls]] · [[cmd-doctor]] · [[cmd-monitor]] · [[cmd-alerts]] · [[cmd-sentry]] · [[cmd-watchdog]] · [[cmd-dogfood]]
+- _Monitoring:_ [[cmd-status]] · [[cmd-logs]] · [[cmd-health]] · [[cmd-urls]] · [[cmd-doctor]] · [[cmd-monitor]] · [[cmd-alerts]] · [[cmd-sentry]] · [[cmd-watchdog]]
 - _Data:_ [[cmd-db]] · [[cmd-backup]] · [[cmd-dr]] · [[cmd-queue]] · [[cmd-webhooks]]
 - _Config:_ [[cmd-config]] · [[cmd-service]] · [[cmd-env]] · [[cmd-promote]]
 - _Networking:_ [[cmd-ssl]] · [[cmd-trust]] · [[cmd-dns-setup]]
 - _Security:_ [[cmd-security]] · [[cmd-secrets]] · [[cmd-waf]]
 - _Tenancy:_ [[cmd-tenant]] · [[cmd-billing]]
-- _Plugins:_ [[cmd-plugin]] · [[cmd-license]]
+- _Plugins:_ [[cmd-plugin]] · [[cmd-license]] · [[cmd-dogfood]] (extracted, CLI-R11)
 - _AI:_ [[cmd-ai]] · [[cmd-claw]] · [[cmd-model]]
 - _Templates:_ [[cmd-template]]
 - _Utilities:_ [[cmd-exec]] · [[cmd-clean]] · [[cmd-reset]] · [[cmd-update]] · [[cmd-upgrade]] · [[cmd-version]] · [[cmd-admin]] · [[cmd-migrate]] · [[cmd-migrate-firebase]] · [[cmd-migrate-supabase]] · [[cmd-completion]]
@@ -279,12 +279,12 @@
 
 <!-- BEGIN GENERATED:command-list -->
 
-**All commands (85)**
+**All commands (84)**
 
 - _A:_ [[cmd-account]] · [[cmd-admin]] · [[cmd-ai]] · [[cmd-ai-studio]] · [[cmd-alerts]] · [[cmd-api]] · [[cmd-audit]]
 - _B:_ [[cmd-backup]] · [[cmd-billing]] · [[cmd-build]] · [[cmd-bundle]]
 - _C:_ [[cmd-ci]] · [[cmd-claw]] · [[cmd-clean]] · [[cmd-completion]] · [[cmd-config]] · [[cmd-costs]]
-- _D:_ [[cmd-db]] · [[cmd-deploy]] · [[cmd-dev]] · [[cmd-dlq]] · [[cmd-doctor]] · [[cmd-dogfood]] · [[cmd-dr]]
+- _D:_ [[cmd-db]] · [[cmd-deploy]] · [[cmd-dev]] · [[cmd-dlq]] · [[cmd-doctor]] · [[cmd-dr]]
 - _E:_ [[cmd-encryption]] · [[cmd-env]] · [[cmd-exec]]
 - _F:_ [[cmd-federation]] · [[cmd-flags]] · [[cmd-functions]]
 - _G:_ [[cmd-gateway]] · [[cmd-gauth]] · [[cmd-gdpr]] · [[cmd-generate]]

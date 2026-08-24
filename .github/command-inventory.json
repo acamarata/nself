@@ -1190,34 +1190,6 @@
     ]
   },
   {
-    "name": "dogfood",
-    "path": "nself dogfood",
-    "short": "Production dogfood audit and reporting",
-    "hidden": false,
-    "group_id": "observe",
-    "subcommands": [
-      {
-        "name": "audit",
-        "path": "nself dogfood audit",
-        "short": "Run comprehensive dogfood audit (21 checks)",
-        "hidden": false,
-        "flags": [
-          "--json",
-          "--save"
-        ]
-      },
-      {
-        "name": "report",
-        "path": "nself dogfood report",
-        "short": "Show the latest dogfood audit report",
-        "hidden": false,
-        "flags": [
-          "--json"
-        ]
-      }
-    ]
-  },
-  {
     "name": "dr",
     "path": "nself dr",
     "short": "Disaster recovery operations: drill, promote-standby, reconfigure-dns, rollback, fence",

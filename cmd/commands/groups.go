@@ -103,7 +103,6 @@ var commandGroupAssignments = map[string]string{
 	"audit":         groupObserve,
 	"costs":         groupObserve,
 	"soak":          groupObserve,
-	"dogfood":       groupObserve,
 	"maintenance":   groupObserve,
 
 	// Plugins & Extensions.

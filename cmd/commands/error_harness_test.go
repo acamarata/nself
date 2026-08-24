@@ -143,11 +143,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"doctor", []string{"doctor", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"doctor", []string{"doctor", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── dogfood ────────────────────────────────────────────────────────────
-	{"dogfood", []string{"dogfood"}, "(a) no project dir"},
-	{"dogfood", []string{"dogfood", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"dogfood", []string{"dogfood", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── dr ─────────────────────────────────────────────────────────────────
 	{"dr", []string{"dr"}, "(a) no project dir"},
 	{"dr", []string{"dr", "--no-such-flag-xyz"}, "(b) invalid flag"},

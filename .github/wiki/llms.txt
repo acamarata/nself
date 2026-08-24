@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (85)
+## Commands (84)
 
 ### nself account
 
@@ -468,21 +468,6 @@ Flags:
 - `--yes` (default false) — Non-interactive mode: accept all defaults (for CI/scripts)
 
 Full page: [[cmd-doctor]]
-
-### nself dogfood
-
-Production dogfood audit and reporting
-
-```
-nself dogfood <subcommand> [flags]
-```
-
-Subcommands:
-
-- `audit` — Run comprehensive dogfood audit (21 checks)
-- `report` — Show the latest dogfood audit report
-
-Full page: [[cmd-dogfood]]
 
 ### nself dr
 
