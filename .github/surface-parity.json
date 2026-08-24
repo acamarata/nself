@@ -56,15 +56,6 @@
       "openapi": "n/a (see below)"
     },
     {
-      "name": "audit",
-      "path": "nself audit",
-      "group_id": "observe",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
       "name": "backup",
       "path": "nself backup",
       "group_id": "data",

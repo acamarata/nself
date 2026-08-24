@@ -272,29 +272,6 @@
     ]
   },
   {
-    "name": "audit",
-    "path": "nself audit",
-    "short": "Run ecosystem audits (docs, origin, etc.)",
-    "hidden": false,
-    "group_id": "observe",
-    "subcommands": [
-      {
-        "name": "docs",
-        "path": "nself audit docs",
-        "short": "Run the quarterly documentation audit",
-        "hidden": false,
-        "flags": [
-          "--fix",
-          "--output",
-          "--quarter",
-          "--root",
-          "--scan",
-          "--summary"
-        ]
-      }
-    ]
-  },
-  {
     "name": "backup",
     "path": "nself backup",
     "short": "Backup operations: create, list, restore, verify, prune, config, status, init-key",

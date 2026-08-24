@@ -15,7 +15,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself ai-studio` | Google AI Studio integration for local nSelf instances | — | bridge |
 | `nself alerts` | Manage Prometheus alert rules and silences | — | list, silence, test |
 | `nself api` | API versioning and deprecation tooling for operators | — | changelog, deprecation-check, version |
-| `nself audit` | Run ecosystem audits (docs, origin, etc.) | — | docs |
 | `nself backup` | Backup operations: create, list, restore, verify, prune, config, status, init-key | — | config, create, drill, init-key, list, prune, restore, restore-remote, resume, schedule, status, stream, verify |
 | `nself billing` | Billing operations: usage, invoice-preview, report, retry-event | — | invoice-preview, report, retry-event, usage |
 | `nself build` | Compose your infrastructure from .env | — | — |
@@ -109,7 +108,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 83**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 82**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -119,7 +118,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 83**
 | `nself ai-studio` | Google AI Studio integration for local nSelf instances | ai | bridge |
 | `nself alerts` | Manage Prometheus alert rules and silences | observe | list, silence, test |
 | `nself api` | API versioning and deprecation tooling for operators | extend | changelog, deprecation-check, version |
-| `nself audit` | Run ecosystem audits (docs, origin, etc.) | observe | docs |
 | `nself backup` | Backup operations: create, list, restore, verify, prune, config, status, init-key | data | config, create, drill, init-key, list, pitr, prune, restore, restore-remote, resume, schedule, status, stream, verify |
 | `nself billing` | Billing operations: usage, invoice-preview, report, retry-event | account | invoice-preview, report, retry-event, usage |
 | `nself build` | Compose your infrastructure from .env | core | — |

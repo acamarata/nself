@@ -171,6 +171,18 @@ items:
     docs_url: "https://nself.org/docs/plugins/soak"
     phase: 1
 
+  # CLI-R11 thin-core extraction. Live on the proxy path, same as `nself
+  # soak` above. Only the docs-audit subcommand moved — internal/audit's
+  # table_audit.go (`nself plugin audit-tables`) and event_log.go (security
+  # event log) stayed in core, so this entry names `audit` itself, not a
+  # sibling command.
+  - name: "nself audit"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install audit"
+    docs_url: "https://nself.org/docs/plugins/audit"
+    phase: 1
+
 # =============================================================================
 # Plugin API versioning — G2 (api_version), G4 (deprecated_endpoints + removal)
 # =============================================================================

@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (83)
+## Commands (82)
 
 ### nself account
 
@@ -116,20 +116,6 @@ Subcommands:
 - `version` — Show API version for every surface observable from this install
 
 Full page: [[cmd-api]]
-
-### nself audit
-
-Run ecosystem audits (docs, origin, etc.)
-
-```
-nself audit <subcommand> [flags]
-```
-
-Subcommands:
-
-- `docs` — Run the quarterly documentation audit
-
-Full page: [[cmd-audit]]
 
 ### nself backup
 

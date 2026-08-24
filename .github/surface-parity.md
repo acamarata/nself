@@ -18,7 +18,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself ai-studio` | ai | yes | no | n/a | n/a (see below) |
 | `nself alerts` | observe | yes | no | n/a | n/a (see below) |
 | `nself api` | extend | yes | no | n/a | n/a (see below) |
-| `nself audit` | observe | yes | no | n/a | n/a (see below) |
 | `nself backup` | data | yes | yes | n/a | n/a (see below) |
 | `nself billing` | account | yes | no | n/a | n/a (see below) |
 | `nself build` | core | yes | yes | undocumented: NSELF_PROFILE | n/a (see below) |
@@ -96,4 +95,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself watchdog` | observe | yes | no | undocumented: NSELF_ENV | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 83 commands. Missing wiki page: 0. No MCP tool: 65. Env vars found but undocumented: 30.
+Total: 82 commands. Missing wiki page: 0. No MCP tool: 64. Env vars found but undocumented: 30.
