@@ -3284,49 +3284,6 @@
     ]
   },
   {
-    "name": "ssl",
-    "path": "nself ssl",
-    "short": "Manage SSL certificates",
-    "hidden": false,
-    "group_id": "config",
-    "subcommands": [
-      {
-        "name": "add",
-        "path": "nself ssl add",
-        "short": "Provision an SSL certificate for a single domain",
-        "hidden": false,
-        "flags": [
-          "--upstream"
-        ]
-      },
-      {
-        "name": "renew",
-        "path": "nself ssl renew",
-        "short": "Reload nginx and optionally renew certificates",
-        "hidden": false
-      },
-      {
-        "name": "setup",
-        "path": "nself ssl setup",
-        "short": "Set up SSL certificates via DNS-01 challenge",
-        "hidden": false,
-        "flags": [
-          "--email",
-          "--install-cron",
-          "--provider",
-          "--staging",
-          "--wildcard"
-        ]
-      },
-      {
-        "name": "status",
-        "path": "nself ssl status",
-        "short": "Show SSL certificate status",
-        "hidden": false
-      }
-    ]
-  },
-  {
     "name": "start",
     "path": "nself start",
     "short": "Boot your nSelf stack",
@@ -3546,6 +3503,12 @@
         ]
       },
       {
+        "name": "ssl",
+        "path": "nself trust ssl",
+        "short": "Manage SSL certificates",
+        "hidden": false
+      },
+      {
         "name": "status",
         "path": "nself trust status",
         "short": "Show trusted cert CAs, last rotation date, and expiry warnings",
@@ -3579,22 +3542,21 @@
         "flags": [
           "--dry-run"
         ]
+      },
+      {
+        "name": "upgrade",
+        "path": "nself update upgrade",
+        "short": "Upgrade the nSelf CLI (detects install method)",
+        "hidden": false,
+        "flags": [
+          "--binary-sha256",
+          "--binary-url",
+          "--channel",
+          "--check",
+          "--rollback",
+          "--version"
+        ]
       }
-    ]
-  },
-  {
-    "name": "upgrade",
-    "path": "nself upgrade",
-    "short": "Upgrade the nSelf CLI (detects install method)",
-    "hidden": false,
-    "group_id": "account",
-    "flags": [
-      "--binary-sha256",
-      "--binary-url",
-      "--channel",
-      "--check",
-      "--rollback",
-      "--version"
     ]
   },
   {

@@ -279,7 +279,7 @@
 
 <!-- BEGIN GENERATED:command-list -->
 
-**All commands (83)**
+**All commands (81)**
 
 - _A:_ [[cmd-account]] · [[cmd-admin]] · [[cmd-ai]] · [[cmd-ai-studio]] · [[cmd-alerts]] · [[cmd-api]] · [[cmd-audit]]
 - _B:_ [[cmd-backup]] · [[cmd-billing]] · [[cmd-build]] · [[cmd-bundle]]
@@ -296,9 +296,9 @@
 - _P:_ [[cmd-pentest-kit]] · [[cmd-plugin]] · [[cmd-promote]]
 - _Q:_ [[cmd-queue]]
 - _R:_ [[cmd-region]] · [[cmd-release]] · [[cmd-remove]] · [[cmd-reset]] · [[cmd-restart]]
-- _S:_ [[cmd-secrets]] · [[cmd-security]] · [[cmd-self-heal]] · [[cmd-sentry]] · [[cmd-sentry-server]] · [[cmd-service]] · [[cmd-soak]] · [[cmd-ssl]] · [[cmd-start]] · [[cmd-status]] · [[cmd-stop]]
+- _S:_ [[cmd-secrets]] · [[cmd-security]] · [[cmd-self-heal]] · [[cmd-sentry]] · [[cmd-sentry-server]] · [[cmd-service]] · [[cmd-soak]] · [[cmd-start]] · [[cmd-status]] · [[cmd-stop]]
 - _T:_ [[cmd-telemetry]] · [[cmd-template]] · [[cmd-tenant]] · [[cmd-trust]]
-- _U:_ [[cmd-update]] · [[cmd-upgrade]] · [[cmd-urls]]
+- _U:_ [[cmd-update]] · [[cmd-urls]]
 - _V:_ [[cmd-verify-sbom]] · [[cmd-version]]
 - _W:_ [[cmd-waf]] · [[cmd-watchdog]] · [[cmd-webhooks]]
 

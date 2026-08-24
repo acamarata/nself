@@ -605,15 +605,6 @@
       "openapi": "n/a (see below)"
     },
     {
-      "name": "ssl",
-      "path": "nself ssl",
-      "group_id": "config",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
       "name": "start",
       "path": "nself start",
       "group_id": "core",
@@ -679,15 +670,6 @@
     {
       "name": "update",
       "path": "nself update",
-      "group_id": "account",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
-      "name": "upgrade",
-      "path": "nself upgrade",
       "group_id": "account",
       "wiki_page": true,
       "mcp_tool": false,

@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (83)
+## Commands (81)
 
 ### nself account
 
@@ -1341,23 +1341,6 @@ Subcommands:
 
 Full page: [[cmd-soak]]
 
-### nself ssl
-
-Manage SSL certificates
-
-```
-nself ssl <subcommand> [flags]
-```
-
-Subcommands:
-
-- `add` — Provision an SSL certificate for a single domain
-- `renew` — Reload nginx and optionally renew certificates
-- `setup` — Set up SSL certificates via DNS-01 challenge
-- `status` — Show SSL certificate status
-
-Full page: [[cmd-ssl]]
-
 ### nself start
 
 Boot your nSelf stack
@@ -1491,6 +1474,7 @@ nself trust <subcommand> [flags]
 Subcommands:
 
 - `dns` — Add project domains to /etc/hosts (run with sudo)
+- `ssl` — Manage SSL certificates
 - `status` — Show trusted cert CAs, last rotation date, and expiry warnings
 
 Flags:
@@ -1515,6 +1499,7 @@ nself update <subcommand> [flags]
 Subcommands:
 
 - `images` — Refresh Docker image digests from registries
+- `upgrade` — Upgrade the nSelf CLI (detects install method)
 
 Flags:
 
@@ -1526,25 +1511,6 @@ Flags:
 - `--version` (default "") — Download a specific version (e.g. v1.2.3)
 
 Full page: [[cmd-update]]
-
-### nself upgrade
-
-Upgrade the nSelf CLI (detects install method)
-
-```
-nself upgrade [flags]
-```
-
-Flags:
-
-- `--binary-sha256` (default "") — Operator-supplied SHA-256 digest for --binary-url (skips checksums.txt fetch)
-- `--binary-url` (default "") — Install from a specific binary URL (HTTPS only; .tar.gz/.tgz; operator use)
-- `--channel` (default "") — Release channel: stable or canary
-- `--check` (default false) — Check for updates without installing
-- `--rollback` (default false) — Revert to the previously installed version
-- `--version` (default "") — Upgrade to a specific version (e.g. 1.2.3)
-
-Full page: [[cmd-upgrade]]
 
 ### nself urls
 

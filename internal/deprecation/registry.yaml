@@ -112,6 +112,20 @@ items:
     docs_url: "https://nself.org/docs/cli/backup"
     phase: 1
 
+  - name: "nself ssl"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself trust ssl"
+    docs_url: "https://nself.org/docs/cli/trust"
+    phase: 1
+
+  - name: "nself upgrade"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself update upgrade"
+    docs_url: "https://nself.org/docs/cli/update"
+    phase: 1
+
   - name: "nself flag"
     type: command
     since: "v1.2.8"

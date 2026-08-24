@@ -109,7 +109,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 83**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 81**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -180,16 +180,14 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 83**
 | `nself sentry-server` | Provision and manage ɳSentry ops servers | observe | provision |
 | `nself service` | Manage optional services | config | add, configure, disable, enable, list, ps, restart, scale, start, stop, update, upgrade |
 | `nself soak` | Manage soak testing lifecycle | observe | abort |
-| `nself ssl` | Manage SSL certificates | config | add, renew, setup, status |
 | `nself start` | Boot your nSelf stack | core | — |
 | `nself status` | Show health status of all services | core | — |
 | `nself stop` | Gracefully shut down all services or specific services | core | — |
 | `nself telemetry` | Manage CLI telemetry preferences | account | off, on, status |
 | `nself template` | Browse and publish full-stack app templates | config | info, list, publish, update |
 | `nself tenant` | [PREVIEW] Tenant management: create, upgrade, suspend, destroy, audit | advanced | audit, create, destroy, suspend, upgrade |
-| `nself trust` | Set up local dev trust (DNS, SSL, port forwarding) | config | dns, status |
-| `nself update` | Update the nSelf CLI and admin UI | account | images |
-| `nself upgrade` | Upgrade the nSelf CLI (detects install method) | account | — |
+| `nself trust` | Set up local dev trust (DNS, SSL, port forwarding) | config | dns, ssl, status |
+| `nself update` | Update the nSelf CLI and admin UI | account | images, upgrade |
 | `nself urls` | Display all service URLs with route conflict detection | core | — |
 | `nself verify-sbom` | Verify the SBOM signature for a CLI release | advanced | — |
 | `nself version` | Show version and system information | account | — |

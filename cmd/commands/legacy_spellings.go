@@ -48,6 +48,8 @@ var legacySpellings = map[string]legacySpelling{
 	"dns-setup":         {canonical: []string{"trust", "dns"}},
 	"ollama":            {canonical: []string{"model", "ollama"}},
 	"feature":           {canonical: []string{"config", "features"}},
+	"ssl":               {canonical: []string{"trust", "ssl"}},
+	"upgrade":           {canonical: []string{"update", "upgrade"}},
 	"pitr": {
 		canonical: []string{"backup", "pitr"},
 		note: "note: `nself db pitr` is a different implementation covering " +

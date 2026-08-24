@@ -40,6 +40,7 @@ Use `--status` to see which components are already set up without making changes
 | Name | Description |
 |------|-------------|
 | `dns` | Add project domains to /etc/hosts (run with sudo) |
+| `ssl` | Manage SSL certificates |
 | `status` | Show trusted cert CAs, last rotation date, and expiry warnings |
 <!-- END GENERATED:subcommands -->
 

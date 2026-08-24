@@ -204,5 +204,7 @@ func init() {
 	upgradeCmd.Flags().Bool("rollback", false, "Revert to the previously installed version")
 	upgradeCmd.Flags().String("binary-url", "", "Install from a specific binary URL (HTTPS only; .tar.gz/.tgz; operator use)")
 	upgradeCmd.Flags().String("binary-sha256", "", "Operator-supplied SHA-256 digest for --binary-url (skips checksums.txt fetch)")
-	RootCmd.AddCommand(upgradeCmd)
+	// CLI-R11 core list: `update` absorbs upgrade. The old top-level spelling
+	// keeps working through legacy_spellings.go.
+	updateCmd.AddCommand(upgradeCmd)
 }
