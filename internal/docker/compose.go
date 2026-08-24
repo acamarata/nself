@@ -84,6 +84,20 @@ func (c *Compose) ComposeDown(ctx context.Context, workdir string, opts DownOpti
 	return c.Run(ctx, workdir, args...)
 }
 
+// ComposeUpNoDeps runs `docker compose up -d --no-deps [services...]`.
+//
+// This is the primitive that means "make these containers match the compose
+// file": Compose recreates a container whose definition changed and leaves an
+// unchanged one alone. `restart` does neither — it bounces the existing
+// container and never re-reads the file. --no-deps keeps the operation scoped
+// to the named services instead of pulling their dependencies up with them.
+func (c *Compose) ComposeUpNoDeps(ctx context.Context, workdir string, services ...string) error {
+	args := c.buildBaseArgs()
+	args = append(args, "up", "-d", "--no-deps")
+	args = append(args, services...)
+	return c.Run(ctx, workdir, args...)
+}
+
 // ComposeRestart runs `docker compose restart [services...]` in the given workdir.
 func (c *Compose) ComposeRestart(ctx context.Context, workdir string, services ...string) error {
 	args := c.buildBaseArgs()

@@ -80,6 +80,19 @@ func restartServices(ctx context.Context, comp *docker.Compose, workdir string, 
 	}
 	ui.Info(fmt.Sprintf("Restarting %d service(s)...", len(services)))
 
+	// Apply any compose change first. `docker compose restart` bounces the
+	// existing container and never re-reads the compose file, so a config edit
+	// followed by `nself restart <service>` silently did nothing and the user
+	// had to recreate the container by hand — reported by the ntask clean-fork
+	// self-host drill, 2026-08-24. `up -d --no-deps` recreates only what
+	// actually changed and is a no-op otherwise.
+	if err := comp.ComposeUpNoDeps(ctx, workdir, services...); err != nil {
+		ui.Error(fmt.Sprintf("Failed to apply compose configuration: %v", err))
+		return fmt.Errorf("applying compose configuration: %w", err)
+	}
+
+	// Then restart, so the command does what it says even when nothing in the
+	// compose file changed and `up` left the containers untouched.
 	if err := comp.ComposeRestart(ctx, workdir, services...); err != nil {
 		ui.Error(fmt.Sprintf("Failed to restart services: %v", err))
 		return fmt.Errorf("restarting services: %w", err)
