@@ -2024,62 +2024,6 @@
     ]
   },
   {
-    "name": "mail",
-    "path": "nself mail",
-    "short": "Send transactional and broadcast email through the nSelf stack",
-    "hidden": false,
-    "group_id": "advanced",
-    "subcommands": [
-      {
-        "name": "broadcast",
-        "path": "nself mail broadcast",
-        "short": "Send a broadcast to a list using a saved template",
-        "hidden": false,
-        "flags": [
-          "--json",
-          "--list",
-          "--template"
-        ]
-      },
-      {
-        "name": "dkim",
-        "path": "nself mail dkim",
-        "short": "Manage DKIM verification",
-        "hidden": false
-      },
-      {
-        "name": "send",
-        "path": "nself mail send",
-        "short": "Send a single transactional email",
-        "hidden": false,
-        "flags": [
-          "--body",
-          "--body-file",
-          "--body-type",
-          "--json",
-          "--subject",
-          "--to"
-        ]
-      },
-      {
-        "name": "status",
-        "path": "nself mail status",
-        "short": "Query delivery status for a sent message",
-        "hidden": false,
-        "flags": [
-          "--json",
-          "--message-id"
-        ]
-      },
-      {
-        "name": "templates",
-        "path": "nself mail templates",
-        "short": "Manage Postmark templates",
-        "hidden": false
-      }
-    ]
-  },
-  {
     "name": "maintenance",
     "path": "nself maintenance",
     "short": "Maintenance utilities: disk cleanup, scheduler",

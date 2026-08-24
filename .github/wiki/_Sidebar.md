@@ -21,7 +21,7 @@
 - _Networking:_ [[cmd-ssl]] · [[cmd-trust]] · [[cmd-dns-setup]]
 - _Security:_ [[cmd-security]] · [[cmd-secrets]]
 - _Tenancy:_ [[cmd-tenant]] · [[cmd-billing]]
-- _Plugins:_ [[cmd-plugin]] · [[cmd-license]] · [[cmd-dogfood]] (extracted, CLI-R11) · [[cmd-encryption]] (extracted, CLI-R11) · [[cmd-waf]] (extracted, CLI-R11) · [[cmd-federation]] (extracted, CLI-R11)
+- _Plugins:_ [[cmd-plugin]] · [[cmd-license]] · [[cmd-dogfood]] (extracted, CLI-R11) · [[cmd-encryption]] (extracted, CLI-R11) · [[cmd-waf]] (extracted, CLI-R11) · [[cmd-federation]] (extracted, CLI-R11) · [[cmd-mail]] (extracted, CLI-R11)
 - _AI:_ [[cmd-ai]] · [[cmd-claw]] · [[cmd-model]]
 - _Templates:_ [[cmd-template]]
 - _Utilities:_ [[cmd-exec]] · [[cmd-clean]] · [[cmd-reset]] · [[cmd-update]] · [[cmd-upgrade]] · [[cmd-version]] · [[cmd-admin]] · [[cmd-migrate]] · [[cmd-migrate-firebase]] · [[cmd-migrate-supabase]] · [[cmd-completion]]
@@ -279,7 +279,7 @@
 
 <!-- BEGIN GENERATED:command-list -->
 
-**All commands (81)**
+**All commands (80)**
 
 - _A:_ [[cmd-account]] · [[cmd-admin]] · [[cmd-ai]] · [[cmd-ai-studio]] · [[cmd-alerts]] · [[cmd-api]] · [[cmd-audit]]
 - _B:_ [[cmd-backup]] · [[cmd-billing]] · [[cmd-build]] · [[cmd-bundle]]
@@ -292,7 +292,7 @@
 - _I:_ [[cmd-infra]] · [[cmd-init]] · [[cmd-install]]
 - _K:_ [[cmd-k8s]]
 - _L:_ [[cmd-license]] · [[cmd-login]] · [[cmd-logout]] · [[cmd-logs]]
-- _M:_ [[cmd-mail]] · [[cmd-maintenance]] · [[cmd-man]] · [[cmd-mcp]] · [[cmd-migrate]] · [[cmd-model]] · [[cmd-monitor]]
+- _M:_ [[cmd-maintenance]] · [[cmd-man]] · [[cmd-mcp]] · [[cmd-migrate]] · [[cmd-model]] · [[cmd-monitor]]
 - _O:_ [[cmd-oauth]] · [[cmd-ops]]
 - _P:_ [[cmd-pentest-kit]] · [[cmd-plugin]] · [[cmd-promote]]
 - _Q:_ [[cmd-queue]]

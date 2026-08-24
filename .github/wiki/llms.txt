@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (81)
+## Commands (80)
 
 ### nself account
 
@@ -843,24 +843,6 @@ Flags:
 - `--until` (default "") — Show logs until (e.g. 1h or RFC3339)
 
 Full page: [[cmd-logs]]
-
-### nself mail
-
-Send transactional and broadcast email through the nSelf stack
-
-```
-nself mail <subcommand> [flags]
-```
-
-Subcommands:
-
-- `broadcast` — Send a broadcast to a list using a saved template
-- `dkim` — Manage DKIM verification
-- `send` — Send a single transactional email
-- `status` — Query delivery status for a sent message
-- `templates` — Manage Postmark templates
-
-Full page: [[cmd-mail]]
 
 ### nself maintenance
 

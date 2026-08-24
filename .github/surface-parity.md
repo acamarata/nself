@@ -53,7 +53,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself login` | account | yes | no | n/a | n/a (see below) |
 | `nself logout` | account | yes | no | n/a | n/a (see below) |
 | `nself logs` | core | yes | yes | n/a | n/a (see below) |
-| `nself mail` | advanced | yes | no | undocumented: NSELF_PING_API_URL | n/a (see below) |
 | `nself maintenance` | observe | yes | no | n/a | n/a (see below) |
 | `nself man` | account | yes | no | n/a | n/a (see below) |
 | `nself mcp` | extend | yes | no | undocumented: HASURA_GRAPHQL_URL, INTEGRATION, NSELF_HASURA_ADMIN_SECRET, NSELF_HASURA_GRAPHQL_URL, NSENTRY_STATUS_URL, POSTGRES_URL | n/a (see below) |
@@ -94,4 +93,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself watchdog` | observe | yes | no | undocumented: NSELF_ENV | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 81 commands. Missing wiki page: 0. No MCP tool: 63. Env vars found but undocumented: 29.
+Total: 80 commands. Missing wiki page: 0. No MCP tool: 62. Env vars found but undocumented: 28.

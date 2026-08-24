@@ -203,10 +203,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"man", []string{"man", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"man", []string{"man", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	{"mail", []string{"mail"}, "(a) no project dir"},
-	{"mail", []string{"mail", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"mail", []string{"mail", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── migrate ────────────────────────────────────────────────────────────
 	{"migrate", []string{"migrate"}, "(a) no project dir"},
 	{"migrate", []string{"migrate", "--no-such-flag-xyz"}, "(b) invalid flag"},

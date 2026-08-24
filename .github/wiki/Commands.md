@@ -51,7 +51,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself login` | Log in to your nSelf account | — | — |
 | `nself logout` | Log out of your nSelf account | — | — |
 | `nself logs` | View and filter service logs | — | — |
-| `nself mail` | Send transactional and broadcast email through the nSelf stack | — | broadcast, dkim, send, status, templates |
 | `nself maintenance` | Maintenance utilities: disk cleanup, scheduler | — | disk-cleanup, schedule, status |
 | `nself man` | Generate man pages for all nself commands | — | — |
 | `nself mcp` | Start the nSelf MCP server | — | — |
@@ -107,7 +106,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 81**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 80**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -152,7 +151,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 81**
 | `nself login` | Log in to your nSelf account | account | — |
 | `nself logout` | Log out of your nSelf account | account | — |
 | `nself logs` | View and filter service logs | core | — |
-| `nself mail` | Send transactional and broadcast email through the nSelf stack | advanced | broadcast, dkim, send, status, templates |
 | `nself maintenance` | Maintenance utilities: disk cleanup, scheduler | observe | disk-cleanup, schedule, status |
 | `nself man` | Generate man pages for all nself commands | account | — |
 | `nself mcp` | Start the nSelf MCP server | extend | — |

@@ -141,7 +141,6 @@ var commandGroupAssignments = map[string]string{
 	"security":    groupAdvanced,
 	"gdpr":        groupAdvanced,
 	"tenant":      groupAdvanced,
-	"mail":        groupAdvanced,
 	"pentest-kit": groupAdvanced,
 	"verify-sbom": groupAdvanced,
 }

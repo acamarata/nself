@@ -371,15 +371,6 @@
       "openapi": "n/a (see below)"
     },
     {
-      "name": "mail",
-      "path": "nself mail",
-      "group_id": "advanced",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "undocumented: NSELF_PING_API_URL",
-      "openapi": "n/a (see below)"
-    },
-    {
       "name": "maintenance",
       "path": "nself maintenance",
       "group_id": "observe",
