@@ -50,7 +50,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself infra` | deploy | yes | no | undocumented: HCLOUD_TOKEN, HETZNER_NSELF_TOKEN | n/a (see below) |
 | `nself init` | core | yes | no | undocumented: NSELF_LICENSE_KEY | n/a (see below) |
 | `nself install` | extend | yes | yes | n/a | n/a (see below) |
-| `nself k8s` | deploy | yes | no | undocumented: NSELF_PLUGIN_LICENSE_KEY | n/a (see below) |
 | `nself license` | extend | yes | no | undocumented: NSELF_LICENSE_SKIP_VERIFY, NSELF_PING_API_URL | n/a (see below) |
 | `nself login` | account | yes | no | n/a | n/a (see below) |
 | `nself logout` | account | yes | no | n/a | n/a (see below) |
@@ -97,4 +96,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself watchdog` | observe | yes | no | undocumented: NSELF_ENV | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 84 commands. Missing wiki page: 0. No MCP tool: 66. Env vars found but undocumented: 30.
+Total: 83 commands. Missing wiki page: 0. No MCP tool: 65. Env vars found but undocumented: 29.

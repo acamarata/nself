@@ -40,10 +40,15 @@ jobs:
       # forbade them, and the PRI listed a pkg/ that does not exist. Rather than
       # relocate nine working directories, the allowlist is made explicit here
       # and in the PRI, and this step keeps the two honest.
+      #
+      # CLI-R11: charts/ removed from the allowlist. It held only
+      # charts/nself/ (the Helm chart for `nself k8s`), referenced solely by
+      # internal/k8s/helm.go's doc comment and nothing else in the tree — so
+      # when `k8s` moved to plugins/free/k8s, charts/ moved with it.
       - name: Enforce explicit root-entry allowlist
         run: |
           set -euo pipefail
-          ALLOWED=".dockerignore .gitattributes .github .gitignore .gitleaks.toml .goreleaser.yml Dockerfile LICENSE Makefile README.md bin charts cmd go.mod go.sum internal monitoring packaging scripts sdk templates terraform test tools vendor"
+          ALLOWED=".dockerignore .gitattributes .github .gitignore .gitleaks.toml .goreleaser.yml Dockerfile LICENSE Makefile README.md bin cmd go.mod go.sum internal monitoring packaging scripts sdk templates terraform test tools vendor"
           echo "$ALLOWED" | tr ' ' '\n' | sort > /tmp/root-allowed.txt
           git ls-files | awk -F/ '{print $1}' | sort -u > /tmp/root-tracked.txt
           UNEXPECTED=$(comm -23 /tmp/root-tracked.txt /tmp/root-allowed.txt)

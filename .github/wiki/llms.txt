@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (84)
+## Commands (83)
 
 ### nself account
 
@@ -768,22 +768,6 @@ Flags:
 - `--yes` (default false) — Skip confirmation prompts (required for third-party URL installs in CI)
 
 Full page: [[cmd-install]]
-
-### nself k8s
-
-Manage nSelf on Kubernetes via Helm
-
-```
-nself k8s <subcommand> [flags]
-```
-
-Subcommands:
-
-- `install` — Install nSelf on a Kubernetes cluster
-- `status` — Show the Helm release status
-- `upgrade` — Upgrade the nSelf Helm release
-
-Full page: [[cmd-k8s]]
 
 ### nself license
 

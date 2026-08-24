@@ -157,6 +157,19 @@ items:
     # phase 1 describes.
     phase: 1
 
+  # CLI-R11 thin-core extraction. Same reasoning as `nself dogfood` above:
+  # relocated to a plugin, not removed, so phase 1 (not 3). This entry IS
+  # live on the proxy path: since commit bb083973 wired warnRelocatedCommand
+  # into root.go's Execute(), an unrecognized `nself k8s` prints this entry's
+  # [DEPRECATED] notice before plugin.ProxyCommand ever runs. See
+  # TestRelocatedCommandEntriesAreWiredToTheProxy.
+  - name: "nself k8s"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install k8s"
+    docs_url: "https://nself.org/docs/plugins/k8s"
+    phase: 1
+
 # =============================================================================
 # Plugin API versioning — G2 (api_version), G4 (deprecated_endpoints + removal)
 # =============================================================================

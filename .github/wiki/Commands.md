@@ -48,7 +48,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself help-topics` | Browse help topics (quickstart, plugins, license, envs, doctor, errors) | — | — |
 | `nself infra` | Provision nSelf infrastructure via Terraform | — | apply, destroy, plan |
 | `nself init` | Initialize a new nSelf project | — | — |
-| `nself k8s` | Manage nSelf on Kubernetes via Helm | — | install, status, upgrade |
 | `nself license` | Manage license keys for nSelf product bundles | — | add, clear, export, health, import, list, migrate, refresh, remove, restore, revalidate, revoke, set, show, simulate-offline, status, tail, upgrade, validate |
 | `nself login` | Log in to your nSelf account | — | — |
 | `nself logout` | Log out of your nSelf account | — | — |
@@ -110,7 +109,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 84**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 83**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -152,7 +151,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 84**
 | `nself infra` | Provision nSelf infrastructure via Terraform | deploy | apply, destroy, plan |
 | `nself init` | Initialize a new nSelf project | core | — |
 | `nself install` | Install a plugin or bundle | extend | — |
-| `nself k8s` | Manage nSelf on Kubernetes via Helm | deploy | install, status, upgrade |
 | `nself license` | Manage license keys for nSelf product bundles | extend | add, clear, export, health, import, list, migrate, refresh, remove, restore, revalidate, revoke, set, show, simulate-offline, status, tail, upgrade, validate |
 | `nself login` | Log in to your nSelf account | account | — |
 | `nself logout` | Log out of your nSelf account | account | — |

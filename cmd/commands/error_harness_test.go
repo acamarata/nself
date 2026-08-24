@@ -425,12 +425,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"infra", []string{"infra", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"infra", []string{"infra", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── k8s ────────────────────────────────────────────────────────────────
-	// k8s root returns cmd.Help() (nil) — soft case.
-	{"k8s", []string{"k8s"}, "(a) shows help (no project required)"},
-	{"k8s", []string{"k8s", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"k8s", []string{"k8s", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── maintenance ────────────────────────────────────────────────────────
 	// maintenance root returns cmd.Help() (nil) — soft case.
 	{"maintenance", []string{"maintenance"}, "(a) shows help (no project required)"},

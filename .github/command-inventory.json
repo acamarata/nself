@@ -1859,47 +1859,6 @@
     ]
   },
   {
-    "name": "k8s",
-    "path": "nself k8s",
-    "short": "Manage nSelf on Kubernetes via Helm",
-    "hidden": false,
-    "group_id": "deploy",
-    "subcommands": [
-      {
-        "name": "install",
-        "path": "nself k8s install",
-        "short": "Install nSelf on a Kubernetes cluster",
-        "hidden": false,
-        "flags": [
-          "--cluster",
-          "--domain",
-          "--plugins",
-          "--release"
-        ]
-      },
-      {
-        "name": "status",
-        "path": "nself k8s status",
-        "short": "Show the Helm release status",
-        "hidden": false,
-        "flags": [
-          "--cluster",
-          "--release"
-        ]
-      },
-      {
-        "name": "upgrade",
-        "path": "nself k8s upgrade",
-        "short": "Upgrade the nSelf Helm release",
-        "hidden": false,
-        "flags": [
-          "--cluster",
-          "--release"
-        ]
-      }
-    ]
-  },
-  {
     "name": "license",
     "path": "nself license",
     "short": "Manage license keys for nSelf product bundles",
