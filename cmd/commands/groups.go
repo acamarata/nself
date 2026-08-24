@@ -100,7 +100,6 @@ var commandGroupAssignments = map[string]string{
 	"self-heal":     groupObserve,
 	"sentry":        groupObserve,
 	"sentry-server": groupObserve,
-	"costs":         groupObserve,
 	"maintenance":   groupObserve,
 
 	// Plugins & Extensions.

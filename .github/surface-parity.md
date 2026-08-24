@@ -27,7 +27,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself clean` | core | yes | no | n/a | n/a (see below) |
 | `nself completion` | account | yes | no | n/a | n/a (see below) |
 | `nself config` | config | yes | yes | n/a | n/a (see below) |
-| `nself costs` | observe | yes | no | undocumented: HETZNER_SERVER_TYPE | n/a (see below) |
 | `nself db` | data | yes | yes | n/a | n/a (see below) |
 | `nself deploy` | deploy | yes | yes | undocumented: NSELF_DEPLOY_ENV, NSELF_DEPLOY_HOST_, NSELF_FEATURE_BLUE_GREEN_DEPLOY, VERCEL_TOKEN | n/a (see below) |
 | `nself dev` | core | yes | no | n/a | n/a (see below) |
@@ -94,4 +93,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself watchdog` | observe | yes | no | undocumented: NSELF_ENV | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 81 commands. Missing wiki page: 0. No MCP tool: 63. Env vars found but undocumented: 30.
+Total: 80 commands. Missing wiki page: 0. No MCP tool: 62. Env vars found but undocumented: 29.

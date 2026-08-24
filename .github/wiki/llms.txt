@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (81)
+## Commands (80)
 
 ### nself account
 
@@ -307,21 +307,6 @@ Flags:
 - `--reveal` (default false) — Show secret values in plaintext
 
 Full page: [[cmd-config]]
-
-### nself costs
-
-Show estimated per-install operational costs
-
-```
-nself costs [flags]
-```
-
-Flags:
-
-- `--format` (default table) — Output format: table|json
-- `--server-type` (default "") — Hetzner server type (e.g. cx23, cax11). Auto-detected from HETZNER_SERVER_TYPE env var if unset.
-
-Full page: [[cmd-costs]]
 
 ### nself db
 

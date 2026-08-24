@@ -827,17 +827,6 @@
     ]
   },
   {
-    "name": "costs",
-    "path": "nself costs",
-    "short": "Show estimated per-install operational costs",
-    "hidden": false,
-    "group_id": "observe",
-    "flags": [
-      "--format",
-      "--server-type"
-    ]
-  },
-  {
     "name": "db",
     "path": "nself db",
     "short": "Database operations: migrations, backups, restore, seed, shell",

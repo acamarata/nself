@@ -98,11 +98,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"completion", []string{"completion", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"completion", []string{"completion", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── costs ──────────────────────────────────────────────────────────────
-	{"costs", []string{"costs"}, "(a) no project dir — costs reads plugin dir; succeeds gracefully"},
-	{"costs", []string{"costs", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"costs", []string{"costs", "--format", "badformat_xyz"}, "(c) unknown format"},
-
 	// ── config ─────────────────────────────────────────────────────────────
 	{"config", []string{"config"}, "(a) no project dir"},
 	{"config", []string{"config", "--no-such-flag-xyz"}, "(b) invalid flag"},

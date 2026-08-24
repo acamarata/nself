@@ -24,7 +24,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself clean` | Remove generated artifacts (docker-compose.yml, nginx configs, build cache) | — | — |
 | `nself completion` | Generate shell completion scripts | — | — |
 | `nself config` | Manage project configuration | — | export, get, import, list, set, show, validate |
-| `nself costs` | Show estimated per-install operational costs | — | — |
 | `nself db` | Database operations: migrations, backups, restore, seed, shell | — | backup, backup-sync, backup-sync-status, drift, drop, fk-index, hasura, lint, list, migrate, pgbouncer, pitr, reset, reset-checksum, restore, restore-drill, restore-drill-list, rls, seed, shell, soft-delete, verify-checksums |
 | `nself deploy` | Deploy the stack to a target environment | — | check-access, environments, health, logs, promote, rollback, status, web |
 | `nself dev` | Start development environment | — | — |
@@ -107,7 +106,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 81**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 80**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -126,7 +125,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 81**
 | `nself clean` | Remove generated artifacts (docker-compose.yml, nginx configs, build cache) | core | — |
 | `nself completion` | Generate shell completion scripts | account | — |
 | `nself config` | Manage project configuration | config | export, features, get, import, list, set, show, validate |
-| `nself costs` | Show estimated per-install operational costs | observe | — |
 | `nself db` | Database operations: migrations, backups, restore, seed, shell | data | backup, backup-sync, backup-sync-status, drift, drop, fk-index, hasura, lint, list, migrate, pgbouncer, pitr, reset, reset-checksum, restore, restore-drill, restore-drill-list, rls, seed, shell, soft-delete, verify-checksums |
 | `nself deploy` | Deploy the stack to a target environment | deploy | check-access, environments, health, logs, promote, rollback, status, web |
 | `nself dev` | Start development environment | core | — |

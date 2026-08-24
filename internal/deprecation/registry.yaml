@@ -195,6 +195,18 @@ items:
     docs_url: "https://nself.org/docs/plugins/pentest-kit"
     phase: 1
 
+  # CLI-R11 thin-core extraction. Live on the proxy path, same as the entries
+  # above. internal/plugin.ListInstalled() is unreachable across the module
+  # boundary and genuinely core-shared, so this plugin's internal/plugininfo
+  # reimplements only the narrow tier read this command needs — see that
+  # package's doc comment for the exact scope of the simplification.
+  - name: "nself costs"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install costs"
+    docs_url: "https://nself.org/docs/plugins/costs"
+    phase: 1
+
 # =============================================================================
 # Plugin API versioning — G2 (api_version), G4 (deprecated_endpoints + removal)
 # =============================================================================
