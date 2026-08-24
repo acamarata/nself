@@ -164,15 +164,6 @@
       "openapi": "n/a (see below)"
     },
     {
-      "name": "dlq",
-      "path": "nself dlq",
-      "group_id": "data",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
       "name": "doctor",
       "path": "nself doctor",
       "group_id": "core",
@@ -191,15 +182,6 @@
       "openapi": "n/a (see below)"
     },
     {
-      "name": "encryption",
-      "path": "nself encryption",
-      "group_id": "advanced",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "undocumented: BYOK_PLUGIN_URL, NSELF_API_URL, NSELF_TENANT_ID",
-      "openapi": "n/a (see below)"
-    },
-    {
       "name": "env",
       "path": "nself env",
       "group_id": "config",
@@ -212,15 +194,6 @@
       "name": "exec",
       "path": "nself exec",
       "group_id": "core",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
-      "name": "federation",
-      "path": "nself federation",
-      "group_id": "advanced",
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
@@ -350,15 +323,6 @@
       "wiki_page": true,
       "mcp_tool": true,
       "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
-      "name": "mail",
-      "path": "nself mail",
-      "group_id": "advanced",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "undocumented: NSELF_PING_API_URL",
       "openapi": "n/a (see below)"
     },
     {
@@ -656,15 +620,6 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: BENCH_RESULTS_FILE",
-      "openapi": "n/a (see below)"
-    },
-    {
-      "name": "waf",
-      "path": "nself waf",
-      "group_id": "advanced",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
       "openapi": "n/a (see below)"
     },
     {

@@ -242,6 +242,58 @@ items:
     since: "v1.2.8"
     replacement: "nself install gdpr"
     docs_url: "https://nself.org/docs/plugins/gdpr"
+
+  # CLI-R11 thin-core extraction. Same shape as `nself dogfood` above: moved
+  # to a plugin entirely, not rewritten to a new core subcommand, so this
+  # entry is not consulted by the current ProxyCommand code path (see the
+  # dogfood entry's comment for the full explanation). Phase 1, not 3, for
+  # the same reason: the command is relocated, not removed.
+  - name: "nself encryption"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install encryption"
+    docs_url: "https://nself.org/docs/plugins/encryption"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Same shape as `nself dogfood`/`nself
+  # encryption` above: moved to a plugin entirely, not rewritten to a new
+  # core subcommand. Phase 1, not 3, for the same reason: relocated, not
+  # removed.
+  - name: "nself waf"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install waf"
+    docs_url: "https://nself.org/docs/plugins/waf"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Same shape as the entries above: moved to
+  # a plugin entirely, not rewritten to a new core subcommand. Phase 1, not
+  # 3, for the same reason: relocated, not removed.
+  - name: "nself federation"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install federation"
+    docs_url: "https://nself.org/docs/plugins/federation"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Same shape as the entries above: moved to
+  # a plugin entirely, not rewritten to a new core subcommand. Phase 1, not
+  # 3, for the same reason: relocated, not removed.
+  - name: "nself mail"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install mail"
+    docs_url: "https://nself.org/docs/plugins/mail"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Same shape as the entries above: moved to
+  # a plugin entirely, not rewritten to a new core subcommand. Phase 1, not
+  # 3, for the same reason: relocated, not removed.
+  - name: "nself dlq"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install dlq"
+    docs_url: "https://nself.org/docs/plugins/dlq"
     phase: 1
 
 # =============================================================================

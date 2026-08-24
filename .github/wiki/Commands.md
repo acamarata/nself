@@ -27,15 +27,12 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself db` | Database operations: migrations, backups, restore, seed, shell | — | backup, backup-sync, backup-sync-status, drift, drop, fk-index, hasura, lint, list, migrate, pgbouncer, pitr, reset, reset-checksum, restore, restore-drill, restore-drill-list, rls, seed, shell, soft-delete, verify-checksums |
 | `nself deploy` | Deploy the stack to a target environment | — | check-access, environments, health, logs, promote, rollback, status, web |
 | `nself dev` | Start development environment | — | — |
-| `nself dlq` | Manage dead-letter queues for nSelf plugins | — | replay |
 | `nself dns-setup` | Add project domains to /etc/hosts (run with sudo) | — | — |
 | `nself doctor` | Run comprehensive system diagnostics | — | — |
 | `nself dr` | Disaster recovery operations: drill, promote-standby, reconfigure-dns, rollback, fence | — | drill, fence, promote-standby, reconfigure-dns, rollback |
-| `nself encryption` | Manage BYOK per-tenant encryption (Enterprise) | — | configure, key-events, rotate, status, verify |
 | `nself env` | Multi-environment management: switch, list, diff, copy | — | copy, diff, list, show, target, use |
 | `nself exec` | Execute a command inside a service container | — | — |
 | `nself feature` | Manage CLI-built-in feature flags | — | disable, enable, list, status |
-| `nself federation` | Manage GraphQL Federation (opt-in, requires NSELF_FEDERATION=true) | — | compose, introspect, status |
 | `nself flag` | Manage feature flags | — | disable, enable, get, history, kill, list, prune, set |
 | `nself functions` | Manage serverless functions | — | delete, deploy, invoke, list, logs |
 | `nself gateway` | Manage the nSelf AI gateway (nself-ai-gateway, port 3761) | — | keys, quota, routes, status |
@@ -49,7 +46,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself login` | Log in to your nSelf account | — | — |
 | `nself logout` | Log out of your nSelf account | — | — |
 | `nself logs` | View and filter service logs | — | — |
-| `nself mail` | Send transactional and broadcast email through the nSelf stack | — | broadcast, dkim, send, status, templates |
 | `nself maintenance` | Maintenance utilities: disk cleanup, scheduler | — | disk-cleanup, schedule, status |
 | `nself man` | Generate man pages for all nself commands | — | — |
 | `nself mcp` | Start the nSelf MCP server | — | — |
@@ -91,7 +87,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself urls` | Display all service URLs with route conflict detection | — | — |
 | `nself verify-sbom` | Verify the SBOM signature for a CLI release | — | — |
 | `nself version` | Show version and system information | — | — |
-| `nself waf` | Manage the Web Application Firewall (Coraza + OWASP CRS) | — | enable, mode, report |
 | `nself watchdog` | Self-healing container watchdog with circuit breaker | — | history, reset, reset-breakers, status, test-alert |
 | `nself webhooks` | Manage webhook processing and outbox | — | outbox |
 
@@ -104,7 +99,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 76**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 71**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -126,13 +121,10 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 76**
 | `nself db` | Database operations: migrations, backups, restore, seed, shell | data | backup, backup-sync, backup-sync-status, drift, drop, fk-index, hasura, lint, list, migrate, pgbouncer, pitr, reset, reset-checksum, restore, restore-drill, restore-drill-list, rls, seed, shell, soft-delete, verify-checksums |
 | `nself deploy` | Deploy the stack to a target environment | deploy | check-access, environments, health, logs, promote, rollback, status, web |
 | `nself dev` | Start development environment | core | — |
-| `nself dlq` | Manage dead-letter queues for nSelf plugins | data | replay |
 | `nself doctor` | Run comprehensive system diagnostics | core | — |
 | `nself dr` | Disaster recovery operations: drill, promote-standby, reconfigure-dns, rollback, fence | deploy | drill, fence, promote-standby, reconfigure-dns, rollback |
-| `nself encryption` | Manage BYOK per-tenant encryption (Enterprise) | advanced | configure, key-events, rotate, status, verify |
 | `nself env` | Multi-environment management: switch, list, diff, copy | config | copy, diff, explain, list, show, target, use |
 | `nself exec` | Execute a command inside a service container | core | — |
-| `nself federation` | Manage GraphQL Federation (opt-in, requires NSELF_FEDERATION=true) | advanced | compose, introspect, status |
 | `nself flags` | Manage application feature flags | config | disable, enable, get, history, kill, list, prune, set |
 | `nself functions` | Manage serverless functions | data | delete, deploy, invoke, list, logs |
 | `nself gateway` | Manage the nSelf AI gateway (nself-ai-gateway, port 3761) | ai | keys, quota, routes, status |
@@ -147,7 +139,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 76**
 | `nself login` | Log in to your nSelf account | account | — |
 | `nself logout` | Log out of your nSelf account | account | — |
 | `nself logs` | View and filter service logs | core | — |
-| `nself mail` | Send transactional and broadcast email through the nSelf stack | advanced | broadcast, dkim, send, status, templates |
 | `nself maintenance` | Maintenance utilities: disk cleanup, scheduler | observe | disk-cleanup, schedule, status |
 | `nself man` | Generate man pages for all nself commands | account | — |
 | `nself mcp` | Start the nSelf MCP server | extend | — |
@@ -181,7 +172,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 76**
 | `nself urls` | Display all service URLs with route conflict detection | core | — |
 | `nself verify-sbom` | Verify the SBOM signature for a CLI release | advanced | — |
 | `nself version` | Show version and system information | account | — |
-| `nself waf` | Manage the Web Application Firewall (Coraza + OWASP CRS) | advanced | enable, mode, report |
 | `nself watchdog` | Self-healing container watchdog with circuit breaker | observe | history, reset, reset-breakers, status, test-alert |
 | `nself webhooks` | Manage webhook processing and outbox | data | outbox |
 

@@ -19,9 +19,13 @@
 - _Data:_ [[cmd-db]] · [[cmd-backup]] · [[cmd-dr]] · [[cmd-queue]] · [[cmd-webhooks]]
 - _Config:_ [[cmd-config]] · [[cmd-service]] · [[cmd-env]] · [[cmd-promote]]
 - _Networking:_ [[cmd-ssl]] · [[cmd-trust]] · [[cmd-dns-setup]]
-- _Security:_ [[cmd-security]] · [[cmd-secrets]] · [[cmd-waf]]
+- _Security:_ [[cmd-security]] · [[cmd-secrets]]
 - _Tenancy:_ [[cmd-tenant]] · [[cmd-billing]]
+<<<<<<< HEAD
 - _Plugins:_ [[cmd-plugin]] · [[cmd-license]] · [[cmd-dogfood]] (extracted, CLI-R11) · [[cmd-k8s]] (extracted, CLI-R11)
+=======
+- _Plugins:_ [[cmd-plugin]] · [[cmd-license]] · [[cmd-dogfood]] (extracted, CLI-R11) · [[cmd-encryption]] (extracted, CLI-R11) · [[cmd-waf]] (extracted, CLI-R11) · [[cmd-federation]] (extracted, CLI-R11) · [[cmd-mail]] (extracted, CLI-R11) · [[cmd-dlq]] (extracted, CLI-R11)
+>>>>>>> worktree-agent-af24993dee207e6e9
 - _AI:_ [[cmd-ai]] · [[cmd-claw]] · [[cmd-model]]
 - _Templates:_ [[cmd-template]]
 - _Utilities:_ [[cmd-exec]] · [[cmd-clean]] · [[cmd-reset]] · [[cmd-update]] · [[cmd-upgrade]] · [[cmd-version]] · [[cmd-admin]] · [[cmd-migrate]] · [[cmd-migrate-firebase]] · [[cmd-migrate-supabase]] · [[cmd-completion]]
@@ -279,19 +283,19 @@
 
 <!-- BEGIN GENERATED:command-list -->
 
-**All commands (76)**
+**All commands (71)**
 
 - _A:_ [[cmd-account]] · [[cmd-admin]] · [[cmd-ai]] · [[cmd-ai-studio]] · [[cmd-alerts]] · [[cmd-api]]
 - _B:_ [[cmd-backup]] · [[cmd-billing]] · [[cmd-build]] · [[cmd-bundle]]
 - _C:_ [[cmd-ci]] · [[cmd-claw]] · [[cmd-clean]] · [[cmd-completion]] · [[cmd-config]]
-- _D:_ [[cmd-db]] · [[cmd-deploy]] · [[cmd-dev]] · [[cmd-dlq]] · [[cmd-doctor]] · [[cmd-dr]]
-- _E:_ [[cmd-encryption]] · [[cmd-env]] · [[cmd-exec]]
-- _F:_ [[cmd-federation]] · [[cmd-flags]] · [[cmd-functions]]
+- _D:_ [[cmd-db]] · [[cmd-deploy]] · [[cmd-dev]] · [[cmd-doctor]] · [[cmd-dr]]
+- _E:_ [[cmd-env]] · [[cmd-exec]]
+- _F:_ [[cmd-flags]] · [[cmd-functions]]
 - _G:_ [[cmd-gateway]] · [[cmd-gauth]] · [[cmd-generate]]
 - _H:_ [[cmd-health]] · [[cmd-help-topics]]
 - _I:_ [[cmd-infra]] · [[cmd-init]] · [[cmd-install]]
 - _L:_ [[cmd-license]] · [[cmd-login]] · [[cmd-logout]] · [[cmd-logs]]
-- _M:_ [[cmd-mail]] · [[cmd-maintenance]] · [[cmd-man]] · [[cmd-mcp]] · [[cmd-migrate]] · [[cmd-model]] · [[cmd-monitor]]
+- _M:_ [[cmd-maintenance]] · [[cmd-man]] · [[cmd-mcp]] · [[cmd-migrate]] · [[cmd-model]] · [[cmd-monitor]]
 - _O:_ [[cmd-oauth]] · [[cmd-ops]]
 - _P:_ [[cmd-plugin]] · [[cmd-promote]]
 - _Q:_ [[cmd-queue]]
@@ -300,6 +304,6 @@
 - _T:_ [[cmd-telemetry]] · [[cmd-template]] · [[cmd-tenant]] · [[cmd-trust]]
 - _U:_ [[cmd-update]] · [[cmd-urls]]
 - _V:_ [[cmd-verify-sbom]] · [[cmd-version]]
-- _W:_ [[cmd-waf]] · [[cmd-watchdog]] · [[cmd-webhooks]]
+- _W:_ [[cmd-watchdog]] · [[cmd-webhooks]]
 
 <!-- END GENERATED:command-list -->

@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (76)
+## Commands (71)
 
 ### nself account
 
@@ -396,20 +396,6 @@ Flags:
 
 Full page: [[cmd-dev]]
 
-### nself dlq
-
-Manage dead-letter queues for nSelf plugins
-
-```
-nself dlq <subcommand> [flags]
-```
-
-Subcommands:
-
-- `replay` — Re-enqueue DLQ rows for a plugin
-
-Full page: [[cmd-dlq]]
-
 ### nself doctor
 
 Run comprehensive system diagnostics
@@ -458,24 +444,6 @@ Subcommands:
 
 Full page: [[cmd-dr]]
 
-### nself encryption
-
-Manage BYOK per-tenant encryption (Enterprise)
-
-```
-nself encryption <subcommand> [flags]
-```
-
-Subcommands:
-
-- `configure` — Configure a KMS provider for BYOK encryption
-- `key-events` — List the key event audit trail
-- `rotate` — Rotate data encryption keys
-- `status` — Show BYOK configuration and last verification
-- `verify` — Test KMS connectivity (wrap+unwrap round-trip)
-
-Full page: [[cmd-encryption]]
-
 ### nself env
 
 Multi-environment management: switch, list, diff, copy
@@ -512,22 +480,6 @@ Flags:
 - `--workdir` (default "") — Working directory inside the container
 
 Full page: [[cmd-exec]]
-
-### nself federation
-
-Manage GraphQL Federation (opt-in, requires NSELF_FEDERATION=true)
-
-```
-nself federation <subcommand> [flags]
-```
-
-Subcommands:
-
-- `compose` — Re-compose supergraph schema from installed plugin subgraphs
-- `introspect` — Print the full supergraph schema to stdout
-- `status` — Show subgraph health and schema composition status
-
-Full page: [[cmd-federation]]
 
 ### nself flags
 
@@ -814,24 +766,6 @@ Flags:
 - `--until` (default "") — Show logs until (e.g. 1h or RFC3339)
 
 Full page: [[cmd-logs]]
-
-### nself mail
-
-Send transactional and broadcast email through the nSelf stack
-
-```
-nself mail <subcommand> [flags]
-```
-
-Subcommands:
-
-- `broadcast` — Send a broadcast to a list using a saved template
-- `dkim` — Manage DKIM verification
-- `send` — Send a single transactional email
-- `status` — Query delivery status for a sent message
-- `templates` — Manage Postmark templates
-
-Full page: [[cmd-mail]]
 
 ### nself maintenance
 
@@ -1481,22 +1415,6 @@ Flags:
 - `--short` (default false) — Print version number only
 
 Full page: [[cmd-version]]
-
-### nself waf
-
-Manage the Web Application Firewall (Coraza + OWASP CRS)
-
-```
-nself waf <subcommand> [flags]
-```
-
-Subcommands:
-
-- `enable` — Enable the WAF in detection mode
-- `mode` — Set WAF enforcement mode
-- `report` — Show recent WAF events
-
-Full page: [[cmd-waf]]
 
 ### nself watchdog
 

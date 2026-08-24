@@ -193,10 +193,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"man", []string{"man", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"man", []string{"man", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	{"mail", []string{"mail"}, "(a) no project dir"},
-	{"mail", []string{"mail", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"mail", []string{"mail", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── migrate ────────────────────────────────────────────────────────────
 	{"migrate", []string{"migrate"}, "(a) no project dir"},
 	{"migrate", []string{"migrate", "--no-such-flag-xyz"}, "(b) invalid flag"},
@@ -313,11 +309,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"version", []string{"version", "unknownsub_xyz"}, "(c) unknown sub"},
 	{"version", []string{"version", "--format", "INVALIDFORMAT_XYZ"}, "(a) bad format"},
 
-	// ── waf ────────────────────────────────────────────────────────────────
-	{"waf", []string{"waf"}, "(a) no project dir"},
-	{"waf", []string{"waf", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"waf", []string{"waf", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── watchdog ───────────────────────────────────────────────────────────
 	{"watchdog", []string{"watchdog"}, "(a) no project dir"},
 	{"watchdog", []string{"watchdog", "--no-such-flag-xyz"}, "(b) invalid flag"},
@@ -342,11 +333,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"api", []string{"api"}, "(a) no project dir"},
 	{"api", []string{"api", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"api", []string{"api", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── dlq ────────────────────────────────────────────────────────────────
-	{"dlq", []string{"dlq"}, "(a) no project dir"},
-	{"dlq", []string{"dlq", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"dlq", []string{"dlq", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── dns-setup ──────────────────────────────────────────────────────────
 	{"trust dns", []string{"trust", "dns"}, "(a) no project dir"},
@@ -377,16 +363,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"ai-studio", []string{"ai-studio"}, "(a) shows help (no project required)"},
 	{"ai-studio", []string{"ai-studio", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"ai-studio", []string{"ai-studio", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── encryption ─────────────────────────────────────────────────────────
-	{"encryption", []string{"encryption"}, "(a) no project dir"},
-	{"encryption", []string{"encryption", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"encryption", []string{"encryption", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── federation ─────────────────────────────────────────────────────────
-	{"federation", []string{"federation"}, "(a) no project dir"},
-	{"federation", []string{"federation", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"federation", []string{"federation", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── generate ───────────────────────────────────────────────────────────
 	{"generate", []string{"generate"}, "(a) no project dir"},

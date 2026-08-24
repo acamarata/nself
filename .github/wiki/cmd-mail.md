@@ -1,242 +1,40 @@
 # nself mail
 
 <!-- BEGIN PROSE:summary -->
-> Send transactional and broadcast email through the nSelf stack.
+> Moved to a plugin (CLI-R11). Install it to keep using `nself mail`.
 <!-- END PROSE:summary -->
 
-## Synopsis
+## This command moved
 
-```
-nself mail <subcommand> [flags]
-```
-
-## Description
-
-<!-- BEGIN PROSE:description -->
-`nself mail` wraps the mux + Postmark plugins. ping_api proxies each call to the running stack, so the Postmark plugin must be installed and a valid license key must be configured.
-
-The command is license-gated. The Postmark plugin ships with the nClaw bundle and ɳSelf+. Without a configured key, the command exits with code `2` and points at `nself license add`.
-
-**Configuration**
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `NSELF_PING_API_URL` | `https://ping.nself.org` | ping_api base URL |
-| `NSELF_LICENSE_KEY` (or `NSELF_PLUGIN_LICENSE_KEY`, `NSELF_LICENSE_KEY_1`..`NSELF_LICENSE_KEY_10`) | — | License token sent as `Authorization: Bearer <key>` |
-
-All subcommands accept `--json` for machine-readable output.
----
-## nself mail send
-
-Send a single transactional email through the mux pipeline.
-
-### Flags
-
-| Flag | Default | Description |
-|---|---|---|
-| `--to <addr>` | — | Recipient email address (required) |
-| `--subject <s>` | — | Email subject (required) |
-| `--body <text>` | — | Email body (inline) |
-| `--body-file <path>` | — | Read body from file (`-` for stdin) |
-| `--body-type <type>` | `text` | `text` or `html` |
-| `--json` | `false` | Output as JSON |
-
-`--body` and `--body-file` are mutually exclusive. One of the two is required.
-
-### Example
+`mail` was extracted from the core binary into the `mail` plugin as part of
+[CLI-R11](https://github.com/nself-org/cli/blob/main/.claude) (the thin-core
+extraction). The command surface is unchanged — only where the code lives
+changed.
 
 ```bash
-nself mail send \
-  --to user@example.com \
-  --subject "Welcome" \
-  --body "Thanks for signing up."
-```
-
-```
-✓ Email queued for user@example.com
-  Message ID: 7c0f...
-  Accepted:   true
-```
-
-JSON form:
-
-```bash
-nself mail send --to user@example.com --subject "Welcome" --body "Hi" --json
-```
-
-```json
-{
-  "message_id": "7c0f...",
-  "accepted": true,
-  "to": "user@example.com"
-}
-```
-
----
-
-## nself mail broadcast
-
-Queue a broadcast email job against a saved list using a Postmark template.
-
-### Flags
-
-| Flag | Default | Description |
-|---|---|---|
-| `--list <list-id>` | — | Mailing list ID (required) |
-| `--template <tpl-id>` | — | Postmark template ID (required) |
-| `--json` | `false` | Output as JSON |
-
-### Example
-
-```bash
+nself install mail
+nself mail send --to user@example.com --subject "Welcome" --body "Hi"
 nself mail broadcast --list customers --template welcome
-```
-
-```
-✓ Broadcast queued: batch batch-9
-  Recipients: 1284
-  Queued:     true
-```
-
----
-
-## nself mail status
-
-Query the delivery status of a previously sent message.
-
-### Flags
-
-| Flag | Default | Description |
-|---|---|---|
-| `--message-id <id>` | — | Message ID returned by `nself mail send` (required) |
-| `--json` | `false` | Output as JSON |
-
-### Example
-
-```bash
-nself mail status --message-id 7c0f-abc-123
-```
-
-```
-Message ID: 7c0f-abc-123
-Status:     delivered
-To:         user@example.com
-Delivered:  2026-04-27T12:34:56Z
-```
-
-Possible status values: `queued`, `sent`, `delivered`, `bounced`, `spam_complaint`.
-
----
-
-## nself mail templates list
-
-List Postmark templates registered with the nSelf stack.
-
-### Flags
-
-| Flag | Default | Description |
-|---|---|---|
-| `--json` | `false` | Output as JSON |
-
-### Example
-
-```bash
+nself mail status --message-id <id>
 nself mail templates list
-```
-
-```
-ID      Name      Subject              Provider   Updated
-welcome Welcome   Welcome to nSelf     postmark   2026-04-20
-receipt Receipt   Order confirmation   postmark   2026-04-22
-```
-
----
-
-## nself mail dkim verify
-
-Check that a DKIM record is present and valid for the supplied domain.
-
-### Flags
-
-| Flag | Default | Description |
-|---|---|---|
-| `--domain <d>` | — | Domain to verify (required) |
-| `--json` | `false` | Output as JSON |
-
-### Example
-
-```bash
 nself mail dkim verify --domain example.com
 ```
 
-```
-Domain:   example.com
-✓ DKIM record valid
-Selector: pm._domainkey
-Record:   v=DKIM1; k=rsa; p=...
-```
+Until it is installed, `nself mail ...` prints an install hint pointing
+here. Full documentation (flags, exit codes, examples) now lives with the
+plugin: https://github.com/nself-org/plugins-pro/tree/main/paid/mail
 
----
-
-## Exit codes
-
-| Code | Meaning |
-|---|---|
-| `0` | Success |
-| `1` | Generic error (network, server, validation) |
-| `2` | No license key configured (Postmark plugin not entitled) |
-
-## Errors
-
-| Error | Cause | Resolution |
-|---|---|---|
-| `nself mail requires nSelf+ or nClaw bundle` | No license key configured | `nself license add <key>` |
-| `license rejected by ping.nself.org` | Key invalid or expired | `nself license validate` |
-| `ping.nself.org unreachable` | Network failure or service outage | Check connectivity, retry |
-| `ping_api server error` | 5xx from ping_api | Check `https://status.nself.org` and retry |
-
-## Related
-
-- [[cmd-license]] — Manage license keys for paid bundles
-- [nself.org/docs/mail](https://nself.org/docs/mail) — Full mail user guide
-- [[Home]]
-<!-- END PROSE:description -->
-
-## Flags
-
-<!-- BEGIN GENERATED:flags -->
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--help`, `-h` | — | Show help |
-<!-- END GENERATED:flags -->
-
-## Subcommands
-
-<!-- BEGIN GENERATED:subcommands -->
-| Name | Description |
-|------|-------------|
-| `broadcast` | Send a broadcast to a list using a saved template |
-| `dkim` | Manage DKIM verification |
-| `send` | Send a single transactional email |
-| `status` | Query delivery status for a sent message |
-| `templates` | Manage Postmark templates |
-<!-- END GENERATED:subcommands -->
-
-## Examples
-
-<!-- BEGIN PROSE:examples -->
-<!-- TODO(docs): needs human prose -->
-
-```bash
-nself mail
-```
-<!-- END PROSE:examples -->
+`mail` requires an ɳSelf+ or ɳClaw bundle license (the bundle that ships the
+Postmark plugin); without a configured key it exits 2, exactly as it did
+in-core.
 
 ## See Also
 
 <!-- BEGIN PROSE:see-also -->
-- [[Commands]] — full command index
-- [[Core-Services]] — what a stack is made of
+- [[cmd-install]], plugin/bundle install sugar
+- [[cmd-plugin]], plugin lifecycle management
+- [[cmd-license]], manage license keys for paid bundles
+- [[Commands]], full command index
 <!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

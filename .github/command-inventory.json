@@ -1109,27 +1109,6 @@
     ]
   },
   {
-    "name": "dlq",
-    "path": "nself dlq",
-    "short": "Manage dead-letter queues for nSelf plugins",
-    "hidden": false,
-    "group_id": "data",
-    "subcommands": [
-      {
-        "name": "replay",
-        "path": "nself dlq replay",
-        "short": "Re-enqueue DLQ rows for a plugin",
-        "hidden": false,
-        "flags": [
-          "--base-url",
-          "--dry-run",
-          "--filter",
-          "--max-rows"
-        ]
-      }
-    ]
-  },
-  {
     "name": "doctor",
     "path": "nself doctor",
     "short": "Run comprehensive system diagnostics",
@@ -1223,57 +1202,6 @@
     ]
   },
   {
-    "name": "encryption",
-    "path": "nself encryption",
-    "short": "Manage BYOK per-tenant encryption (Enterprise)",
-    "hidden": false,
-    "group_id": "advanced",
-    "subcommands": [
-      {
-        "name": "configure",
-        "path": "nself encryption configure",
-        "short": "Configure a KMS provider for BYOK encryption",
-        "hidden": false,
-        "flags": [
-          "--credentials-ref",
-          "--endpoint",
-          "--key-id",
-          "--key-name",
-          "--key-path",
-          "--provider",
-          "--region"
-        ]
-      },
-      {
-        "name": "key-events",
-        "path": "nself encryption key-events",
-        "short": "List the key event audit trail",
-        "hidden": false
-      },
-      {
-        "name": "rotate",
-        "path": "nself encryption rotate",
-        "short": "Rotate data encryption keys",
-        "hidden": false,
-        "flags": [
-          "--dry-run"
-        ]
-      },
-      {
-        "name": "status",
-        "path": "nself encryption status",
-        "short": "Show BYOK configuration and last verification",
-        "hidden": false
-      },
-      {
-        "name": "verify",
-        "path": "nself encryption verify",
-        "short": "Test KMS connectivity (wrap+unwrap round-trip)",
-        "hidden": false
-      }
-    ]
-  },
-  {
     "name": "env",
     "path": "nself env",
     "short": "Multi-environment management: switch, list, diff, copy",
@@ -1338,36 +1266,6 @@
       "--no-tty",
       "--user",
       "--workdir"
-    ]
-  },
-  {
-    "name": "federation",
-    "path": "nself federation",
-    "short": "Manage GraphQL Federation (opt-in, requires NSELF_FEDERATION=true)",
-    "hidden": false,
-    "group_id": "advanced",
-    "subcommands": [
-      {
-        "name": "compose",
-        "path": "nself federation compose",
-        "short": "Re-compose supergraph schema from installed plugin subgraphs",
-        "hidden": false
-      },
-      {
-        "name": "introspect",
-        "path": "nself federation introspect",
-        "short": "Print the full supergraph schema to stdout",
-        "hidden": false
-      },
-      {
-        "name": "status",
-        "path": "nself federation status",
-        "short": "Show subgraph health and schema composition status",
-        "hidden": false,
-        "flags": [
-          "--json"
-        ]
-      }
     ]
   },
   {
@@ -1967,62 +1865,6 @@
       "--tail",
       "--top",
       "--until"
-    ]
-  },
-  {
-    "name": "mail",
-    "path": "nself mail",
-    "short": "Send transactional and broadcast email through the nSelf stack",
-    "hidden": false,
-    "group_id": "advanced",
-    "subcommands": [
-      {
-        "name": "broadcast",
-        "path": "nself mail broadcast",
-        "short": "Send a broadcast to a list using a saved template",
-        "hidden": false,
-        "flags": [
-          "--json",
-          "--list",
-          "--template"
-        ]
-      },
-      {
-        "name": "dkim",
-        "path": "nself mail dkim",
-        "short": "Manage DKIM verification",
-        "hidden": false
-      },
-      {
-        "name": "send",
-        "path": "nself mail send",
-        "short": "Send a single transactional email",
-        "hidden": false,
-        "flags": [
-          "--body",
-          "--body-file",
-          "--body-type",
-          "--json",
-          "--subject",
-          "--to"
-        ]
-      },
-      {
-        "name": "status",
-        "path": "nself mail status",
-        "short": "Query delivery status for a sent message",
-        "hidden": false,
-        "flags": [
-          "--json",
-          "--message-id"
-        ]
-      },
-      {
-        "name": "templates",
-        "path": "nself mail templates",
-        "short": "Manage Postmark templates",
-        "hidden": false
-      }
     ]
   },
   {
@@ -3438,36 +3280,6 @@
     "flags": [
       "--json",
       "--short"
-    ]
-  },
-  {
-    "name": "waf",
-    "path": "nself waf",
-    "short": "Manage the Web Application Firewall (Coraza + OWASP CRS)",
-    "hidden": false,
-    "group_id": "advanced",
-    "subcommands": [
-      {
-        "name": "enable",
-        "path": "nself waf enable",
-        "short": "Enable the WAF in detection mode",
-        "hidden": false
-      },
-      {
-        "name": "mode",
-        "path": "nself waf mode",
-        "short": "Set WAF enforcement mode",
-        "hidden": false
-      },
-      {
-        "name": "report",
-        "path": "nself waf report",
-        "short": "Show recent WAF events",
-        "hidden": false,
-        "flags": [
-          "--since"
-        ]
-      }
     ]
   },
   {

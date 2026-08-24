@@ -30,13 +30,10 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself db` | data | yes | yes | n/a | n/a (see below) |
 | `nself deploy` | deploy | yes | yes | undocumented: NSELF_DEPLOY_ENV, NSELF_DEPLOY_HOST_, NSELF_FEATURE_BLUE_GREEN_DEPLOY, VERCEL_TOKEN | n/a (see below) |
 | `nself dev` | core | yes | no | n/a | n/a (see below) |
-| `nself dlq` | data | yes | no | n/a | n/a (see below) |
 | `nself doctor` | core | yes | yes | undocumented: NSELF_PING_API_URL | n/a (see below) |
 | `nself dr` | deploy | yes | no | n/a | n/a (see below) |
-| `nself encryption` | advanced | yes | no | undocumented: BYOK_PLUGIN_URL, NSELF_API_URL, NSELF_TENANT_ID | n/a (see below) |
 | `nself env` | config | yes | yes | documented | n/a (see below) |
 | `nself exec` | core | yes | no | n/a | n/a (see below) |
-| `nself federation` | advanced | yes | no | n/a | n/a (see below) |
 | `nself flags` | config | yes | no | n/a | n/a (see below) |
 | `nself functions` | data | yes | no | n/a | n/a (see below) |
 | `nself gateway` | ai | yes | no | n/a | n/a (see below) |
@@ -51,7 +48,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself login` | account | yes | no | n/a | n/a (see below) |
 | `nself logout` | account | yes | no | n/a | n/a (see below) |
 | `nself logs` | core | yes | yes | n/a | n/a (see below) |
-| `nself mail` | advanced | yes | no | undocumented: NSELF_PING_API_URL | n/a (see below) |
 | `nself maintenance` | observe | yes | no | n/a | n/a (see below) |
 | `nself man` | account | yes | no | n/a | n/a (see below) |
 | `nself mcp` | extend | yes | no | undocumented: HASURA_GRAPHQL_URL, INTEGRATION, NSELF_HASURA_ADMIN_SECRET, NSELF_HASURA_GRAPHQL_URL, NSENTRY_STATUS_URL, POSTGRES_URL | n/a (see below) |
@@ -85,8 +81,7 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself urls` | core | yes | yes | n/a | n/a (see below) |
 | `nself verify-sbom` | advanced | yes | no | n/a | n/a (see below) |
 | `nself version` | account | yes | no | undocumented: BENCH_RESULTS_FILE | n/a (see below) |
-| `nself waf` | advanced | yes | no | n/a | n/a (see below) |
 | `nself watchdog` | observe | yes | no | undocumented: NSELF_ENV | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 76 commands. Missing wiki page: 0. No MCP tool: 58. Env vars found but undocumented: 28.
+Total: 71 commands. Missing wiki page: 0. No MCP tool: 53. Env vars found but undocumented: 26.
