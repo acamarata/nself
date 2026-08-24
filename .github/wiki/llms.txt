@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (84)
+## Commands (83)
 
 ### nself account
 
@@ -1342,20 +1342,6 @@ Flags:
 - `--env` (default "") — Target environment (reads .env.{env})
 
 Full page: [[cmd-service]]
-
-### nself soak
-
-Manage soak testing lifecycle
-
-```
-nself soak <subcommand> [flags]
-```
-
-Subcommands:
-
-- `abort` — Abort a running soak and roll back to a prior version
-
-Full page: [[cmd-soak]]
 
 ### nself ssl
 

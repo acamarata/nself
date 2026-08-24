@@ -157,6 +157,20 @@ items:
     # phase 1 describes.
     phase: 1
 
+  # CLI-R11 thin-core extraction. Same reasoning as `nself dogfood` above:
+  # relocated to a plugin, not removed, so phase 1 (not 3). Unlike the
+  # dogfood entry's comment above (written before root.go's Execute() wired
+  # warnRelocatedCommand into the unknown-command path — see commit
+  # bb083973), this one IS live on that path: an unrecognized `nself soak`
+  # prints this entry's [DEPRECATED] notice before plugin.ProxyCommand ever
+  # runs. See TestRelocatedCommandEntriesAreWiredToTheProxy.
+  - name: "nself soak"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install soak"
+    docs_url: "https://nself.org/docs/plugins/soak"
+    phase: 1
+
 # =============================================================================
 # Plugin API versioning — G2 (api_version), G4 (deprecated_endpoints + removal)
 # =============================================================================

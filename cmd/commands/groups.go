@@ -102,7 +102,6 @@ var commandGroupAssignments = map[string]string{
 	"sentry-server": groupObserve,
 	"audit":         groupObserve,
 	"costs":         groupObserve,
-	"soak":          groupObserve,
 	"maintenance":   groupObserve,
 
 	// Plugins & Extensions.

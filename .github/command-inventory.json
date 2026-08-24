@@ -3303,28 +3303,6 @@
     ]
   },
   {
-    "name": "soak",
-    "path": "nself soak",
-    "short": "Manage soak testing lifecycle",
-    "hidden": false,
-    "group_id": "observe",
-    "subcommands": [
-      {
-        "name": "abort",
-        "path": "nself soak abort",
-        "short": "Abort a running soak and roll back to a prior version",
-        "hidden": false,
-        "flags": [
-          "--dry-run",
-          "--env",
-          "--prod-i-mean-it",
-          "--rollback",
-          "--yes"
-        ]
-      }
-    ]
-  },
-  {
     "name": "ssl",
     "path": "nself ssl",
     "short": "Manage SSL certificates",

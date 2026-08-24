@@ -82,7 +82,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself sentry` | ɳSentry ops: status, alerts, and observability | — | alerts, incidents, login, logout, monitors, status, status-pages, whoami |
 | `nself sentry-server` | Provision and manage ɳSentry ops servers | — | provision |
 | `nself service` | Manage optional services | — | add, configure, disable, enable, list, ps, restart, scale, start, stop, update, upgrade |
-| `nself soak` | Manage soak testing lifecycle | — | abort |
 | `nself ssl` | Manage SSL certificates | — | add, renew, setup, status |
 | `nself start` | Boot your nSelf stack | — | — |
 | `nself status` | Show health status of all services | — | — |
@@ -110,7 +109,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 84**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 83**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -181,7 +180,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 84**
 | `nself sentry` | ɳSentry ops: status, alerts, and observability | observe | alerts, incidents, login, logout, monitors, status, status-pages, whoami |
 | `nself sentry-server` | Provision and manage ɳSentry ops servers | observe | provision |
 | `nself service` | Manage optional services | config | add, configure, disable, enable, list, ps, restart, scale, start, stop, update, upgrade |
-| `nself soak` | Manage soak testing lifecycle | observe | abort |
 | `nself ssl` | Manage SSL certificates | config | add, renew, setup, status |
 | `nself start` | Boot your nSelf stack | core | — |
 | `nself status` | Show health status of all services | core | — |

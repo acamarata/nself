@@ -382,11 +382,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"oauth", []string{"oauth", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"oauth", []string{"oauth", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── soak ───────────────────────────────────────────────────────────────
-	{"soak", []string{"soak"}, "(a) no project dir"},
-	{"soak", []string{"soak", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"soak", []string{"soak", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── ai-studio ──────────────────────────────────────────────────────────
 	// ai-studio root returns cmd.Help() (nil) — same pattern as model.
 	{"ai-studio", []string{"ai-studio"}, "(a) shows help (no project required)"},
