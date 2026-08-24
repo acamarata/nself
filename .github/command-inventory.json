@@ -1324,36 +1324,6 @@
     ]
   },
   {
-    "name": "federation",
-    "path": "nself federation",
-    "short": "Manage GraphQL Federation (opt-in, requires NSELF_FEDERATION=true)",
-    "hidden": false,
-    "group_id": "advanced",
-    "subcommands": [
-      {
-        "name": "compose",
-        "path": "nself federation compose",
-        "short": "Re-compose supergraph schema from installed plugin subgraphs",
-        "hidden": false
-      },
-      {
-        "name": "introspect",
-        "path": "nself federation introspect",
-        "short": "Print the full supergraph schema to stdout",
-        "hidden": false
-      },
-      {
-        "name": "status",
-        "path": "nself federation status",
-        "short": "Show subgraph health and schema composition status",
-        "hidden": false,
-        "flags": [
-          "--json"
-        ]
-      }
-    ]
-  },
-  {
     "name": "flags",
     "path": "nself flags",
     "short": "Manage application feature flags",

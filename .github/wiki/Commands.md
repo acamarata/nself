@@ -36,7 +36,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself env` | Multi-environment management: switch, list, diff, copy | — | copy, diff, list, show, target, use |
 | `nself exec` | Execute a command inside a service container | — | — |
 | `nself feature` | Manage CLI-built-in feature flags | — | disable, enable, list, status |
-| `nself federation` | Manage GraphQL Federation (opt-in, requires NSELF_FEDERATION=true) | — | compose, introspect, status |
 | `nself flag` | Manage feature flags | — | disable, enable, get, history, kill, list, prune, set |
 | `nself functions` | Manage serverless functions | — | delete, deploy, invoke, list, logs |
 | `nself gateway` | Manage the nSelf AI gateway (nself-ai-gateway, port 3761) | — | keys, quota, routes, status |
@@ -108,7 +107,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 82**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 81**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -137,7 +136,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 82**
 | `nself dr` | Disaster recovery operations: drill, promote-standby, reconfigure-dns, rollback, fence | deploy | drill, fence, promote-standby, reconfigure-dns, rollback |
 | `nself env` | Multi-environment management: switch, list, diff, copy | config | copy, diff, explain, list, show, target, use |
 | `nself exec` | Execute a command inside a service container | core | — |
-| `nself federation` | Manage GraphQL Federation (opt-in, requires NSELF_FEDERATION=true) | advanced | compose, introspect, status |
 | `nself flags` | Manage application feature flags | config | disable, enable, get, history, kill, list, prune, set |
 | `nself functions` | Manage serverless functions | data | delete, deploy, invoke, list, logs |
 | `nself gateway` | Manage the nSelf AI gateway (nself-ai-gateway, port 3761) | ai | keys, quota, routes, status |

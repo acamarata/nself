@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (82)
+## Commands (81)
 
 ### nself account
 
@@ -523,22 +523,6 @@ Flags:
 - `--workdir` (default "") — Working directory inside the container
 
 Full page: [[cmd-exec]]
-
-### nself federation
-
-Manage GraphQL Federation (opt-in, requires NSELF_FEDERATION=true)
-
-```
-nself federation <subcommand> [flags]
-```
-
-Subcommands:
-
-- `compose` — Re-compose supergraph schema from installed plugin subgraphs
-- `introspect` — Print the full supergraph schema to stdout
-- `status` — Show subgraph health and schema composition status
-
-Full page: [[cmd-federation]]
 
 ### nself flags
 

@@ -180,6 +180,16 @@ items:
     docs_url: "https://nself.org/docs/plugins/waf"
     phase: 1
 
+  # CLI-R11 thin-core extraction. Same shape as the entries above: moved to
+  # a plugin entirely, not rewritten to a new core subcommand. Phase 1, not
+  # 3, for the same reason: relocated, not removed.
+  - name: "nself federation"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install federation"
+    docs_url: "https://nself.org/docs/plugins/federation"
+    phase: 1
+
 # =============================================================================
 # Plugin API versioning — G2 (api_version), G4 (deprecated_endpoints + removal)
 # =============================================================================

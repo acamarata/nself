@@ -37,7 +37,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself dr` | deploy | yes | no | n/a | n/a (see below) |
 | `nself env` | config | yes | yes | documented | n/a (see below) |
 | `nself exec` | core | yes | no | n/a | n/a (see below) |
-| `nself federation` | advanced | yes | no | n/a | n/a (see below) |
 | `nself flags` | config | yes | no | n/a | n/a (see below) |
 | `nself functions` | data | yes | no | n/a | n/a (see below) |
 | `nself gateway` | ai | yes | no | n/a | n/a (see below) |
@@ -95,4 +94,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself watchdog` | observe | yes | no | undocumented: NSELF_ENV | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 82 commands. Missing wiki page: 0. No MCP tool: 64. Env vars found but undocumented: 29.
+Total: 81 commands. Missing wiki page: 0. No MCP tool: 63. Env vars found but undocumented: 29.
