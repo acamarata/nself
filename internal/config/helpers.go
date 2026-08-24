@@ -272,6 +272,31 @@ func minInt(x, y int) int {
 
 // ── T38 ─────────────────────────────────────────────────────────────────────
 
+// projectMarkerFiles are the committed cascade files whose presence marks a
+// directory as an nSelf project root.
+//
+// Only `.env` used to count. That broke a legitimate shape the CLI-R18 cascade
+// made first-class: a repository that commits `.env.dev` (or a per-environment
+// file) and no bare `.env` is a complete project, but the CLI reported "no
+// nself project found. Run 'nself init'" — advice that would have overwritten
+// a working configuration. Reported by the ntask clean-fork self-host drill,
+// 2026-08-24.
+//
+// Deliberately excludes the never-committed layers (.env.secrets, .env.local):
+// those are local overlays, and a directory containing only an overlay is not
+// a project anyone checked out.
+var projectMarkerFiles = []string{".env", ".env.dev", ".env.staging", ".env.prod"}
+
+// hasProjectMarker reports whether dir contains any committed cascade file.
+func hasProjectMarker(dir string) bool {
+	for _, name := range projectMarkerFiles {
+		if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
 // FindNSelfRoot walks up from startDir looking for a nself project root.
 // It checks, at each directory level:
 //  1. startDir/.backend/.env  → returns startDir/.backend (monorepo case)
@@ -289,16 +314,17 @@ func FindNSelfRoot(startDir string) (string, error) {
 		// like "C:\" where filepath.Dir("C:\\") == "C:\\" (unlike "/" which
 		// does not match Windows drive roots).
 		if dir == home || filepath.Dir(dir) == dir {
-			return "", fmt.Errorf("no nself project found")
+			return "", fmt.Errorf("no nself project found: looked for %s in %s and each parent directory",
+				strings.Join(projectMarkerFiles, ", "), startDir)
 		}
 
-		// Monorepo case: .backend/.env exists one level down.
-		if _, err := os.Stat(filepath.Join(dir, ".backend", ".env")); err == nil {
+		// Monorepo case: a committed cascade file exists one level down.
+		if hasProjectMarker(filepath.Join(dir, ".backend")) {
 			return filepath.Join(dir, ".backend"), nil
 		}
 
-		// Already-in-backend case: .env exists directly here.
-		if _, err := os.Stat(filepath.Join(dir, ".env")); err == nil {
+		// Already-in-backend case: a committed cascade file is right here.
+		if hasProjectMarker(dir) {
 			return dir, nil
 		}
 
