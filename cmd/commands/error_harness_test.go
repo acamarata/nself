@@ -58,11 +58,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"alerts", []string{"alerts", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"alerts", []string{"alerts", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── audit ──────────────────────────────────────────────────────────────
-	{"audit", []string{"audit"}, "(a) no project dir"},
-	{"audit", []string{"audit", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"audit", []string{"audit", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── backup ─────────────────────────────────────────────────────────────
 	{"backup", []string{"backup"}, "(a) no project dir"},
 	{"backup", []string{"backup", "--no-such-flag-xyz"}, "(b) invalid flag"},
@@ -102,11 +97,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"completion", []string{"completion", "invalidshell_xyz"}, "(a) unknown shell"},
 	{"completion", []string{"completion", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"completion", []string{"completion", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── costs ──────────────────────────────────────────────────────────────
-	{"costs", []string{"costs"}, "(a) no project dir — costs reads plugin dir; succeeds gracefully"},
-	{"costs", []string{"costs", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"costs", []string{"costs", "--format", "badformat_xyz"}, "(c) unknown format"},
 
 	// ── config ─────────────────────────────────────────────────────────────
 	{"config", []string{"config"}, "(a) no project dir"},
@@ -382,11 +372,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"oauth", []string{"oauth", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"oauth", []string{"oauth", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── soak ───────────────────────────────────────────────────────────────
-	{"soak", []string{"soak"}, "(a) no project dir"},
-	{"soak", []string{"soak", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"soak", []string{"soak", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── ai-studio ──────────────────────────────────────────────────────────
 	// ai-studio root returns cmd.Help() (nil) — same pattern as model.
 	{"ai-studio", []string{"ai-studio"}, "(a) shows help (no project required)"},
@@ -402,11 +387,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"federation", []string{"federation"}, "(a) no project dir"},
 	{"federation", []string{"federation", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"federation", []string{"federation", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── gdpr ───────────────────────────────────────────────────────────────
-	{"gdpr", []string{"gdpr"}, "(a) no project dir"},
-	{"gdpr", []string{"gdpr", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"gdpr", []string{"gdpr", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── generate ───────────────────────────────────────────────────────────
 	{"generate", []string{"generate"}, "(a) no project dir"},
@@ -441,12 +421,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"model ollama", []string{"model", "ollama"}, "(a) shows help (no project required)"},
 	{"model ollama", []string{"model", "ollama", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"model ollama", []string{"model", "ollama", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── pentest-kit ────────────────────────────────────────────────────────
-	// pentest-kit root returns cmd.Help() (nil) — soft case.
-	{"pentest-kit", []string{"pentest-kit"}, "(a) shows help (no project required)"},
-	{"pentest-kit", []string{"pentest-kit", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"pentest-kit", []string{"pentest-kit", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── pitr ───────────────────────────────────────────────────────────────
 	// pitr root returns cmd.Help() (nil) — soft case.

@@ -18,7 +18,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself ai-studio` | ai | yes | no | n/a | n/a (see below) |
 | `nself alerts` | observe | yes | no | n/a | n/a (see below) |
 | `nself api` | extend | yes | no | n/a | n/a (see below) |
-| `nself audit` | observe | yes | no | n/a | n/a (see below) |
 | `nself backup` | data | yes | yes | n/a | n/a (see below) |
 | `nself billing` | account | yes | no | n/a | n/a (see below) |
 | `nself build` | core | yes | yes | undocumented: NSELF_PROFILE | n/a (see below) |
@@ -28,7 +27,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself clean` | core | yes | no | n/a | n/a (see below) |
 | `nself completion` | account | yes | no | n/a | n/a (see below) |
 | `nself config` | config | yes | yes | n/a | n/a (see below) |
-| `nself costs` | observe | yes | no | undocumented: HETZNER_SERVER_TYPE | n/a (see below) |
 | `nself db` | data | yes | yes | n/a | n/a (see below) |
 | `nself deploy` | deploy | yes | yes | undocumented: NSELF_DEPLOY_ENV, NSELF_DEPLOY_HOST_, NSELF_FEATURE_BLUE_GREEN_DEPLOY, VERCEL_TOKEN | n/a (see below) |
 | `nself dev` | core | yes | no | n/a | n/a (see below) |
@@ -43,7 +41,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself functions` | data | yes | no | n/a | n/a (see below) |
 | `nself gateway` | ai | yes | no | n/a | n/a (see below) |
 | `nself gauth` | ai | yes | no | undocumented: GAUTH_PORT, GAUTH_URL | n/a (see below) |
-| `nself gdpr` | advanced | yes | no | documented | n/a (see below) |
 | `nself generate` | config | yes | no | undocumented: NSELF_HASURA_PROD_ADMIN_SECRET, NSELF_HASURA_PROD_URL, NSELF_HASURA_STAGING_ADMIN_SECRET, NSELF_HASURA_STAGING_URL | n/a (see below) |
 | `nself health` | observe | yes | no | n/a | n/a (see below) |
 | `nself help-topics` | account | yes | no | n/a | n/a (see below) |
@@ -63,7 +60,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself monitor` | observe | yes | no | n/a | n/a (see below) |
 | `nself oauth` | account | yes | no | n/a | n/a (see below) |
 | `nself ops` | deploy | yes | no | n/a | n/a (see below) |
-| `nself pentest-kit` | advanced | yes | no | n/a | n/a (see below) |
 | `nself plugin` | extend | yes | yes | undocumented: GOPATH, NSELF_LICENSE_SKIP_VERIFY, NSELF_LOCAL_URL, NSELF_MARKETPLACE_URL, NSELF_PING_URL, NSELF_PLUGIN_CACHE, NSELF_PLUGIN_DIR, NSELF_PLUGIN_LICENSE_KEY, NSELF_PLUGIN_REGISTRY | n/a (see below) |
 | `nself promote` | deploy | yes | no | n/a | n/a (see below) |
 | `nself queue` | data | yes | no | n/a | n/a (see below) |
@@ -78,7 +74,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself sentry` | observe | yes | yes | undocumented: HCLOUD_TOKEN, HETZNER_NSELF_TOKEN, NSELF_DEPLOY_HOST_OPS, NSENTRY_PRIVATE_TOKEN, OPS_DEPLOY_HOST, STATUS_PAGE_PRIVATE_TOKEN | n/a (see below) |
 | `nself sentry-server` | observe | yes | no | n/a | n/a (see below) |
 | `nself service` | config | yes | yes | n/a | n/a (see below) |
-| `nself soak` | observe | yes | no | n/a | n/a (see below) |
 | `nself start` | core | yes | yes | undocumented: AI_AUTO_INSTALL, NSELF_PROFILE, NSELF_SKIP_DB_INIT | n/a (see below) |
 | `nself status` | core | yes | yes | n/a | n/a (see below) |
 | `nself stop` | core | yes | yes | n/a | n/a (see below) |
@@ -94,4 +89,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself watchdog` | observe | yes | no | undocumented: NSELF_ENV | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 81 commands. Missing wiki page: 0. No MCP tool: 63. Env vars found but undocumented: 29.
+Total: 76 commands. Missing wiki page: 0. No MCP tool: 58. Env vars found but undocumented: 28.

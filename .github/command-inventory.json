@@ -272,29 +272,6 @@
     ]
   },
   {
-    "name": "audit",
-    "path": "nself audit",
-    "short": "Run ecosystem audits (docs, origin, etc.)",
-    "hidden": false,
-    "group_id": "observe",
-    "subcommands": [
-      {
-        "name": "docs",
-        "path": "nself audit docs",
-        "short": "Run the quarterly documentation audit",
-        "hidden": false,
-        "flags": [
-          "--fix",
-          "--output",
-          "--quarter",
-          "--root",
-          "--scan",
-          "--summary"
-        ]
-      }
-    ]
-  },
-  {
     "name": "backup",
     "path": "nself backup",
     "short": "Backup operations: create, list, restore, verify, prune, config, status, init-key",
@@ -847,17 +824,6 @@
         "short": "Validate configuration against all registered rules",
         "hidden": false
       }
-    ]
-  },
-  {
-    "name": "costs",
-    "path": "nself costs",
-    "short": "Show estimated per-install operational costs",
-    "hidden": false,
-    "group_id": "observe",
-    "flags": [
-      "--format",
-      "--server-type"
     ]
   },
   {
@@ -1634,66 +1600,6 @@
     ]
   },
   {
-    "name": "gdpr",
-    "path": "nself gdpr",
-    "short": "GDPR data portability and right-to-erasure (Art. 20, 17)",
-    "hidden": false,
-    "group_id": "advanced",
-    "subcommands": [
-      {
-        "name": "delete",
-        "path": "nself gdpr delete",
-        "short": "Delete or anonymize all data for a user (GDPR Art. 17 erasure)",
-        "hidden": false,
-        "flags": [
-          "--dry-run",
-          "--user"
-        ]
-      },
-      {
-        "name": "export",
-        "path": "nself gdpr export",
-        "short": "Export all data for a user (GDPR Art. 20 portability)",
-        "hidden": false,
-        "flags": [
-          "--dry-run",
-          "--format",
-          "--notify",
-          "--output",
-          "--user"
-        ]
-      },
-      {
-        "name": "forget",
-        "path": "nself gdpr forget",
-        "short": "Alias for 'delete' — right to be forgotten (GDPR Art. 17)",
-        "hidden": false,
-        "flags": [
-          "--dry-run",
-          "--user"
-        ]
-      },
-      {
-        "name": "list-requests",
-        "path": "nself gdpr list-requests",
-        "short": "List all GDPR requests",
-        "hidden": false,
-        "flags": [
-          "--status"
-        ]
-      },
-      {
-        "name": "status",
-        "path": "nself gdpr status",
-        "short": "Show the status of a GDPR request",
-        "hidden": false,
-        "flags": [
-          "--request"
-        ]
-      }
-    ]
-  },
-  {
     "name": "generate",
     "path": "nself generate",
     "short": "Generate type-safe client SDK types from the live Hasura schema",
@@ -2386,45 +2292,6 @@
           "--dry-run",
           "--follow"
         ]
-      }
-    ]
-  },
-  {
-    "name": "pentest-kit",
-    "path": "nself pentest-kit",
-    "short": "Penetration-test readiness kit (Business+)",
-    "hidden": false,
-    "group_id": "advanced",
-    "subcommands": [
-      {
-        "name": "credentials",
-        "path": "nself pentest-kit credentials",
-        "short": "Create pentest role and test credentials in Hasura",
-        "hidden": false
-      },
-      {
-        "name": "generate",
-        "path": "nself pentest-kit generate",
-        "short": "Generate pentest scope document",
-        "hidden": false,
-        "flags": [
-          "--output-dir"
-        ]
-      },
-      {
-        "name": "remediation",
-        "path": "nself pentest-kit remediation",
-        "short": "Import pentest findings from a structured report",
-        "hidden": false,
-        "flags": [
-          "--import"
-        ]
-      },
-      {
-        "name": "status",
-        "path": "nself pentest-kit status",
-        "short": "Show open pentest findings by severity",
-        "hidden": false
       }
     ]
   },
@@ -3258,28 +3125,6 @@
         "path": "nself service upgrade",
         "short": "Pin a service to a specific image version",
         "hidden": false
-      }
-    ]
-  },
-  {
-    "name": "soak",
-    "path": "nself soak",
-    "short": "Manage soak testing lifecycle",
-    "hidden": false,
-    "group_id": "observe",
-    "subcommands": [
-      {
-        "name": "abort",
-        "path": "nself soak abort",
-        "short": "Abort a running soak and roll back to a prior version",
-        "hidden": false,
-        "flags": [
-          "--dry-run",
-          "--env",
-          "--prod-i-mean-it",
-          "--rollback",
-          "--yes"
-        ]
       }
     ]
   },

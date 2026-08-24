@@ -56,15 +56,6 @@
       "openapi": "n/a (see below)"
     },
     {
-      "name": "audit",
-      "path": "nself audit",
-      "group_id": "observe",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
       "name": "backup",
       "path": "nself backup",
       "group_id": "data",
@@ -143,15 +134,6 @@
       "wiki_page": true,
       "mcp_tool": true,
       "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
-      "name": "costs",
-      "path": "nself costs",
-      "group_id": "observe",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "undocumented: HETZNER_SERVER_TYPE",
       "openapi": "n/a (see below)"
     },
     {
@@ -278,15 +260,6 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: GAUTH_PORT, GAUTH_URL",
-      "openapi": "n/a (see below)"
-    },
-    {
-      "name": "gdpr",
-      "path": "nself gdpr",
-      "group_id": "advanced",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "documented",
       "openapi": "n/a (see below)"
     },
     {
@@ -461,15 +434,6 @@
       "openapi": "n/a (see below)"
     },
     {
-      "name": "pentest-kit",
-      "path": "nself pentest-kit",
-      "group_id": "advanced",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
       "name": "plugin",
       "path": "nself plugin",
       "group_id": "extend",
@@ -592,15 +556,6 @@
       "group_id": "config",
       "wiki_page": true,
       "mcp_tool": true,
-      "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
-      "name": "soak",
-      "path": "nself soak",
-      "group_id": "observe",
-      "wiki_page": true,
-      "mcp_tool": false,
       "env_vars": "n/a",
       "openapi": "n/a (see below)"
     },

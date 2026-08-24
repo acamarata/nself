@@ -147,9 +147,11 @@ type PluginManifest struct {
 	Views  []string `json:"views,omitempty"`
 
 	// API
-	APIEndpoints []string     `json:"apiEndpoints,omitempty"`
-	Webhooks     []string     `json:"webhooks,omitempty"`
-	CLICommands  []CLICommand `json:"cliCommands,omitempty"`
+	APIEndpoints []string `json:"apiEndpoints,omitempty"`
+	// WebhookNames, not []string: real manifests use both an array of event
+	// names and an object keyed by event name. See webhooks.go.
+	Webhooks    WebhookNames `json:"webhooks,omitempty"`
+	CLICommands []CLICommand `json:"cliCommands,omitempty"`
 
 	// Environment
 	EnvVars []EnvVar `json:"envVars,omitempty"`

@@ -182,6 +182,66 @@ items:
     since: "v1.2.8"
     replacement: "nself install k8s"
     docs_url: "https://nself.org/docs/plugins/k8s"
+
+  # relocated to a plugin, not removed, so phase 1 (not 3). Unlike the
+  # dogfood entry's comment above (written before root.go's Execute() wired
+  # warnRelocatedCommand into the unknown-command path — see commit
+  # bb083973), this one IS live on that path: an unrecognized `nself soak`
+  # prints this entry's [DEPRECATED] notice before plugin.ProxyCommand ever
+  # runs. See TestRelocatedCommandEntriesAreWiredToTheProxy.
+  - name: "nself soak"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install soak"
+    docs_url: "https://nself.org/docs/plugins/soak"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Live on the proxy path, same as `nself
+  # soak` above. Only the docs-audit subcommand moved — internal/audit's
+  # table_audit.go (`nself plugin audit-tables`) and event_log.go (security
+  # event log) stayed in core, so this entry names `audit` itself, not a
+  # sibling command.
+  - name: "nself audit"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install audit"
+    docs_url: "https://nself.org/docs/plugins/audit"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Live on the proxy path, same as the entries
+  # above. This is the first PAID (Business+ tier) extraction in this batch:
+  # the plugin at plugins-pro/paid/pentest-kit/ still gates on the same
+  # requirePentestKit() license check, just reimplemented locally since
+  # internal/license is unreachable across the module boundary.
+  - name: "nself pentest-kit"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install pentest-kit"
+    docs_url: "https://nself.org/docs/plugins/pentest-kit"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Live on the proxy path, same as the entries
+  # above. internal/plugin.ListInstalled() is unreachable across the module
+  # boundary and genuinely core-shared, so this plugin's internal/plugininfo
+  # reimplements only the narrow tier read this command needs — see that
+  # package's doc comment for the exact scope of the simplification.
+  - name: "nself costs"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install costs"
+    docs_url: "https://nself.org/docs/plugins/costs"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Live on the proxy path, same as the entries
+  # above. internal/gdpr was exclusive to these commands (confirmed via
+  # grep before moving) and moved wholesale; only internal/database's single
+  # SanitizeIdentifier function had to be copied into the plugin's own
+  # internal/database package.
+  - name: "nself gdpr"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install gdpr"
+    docs_url: "https://nself.org/docs/plugins/gdpr"
     phase: 1
 
 # =============================================================================

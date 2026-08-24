@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (81)
+## Commands (76)
 
 ### nself account
 
@@ -116,20 +116,6 @@ Subcommands:
 - `version` — Show API version for every surface observable from this install
 
 Full page: [[cmd-api]]
-
-### nself audit
-
-Run ecosystem audits (docs, origin, etc.)
-
-```
-nself audit <subcommand> [flags]
-```
-
-Subcommands:
-
-- `docs` — Run the quarterly documentation audit
-
-Full page: [[cmd-audit]]
 
 ### nself backup
 
@@ -321,21 +307,6 @@ Flags:
 - `--reveal` (default false) — Show secret values in plaintext
 
 Full page: [[cmd-config]]
-
-### nself costs
-
-Show estimated per-install operational costs
-
-```
-nself costs [flags]
-```
-
-Flags:
-
-- `--format` (default table) — Output format: table|json
-- `--server-type` (default "") — Hetzner server type (e.g. cx23, cax11). Auto-detected from HETZNER_SERVER_TYPE env var if unset.
-
-Full page: [[cmd-costs]]
 
 ### nself db
 
@@ -629,24 +600,6 @@ Subcommands:
 - `status` — Show token expiry for all provisioned gauth accounts
 
 Full page: [[cmd-gauth]]
-
-### nself gdpr
-
-GDPR data portability and right-to-erasure (Art. 20, 17)
-
-```
-nself gdpr <subcommand> [flags]
-```
-
-Subcommands:
-
-- `delete` — Delete or anonymize all data for a user (GDPR Art. 17 erasure)
-- `export` — Export all data for a user (GDPR Art. 20 portability)
-- `forget` — Alias for 'delete' — right to be forgotten (GDPR Art. 17)
-- `list-requests` — List all GDPR requests
-- `status` — Show the status of a GDPR request
-
-Full page: [[cmd-gdpr]]
 
 ### nself generate
 
@@ -1012,23 +965,6 @@ Subcommands:
 
 Full page: [[cmd-ops]]
 
-### nself pentest-kit
-
-Penetration-test readiness kit (Business+)
-
-```
-nself pentest-kit <subcommand> [flags]
-```
-
-Subcommands:
-
-- `credentials` — Create pentest role and test credentials in Hasura
-- `generate` — Generate pentest scope document
-- `remediation` — Import pentest findings from a structured report
-- `status` — Show open pentest findings by severity
-
-Full page: [[cmd-pentest-kit]]
-
 ### nself plugin
 
 Manage nSelf plugins
@@ -1326,20 +1262,6 @@ Flags:
 - `--env` (default "") — Target environment (reads .env.{env})
 
 Full page: [[cmd-service]]
-
-### nself soak
-
-Manage soak testing lifecycle
-
-```
-nself soak <subcommand> [flags]
-```
-
-Subcommands:
-
-- `abort` — Abort a running soak and roll back to a prior version
-
-Full page: [[cmd-soak]]
 
 ### nself start
 

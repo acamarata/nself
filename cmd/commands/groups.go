@@ -98,9 +98,6 @@ var commandGroupAssignments = map[string]string{
 	"self-heal":     groupObserve,
 	"sentry":        groupObserve,
 	"sentry-server": groupObserve,
-	"audit":         groupObserve,
-	"costs":         groupObserve,
-	"soak":          groupObserve,
 	"maintenance":   groupObserve,
 
 	// Plugins & Extensions.
@@ -138,11 +135,9 @@ var commandGroupAssignments = map[string]string{
 	"security":    groupAdvanced,
 	"encryption":  groupAdvanced,
 	"waf":         groupAdvanced,
-	"gdpr":        groupAdvanced,
 	"tenant":      groupAdvanced,
 	"federation":  groupAdvanced,
 	"mail":        groupAdvanced,
-	"pentest-kit": groupAdvanced,
 	"verify-sbom": groupAdvanced,
 }
 

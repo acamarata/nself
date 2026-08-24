@@ -15,7 +15,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself ai-studio` | Google AI Studio integration for local nSelf instances | — | bridge |
 | `nself alerts` | Manage Prometheus alert rules and silences | — | list, silence, test |
 | `nself api` | API versioning and deprecation tooling for operators | — | changelog, deprecation-check, version |
-| `nself audit` | Run ecosystem audits (docs, origin, etc.) | — | docs |
 | `nself backup` | Backup operations: create, list, restore, verify, prune, config, status, init-key | — | config, create, drill, init-key, list, prune, restore, restore-remote, resume, schedule, status, stream, verify |
 | `nself billing` | Billing operations: usage, invoice-preview, report, retry-event | — | invoice-preview, report, retry-event, usage |
 | `nself build` | Compose your infrastructure from .env | — | — |
@@ -25,7 +24,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself clean` | Remove generated artifacts (docker-compose.yml, nginx configs, build cache) | — | — |
 | `nself completion` | Generate shell completion scripts | — | — |
 | `nself config` | Manage project configuration | — | export, get, import, list, set, show, validate |
-| `nself costs` | Show estimated per-install operational costs | — | — |
 | `nself db` | Database operations: migrations, backups, restore, seed, shell | — | backup, backup-sync, backup-sync-status, drift, drop, fk-index, hasura, lint, list, migrate, pgbouncer, pitr, reset, reset-checksum, restore, restore-drill, restore-drill-list, rls, seed, shell, soft-delete, verify-checksums |
 | `nself deploy` | Deploy the stack to a target environment | — | check-access, environments, health, logs, promote, rollback, status, web |
 | `nself dev` | Start development environment | — | — |
@@ -42,7 +40,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself functions` | Manage serverless functions | — | delete, deploy, invoke, list, logs |
 | `nself gateway` | Manage the nSelf AI gateway (nself-ai-gateway, port 3761) | — | keys, quota, routes, status |
 | `nself gauth` | Manage Google OAuth tokens for nSelf AI services | — | refresh, revoke, status |
-| `nself gdpr` | GDPR data portability and right-to-erasure (Art. 20, 17) | — | delete, export, forget, list-requests, status |
 | `nself generate` | Generate type-safe client SDK types from the live Hasura schema | — | — |
 | `nself health` | Health check management with continuous monitoring | — | check, config, endpoint, history, service, watch |
 | `nself help-topics` | Browse help topics (quickstart, plugins, license, envs, doctor, errors) | — | — |
@@ -63,7 +60,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself oauth` | Manage OAuth provider tokens | — | refresh |
 | `nself ollama` | Manage local Ollama LLM stack | — | models, status |
 | `nself ops` | Ops-profile deployment and management | — | deploy |
-| `nself pentest-kit` | Penetration-test readiness kit (Business+) | — | credentials, generate, remediation, status |
 | `nself pitr` | Point-in-time recovery: enable, disable, status, base-backup, restore | — | base-backup, disable, enable, restore, status |
 | `nself plugin` | Manage nSelf plugins | — | audit-tables, compat-check, debug, dev, disable, enable, info, init, install, inventory, link, list, logs, marketplace, new, refresh, remove, search, start, status, stop, submit, test, unlink, update, updates |
 | `nself promote` | Promote one environment to another (e.g. staging to prod) | — | rollback |
@@ -81,7 +77,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself sentry` | ɳSentry ops: status, alerts, and observability | — | alerts, incidents, login, logout, monitors, status, status-pages, whoami |
 | `nself sentry-server` | Provision and manage ɳSentry ops servers | — | provision |
 | `nself service` | Manage optional services | — | add, configure, disable, enable, list, ps, restart, scale, start, stop, update, upgrade |
-| `nself soak` | Manage soak testing lifecycle | — | abort |
 | `nself ssl` | Manage SSL certificates | — | add, renew, setup, status |
 | `nself start` | Boot your nSelf stack | — | — |
 | `nself status` | Show health status of all services | — | — |
@@ -109,7 +104,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 81**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 76**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -119,7 +114,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 81**
 | `nself ai-studio` | Google AI Studio integration for local nSelf instances | ai | bridge |
 | `nself alerts` | Manage Prometheus alert rules and silences | observe | list, silence, test |
 | `nself api` | API versioning and deprecation tooling for operators | extend | changelog, deprecation-check, version |
-| `nself audit` | Run ecosystem audits (docs, origin, etc.) | observe | docs |
 | `nself backup` | Backup operations: create, list, restore, verify, prune, config, status, init-key | data | config, create, drill, init-key, list, pitr, prune, restore, restore-remote, resume, schedule, status, stream, verify |
 | `nself billing` | Billing operations: usage, invoice-preview, report, retry-event | account | invoice-preview, report, retry-event, usage |
 | `nself build` | Compose your infrastructure from .env | core | — |
@@ -129,7 +123,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 81**
 | `nself clean` | Remove generated artifacts (docker-compose.yml, nginx configs, build cache) | core | — |
 | `nself completion` | Generate shell completion scripts | account | — |
 | `nself config` | Manage project configuration | config | export, features, get, import, list, set, show, validate |
-| `nself costs` | Show estimated per-install operational costs | observe | — |
 | `nself db` | Database operations: migrations, backups, restore, seed, shell | data | backup, backup-sync, backup-sync-status, drift, drop, fk-index, hasura, lint, list, migrate, pgbouncer, pitr, reset, reset-checksum, restore, restore-drill, restore-drill-list, rls, seed, shell, soft-delete, verify-checksums |
 | `nself deploy` | Deploy the stack to a target environment | deploy | check-access, environments, health, logs, promote, rollback, status, web |
 | `nself dev` | Start development environment | core | — |
@@ -144,7 +137,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 81**
 | `nself functions` | Manage serverless functions | data | delete, deploy, invoke, list, logs |
 | `nself gateway` | Manage the nSelf AI gateway (nself-ai-gateway, port 3761) | ai | keys, quota, routes, status |
 | `nself gauth` | Manage Google OAuth tokens for nSelf AI services | ai | refresh, revoke, status |
-| `nself gdpr` | GDPR data portability and right-to-erasure (Art. 20, 17) | advanced | delete, export, forget, list-requests, status |
 | `nself generate` | Generate type-safe client SDK types from the live Hasura schema | config | — |
 | `nself health` | Health check management with continuous monitoring | observe | check, config, endpoint, history, service, watch |
 | `nself help-topics` | Browse help topics (quickstart, plugins, license, envs, doctor, errors) | account | — |
@@ -164,7 +156,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 81**
 | `nself monitor` | Monitoring stack management | observe | upgrade-dashboards |
 | `nself oauth` | Manage OAuth provider tokens | account | refresh |
 | `nself ops` | Ops-profile deployment and management | deploy | deploy |
-| `nself pentest-kit` | Penetration-test readiness kit (Business+) | advanced | credentials, generate, remediation, status |
 | `nself plugin` | Manage nSelf plugins | extend | audit-tables, compat-check, debug, dev, disable, enable, info, init, install, inventory, link, list, logs, marketplace, new, outdated, refresh, remove, search, start, status, stop, submit, test, unlink, update, updates |
 | `nself promote` | Promote one environment to another (e.g. staging to prod) | deploy | rollback |
 | `nself queue` | Manage async job queues (pg-boss) | data | cron, jobs, list, purge, retry |
@@ -179,7 +170,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 81**
 | `nself sentry` | ɳSentry ops: status, alerts, and observability | observe | alerts, incidents, login, logout, monitors, status, status-pages, whoami |
 | `nself sentry-server` | Provision and manage ɳSentry ops servers | observe | provision |
 | `nself service` | Manage optional services | config | add, configure, disable, enable, list, ps, restart, scale, start, stop, update, upgrade |
-| `nself soak` | Manage soak testing lifecycle | observe | abort |
 | `nself start` | Boot your nSelf stack | core | — |
 | `nself status` | Show health status of all services | core | — |
 | `nself stop` | Gracefully shut down all services or specific services | core | — |

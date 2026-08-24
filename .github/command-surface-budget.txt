@@ -3,4 +3,4 @@
 # of .claude/tasks/cli-review-tickets-2026-08-23.md).
 # internal/repoqa/command_surface_test.go fails if the real count rises above
 # this, and separately if this number is left higher than reality.
-81
+76
