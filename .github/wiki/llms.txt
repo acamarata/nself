@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (83)
+## Commands (82)
 
 ### nself account
 
@@ -1591,22 +1591,6 @@ Flags:
 - `--short` (default false) — Print version number only
 
 Full page: [[cmd-version]]
-
-### nself waf
-
-Manage the Web Application Firewall (Coraza + OWASP CRS)
-
-```
-nself waf <subcommand> [flags]
-```
-
-Subcommands:
-
-- `enable` — Enable the WAF in detection mode
-- `mode` — Set WAF enforcement mode
-- `report` — Show recent WAF events
-
-Full page: [[cmd-waf]]
 
 ### nself watchdog
 

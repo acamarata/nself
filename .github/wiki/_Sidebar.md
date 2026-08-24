@@ -19,9 +19,9 @@
 - _Data:_ [[cmd-db]] · [[cmd-backup]] · [[cmd-dr]] · [[cmd-queue]] · [[cmd-webhooks]]
 - _Config:_ [[cmd-config]] · [[cmd-service]] · [[cmd-env]] · [[cmd-promote]]
 - _Networking:_ [[cmd-ssl]] · [[cmd-trust]] · [[cmd-dns-setup]]
-- _Security:_ [[cmd-security]] · [[cmd-secrets]] · [[cmd-waf]]
+- _Security:_ [[cmd-security]] · [[cmd-secrets]]
 - _Tenancy:_ [[cmd-tenant]] · [[cmd-billing]]
-- _Plugins:_ [[cmd-plugin]] · [[cmd-license]] · [[cmd-dogfood]] (extracted, CLI-R11) · [[cmd-encryption]] (extracted, CLI-R11)
+- _Plugins:_ [[cmd-plugin]] · [[cmd-license]] · [[cmd-dogfood]] (extracted, CLI-R11) · [[cmd-encryption]] (extracted, CLI-R11) · [[cmd-waf]] (extracted, CLI-R11)
 - _AI:_ [[cmd-ai]] · [[cmd-claw]] · [[cmd-model]]
 - _Templates:_ [[cmd-template]]
 - _Utilities:_ [[cmd-exec]] · [[cmd-clean]] · [[cmd-reset]] · [[cmd-update]] · [[cmd-upgrade]] · [[cmd-version]] · [[cmd-admin]] · [[cmd-migrate]] · [[cmd-migrate-firebase]] · [[cmd-migrate-supabase]] · [[cmd-completion]]
@@ -279,7 +279,7 @@
 
 <!-- BEGIN GENERATED:command-list -->
 
-**All commands (83)**
+**All commands (82)**
 
 - _A:_ [[cmd-account]] · [[cmd-admin]] · [[cmd-ai]] · [[cmd-ai-studio]] · [[cmd-alerts]] · [[cmd-api]] · [[cmd-audit]]
 - _B:_ [[cmd-backup]] · [[cmd-billing]] · [[cmd-build]] · [[cmd-bundle]]
@@ -301,6 +301,6 @@
 - _T:_ [[cmd-telemetry]] · [[cmd-template]] · [[cmd-tenant]] · [[cmd-trust]]
 - _U:_ [[cmd-update]] · [[cmd-upgrade]] · [[cmd-urls]]
 - _V:_ [[cmd-verify-sbom]] · [[cmd-version]]
-- _W:_ [[cmd-waf]] · [[cmd-watchdog]] · [[cmd-webhooks]]
+- _W:_ [[cmd-watchdog]] · [[cmd-webhooks]]
 
 <!-- END GENERATED:command-list -->

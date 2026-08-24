@@ -323,11 +323,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"version", []string{"version", "unknownsub_xyz"}, "(c) unknown sub"},
 	{"version", []string{"version", "--format", "INVALIDFORMAT_XYZ"}, "(a) bad format"},
 
-	// ── waf ────────────────────────────────────────────────────────────────
-	{"waf", []string{"waf"}, "(a) no project dir"},
-	{"waf", []string{"waf", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"waf", []string{"waf", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── watchdog ───────────────────────────────────────────────────────────
 	{"watchdog", []string{"watchdog"}, "(a) no project dir"},
 	{"watchdog", []string{"watchdog", "--no-such-flag-xyz"}, "(b) invalid flag"},

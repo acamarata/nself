@@ -3624,36 +3624,6 @@
     ]
   },
   {
-    "name": "waf",
-    "path": "nself waf",
-    "short": "Manage the Web Application Firewall (Coraza + OWASP CRS)",
-    "hidden": false,
-    "group_id": "advanced",
-    "subcommands": [
-      {
-        "name": "enable",
-        "path": "nself waf enable",
-        "short": "Enable the WAF in detection mode",
-        "hidden": false
-      },
-      {
-        "name": "mode",
-        "path": "nself waf mode",
-        "short": "Set WAF enforcement mode",
-        "hidden": false
-      },
-      {
-        "name": "report",
-        "path": "nself waf report",
-        "short": "Show recent WAF events",
-        "hidden": false,
-        "flags": [
-          "--since"
-        ]
-      }
-    ]
-  },
-  {
     "name": "watchdog",
     "path": "nself watchdog",
     "short": "Self-healing container watchdog with circuit breaker",
