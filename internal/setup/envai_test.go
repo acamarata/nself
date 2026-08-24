@@ -3,6 +3,7 @@ package setup
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -47,8 +48,15 @@ func TestWriteAIConfig_Permissions0600(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stat .env.secrets: %v", err)
 	}
-	if perm := info.Mode().Perm(); perm != 0o600 {
-		t.Errorf(".env.secrets perm = %o, want 0600", perm)
+	// Windows has no Unix permission bits — Go's os package models only the
+	// read-only flag, so a file written 0600 reports 0666 there. The 0600
+	// requirement is a real invariant on Unix (P15 shipped .env.local at 0644
+	// and leaked secrets), so the production chmod stays; only the assertion
+	// is platform-gated.
+	if runtime.GOOS != "windows" {
+		if perm := info.Mode().Perm(); perm != 0o600 {
+			t.Errorf(".env.secrets perm = %o, want 0600", perm)
+		}
 	}
 }
 

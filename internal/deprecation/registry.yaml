@@ -149,7 +149,13 @@ items:
     since: "v1.2.8"
     replacement: "nself install dogfood"
     docs_url: "https://nself.org/docs/plugins/dogfood"
-    phase: 3
+    # Phase 1, not 3. Phase 3 means "removed", and the deprecation-cycle
+    # workflow rightly refuses a jump straight to it without a prior warning
+    # release. But it is also the wrong classification: a CLI-R11 extraction
+    # RELOCATES a command, it does not delete it. `nself dogfood ...` works
+    # exactly as before once `nself install dogfood` has run, which is what
+    # phase 1 describes.
+    phase: 1
 
 # =============================================================================
 # Plugin API versioning — G2 (api_version), G4 (deprecated_endpoints + removal)

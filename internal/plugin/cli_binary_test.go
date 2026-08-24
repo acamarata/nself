@@ -37,7 +37,7 @@ func TestLinkCLIBinary_PublishesWhereProxyLooks(t *testing.T) {
 		t.Fatalf("linkCLIBinary: %v", err)
 	}
 
-	published := filepath.Join(PluginBinDir(), "nself-dogfood")
+	published := PublishedBinaryPath("nself-dogfood")
 	info, err := os.Stat(published)
 	if err != nil {
 		t.Fatalf("binary was not published where ProxyCommand looks (%s): %v", published, err)
@@ -68,7 +68,7 @@ func TestLinkCLIBinary_IgnoresServicePlugins(t *testing.T) {
 		t.Fatalf("linkCLIBinary: %v", err)
 	}
 
-	if _, err := os.Stat(filepath.Join(PluginBinDir(), "nself-backup")); err == nil {
+	if _, err := os.Stat(PublishedBinaryPath("nself-backup")); err == nil {
 		t.Error("a service plugin had a binary published into the command lookup path")
 	}
 }
@@ -102,7 +102,7 @@ func TestUnlinkCLIBinary_RemovesPublishedCommand(t *testing.T) {
 	if err := os.MkdirAll(binDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
 	}
-	published := filepath.Join(binDir, "nself-dogfood")
+	published := PublishedBinaryPath("nself-dogfood")
 	if err := os.WriteFile(published, []byte("x"), 0o755); err != nil {
 		t.Fatalf("write: %v", err)
 	}

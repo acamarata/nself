@@ -196,6 +196,28 @@ func invokedCommandPath(cmd *cobra.Command) string {
 	return prefix + " " + called
 }
 
+// warnRelocatedCommand emits the deprecation notice for a command that has
+// moved out of core into a plugin.
+//
+// The registry is keyed on the spelling the user typed, same as
+// invokedCommandPath, but this path runs before cobra: an extracted command is
+// no longer registered, so RootCmd.Execute never reaches PersistentPreRunE for
+// it. Without this the entry exists only as documentation and the user is told
+// nothing about where the command went.
+func warnRelocatedCommand(cmdName string) {
+	if deprecationRegistry == nil {
+		return
+	}
+	for _, a := range os.Args {
+		if a == "--no-deprecation-warnings" || a == "--quiet" {
+			return
+		}
+	}
+	if item, ok := deprecationRegistry.Lookup("nself " + cmdName); ok {
+		deprecationRegistry.Warn(os.Stderr, item)
+	}
+}
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main().
 func Execute() error {
@@ -233,6 +255,13 @@ func Execute() error {
 			}
 
 			if !isKnown {
+				// A command that left core for a plugin (CLI-R11) still has a
+				// deprecation registry entry naming where it went. cobra never
+				// sees the invocation — it is not a registered command — so
+				// PersistentPreRunE's warning never runs and the entry would be
+				// decorative. Emit it here, on the one path that does see it.
+				warnRelocatedCommand(cmdName)
+
 				// Proxy to plugin
 				pluginArgs := []string{}
 				if len(os.Args) > 2 {

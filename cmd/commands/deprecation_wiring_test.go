@@ -108,36 +108,46 @@ func TestNoDeprecationWarningsFlagSuppresses(t *testing.T) {
 }
 
 // TestEveryDeprecatedCommandEntryIsReachable stops the registry filling up with
-// entries that can never match. Each `type: command` entry must name a real
-// command path or a real alias of one; otherwise the warning is dead weight and
-// the rename it documents is silently unannounced.
+// entries that never produce a message.
 //
-// Exception: phase 3 ("removed", per the schema comment atop registry.yaml)
-// entries are exempt. Phase 1/2 promise a working rewrite target — reachable
-// through a registered command or a legacySpellings alias — so an unreachable
-// one really is dead weight. Phase 3 means the opposite: the command was
-// deleted outright (CLI-R11 plugin extraction is the first case), so by
-// definition nothing in RootCmd's tree can ever reach it again. The entry's
-// job there is purely documentary: it pins the replacement text so it stays
-// reviewable and consistent with whatever does surface the message at
-// runtime (for a plugin extraction, internal/plugin.ProxyCommand's own
-// "unknown command" hint — see the dogfood entry's comment in registry.yaml).
+// There are exactly three ways an entry can surface:
+//   - the name is a registered command or an alias of one, handled by
+//     PersistentPreRunE via invokedCommandPath (CLI-R03);
+//   - the name is a retired top-level spelling, rewritten onto its new home by
+//     legacy_spellings.go (CLI-R09);
+//   - the name is no longer registered at all because the command moved out to
+//     a plugin, handled by warnRelocatedCommand on the proxy path (CLI-R11).
+//
+// A hidden command is a fourth, legitimate shape: deprecated but still working,
+// warning on its own canonical name (CLI-R19's `uninstall`).
+//
+// The third case is why there is no phase-3 exemption here. An earlier version
+// exempted phase 3 on the grounds that a removed command is unreachable by
+// definition — but that accepted a decorative entry that told the user nothing.
+// Wiring the proxy path into the registry made it reachable for real, so the
+// test can demand that every entry works rather than excusing the ones that do
+// not.
 func TestEveryDeprecatedCommandEntryIsReachable(t *testing.T) {
 	reg, err := deprecation.LoadEmbeddedRegistry()
 	if err != nil {
 		t.Fatalf("LoadEmbeddedRegistry: %v", err)
 	}
 
-	reachable := map[string]bool{}
+	registered := map[string]bool{}
+	hidden := map[string]bool{}
+	aliased := map[string]bool{}
 	var walk func(c *cobra.Command)
 	walk = func(c *cobra.Command) {
-		reachable[c.CommandPath()] = true
+		registered[c.CommandPath()] = true
+		if c.Hidden {
+			hidden[c.CommandPath()] = true
+		}
 		prefix := "nself"
 		if p := c.Parent(); p != nil {
 			prefix = p.CommandPath()
 		}
 		for _, a := range c.Aliases {
-			reachable[prefix+" "+a] = true
+			aliased[prefix+" "+a] = true
 		}
 		for _, sub := range c.Commands() {
 			walk(sub)
@@ -145,29 +155,81 @@ func TestEveryDeprecatedCommandEntryIsReachable(t *testing.T) {
 	}
 	walk(RootCmd)
 
-	// Retired top-level spellings are reachable through argv rewriting rather
-	// than through a registered command (CLI-R09, legacy_spellings.go).
-	for name := range legacySpellings {
-		reachable["nself "+name] = true
-	}
-
-	var dead []string
+	var noisy []string
 	for _, name := range reg.Names() {
 		item, _ := reg.Lookup(name)
 		if item.Type != deprecation.TypeCommand {
 			continue
 		}
-		if item.Phase >= 3 {
-			continue // removed entirely — see the exemption note above.
+
+		// An entry naming a live command by its CANONICAL name would fire on
+		// every correct invocation. That is the failure worth catching: an
+		// unregistered name is handled by the proxy path, and an alias or a
+		// legacy spelling is handled by its own mechanism.
+		isTopLevelLegacy := false
+		if rest, ok := strings.CutPrefix(name, "nself "); ok {
+			_, isTopLevelLegacy = legacySpellings[rest]
 		}
-		if !reachable[name] {
-			dead = append(dead, name)
+		// A hidden command is deprecated-but-working (CLI-R19 keeps `uninstall`
+		// this way so existing scripts behave identically). Warning on its
+		// canonical name is the whole point, so it is not noise.
+		if registered[name] && !hidden[name] && !aliased[name] && !isTopLevelLegacy {
+			noisy = append(noisy, name)
 		}
 	}
 
-	if len(dead) > 0 {
-		t.Fatalf("deprecation registry has %d command entr(ies) no invocation can reach:\n  %s",
-			len(dead), strings.Join(dead, "\n  "))
+	if len(noisy) > 0 {
+		t.Fatalf("deprecation registry names %d live command(s) by their canonical spelling, "+
+			"which would warn on every correct invocation:\n  %s",
+			len(noisy), strings.Join(noisy, "\n  "))
+	}
+}
+
+// TestRelocatedCommandEntriesAreWiredToTheProxy proves the third surfacing
+// route actually works: a registry entry for a command that has left core must
+// produce its message through warnRelocatedCommand, not sit there as
+// documentation.
+func TestRelocatedCommandEntriesAreWiredToTheProxy(t *testing.T) {
+	reg, err := deprecation.LoadEmbeddedRegistry()
+	if err != nil {
+		t.Fatalf("LoadEmbeddedRegistry: %v", err)
+	}
+
+	registered := map[string]bool{}
+	for _, c := range RootCmd.Commands() {
+		registered["nself "+c.Name()] = true
+		for _, a := range c.Aliases {
+			registered["nself "+a] = true
+		}
+	}
+
+	checked := 0
+	for _, name := range reg.Names() {
+		item, _ := reg.Lookup(name)
+		if item.Type != deprecation.TypeCommand || registered[name] {
+			continue
+		}
+		bare, ok := strings.CutPrefix(name, "nself ")
+		if !ok {
+			continue
+		}
+		if _, isLegacy := legacySpellings[bare]; isLegacy {
+			continue
+		}
+
+		out := captureStderr(t, func() { warnRelocatedCommand(bare) })
+		if !strings.Contains(out, "[DEPRECATED]") {
+			t.Errorf("relocated command %q produces no message on the proxy path", name)
+			continue
+		}
+		if item.Replacement != "" && !strings.Contains(out, item.Replacement) {
+			t.Errorf("message for %q does not name its replacement %q: %s", name, item.Replacement, out)
+		}
+		checked++
+	}
+
+	if checked == 0 {
+		t.Skip("no relocated commands in the registry yet")
 	}
 }
 

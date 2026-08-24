@@ -33,6 +33,20 @@ import (
 // where that is.
 func PluginBinDir() string { return pluginBinDir() }
 
+// PublishedBinaryPath returns where a plugin's command binary is published,
+// including the platform's executable suffix.
+//
+// Exported so tests assert against the same path the installer writes. Having
+// the test compute the name itself is how the Windows job went red: the
+// installer appended .exe and the test did not.
+func PublishedBinaryPath(binName string) string {
+	dst := filepath.Join(pluginBinDir(), binName)
+	if runtime.GOOS == "windows" {
+		dst += ".exe"
+	}
+	return dst
+}
+
 // cliBinaryName returns the binary name a CLI-type plugin installs, or "" when
 // the plugin does not provide a command.
 //
@@ -76,10 +90,7 @@ func linkCLIBinary(destDir, name string, m *PluginManifest) error {
 		return fmt.Errorf("creating plugin bin dir: %w", err)
 	}
 
-	dst := filepath.Join(binDir, binName)
-	if runtime.GOOS == "windows" {
-		dst += ".exe"
-	}
+	dst := PublishedBinaryPath(binName)
 
 	// Replace any previous version rather than failing on an existing file: an
 	// upgrade must leave the proxy pointing at the new binary.
@@ -101,10 +112,7 @@ func unlinkCLIBinary(name string, m *PluginManifest) error {
 		binName = "nself-" + name // best effort on an unreadable manifest
 	}
 
-	dst := filepath.Join(pluginBinDir(), binName)
-	if runtime.GOOS == "windows" {
-		dst += ".exe"
-	}
+	dst := PublishedBinaryPath(binName)
 	if err := os.Remove(dst); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("removing plugin binary %s: %w", dst, err)
 	}
