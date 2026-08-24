@@ -1257,57 +1257,6 @@
     ]
   },
   {
-    "name": "encryption",
-    "path": "nself encryption",
-    "short": "Manage BYOK per-tenant encryption (Enterprise)",
-    "hidden": false,
-    "group_id": "advanced",
-    "subcommands": [
-      {
-        "name": "configure",
-        "path": "nself encryption configure",
-        "short": "Configure a KMS provider for BYOK encryption",
-        "hidden": false,
-        "flags": [
-          "--credentials-ref",
-          "--endpoint",
-          "--key-id",
-          "--key-name",
-          "--key-path",
-          "--provider",
-          "--region"
-        ]
-      },
-      {
-        "name": "key-events",
-        "path": "nself encryption key-events",
-        "short": "List the key event audit trail",
-        "hidden": false
-      },
-      {
-        "name": "rotate",
-        "path": "nself encryption rotate",
-        "short": "Rotate data encryption keys",
-        "hidden": false,
-        "flags": [
-          "--dry-run"
-        ]
-      },
-      {
-        "name": "status",
-        "path": "nself encryption status",
-        "short": "Show BYOK configuration and last verification",
-        "hidden": false
-      },
-      {
-        "name": "verify",
-        "path": "nself encryption verify",
-        "short": "Test KMS connectivity (wrap+unwrap round-trip)",
-        "hidden": false
-      }
-    ]
-  },
-  {
     "name": "env",
     "path": "nself env",
     "short": "Multi-environment management: switch, list, diff, copy",

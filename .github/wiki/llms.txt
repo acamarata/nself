@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (84)
+## Commands (83)
 
 ### nself account
 
@@ -486,24 +486,6 @@ Subcommands:
 - `rollback` — Demote promoted standby and resync from original primary
 
 Full page: [[cmd-dr]]
-
-### nself encryption
-
-Manage BYOK per-tenant encryption (Enterprise)
-
-```
-nself encryption <subcommand> [flags]
-```
-
-Subcommands:
-
-- `configure` — Configure a KMS provider for BYOK encryption
-- `key-events` — List the key event audit trail
-- `rotate` — Rotate data encryption keys
-- `status` — Show BYOK configuration and last verification
-- `verify` — Test KMS connectivity (wrap+unwrap round-trip)
-
-Full page: [[cmd-encryption]]
 
 ### nself env
 

@@ -209,15 +209,6 @@
       "openapi": "n/a (see below)"
     },
     {
-      "name": "encryption",
-      "path": "nself encryption",
-      "group_id": "advanced",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "undocumented: BYOK_PLUGIN_URL, NSELF_API_URL, NSELF_TENANT_ID",
-      "openapi": "n/a (see below)"
-    },
-    {
       "name": "env",
       "path": "nself env",
       "group_id": "config",

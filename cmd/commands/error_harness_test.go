@@ -393,11 +393,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"ai-studio", []string{"ai-studio", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"ai-studio", []string{"ai-studio", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── encryption ─────────────────────────────────────────────────────────
-	{"encryption", []string{"encryption"}, "(a) no project dir"},
-	{"encryption", []string{"encryption", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"encryption", []string{"encryption", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── federation ─────────────────────────────────────────────────────────
 	{"federation", []string{"federation"}, "(a) no project dir"},
 	{"federation", []string{"federation", "--no-such-flag-xyz"}, "(b) invalid flag"},

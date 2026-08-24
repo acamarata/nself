@@ -157,6 +157,18 @@ items:
     # phase 1 describes.
     phase: 1
 
+  # CLI-R11 thin-core extraction. Same shape as `nself dogfood` above: moved
+  # to a plugin entirely, not rewritten to a new core subcommand, so this
+  # entry is not consulted by the current ProxyCommand code path (see the
+  # dogfood entry's comment for the full explanation). Phase 1, not 3, for
+  # the same reason: the command is relocated, not removed.
+  - name: "nself encryption"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install encryption"
+    docs_url: "https://nself.org/docs/plugins/encryption"
+    phase: 1
+
 # =============================================================================
 # Plugin API versioning — G2 (api_version), G4 (deprecated_endpoints + removal)
 # =============================================================================

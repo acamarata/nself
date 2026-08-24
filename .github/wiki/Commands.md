@@ -33,7 +33,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself dns-setup` | Add project domains to /etc/hosts (run with sudo) | — | — |
 | `nself doctor` | Run comprehensive system diagnostics | — | — |
 | `nself dr` | Disaster recovery operations: drill, promote-standby, reconfigure-dns, rollback, fence | — | drill, fence, promote-standby, reconfigure-dns, rollback |
-| `nself encryption` | Manage BYOK per-tenant encryption (Enterprise) | — | configure, key-events, rotate, status, verify |
 | `nself env` | Multi-environment management: switch, list, diff, copy | — | copy, diff, list, show, target, use |
 | `nself exec` | Execute a command inside a service container | — | — |
 | `nself feature` | Manage CLI-built-in feature flags | — | disable, enable, list, status |
@@ -110,7 +109,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 84**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 83**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -137,7 +136,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 84**
 | `nself dlq` | Manage dead-letter queues for nSelf plugins | data | replay |
 | `nself doctor` | Run comprehensive system diagnostics | core | — |
 | `nself dr` | Disaster recovery operations: drill, promote-standby, reconfigure-dns, rollback, fence | deploy | drill, fence, promote-standby, reconfigure-dns, rollback |
-| `nself encryption` | Manage BYOK per-tenant encryption (Enterprise) | advanced | configure, key-events, rotate, status, verify |
 | `nself env` | Multi-environment management: switch, list, diff, copy | config | copy, diff, explain, list, show, target, use |
 | `nself exec` | Execute a command inside a service container | core | — |
 | `nself federation` | Manage GraphQL Federation (opt-in, requires NSELF_FEDERATION=true) | advanced | compose, introspect, status |

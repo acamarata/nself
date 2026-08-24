@@ -1,110 +1,39 @@
 # nself encryption
 
 <!-- BEGIN PROSE:summary -->
-> Manage BYOK per-tenant encryption for nSelf Cloud (Enterprise tier only).
+> Moved to a plugin (CLI-R11). Install it to keep using `nself encryption`.
 <!-- END PROSE:summary -->
 
-## Synopsis
+## This command moved
 
-```
-nself encryption <subcommand> [flags]
-```
-
-## Description
-
-<!-- BEGIN PROSE:description -->
-`nself encryption` manages Bring Your Own Key (BYOK) encryption for nSelf Cloud tenants. Each tenant supplies a Customer Managed Key (CMK) hosted in AWS KMS, GCP Cloud KMS, or HashiCorp Vault Transit. nSelf uses envelope encryption: data is encrypted with a Data Encryption Key (DEK), and the DEK is wrapped by the tenant's CMK. The CMK never leaves the tenant's KMS.
-
-Key operations: configure a KMS provider, verify connectivity with a wrap/unwrap round-trip, rotate DEKs after a CMK rotation, check the current configuration status, and review the key event audit trail.
-
-Set `BYOK_PLUGIN_URL` to point at your BYOK plugin endpoint. If unset, the command falls back to `NSELF_API_URL`, then `http://localhost:3741`. Set `NSELF_TENANT_ID` to scope requests to a specific tenant.
-
-> **Enterprise tier required.** BYOK encryption requires `NSELF_BYOK=true` and a valid Enterprise license. This command has no effect on self-hosted Community or ɳSelf+ deployments.
-
-### nself encryption configure
-### nself encryption rotate
-<!-- END PROSE:description -->
-
-## Flags
-
-<!-- BEGIN GENERATED:flags -->
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--help`, `-h` | — | Show help |
-<!-- END GENERATED:flags -->
-
-## Subcommands
-
-<!-- BEGIN GENERATED:subcommands -->
-| Name | Description |
-|------|-------------|
-| `configure` | Configure a KMS provider for BYOK encryption |
-| `key-events` | List the key event audit trail |
-| `rotate` | Rotate data encryption keys |
-| `status` | Show BYOK configuration and last verification |
-| `verify` | Test KMS connectivity (wrap+unwrap round-trip) |
-<!-- END GENERATED:subcommands -->
-
-## Examples
-
-<!-- BEGIN PROSE:examples -->
-```bash
-# Configure AWS KMS
-nself encryption configure \
-  --provider aws \
-  --key-id arn:aws:kms:us-east-1:123456789:key/abc123 \
-  --region us-east-1
-```
+`encryption` was extracted from the core binary into the `encryption` plugin
+as part of [CLI-R11](https://github.com/nself-org/cli/blob/main/.claude) (the
+thin-core extraction). The command surface is unchanged — only where the code
+lives changed.
 
 ```bash
-# Configure GCP Cloud KMS
-nself encryption configure \
-  --provider gcp \
-  --key-name projects/my-project/locations/global/keyRings/my-ring/cryptoKeys/my-key
-```
-
-```bash
-# Configure HashiCorp Vault Transit
-nself encryption configure \
-  --provider vault \
-  --key-path transit/keys/tenant-abc \
-  --endpoint https://vault.example.com
-```
-
-```bash
-# Verify KMS connectivity after configuration
+nself install encryption
+nself encryption configure --provider aws --key-id arn:aws:kms:us-east-1:123456:key/abc123
 nself encryption verify
-```
-
-```bash
-# Check current BYOK configuration
-nself encryption status
-```
-
-```bash
-# Preview a key rotation without applying it
-nself encryption rotate --dry-run
-```
-
-```bash
-# Rotate DEKs after rotating the CMK in your KMS
 nself encryption rotate
-```
-
-```bash
-# Review key event audit trail
+nself encryption status
 nself encryption key-events
 ```
-<!-- END PROSE:examples -->
+
+Until it is installed, `nself encryption ...` prints an install hint pointing
+here. Full documentation (flags, exit codes, examples) now lives with the
+plugin: https://github.com/nself-org/plugins-pro/tree/main/paid/encryption
+
+BYOK encryption requires an ɳSelf+ or Enterprise license (`NSELF_BYOK=true`);
+it has no effect on self-hosted Community deployments.
 
 ## See Also
 
 <!-- BEGIN PROSE:see-also -->
-- [cmd-license.md](cmd-license.md) — manage your nSelf license key (Enterprise tier required)
-- [cmd-audit.md](cmd-audit.md) — view the security audit log
-- [cmd-doctor.md](cmd-doctor.md) — verify environment and configuration health
-- [cmd-config.md](cmd-config.md) — view and set nSelf configuration values
-- [cmd-status.md](cmd-status.md) — view the running state of your nSelf install
+- [[cmd-install]], plugin/bundle install sugar
+- [[cmd-plugin]], plugin lifecycle management
+- [[cmd-license]], manage your nSelf license key
+- [[Commands]], full command index
 <!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →
