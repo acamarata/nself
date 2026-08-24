@@ -3,6 +3,8 @@ package plugin
 import (
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -42,8 +44,14 @@ func TestLinkCLIBinary_PublishesWhereProxyLooks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("binary was not published where ProxyCommand looks (%s): %v", published, err)
 	}
-	if info.Mode().Perm()&0o111 == 0 {
+	// Windows has no executable permission bit — what makes a file runnable
+	// there is the .exe extension, which PublishedBinaryPath supplies. Go
+	// reports 0666 for any file it writes, so this assertion is Unix-only.
+	if runtime.GOOS != "windows" && info.Mode().Perm()&0o111 == 0 {
 		t.Errorf("published binary is not executable: mode %v", info.Mode().Perm())
+	}
+	if runtime.GOOS == "windows" && !strings.HasSuffix(published, ".exe") {
+		t.Errorf("published binary needs a .exe suffix to be runnable on Windows: %s", published)
 	}
 }
 
