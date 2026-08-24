@@ -207,6 +207,18 @@ items:
     docs_url: "https://nself.org/docs/plugins/costs"
     phase: 1
 
+  # CLI-R11 thin-core extraction. Live on the proxy path, same as the entries
+  # above. internal/gdpr was exclusive to these commands (confirmed via
+  # grep before moving) and moved wholesale; only internal/database's single
+  # SanitizeIdentifier function had to be copied into the plugin's own
+  # internal/database package.
+  - name: "nself gdpr"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install gdpr"
+    docs_url: "https://nself.org/docs/plugins/gdpr"
+    phase: 1
+
 # =============================================================================
 # Plugin API versioning — G2 (api_version), G4 (deprecated_endpoints + removal)
 # =============================================================================

@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (80)
+## Commands (79)
 
 ### nself account
 
@@ -600,24 +600,6 @@ Subcommands:
 - `status` — Show token expiry for all provisioned gauth accounts
 
 Full page: [[cmd-gauth]]
-
-### nself gdpr
-
-GDPR data portability and right-to-erasure (Art. 20, 17)
-
-```
-nself gdpr <subcommand> [flags]
-```
-
-Subcommands:
-
-- `delete` — Delete or anonymize all data for a user (GDPR Art. 17 erasure)
-- `export` — Export all data for a user (GDPR Art. 20 portability)
-- `forget` — Alias for 'delete' — right to be forgotten (GDPR Art. 17)
-- `list-requests` — List all GDPR requests
-- `status` — Show the status of a GDPR request
-
-Full page: [[cmd-gdpr]]
 
 ### nself generate
 

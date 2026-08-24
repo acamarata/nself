@@ -41,7 +41,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself functions` | data | yes | no | n/a | n/a (see below) |
 | `nself gateway` | ai | yes | no | n/a | n/a (see below) |
 | `nself gauth` | ai | yes | no | undocumented: GAUTH_PORT, GAUTH_URL | n/a (see below) |
-| `nself gdpr` | advanced | yes | no | documented | n/a (see below) |
 | `nself generate` | config | yes | no | undocumented: NSELF_HASURA_PROD_ADMIN_SECRET, NSELF_HASURA_PROD_URL, NSELF_HASURA_STAGING_ADMIN_SECRET, NSELF_HASURA_STAGING_URL | n/a (see below) |
 | `nself health` | observe | yes | no | n/a | n/a (see below) |
 | `nself help-topics` | account | yes | no | n/a | n/a (see below) |
@@ -93,4 +92,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself watchdog` | observe | yes | no | undocumented: NSELF_ENV | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 80 commands. Missing wiki page: 0. No MCP tool: 62. Env vars found but undocumented: 29.
+Total: 79 commands. Missing wiki page: 0. No MCP tool: 61. Env vars found but undocumented: 29.

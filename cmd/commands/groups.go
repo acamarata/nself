@@ -138,7 +138,6 @@ var commandGroupAssignments = map[string]string{
 	"security":    groupAdvanced,
 	"encryption":  groupAdvanced,
 	"waf":         groupAdvanced,
-	"gdpr":        groupAdvanced,
 	"tenant":      groupAdvanced,
 	"federation":  groupAdvanced,
 	"mail":        groupAdvanced,

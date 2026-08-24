@@ -40,7 +40,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself functions` | Manage serverless functions | — | delete, deploy, invoke, list, logs |
 | `nself gateway` | Manage the nSelf AI gateway (nself-ai-gateway, port 3761) | — | keys, quota, routes, status |
 | `nself gauth` | Manage Google OAuth tokens for nSelf AI services | — | refresh, revoke, status |
-| `nself gdpr` | GDPR data portability and right-to-erasure (Art. 20, 17) | — | delete, export, forget, list-requests, status |
 | `nself generate` | Generate type-safe client SDK types from the live Hasura schema | — | — |
 | `nself health` | Health check management with continuous monitoring | — | check, config, endpoint, history, service, watch |
 | `nself help-topics` | Browse help topics (quickstart, plugins, license, envs, doctor, errors) | — | — |
@@ -106,7 +105,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 80**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 79**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -139,7 +138,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 80**
 | `nself functions` | Manage serverless functions | data | delete, deploy, invoke, list, logs |
 | `nself gateway` | Manage the nSelf AI gateway (nself-ai-gateway, port 3761) | ai | keys, quota, routes, status |
 | `nself gauth` | Manage Google OAuth tokens for nSelf AI services | ai | refresh, revoke, status |
-| `nself gdpr` | GDPR data portability and right-to-erasure (Art. 20, 17) | advanced | delete, export, forget, list-requests, status |
 | `nself generate` | Generate type-safe client SDK types from the live Hasura schema | config | — |
 | `nself health` | Health check management with continuous monitoring | observe | check, config, endpoint, history, service, watch |
 | `nself help-topics` | Browse help topics (quickstart, plugins, license, envs, doctor, errors) | account | — |

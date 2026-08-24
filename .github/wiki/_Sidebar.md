@@ -279,7 +279,7 @@
 
 <!-- BEGIN GENERATED:command-list -->
 
-**All commands (80)**
+**All commands (79)**
 
 - _A:_ [[cmd-account]] · [[cmd-admin]] · [[cmd-ai]] · [[cmd-ai-studio]] · [[cmd-alerts]] · [[cmd-api]]
 - _B:_ [[cmd-backup]] · [[cmd-billing]] · [[cmd-build]] · [[cmd-bundle]]
@@ -287,7 +287,7 @@
 - _D:_ [[cmd-db]] · [[cmd-deploy]] · [[cmd-dev]] · [[cmd-dlq]] · [[cmd-doctor]] · [[cmd-dr]]
 - _E:_ [[cmd-encryption]] · [[cmd-env]] · [[cmd-exec]]
 - _F:_ [[cmd-federation]] · [[cmd-flags]] · [[cmd-functions]]
-- _G:_ [[cmd-gateway]] · [[cmd-gauth]] · [[cmd-gdpr]] · [[cmd-generate]]
+- _G:_ [[cmd-gateway]] · [[cmd-gauth]] · [[cmd-generate]]
 - _H:_ [[cmd-health]] · [[cmd-help-topics]]
 - _I:_ [[cmd-infra]] · [[cmd-init]] · [[cmd-install]]
 - _K:_ [[cmd-k8s]]

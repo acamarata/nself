@@ -1600,66 +1600,6 @@
     ]
   },
   {
-    "name": "gdpr",
-    "path": "nself gdpr",
-    "short": "GDPR data portability and right-to-erasure (Art. 20, 17)",
-    "hidden": false,
-    "group_id": "advanced",
-    "subcommands": [
-      {
-        "name": "delete",
-        "path": "nself gdpr delete",
-        "short": "Delete or anonymize all data for a user (GDPR Art. 17 erasure)",
-        "hidden": false,
-        "flags": [
-          "--dry-run",
-          "--user"
-        ]
-      },
-      {
-        "name": "export",
-        "path": "nself gdpr export",
-        "short": "Export all data for a user (GDPR Art. 20 portability)",
-        "hidden": false,
-        "flags": [
-          "--dry-run",
-          "--format",
-          "--notify",
-          "--output",
-          "--user"
-        ]
-      },
-      {
-        "name": "forget",
-        "path": "nself gdpr forget",
-        "short": "Alias for 'delete' — right to be forgotten (GDPR Art. 17)",
-        "hidden": false,
-        "flags": [
-          "--dry-run",
-          "--user"
-        ]
-      },
-      {
-        "name": "list-requests",
-        "path": "nself gdpr list-requests",
-        "short": "List all GDPR requests",
-        "hidden": false,
-        "flags": [
-          "--status"
-        ]
-      },
-      {
-        "name": "status",
-        "path": "nself gdpr status",
-        "short": "Show the status of a GDPR request",
-        "hidden": false,
-        "flags": [
-          "--request"
-        ]
-      }
-    ]
-  },
-  {
     "name": "generate",
     "path": "nself generate",
     "short": "Generate type-safe client SDK types from the live Hasura schema",

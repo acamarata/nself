@@ -263,15 +263,6 @@
       "openapi": "n/a (see below)"
     },
     {
-      "name": "gdpr",
-      "path": "nself gdpr",
-      "group_id": "advanced",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "documented",
-      "openapi": "n/a (see below)"
-    },
-    {
       "name": "generate",
       "path": "nself generate",
       "group_id": "config",

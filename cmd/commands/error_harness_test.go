@@ -388,11 +388,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"federation", []string{"federation", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"federation", []string{"federation", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── gdpr ───────────────────────────────────────────────────────────────
-	{"gdpr", []string{"gdpr"}, "(a) no project dir"},
-	{"gdpr", []string{"gdpr", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"gdpr", []string{"gdpr", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── generate ───────────────────────────────────────────────────────────
 	{"generate", []string{"generate"}, "(a) no project dir"},
 	{"generate", []string{"generate", "--no-such-flag-xyz"}, "(b) invalid flag"},
