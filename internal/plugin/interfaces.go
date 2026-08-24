@@ -125,11 +125,19 @@ type PluginManifest struct {
 	ArchSupport          []string `json:"arch_support,omitempty"`
 
 	// Implementation
-	Language       string `json:"language,omitempty"`
-	Runtime        string `json:"runtime,omitempty"`
-	Port           int    `json:"port,omitempty"`
-	EntryPoint     string `json:"entryPoint,omitempty"`
-	CLI            string `json:"cli,omitempty"`
+	Language   string `json:"language,omitempty"`
+	Runtime    string `json:"runtime,omitempty"`
+	Port       int    `json:"port,omitempty"`
+	EntryPoint string `json:"entryPoint,omitempty"`
+	CLI        string `json:"cli,omitempty"`
+	// PluginType distinguishes a plugin that adds a CLI command ("cli") from
+	// one that runs as a service. Only a "cli" plugin gets its binary published
+	// into the directory ProxyCommand searches — see cli_binary.go.
+	PluginType string `json:"pluginType,omitempty"`
+	// BinaryName overrides the nself-<name> convention for the published
+	// binary. ProxyCommand resolves nself-<command>, so this should only differ
+	// when the command name differs from the plugin name.
+	BinaryName     string `json:"binaryName,omitempty"`
 	HealthEndpoint string `json:"health_endpoint,omitempty"`
 	PackageManager string `json:"packageManager,omitempty"`
 	Framework      string `json:"framework,omitempty"`

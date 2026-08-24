@@ -289,6 +289,14 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 		return fmt.Errorf("extracting plugin %q: %w", name, err)
 	}
 
+	// Step 6b: Publish a CLI plugin's binary where ProxyCommand will find it.
+	// Without this a command-providing plugin installs cleanly and then cannot
+	// be run at all — the proxy only reads ~/.nself/plugins/bin/.
+	if err := linkCLIBinary(destDir, name, manifest); err != nil {
+		rollbackInstall(ctx, cfg, name, destDir)
+		return fmt.Errorf("publishing plugin %q command: %w", name, err)
+	}
+
 	// Step 7: Create database schema. On failure, rollback extraction.
 	if err := createPluginSchema(ctx, cfg, name); err != nil {
 		rollbackInstall(ctx, cfg, name, destDir)
@@ -406,6 +414,12 @@ func Remove(ctx context.Context, cfg *config.Config, name string, pluginDir stri
 		return fmt.Errorf("plugin %q is not installed", name)
 	}
 
+	// Read the manifest before the directory goes away, so the published
+	// binary can be un-published by the same name it was published under.
+	// Best effort: an unreadable manifest falls back to the nself-<name>
+	// convention rather than leaving a stale binary the proxy would still run.
+	removedManifest := readPluginManifest(destDir)
+
 	// Check for reverse dependencies before doing anything destructive.
 	if !force {
 		dependents, err := checkReverseDependencies(pluginDir, name)
@@ -431,6 +445,12 @@ func Remove(ctx context.Context, cfg *config.Config, name string, pluginDir stri
 		if err := dropPluginSchema(ctx, cfg, name); err != nil {
 			return fmt.Errorf("dropping schema for plugin %q: %w", name, err)
 		}
+	}
+
+	// Un-publish the command before the directory goes away, so the proxy does
+	// not keep resolving a plugin the user just removed.
+	if err := unlinkCLIBinary(name, removedManifest); err != nil {
+		return fmt.Errorf("removing plugin %q command: %w", name, err)
 	}
 
 	// Remove plugin directory.
