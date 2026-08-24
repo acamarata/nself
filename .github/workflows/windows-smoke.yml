@@ -62,7 +62,7 @@ jobs:
 
       - name: Cache Go modules
         if: ${{ inputs.arch == 'both' || inputs.arch == matrix.goarch }}
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~\AppData\Local\go-build

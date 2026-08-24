@@ -41,7 +41,7 @@ jobs:
           cache-dependency-path: go.sum
 
       - name: Cache pglite WASM
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.nself/cache/pglite
           key: pglite-wasm-${{ runner.os }}-0.2.17
