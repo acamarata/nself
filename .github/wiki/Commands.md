@@ -29,7 +29,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself db` | Database operations: migrations, backups, restore, seed, shell | — | backup, backup-sync, backup-sync-status, drift, drop, fk-index, hasura, lint, list, migrate, pgbouncer, pitr, reset, reset-checksum, restore, restore-drill, restore-drill-list, rls, seed, shell, soft-delete, verify-checksums |
 | `nself deploy` | Deploy the stack to a target environment | — | check-access, environments, health, logs, promote, rollback, status, web |
 | `nself dev` | Start development environment | — | — |
-| `nself dlq` | Manage dead-letter queues for nSelf plugins | — | replay |
 | `nself dns-setup` | Add project domains to /etc/hosts (run with sudo) | — | — |
 | `nself doctor` | Run comprehensive system diagnostics | — | — |
 | `nself dr` | Disaster recovery operations: drill, promote-standby, reconfigure-dns, rollback, fence | — | drill, fence, promote-standby, reconfigure-dns, rollback |
@@ -106,7 +105,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 80**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 79**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -130,7 +129,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 80**
 | `nself db` | Database operations: migrations, backups, restore, seed, shell | data | backup, backup-sync, backup-sync-status, drift, drop, fk-index, hasura, lint, list, migrate, pgbouncer, pitr, reset, reset-checksum, restore, restore-drill, restore-drill-list, rls, seed, shell, soft-delete, verify-checksums |
 | `nself deploy` | Deploy the stack to a target environment | deploy | check-access, environments, health, logs, promote, rollback, status, web |
 | `nself dev` | Start development environment | core | — |
-| `nself dlq` | Manage dead-letter queues for nSelf plugins | data | replay |
 | `nself doctor` | Run comprehensive system diagnostics | core | — |
 | `nself dr` | Disaster recovery operations: drill, promote-standby, reconfigure-dns, rollback, fence | deploy | drill, fence, promote-standby, reconfigure-dns, rollback |
 | `nself env` | Multi-environment management: switch, list, diff, copy | config | copy, diff, explain, list, show, target, use |

@@ -344,11 +344,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"api", []string{"api", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"api", []string{"api", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── dlq ────────────────────────────────────────────────────────────────
-	{"dlq", []string{"dlq"}, "(a) no project dir"},
-	{"dlq", []string{"dlq", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"dlq", []string{"dlq", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── dns-setup ──────────────────────────────────────────────────────────
 	{"trust dns", []string{"trust", "dns"}, "(a) no project dir"},
 	{"trust dns", []string{"trust", "dns", "--no-such-flag-xyz"}, "(b) invalid flag"},

@@ -182,15 +182,6 @@
       "openapi": "n/a (see below)"
     },
     {
-      "name": "dlq",
-      "path": "nself dlq",
-      "group_id": "data",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
       "name": "doctor",
       "path": "nself doctor",
       "group_id": "core",

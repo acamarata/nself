@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (80)
+## Commands (79)
 
 ### nself account
 
@@ -424,20 +424,6 @@ Flags:
 - `--hot` (default false) — Enable plugin hot-reload on source changes
 
 Full page: [[cmd-dev]]
-
-### nself dlq
-
-Manage dead-letter queues for nSelf plugins
-
-```
-nself dlq <subcommand> [flags]
-```
-
-Subcommands:
-
-- `replay` — Re-enqueue DLQ rows for a plugin
-
-Full page: [[cmd-dlq]]
 
 ### nself doctor
 

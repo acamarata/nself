@@ -78,7 +78,6 @@ var commandGroupAssignments = map[string]string{
 	"migrate":   groupData,
 	"functions": groupData,
 	"queue":     groupData,
-	"dlq":       groupData,
 	"webhooks":  groupData,
 
 	// Deploy & Remote.

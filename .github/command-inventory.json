@@ -1143,27 +1143,6 @@
     ]
   },
   {
-    "name": "dlq",
-    "path": "nself dlq",
-    "short": "Manage dead-letter queues for nSelf plugins",
-    "hidden": false,
-    "group_id": "data",
-    "subcommands": [
-      {
-        "name": "replay",
-        "path": "nself dlq replay",
-        "short": "Re-enqueue DLQ rows for a plugin",
-        "hidden": false,
-        "flags": [
-          "--base-url",
-          "--dry-run",
-          "--filter",
-          "--max-rows"
-        ]
-      }
-    ]
-  },
-  {
     "name": "doctor",
     "path": "nself doctor",
     "short": "Run comprehensive system diagnostics",
