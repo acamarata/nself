@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (58)
+## Commands (53)
 
 ### nself account
 
@@ -55,22 +55,6 @@ Subcommands:
 
 Full page: [[cmd-admin]]
 
-### nself api
-
-API versioning and deprecation tooling for operators
-
-```
-nself api <subcommand> [flags]
-```
-
-Subcommands:
-
-- `changelog` — Print the deprecation sunset calendar for a plugin
-- `deprecation-check` — Check for deprecated API usage in this install
-- `version` — Show API version for every surface observable from this install
-
-Full page: [[cmd-api]]
-
 ### nself backup
 
 Backup operations: create, list, restore, verify, prune, config, status, init-key
@@ -97,23 +81,6 @@ Subcommands:
 - `verify` — Verify backup integrity
 
 Full page: [[cmd-backup]]
-
-### nself billing
-
-Billing operations: usage, invoice-preview, report, retry-event
-
-```
-nself billing <subcommand> [flags]
-```
-
-Subcommands:
-
-- `invoice-preview` — Preview next Stripe invoice (requires STRIPE_SECRET_KEY)
-- `report` — Generate billing report across tenants
-- `retry-event` — Re-enqueue a failed Stripe outbox event
-- `usage` — Show usage metrics for a tenant
-
-Full page: [[cmd-billing]]
 
 ### nself build
 
@@ -352,24 +319,6 @@ Flags:
 - `--yes` (default false) — Non-interactive mode: accept all defaults (for CI/scripts)
 
 Full page: [[cmd-doctor]]
-
-### nself dr
-
-Disaster recovery operations: drill, promote-standby, reconfigure-dns, rollback, fence
-
-```
-nself dr <subcommand> [flags]
-```
-
-Subcommands:
-
-- `drill` — Execute a DR drill
-- `fence` — Set read-only flag in Redis for split-brain prevention
-- `promote-standby` — Promote warm standby to primary
-- `reconfigure-dns` — Update DNS records to point to new primary
-- `rollback` — Demote promoted standby and resync from original primary
-
-Full page: [[cmd-dr]]
 
 ### nself env
 
@@ -805,24 +754,6 @@ Flags:
 
 Full page: [[cmd-promote]]
 
-### nself queue
-
-Manage async job queues (pg-boss)
-
-```
-nself queue <subcommand> [flags]
-```
-
-Subcommands:
-
-- `cron` — Manage scheduled cron jobs
-- `jobs` — List jobs in a queue
-- `list` — List all queues with job counts
-- `purge` — Purge completed/dead jobs older than specified duration
-- `retry` — Retry a failed or dead job
-
-Full page: [[cmd-queue]]
-
 ### nself release
 
 Orchestrate the full release cascade for a version
@@ -1093,24 +1024,6 @@ Subcommands:
 - `update` — Apply incremental migrations for the installed template
 
 Full page: [[cmd-template]]
-
-### nself tenant
-
-[PREVIEW] Tenant management: create, upgrade, suspend, destroy, audit
-
-```
-nself tenant <subcommand> [flags]
-```
-
-Subcommands:
-
-- `audit` — Query tenant audit log
-- `create` — Create a new tenant
-- `destroy` — Hard-delete a tenant (DESTRUCTIVE)
-- `suspend` — Suspend a tenant
-- `upgrade` — Change a tenant's plan
-
-Full page: [[cmd-tenant]]
 
 ### nself trust
 

@@ -407,6 +407,36 @@ items:
   # every future name != registry-name extraction, not just this one, but is
   # a shared-file change out of this ticket's scope and touches code other
   # CLI-R11 extraction batches are concurrently editing — left as a follow-up.
+  - name: "nself tenant"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install tenant"
+    docs_url: "https://nself.org/docs/plugins/tenant"
+    phase: 1
+  - name: "nself billing"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install tenant"
+    docs_url: "https://nself.org/docs/plugins/tenant"
+    phase: 1
+  - name: "nself queue"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install queue"
+    docs_url: "https://nself.org/docs/plugins/queue"
+    phase: 1
+  - name: "nself dr"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install dr"
+    docs_url: "https://nself.org/docs/plugins/dr"
+    phase: 1
+  - name: "nself api"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install api"
+    docs_url: "https://nself.org/docs/plugins/api"
+    phase: 1
   - name: "nself sentry"
     type: command
     since: "v1.2.8"

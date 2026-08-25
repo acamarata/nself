@@ -14,9 +14,7 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 |---|---|---|---|---|---|
 | `nself account` | account | yes | no | undocumented: NSELF_NO_BROWSER | n/a (see below) |
 | `nself admin` | account | yes | no | undocumented: ADMIN_PORT | n/a (see below) |
-| `nself api` | extend | yes | no | n/a | n/a (see below) |
 | `nself backup` | data | yes | yes | n/a | n/a (see below) |
-| `nself billing` | account | yes | no | n/a | n/a (see below) |
 | `nself build` | core | yes | yes | undocumented: NSELF_PROFILE | n/a (see below) |
 | `nself bundle` | extend | yes | no | n/a | n/a (see below) |
 | `nself ci` | deploy | yes | no | undocumented: NSELF_FORGEJO_ADMIN_PASSWORD, NSELF_FORGEJO_ADMIN_USER | n/a (see below) |
@@ -27,7 +25,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself deploy` | deploy | yes | yes | undocumented: NSELF_DEPLOY_ENV, NSELF_DEPLOY_HOST_, NSELF_FEATURE_BLUE_GREEN_DEPLOY, VERCEL_TOKEN | n/a (see below) |
 | `nself dev` | core | yes | no | n/a | n/a (see below) |
 | `nself doctor` | core | yes | yes | undocumented: NSELF_PING_API_URL, OLLAMA_BASE_URL, OLLAMA_HOST, PLUGIN_AI_INTERNAL_URL, PLUGIN_INTERNAL_SECRET | n/a (see below) |
-| `nself dr` | deploy | yes | no | n/a | n/a (see below) |
 | `nself env` | config | yes | yes | documented | n/a (see below) |
 | `nself exec` | core | yes | no | n/a | n/a (see below) |
 | `nself flags` | config | yes | no | n/a | n/a (see below) |
@@ -49,7 +46,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself ops` | deploy | yes | no | n/a | n/a (see below) |
 | `nself plugin` | extend | yes | yes | undocumented: GOPATH, NSELF_LICENSE_SKIP_VERIFY, NSELF_LOCAL_URL, NSELF_MARKETPLACE_URL, NSELF_PING_URL, NSELF_PLUGIN_CACHE, NSELF_PLUGIN_DIR, NSELF_PLUGIN_LICENSE_KEY, NSELF_PLUGIN_REGISTRY | n/a (see below) |
 | `nself promote` | deploy | yes | no | n/a | n/a (see below) |
-| `nself queue` | data | yes | no | n/a | n/a (see below) |
 | `nself release` | deploy | yes | no | undocumented: GITHUB_TOKEN, NSELF_VERSION | n/a (see below) |
 | `nself remove` | extend | yes | no | n/a | n/a (see below) |
 | `nself reset` | core | yes | no | n/a | n/a (see below) |
@@ -63,7 +59,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself stop` | core | yes | yes | n/a | n/a (see below) |
 | `nself telemetry` | account | yes | no | undocumented: NSELF_TELEMETRY, NSELF_TELEMETRY_OPT_OUT | n/a (see below) |
 | `nself template` | config | yes | no | undocumented: NSELF_TEMPLATE_REGISTRY_URL | n/a (see below) |
-| `nself tenant` | advanced | yes | no | n/a | n/a (see below) |
 | `nself trust` | config | yes | no | n/a | n/a (see below) |
 | `nself update` | account | yes | no | n/a | n/a (see below) |
 | `nself urls` | core | yes | yes | n/a | n/a (see below) |
@@ -71,4 +66,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself version` | account | yes | no | undocumented: BENCH_RESULTS_FILE | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 58 commands. Missing wiki page: 0. No MCP tool: 41. Env vars found but undocumented: 19.
+Total: 53 commands. Missing wiki page: 0. No MCP tool: 36. Env vars found but undocumented: 19.

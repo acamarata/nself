@@ -283,12 +283,12 @@
 
 <!-- BEGIN GENERATED:command-list -->
 
-**All commands (58)**
+**All commands (53)**
 
-- _A:_ [[cmd-account]] · [[cmd-admin]] · [[cmd-api]]
-- _B:_ [[cmd-backup]] · [[cmd-billing]] · [[cmd-build]] · [[cmd-bundle]]
+- _A:_ [[cmd-account]] · [[cmd-admin]]
+- _B:_ [[cmd-backup]] · [[cmd-build]] · [[cmd-bundle]]
 - _C:_ [[cmd-ci]] · [[cmd-clean]] · [[cmd-completion]] · [[cmd-config]]
-- _D:_ [[cmd-db]] · [[cmd-deploy]] · [[cmd-dev]] · [[cmd-doctor]] · [[cmd-dr]]
+- _D:_ [[cmd-db]] · [[cmd-deploy]] · [[cmd-dev]] · [[cmd-doctor]]
 - _E:_ [[cmd-env]] · [[cmd-exec]]
 - _F:_ [[cmd-flags]] · [[cmd-functions]]
 - _G:_ [[cmd-generate]]
@@ -298,10 +298,9 @@
 - _M:_ [[cmd-maintenance]] · [[cmd-man]] · [[cmd-mcp]] · [[cmd-migrate]]
 - _O:_ [[cmd-oauth]] · [[cmd-ops]]
 - _P:_ [[cmd-plugin]] · [[cmd-promote]]
-- _Q:_ [[cmd-queue]]
 - _R:_ [[cmd-release]] · [[cmd-remove]] · [[cmd-reset]] · [[cmd-restart]]
 - _S:_ [[cmd-secrets]] · [[cmd-security]] · [[cmd-self-heal]] · [[cmd-service]] · [[cmd-start]] · [[cmd-status]] · [[cmd-stop]]
-- _T:_ [[cmd-telemetry]] · [[cmd-template]] · [[cmd-tenant]] · [[cmd-trust]]
+- _T:_ [[cmd-telemetry]] · [[cmd-template]] · [[cmd-trust]]
 - _U:_ [[cmd-update]] · [[cmd-urls]]
 - _V:_ [[cmd-verify-sbom]] · [[cmd-version]]
 - _W:_ [[cmd-webhooks]]

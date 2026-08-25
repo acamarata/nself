@@ -74,7 +74,6 @@ var commandGroupAssignments = map[string]string{
 	"backup":    groupData,
 	"migrate":   groupData,
 	"functions": groupData,
-	"queue":     groupData,
 	"webhooks":  groupData,
 
 	// Deploy & Remote.
@@ -82,7 +81,6 @@ var commandGroupAssignments = map[string]string{
 	"promote": groupDeploy,
 	"release": groupDeploy,
 	"ci":      groupDeploy,
-	"dr":      groupDeploy,
 	"ops":     groupDeploy,
 
 	// Observability.
@@ -97,7 +95,6 @@ var commandGroupAssignments = map[string]string{
 	"bundle":  groupExtend,
 	"license": groupExtend,
 	"mcp":     groupExtend,
-	"api":     groupExtend,
 
 	// Account & Meta.
 	"account":     groupAccount,
@@ -111,11 +108,9 @@ var commandGroupAssignments = map[string]string{
 	"man":         groupAccount,
 	"help-topics": groupAccount,
 	"telemetry":   groupAccount,
-	"billing":     groupAccount,
 
 	// Advanced & Enterprise.
 	"security":    groupAdvanced,
-	"tenant":      groupAdvanced,
 	"verify-sbom": groupAdvanced,
 }
 

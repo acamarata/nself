@@ -140,46 +140,6 @@
     ]
   },
   {
-    "name": "api",
-    "path": "nself api",
-    "short": "API versioning and deprecation tooling for operators",
-    "hidden": false,
-    "group_id": "extend",
-    "subcommands": [
-      {
-        "name": "changelog",
-        "path": "nself api changelog",
-        "short": "Print the deprecation sunset calendar for a plugin",
-        "hidden": false,
-        "flags": [
-          "--json"
-        ]
-      },
-      {
-        "name": "deprecation-check",
-        "path": "nself api deprecation-check",
-        "short": "Check for deprecated API usage in this install",
-        "hidden": false,
-        "flags": [
-          "--json",
-          "--plugin",
-          "--strict"
-        ]
-      },
-      {
-        "name": "version",
-        "path": "nself api version",
-        "short": "Show API version for every surface observable from this install",
-        "hidden": false,
-        "flags": [
-          "--json",
-          "--surface",
-          "--timeout"
-        ]
-      }
-    ]
-  },
-  {
     "name": "backup",
     "path": "nself backup",
     "short": "Backup operations: create, list, restore, verify, prune, config, status, init-key",
@@ -339,48 +299,6 @@
           "--cleanup",
           "--keep",
           "--restore-test"
-        ]
-      }
-    ]
-  },
-  {
-    "name": "billing",
-    "path": "nself billing",
-    "short": "Billing operations: usage, invoice-preview, report, retry-event",
-    "hidden": false,
-    "group_id": "account",
-    "subcommands": [
-      {
-        "name": "invoice-preview",
-        "path": "nself billing invoice-preview",
-        "short": "Preview next Stripe invoice (requires STRIPE_SECRET_KEY)",
-        "hidden": false
-      },
-      {
-        "name": "report",
-        "path": "nself billing report",
-        "short": "Generate billing report across tenants",
-        "hidden": false,
-        "flags": [
-          "--format",
-          "--month",
-          "--tenant"
-        ]
-      },
-      {
-        "name": "retry-event",
-        "path": "nself billing retry-event",
-        "short": "Re-enqueue a failed Stripe outbox event",
-        "hidden": false
-      },
-      {
-        "name": "usage",
-        "path": "nself billing usage",
-        "short": "Show usage metrics for a tenant",
-        "hidden": false,
-        "flags": [
-          "--format",
-          "--month"
         ]
       }
     ]
@@ -912,73 +830,6 @@
       "--skip-pool",
       "--verbose",
       "--yes"
-    ]
-  },
-  {
-    "name": "dr",
-    "path": "nself dr",
-    "short": "Disaster recovery operations: drill, promote-standby, reconfigure-dns, rollback, fence",
-    "hidden": false,
-    "group_id": "deploy",
-    "subcommands": [
-      {
-        "name": "drill",
-        "path": "nself dr drill",
-        "short": "Execute a DR drill",
-        "hidden": false,
-        "flags": [
-          "--dry-run",
-          "--hetzner-project",
-          "--install-cron",
-          "--now",
-          "--region",
-          "--render-alerts",
-          "--render-cloud-init",
-          "--scenario",
-          "--schedule",
-          "--ssh-key",
-          "--vm-type"
-        ]
-      },
-      {
-        "name": "fence",
-        "path": "nself dr fence",
-        "short": "Set read-only flag in Redis for split-brain prevention",
-        "hidden": false,
-        "flags": [
-          "--dry-run"
-        ]
-      },
-      {
-        "name": "promote-standby",
-        "path": "nself dr promote-standby",
-        "short": "Promote warm standby to primary",
-        "hidden": false,
-        "flags": [
-          "--dry-run",
-          "--region",
-          "--yes"
-        ]
-      },
-      {
-        "name": "reconfigure-dns",
-        "path": "nself dr reconfigure-dns",
-        "short": "Update DNS records to point to new primary",
-        "hidden": false,
-        "flags": [
-          "--dry-run",
-          "--ip"
-        ]
-      },
-      {
-        "name": "rollback",
-        "path": "nself dr rollback",
-        "short": "Demote promoted standby and resync from original primary",
-        "hidden": false,
-        "flags": [
-          "--dry-run"
-        ]
-      }
     ]
   },
   {
@@ -2025,56 +1876,6 @@
     ]
   },
   {
-    "name": "queue",
-    "path": "nself queue",
-    "short": "Manage async job queues (pg-boss)",
-    "hidden": false,
-    "group_id": "data",
-    "subcommands": [
-      {
-        "name": "cron",
-        "path": "nself queue cron",
-        "short": "Manage scheduled cron jobs",
-        "hidden": false
-      },
-      {
-        "name": "jobs",
-        "path": "nself queue jobs",
-        "short": "List jobs in a queue",
-        "hidden": false,
-        "flags": [
-          "--json",
-          "--limit",
-          "--state"
-        ]
-      },
-      {
-        "name": "list",
-        "path": "nself queue list",
-        "short": "List all queues with job counts",
-        "hidden": false,
-        "flags": [
-          "--json"
-        ]
-      },
-      {
-        "name": "purge",
-        "path": "nself queue purge",
-        "short": "Purge completed/dead jobs older than specified duration",
-        "hidden": false,
-        "flags": [
-          "--older-than"
-        ]
-      },
-      {
-        "name": "retry",
-        "path": "nself queue retry",
-        "short": "Retry a failed or dead job",
-        "hidden": false
-      }
-    ]
-  },
-  {
     "name": "release",
     "path": "nself release",
     "short": "Orchestrate the full release cascade for a version",
@@ -2552,61 +2353,6 @@
         "flags": [
           "--dry-run",
           "--force"
-        ]
-      }
-    ]
-  },
-  {
-    "name": "tenant",
-    "path": "nself tenant",
-    "short": "[PREVIEW] Tenant management: create, upgrade, suspend, destroy, audit",
-    "hidden": false,
-    "group_id": "advanced",
-    "subcommands": [
-      {
-        "name": "audit",
-        "path": "nself tenant audit",
-        "short": "Query tenant audit log",
-        "hidden": false,
-        "flags": [
-          "--format",
-          "--since"
-        ]
-      },
-      {
-        "name": "create",
-        "path": "nself tenant create",
-        "short": "Create a new tenant",
-        "hidden": false,
-        "flags": [
-          "--plan"
-        ]
-      },
-      {
-        "name": "destroy",
-        "path": "nself tenant destroy",
-        "short": "Hard-delete a tenant (DESTRUCTIVE)",
-        "hidden": false,
-        "flags": [
-          "--confirm-name"
-        ]
-      },
-      {
-        "name": "suspend",
-        "path": "nself tenant suspend",
-        "short": "Suspend a tenant",
-        "hidden": false,
-        "flags": [
-          "--reason"
-        ]
-      },
-      {
-        "name": "upgrade",
-        "path": "nself tenant upgrade",
-        "short": "Change a tenant's plan",
-        "hidden": false,
-        "flags": [
-          "--plan"
         ]
       }
     ]

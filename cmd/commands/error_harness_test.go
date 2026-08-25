@@ -53,11 +53,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"backup", []string{"backup", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"backup", []string{"backup", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── billing ────────────────────────────────────────────────────────────
-	{"billing", []string{"billing"}, "(a) no project dir"},
-	{"billing", []string{"billing", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"billing", []string{"billing", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── build ──────────────────────────────────────────────────────────────
 	{"build", []string{"build"}, "(a) no project dir"},
 	{"build", []string{"build", "--no-such-flag-xyz"}, "(b) invalid flag"},
@@ -112,11 +107,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"doctor", []string{"doctor"}, "(a) no project dir"},
 	{"doctor", []string{"doctor", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"doctor", []string{"doctor", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── dr ─────────────────────────────────────────────────────────────────
-	{"dr", []string{"dr"}, "(a) no project dir"},
-	{"dr", []string{"dr", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"dr", []string{"dr", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── env ────────────────────────────────────────────────────────────────
 	{"env", []string{"env"}, "(a) no project dir"},
@@ -193,11 +183,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"promote", []string{"promote", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"promote", []string{"promote", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── queue ──────────────────────────────────────────────────────────────
-	{"queue", []string{"queue"}, "(a) no project dir"},
-	{"queue", []string{"queue", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"queue", []string{"queue", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── reset ──────────────────────────────────────────────────────────────
 	{"reset", []string{"reset"}, "(a) no project dir"},
 	{"reset", []string{"reset", "--no-such-flag-xyz"}, "(b) invalid flag"},
@@ -248,11 +233,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"telemetry", []string{"telemetry", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"telemetry", []string{"telemetry", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── tenant ─────────────────────────────────────────────────────────────
-	{"tenant", []string{"tenant"}, "(a) no project dir"},
-	{"tenant", []string{"tenant", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"tenant", []string{"tenant", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── trust ──────────────────────────────────────────────────────────────
 	{"trust", []string{"trust"}, "(a) no project dir"},
 	{"trust", []string{"trust", "--no-such-flag-xyz"}, "(b) invalid flag"},
@@ -293,11 +273,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"account", []string{"account"}, "(a) no project dir"},
 	{"account", []string{"account", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"account", []string{"account", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── api ────────────────────────────────────────────────────────────────
-	{"api", []string{"api"}, "(a) no project dir"},
-	{"api", []string{"api", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"api", []string{"api", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── dns-setup ──────────────────────────────────────────────────────────
 	{"trust dns", []string{"trust", "dns"}, "(a) no project dir"},
