@@ -134,3 +134,43 @@ func TestUnlinkCLIBinary_MissingIsNotAnError(t *testing.T) {
 		t.Fatalf("removing a plugin that published nothing should succeed: %v", err)
 	}
 }
+
+// TestIsCommandInstalled_TracksThePublishedBinary backs the rule that decides
+// whether a relocated command still nags the user.
+//
+// Found by round-tripping a real plugin: with nself-soak installed, `nself
+// soak` still printed "use nself install soak" — telling the user to install
+// what they had just installed. The notice must fire only when the plugin is
+// actually absent.
+func TestIsCommandInstalled_TracksThePublishedBinary(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
+	if IsCommandInstalled("soak") {
+		t.Fatal("reported installed before anything was published")
+	}
+
+	binDir := PluginBinDir()
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(PublishedBinaryPath("nself-soak"), []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	if !IsCommandInstalled("soak") {
+		t.Error("did not see the published binary that ProxyCommand would run")
+	}
+
+	// A directory of the right name is not an installed command.
+	if err := os.Remove(PublishedBinaryPath("nself-soak")); err != nil {
+		t.Fatalf("remove: %v", err)
+	}
+	if err := os.MkdirAll(PublishedBinaryPath("nself-soak"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if IsCommandInstalled("soak") {
+		t.Error("a directory was treated as an installed command binary")
+	}
+}

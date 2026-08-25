@@ -260,7 +260,12 @@ func Execute() error {
 				// sees the invocation — it is not a registered command — so
 				// PersistentPreRunE's warning never runs and the entry would be
 				// decorative. Emit it here, on the one path that does see it.
-				warnRelocatedCommand(cmdName)
+				// ...but ONLY when the plugin is absent: once the user has run
+				// `nself install soak`, `nself soak` IS the supported spelling,
+				// and telling them to install what they just installed is noise.
+				if !plugin.IsCommandInstalled(cmdName) {
+					warnRelocatedCommand(cmdName)
+				}
 
 				// Proxy to plugin
 				pluginArgs := []string{}

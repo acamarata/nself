@@ -191,3 +191,15 @@ func readPluginManifest(destDir string) *PluginManifest {
 	}
 	return &m
 }
+
+// IsCommandInstalled reports whether a plugin providing the named command is
+// present, i.e. whether ProxyCommand would find a binary for it.
+//
+// Used by the CLI to decide whether a relocated command still needs its
+// "moved to a plugin" notice. Once the plugin is installed the old spelling is
+// the supported spelling, and repeating the install hint is noise.
+func IsCommandInstalled(cmdName string) bool {
+	candidate := PublishedBinaryPath("nself-" + cmdName)
+	info, err := os.Stat(candidate)
+	return err == nil && !info.IsDir()
+}
