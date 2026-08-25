@@ -3,6 +3,102 @@
 All notable changes to the ɳSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
+## [1.3.0] — 2026-08-25
+
+A thin core: 92 commands to 52, with 30 command families moved into plugins that
+install in one step and behave exactly as they did before.
+
+This is a minor release rather than a patch because **43 commands are no longer
+in the binary**. Every one still works — the CLI proxies the original spelling
+to the plugin and names what to install when the plugin is absent — but a
+machine without the plugin no longer has the command. Read the compatibility
+notes before upgrading a scripted environment.
+
+### Fixed
+
+- **Installing a plugin left the command dead (CRITICAL)** — four separate
+  defects stacked, and none was visible to any test, because no test performed a
+  real install. The registry cache silently dropped `pluginType`, `binaryName`,
+  `language` and `runtime`, so the first request parsed them, the cache write
+  discarded them, and the next read returned a plugin claiming to provide no
+  command — the bug only appeared on the *second* run. Registry parsing never
+  read those fields anyway. Installing a command-line tool required Docker and
+  Postgres, because the schema step ran even for plugins with no tables. And the
+  release pipeline never compiled anything: it tarred source, so Go plugins
+  shipped with no binary. Tolerating a missing binary is what made all of this
+  silent; it is now a failed install that names the cause. Plugins are
+  cross-compiled for all five supported platforms and the CLI fetches the one
+  matching the machine.
+- **Almost every plugin was invisible** — 181 of 184 shipped `plugin.json` files
+  could not be parsed, so nearly the whole catalogue was missing from
+  `nself plugin list` and everything else that enumerates installed plugins.
+  Five fields were typed for one of the shapes in use rather than all of them:
+  `envVars`, `permissions`, `dependencies`, `systemDependencies`,
+  `apiEndpoints`. All 184 now parse, guarded by a test that reads the real
+  published manifests rather than fixtures written from the struct.
+- **The CLI talked over failing plugins** — `Plugin error: plugin exited with
+  code 1` printed on top of the plugin's own message on every extracted command.
+  The plugin's exit code is now mirrored in silence; only a proxy failure the
+  user has seen nothing for still speaks.
+- **`--no-deprecation-warnings` broke every extracted command** — nself's own
+  persistent flags were passed through to plugins that do not implement them,
+  so a script using that flag died with "unknown flag". They are stripped before
+  the plugin runs, as cobra did before the command moved.
+- **`nself login` could spawn a browser under `go test`** — it called an
+  unguarded copy of `openBrowser` instead of the guarded one two files away.
+- **`nself <cmd> nosuch` errored where it used to print help** — cobra treats a
+  root command's unknown first argument differently from a child's.
+- **`docker-compose.override.yml` was inert on every project.** It is applied.
+- **nginx refused to start on a fresh project** when no trusted certificate
+  chain existed.
+- **Help text taught a deprecated spelling** — all 17 `flags` examples showed
+  `nself flag`, renamed in this release line.
+- **The plugin proxy wrote a raw timestamped log line** above its own error.
+
+### Added
+
+- **`nself install <name>`** as a first-class command, with the plugin name
+  suggested on any unknown command.
+- **Command groups in `nself --help`**, so the golden path reads first.
+- **Plugins may provide several commands** via `cliCommands`, and a service
+  plugin may also ship one. `sentry` provides `nself sentry` and
+  `nself sentry-server`; `tenant` provides `nself tenant` and `nself billing`;
+  `webhooks` is the delivery service and the `nself webhooks` command.
+- **Project configuration reaches command plugins.** nself resolves the `.env`
+  cascade and passes each plugin only the variables its manifest declares, so a
+  plugin never re-implements the cascade.
+- **`scripts/plugin-counts.sh`** generates the free/pro/total plugin counts that
+  documentation had been hand-typing, and had drifted on.
+
+### Changed
+
+- **The env cascade** now follows its documented order, with
+  `NSELF_LEGACY_ENV_ORDER` as a one-minor-version escape hatch.
+- **43 commands moved out of the binary.** Each is proxied to its plugin once
+  installed: `ai` `ai-studio` `alerts` `api` `audit` `billing` `claw` `costs`
+  `dlq` `dogfood` `dr` `encryption` `federation` `gateway` `gauth` `gdpr`
+  `infra` `k8s` `mail` `model` `monitor` `ollama` `pentest-kit` `queue` `region`
+  `sentry` `sentry-server` `soak` `tenant` `waf` `watchdog` `webhooks`.
+- **Renamed or absorbed**, still working through argv rewriting: `dns-setup` and
+  `ssl` into `trust`, `pitr` into `db`, `flag` to `flags`, `uninstall` to
+  `remove`, `upgrade` and the `release-*` trio into `update`. `feature` and
+  `migrate-from-v099` retired.
+- **121 files over 300 lines down to 7**, each documented, with a ratchet that
+  only moves one way.
+
+### Known
+
+- **`admin` call sites have not been audited** against the 43 removed commands.
+  An admin call that shells out to one of those on a machine without the plugin
+  now fails where it used to succeed.
+- **Two permission vocabularies are in use.** 121 shipped manifests declare
+  permissions in a form the CLI's allowlist does not cover. Both are kept, and
+  `nself plugin info` states which were not checked, rather than a mapping being
+  invented between them.
+- **`health`, `self-heal` and `template` stay in the core** despite being listed
+  for extraction: `health` backs `doctor` and `status`, and `template` catalogs
+  what `nself init --template` can clone.
+
 ## [1.2.4] — 2026-07-03
 
 ### Fixed
