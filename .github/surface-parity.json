@@ -371,15 +371,6 @@
       "openapi": "n/a (see below)"
     },
     {
-      "name": "monitor",
-      "path": "nself monitor",
-      "group_id": "observe",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
       "name": "oauth",
       "path": "nself oauth",
       "group_id": "account",

@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (71)
+## Commands (70)
 
 ### nself account
 
@@ -856,20 +856,6 @@ Subcommands:
 - `update` — Re-pull a model to fetch the latest version of its tag
 
 Full page: [[cmd-model]]
-
-### nself monitor
-
-Monitoring stack management
-
-```
-nself monitor <subcommand> [flags]
-```
-
-Subcommands:
-
-- `upgrade-dashboards` — Upgrade Grafana dashboards to the latest bundled versions
-
-Full page: [[cmd-monitor]]
 
 ### nself oauth
 

@@ -208,11 +208,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"model", []string{"model", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"model", []string{"model", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── monitor ────────────────────────────────────────────────────────────
-	{"monitor", []string{"monitor"}, "(a) no project dir"},
-	{"monitor", []string{"monitor", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"monitor", []string{"monitor", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── plugin ─────────────────────────────────────────────────────────────
 	{"plugin", []string{"plugin"}, "(a) no project dir"},
 	{"plugin", []string{"plugin", "--no-such-flag-xyz"}, "(b) invalid flag"},

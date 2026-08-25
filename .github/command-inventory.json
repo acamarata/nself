@@ -2081,24 +2081,6 @@
     ]
   },
   {
-    "name": "monitor",
-    "path": "nself monitor",
-    "short": "Monitoring stack management",
-    "hidden": false,
-    "group_id": "observe",
-    "subcommands": [
-      {
-        "name": "upgrade-dashboards",
-        "path": "nself monitor upgrade-dashboards",
-        "short": "Upgrade Grafana dashboards to the latest bundled versions",
-        "hidden": false,
-        "flags": [
-          "--force"
-        ]
-      }
-    ]
-  },
-  {
     "name": "oauth",
     "path": "nself oauth",
     "short": "Manage OAuth provider tokens",

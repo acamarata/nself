@@ -52,7 +52,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself migrate` | Detect and migrate legacy artifacts to the current nSelf version | — | detect, firebase, from-bash, generate, rollback, run, supabase, watch |
 | `nself migrate-from-v099` | Migrate v0.9.9 home-level state (license key, channel, ssh keys) to v1.x layout | — | — |
 | `nself model` | Manage local AI models via Ollama | — | benchmark, list, pull, remove, update |
-| `nself monitor` | Monitoring stack management | — | upgrade-dashboards |
 | `nself oauth` | Manage OAuth provider tokens | — | refresh |
 | `nself ollama` | Manage local Ollama LLM stack | — | models, status |
 | `nself ops` | Ops-profile deployment and management | — | deploy |
@@ -99,7 +98,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 71**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 70**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -144,7 +143,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 71**
 | `nself mcp` | Start the nSelf MCP server | extend | — |
 | `nself migrate` | Detect and migrate legacy artifacts to the current nSelf version | data | detect, firebase, from-bash, from-v099, generate, rollback, run, supabase, watch |
 | `nself model` | Manage local AI models via Ollama | ai | benchmark, list, ollama, pull, remove, update |
-| `nself monitor` | Monitoring stack management | observe | upgrade-dashboards |
 | `nself oauth` | Manage OAuth provider tokens | account | refresh |
 | `nself ops` | Ops-profile deployment and management | deploy | deploy |
 | `nself plugin` | Manage nSelf plugins | extend | audit-tables, compat-check, debug, dev, disable, enable, info, init, install, inventory, link, list, logs, marketplace, new, outdated, refresh, remove, search, start, status, stop, submit, test, unlink, update, updates |

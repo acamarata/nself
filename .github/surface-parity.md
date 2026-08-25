@@ -53,7 +53,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself mcp` | extend | yes | no | undocumented: HASURA_GRAPHQL_URL, INTEGRATION, NSELF_HASURA_ADMIN_SECRET, NSELF_HASURA_GRAPHQL_URL, NSENTRY_STATUS_URL, POSTGRES_URL | n/a (see below) |
 | `nself migrate` | data | yes | yes | undocumented: NSELF_AI_ENDPOINT, NSELF_MIGRATION_AUTO_APPLY, NSELF_PROFILE, NSELF_SUPABASE_SKIP | n/a (see below) |
 | `nself model` | ai | yes | no | undocumented: NSELF_OLLAMA_DEFAULT_MODEL, NSELF_OLLAMA_HOST, NSELF_OLLAMA_TIMEOUT_SECONDS, PLUGIN_AI_OLLAMA_URL | n/a (see below) |
-| `nself monitor` | observe | yes | no | n/a | n/a (see below) |
 | `nself oauth` | account | yes | no | n/a | n/a (see below) |
 | `nself ops` | deploy | yes | no | n/a | n/a (see below) |
 | `nself plugin` | extend | yes | yes | undocumented: GOPATH, NSELF_LICENSE_SKIP_VERIFY, NSELF_LOCAL_URL, NSELF_MARKETPLACE_URL, NSELF_PING_URL, NSELF_PLUGIN_CACHE, NSELF_PLUGIN_DIR, NSELF_PLUGIN_LICENSE_KEY, NSELF_PLUGIN_REGISTRY | n/a (see below) |
@@ -84,4 +83,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself watchdog` | observe | yes | no | undocumented: NSELF_ENV | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 71 commands. Missing wiki page: 0. No MCP tool: 53. Env vars found but undocumented: 26.
+Total: 70 commands. Missing wiki page: 0. No MCP tool: 52. Env vars found but undocumented: 26.
