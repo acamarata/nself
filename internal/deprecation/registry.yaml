@@ -446,14 +446,14 @@ items:
   - name: "nself sentry"
     type: command
     since: "v1.3.0"
-    replacement: "nself install sentry"
-    docs_url: "https://nself.org/docs/plugins/sentry"
+    replacement: "nself install sentry-cli"
+    docs_url: "https://nself.org/docs/plugins/sentry-cli"
     phase: 1
   - name: "nself sentry-server"
     type: command
     since: "v1.3.0"
-    replacement: "nself install sentry"
-    docs_url: "https://nself.org/docs/plugins/sentry"
+    replacement: "nself install sentry-cli"
+    docs_url: "https://nself.org/docs/plugins/sentry-cli"
     phase: 1
   - name: "nself ai"
     type: command

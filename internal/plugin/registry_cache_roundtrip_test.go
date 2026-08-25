@@ -131,3 +131,54 @@ func TestRegistryCacheRoundTripIsDrivenByTheManifest(t *testing.T) {
 		t.Errorf("Tables not preserved: %v", got.Tables)
 	}
 }
+
+// TestCacheKeepsSignatureMaterial pins the most consequential instance of the
+// dropped-field bug.
+//
+// Registry.MarshalJSON did not copy AuthorPublicKey, Signature or
+// PublishStatus. The registry cache is read on every run after the first, so
+// from the second install onward verifyPluginSignature received three empty
+// strings. That takes the "no signature supplied" branch, which refuses only
+// when publishStatus is "stable" — and publishStatus was empty too, so it
+// returned nil.
+//
+// The result: a signed, stable plugin installed without its signature being
+// checked, on every cache-warm run, with nothing printed.
+func TestCacheKeepsSignatureMaterial(t *testing.T) {
+	original := &Registry{Plugins: []PluginManifest{{
+		Name:            "signed-plugin",
+		Version:         "1.0.0",
+		PublishStatus:   "stable",
+		AuthorPublicKey: "aa" + "bb" + "cc",
+		Signature:       "dd" + "ee" + "ff",
+	}}}
+
+	data, err := json.Marshal(original)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	reloaded, err := parseRegistryJSON(data)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	got, ok := findPlugin(reloaded, "signed-plugin")
+	if !ok {
+		t.Fatal("plugin vanished from the cache round-trip")
+	}
+
+	if got.AuthorPublicKey == "" || got.Signature == "" {
+		t.Errorf("signature material lost: key=%q sig=%q — verification would be skipped",
+			got.AuthorPublicKey, got.Signature)
+	}
+	if got.PublishStatus != "stable" {
+		t.Errorf("publishStatus = %q, want \"stable\" — an empty value turns a "+
+			"refused unsigned install into an allowed one", got.PublishStatus)
+	}
+
+	// The behaviour that matters, asserted directly: a stable plugin arriving
+	// with no signature must be refused, and this is the path the cache used to
+	// send every stable plugin down.
+	if err := verifyPluginSignature("/nonexistent", "", "", got.PublishStatus); err == nil {
+		t.Error("a stable plugin with no signature was accepted")
+	}
+}

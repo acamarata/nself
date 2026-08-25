@@ -107,6 +107,7 @@ func entryToManifest(e pluginEntry) PluginManifest {
 	runtime := e.Runtime
 	pluginType := e.PluginType
 	binaryName := e.BinaryName
+	var implEntryPoint, implCLI, implPackageManager, implFramework string
 	if e.Implementation != nil {
 		if language == "" {
 			language = e.Implementation.Language
@@ -123,6 +124,10 @@ func entryToManifest(e pluginEntry) PluginManifest {
 		if binaryName == "" {
 			binaryName = e.Implementation.BinaryName
 		}
+		implEntryPoint = e.Implementation.EntryPoint
+		implCLI = e.Implementation.CLI
+		implPackageManager = e.Implementation.PackageManager
+		implFramework = e.Implementation.Framework
 	}
 
 	return PluginManifest{
@@ -145,10 +150,40 @@ func entryToManifest(e pluginEntry) PluginManifest {
 		Runtime:         runtime,
 		PluginType:      pluginType,
 		BinaryName:      binaryName,
-		Compat:          e.Compat,
-		PublishStatus:   e.PublishStatus,
-		AuthorPublicKey: e.AuthorPublicKey,
-		Signature:       e.Signature,
-		UpdatedAt:       e.UpdatedAt,
+		CLICommands:     e.CLICommands,
+
+		Author:               e.Author,
+		Homepage:             e.Homepage,
+		IsCommercial:         e.IsCommercial,
+		RequiredEntitlements: e.RequiredEntitlements,
+		MinNselfVersion:      e.MinNselfVersion,
+		MaxNselfVersion:      e.MaxNselfVersion,
+		MinNodeVersion:       e.MinNodeVersion,
+		ArchSupport:          e.ArchSupport,
+		EntryPoint:           firstNonEmptyStr(e.EntryPoint, implEntryPoint),
+		CLI:                  firstNonEmptyStr(e.CLI, implCLI),
+		HealthEndpoint:       e.HealthEndpoint,
+		PackageManager:       firstNonEmptyStr(e.PackageManager, implPackageManager),
+		Framework:            firstNonEmptyStr(e.Framework, implFramework),
+		Views:                e.Views,
+		MultiApp:             e.MultiApp,
+		Deprecation:          e.Deprecation,
+		GraphQL:              e.GraphQL,
+		Compat:               e.Compat,
+		PublishStatus:        e.PublishStatus,
+		AuthorPublicKey:      e.AuthorPublicKey,
+		Signature:            e.Signature,
+		UpdatedAt:            e.UpdatedAt,
 	}
+}
+
+// firstNonEmptyStr returns the first non-empty argument, so a flat registry
+// field wins over the same value nested under implementation.
+func firstNonEmptyStr(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }

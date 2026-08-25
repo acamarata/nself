@@ -8,7 +8,7 @@ surface, not part of the self-hosted backend lifecycle the core covers.
 ## Install
 
 ```bash
-nself install sentry
+nself install sentry-cli
 ```
 
 One plugin provides both `nself sentry` and `nself sentry-server`. Once

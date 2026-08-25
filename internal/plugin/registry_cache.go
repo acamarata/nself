@@ -127,10 +127,38 @@ func (r Registry) MarshalJSON() ([]byte, error) {
 			// both empty — so linkCLIBinary saw a plugin that declared no
 			// command and did nothing. Language and Runtime were being lost
 			// the same way, which is the tell I should have followed sooner.
-			Language:   p.Language,
-			Runtime:    p.Runtime,
-			PluginType: p.PluginType,
-			BinaryName: p.BinaryName,
+			Language:    p.Language,
+			Runtime:     p.Runtime,
+			PluginType:  p.PluginType,
+			BinaryName:  p.BinaryName,
+			CLICommands: p.CLICommands,
+
+			// Signature material. Its absence here meant a warm cache handed
+			// verifyPluginSignature three empty strings, which takes the
+			// "unsigned" branch — and because publishStatus was empty too, that
+			// branch returns nil instead of refusing a stable plugin. Signature
+			// verification was being skipped on every cache-warm install.
+			PublishStatus:   p.PublishStatus,
+			AuthorPublicKey: p.AuthorPublicKey,
+			Signature:       p.Signature,
+
+			Author:               p.Author,
+			Homepage:             p.Homepage,
+			IsCommercial:         p.IsCommercial,
+			RequiredEntitlements: p.RequiredEntitlements,
+			MinNselfVersion:      p.MinNselfVersion,
+			MaxNselfVersion:      p.MaxNselfVersion,
+			MinNodeVersion:       p.MinNodeVersion,
+			ArchSupport:          p.ArchSupport,
+			EntryPoint:           p.EntryPoint,
+			CLI:                  p.CLI,
+			HealthEndpoint:       p.HealthEndpoint,
+			PackageManager:       p.PackageManager,
+			Framework:            p.Framework,
+			Views:                p.Views,
+			MultiApp:             p.MultiApp,
+			Deprecation:          p.Deprecation,
+			GraphQL:              p.GraphQL,
 		})
 	}
 	return json.Marshal(envelope{
