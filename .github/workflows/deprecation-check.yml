@@ -24,22 +24,41 @@ jobs:
           BASE="${{ github.event.pull_request.base.sha }}"
           HEAD="${{ github.sha }}"
 
-          # Find files deleted from cmd/commands/ in this PR
-          DELETED=$(git diff --name-only --diff-filter=D "$BASE" "$HEAD" -- 'cmd/commands/*.go' || true)
+          # Compare the generated command inventory, not filenames.
+          #
+          # This used to derive command names from deleted files in
+          # cmd/commands/, which is wrong in two ways and produced only false
+          # positives the first time a command family was extracted: it treated
+          # `gdpr_test.go` as a command named "gdpr_test", and it treated a
+          # subcommand file like `soak_abort.go` or `dlq_replay.go` as a
+          # separate top-level command. None of those names ever existed.
+          #
+          # .github/command-inventory.json has been the generated source of
+          # truth for the registered surface since CLI-R06, and CI already
+          # diffs it, so a command that genuinely disappears shows up here
+          # exactly once under the name users actually type.
+          REGISTRY="internal/deprecation/registry.yaml"
+          INVENTORY=".github/command-inventory.json"
 
-          if [ -z "$DELETED" ]; then
-            echo "OK: no command files deleted in this PR"
+          git show "$BASE:$INVENTORY" > /tmp/inventory-base.json 2>/dev/null || echo '[]' > /tmp/inventory-base.json
+          cp "$INVENTORY" /tmp/inventory-head.json
+
+          REMOVED=$(python3 -c "
+          import json
+          base = {c['name'] for c in json.load(open('/tmp/inventory-base.json'))}
+          head = {c['name'] for c in json.load(open('/tmp/inventory-head.json'))}
+          print(' '.join(sorted(base - head)))
+          ")
+
+          if [ -z "$REMOVED" ]; then
+            echo "OK: no top-level commands removed in this PR"
             exit 0
           fi
 
-          echo "Deleted command files detected:"
-          echo "$DELETED"
+          echo "Top-level commands removed in this PR: $REMOVED"
 
-          # Each deleted command file must have a corresponding entry in registry.yaml
-          REGISTRY="internal/deprecation/registry.yaml"
           FAIL=0
-          for f in $DELETED; do
-            CMD=$(basename "$f" .go)
+          for CMD in $REMOVED; do
             if ! grep -q "name:.*nself $CMD" "$REGISTRY" 2>/dev/null; then
               echo "ERROR: Command '$CMD' removed without deprecation registry entry."
               echo "       Add an entry to $REGISTRY before removing a command."
