@@ -39,9 +39,9 @@ const (
 
 // Record tracks a single plugin's license lifecycle state.
 type Record struct {
-	Name          string    `json:"name"`
-	State         State     `json:"state"`
-	LicenseExpiry time.Time `json:"license_expiry"`
+	Name          string     `json:"name"`
+	State         State      `json:"state"`
+	LicenseExpiry time.Time  `json:"license_expiry"`
 	DormantSince  *time.Time `json:"dormant_since,omitempty"`
 	// GracePeriod is persisted per-record so that global config changes cannot
 	// retroactively shorten a grace period already in progress.
@@ -51,7 +51,7 @@ type Record struct {
 // Store is the persistent state for all plugin lifecycle records.
 // It is serialised to ~/.config/nself/plugin-lifecycle.json.
 type Store struct {
-	Version int               `json:"version"`
+	Version int                `json:"version"`
 	Records map[string]*Record `json:"records"`
 }
 

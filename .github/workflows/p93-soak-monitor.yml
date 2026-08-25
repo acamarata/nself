@@ -10,9 +10,13 @@ name: P93 48h Soak Monitor
 #   - Set repo variable SOAK_ACTIVE=true to enable polling.
 #   - Set repo secret SOAK_SSH_KEY to allow deploy/ssh into prod monitor host.
 
+# CLI-R05 (2026-08-23): the '*/5 * * * *' schedule was removed. SOAK_ACTIVE has
+# never been set, so every one of the ~288 runs a day was created only to be
+# skipped by the job-level `if`, burying real results in the Actions history.
+# The P93 soak this monitors concluded long before v1.2.x. Re-enable by setting
+# the SOAK_ACTIVE repo variable and restoring the schedule block; until then the
+# monitor is reachable on demand via workflow_dispatch.
 on:
-  schedule:
-    - cron: '*/5 * * * *'
   workflow_dispatch:
     inputs:
       run_t09:

@@ -46,7 +46,11 @@ func LoadPluginRegistry(path string) (*PluginRegistry, error) {
 		return &PluginRegistry{plugins: make(map[string]PluginEntry)},
 			fmt.Errorf("deprecation: registry not found at %s: %w", path, err)
 	}
+	return parsePluginRegistry(data)
+}
 
+// parsePluginRegistry builds a PluginRegistry from raw YAML bytes.
+func parsePluginRegistry(data []byte) (*PluginRegistry, error) {
 	var rf pluginRegistryFile
 	if err := yaml.Unmarshal(data, &rf); err != nil {
 		return &PluginRegistry{plugins: make(map[string]PluginEntry)},
@@ -58,6 +62,27 @@ func LoadPluginRegistry(path string) (*PluginRegistry, error) {
 		pr.plugins[p.Name] = p
 	}
 	return pr, nil
+}
+
+// LoadEmbeddedPluginRegistry returns the plugin-API section of the registry
+// compiled into the binary. Same CLI-R03 rationale as LoadEmbeddedRegistry:
+// a path-based load is dead code for an installed single-file binary.
+// NSELF_DEPRECATION_REGISTRY overrides it with a file when set and readable.
+func LoadEmbeddedPluginRegistry() (*PluginRegistry, error) {
+	if path := os.Getenv(RegistryPathEnv); path != "" {
+		pr, err := LoadPluginRegistry(path)
+		if err == nil {
+			return pr, nil
+		}
+	}
+	return parsePluginRegistry(registryYAML)
+}
+
+// Len reports how many plugin entries the registry holds.
+func (pr *PluginRegistry) Len() int {
+	pr.mu.RLock()
+	defer pr.mu.RUnlock()
+	return len(pr.plugins)
 }
 
 // LookupPlugin returns the PluginEntry for the given plugin name and true if found.

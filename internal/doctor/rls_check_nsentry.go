@@ -28,8 +28,8 @@ import (
 // nsentryRLSPlugin maps one ɳSentry baseline plugin to its canonical check ID
 // and the np_* table-name prefix expected for that plugin.
 type nsentryRLSPlugin struct {
-	name     string // installation directory name (e.g. "nself-uptime-monitor")
-	checkID  string // canonical doctor check ID (e.g. "NSENTRY-RLS-01")
+	name        string // installation directory name (e.g. "nself-uptime-monitor")
+	checkID     string // canonical doctor check ID (e.g. "NSENTRY-RLS-01")
 	tablePrefix string // np_* table prefix for this plugin (e.g. "np_uptime_")
 }
 

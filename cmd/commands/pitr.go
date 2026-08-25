@@ -121,7 +121,7 @@ func init() {
 	pitrCmd.AddCommand(pitrRestoreCmd)
 
 	// Register top-level command.
-	RootCmd.AddCommand(pitrCmd)
+	backupCmd.AddCommand(pitrCmd)
 }
 
 // ── run functions ─────────────────────────────────────────────────────────────

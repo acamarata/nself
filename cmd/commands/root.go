@@ -9,9 +9,9 @@ import (
 	"github.com/nself-org/cli/internal/cmdlog"
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/deprecation"
+	"github.com/nself-org/cli/internal/errs"
 	"github.com/nself-org/cli/internal/license"
 	"github.com/nself-org/cli/internal/observability"
-	"github.com/nself-org/cli/internal/plugin"
 	"github.com/nself-org/cli/internal/version"
 
 	"github.com/spf13/cobra"
@@ -55,12 +55,12 @@ The Golden Path:
 }
 
 func init() {
-	// Load deprecation registry at startup (≤5ms; cached in memory).
-	// Resolve path relative to the executable so it works after `make install`.
-	// Missing or malformed registry is logged in debug mode only — never crashes.
+	// Load the deprecation registry at startup (≤5ms; cached in memory).
+	// The registry is compiled into the binary via go:embed, so it travels with
+	// a single-file install. NSELF_DEPRECATION_REGISTRY overrides it with a file
+	// for tests. A malformed registry is logged in debug mode only, never fatal.
 	var regErr error
-	regPath := resolveRegistryPath()
-	deprecationRegistry, regErr = deprecation.LoadRegistry(regPath)
+	deprecationRegistry, regErr = deprecation.LoadEmbeddedRegistry()
 	if regErr != nil && os.Getenv("NSELF_DEBUG") == "1" {
 		fmt.Fprintf(os.Stderr, "debug: deprecation registry: %v\n", regErr)
 	}
@@ -98,8 +98,7 @@ func init() {
 			noWarn, _ := cmd.Flags().GetBool("no-deprecation-warnings")
 			quiet, _ := cmd.Flags().GetBool("quiet")
 			if !noWarn && !quiet {
-				cmdPath := cmd.CommandPath() // e.g. "nself old-cmd"
-				if item, ok := deprecationRegistry.Lookup(cmdPath); ok {
+				if item, ok := deprecationRegistry.Lookup(invokedCommandPath(cmd)); ok {
 					deprecationRegistry.Warn(os.Stderr, item)
 				}
 			}
@@ -118,10 +117,13 @@ func init() {
 		finishLog := cmdlog.New(logDir).Begin(os.Args)
 		defer func() { finishLog(0, nil) }()
 
+		// `nself --version` prints and stops. Returning a silent exit-0 error
+		// rather than calling os.Exit keeps the single-exit-point rule and lets
+		// PersistentPostRunE flush any OTel spans first.
 		v, _ := cmd.Flags().GetBool("version")
 		if v {
 			fmt.Println(version.GetVersion())
-			os.Exit(0)
+			return errs.Exit(0)
 		}
 
 		// Source directory guard — prevent running nself commands inside
@@ -170,174 +172,4 @@ func init() {
 		}
 		return nil
 	}
-}
-
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main().
-func Execute() error {
-	// Product-alias shim: 'nsentry <args>' (symlinked binary) ≡ 'nself sentry <args>'.
-	normalizeInvokedBinary()
-
-	// Route cobra error/usage output to stderr so structured output stays clean.
-	RootCmd.SetErr(os.Stderr)
-
-	// Intercept unknown commands for the plugin router
-	if len(os.Args) > 1 {
-		cmdName := os.Args[1]
-
-		// Ignore global flags or root help
-		if cmdName != "" && cmdName != "help" && cmdName[0] != '-' {
-			// Check if the command is known to Cobra
-			isKnown := false
-			for _, c := range RootCmd.Commands() {
-				if c.Name() == cmdName || c.HasAlias(cmdName) {
-					isKnown = true
-					break
-				}
-			}
-
-			if !isKnown {
-				// Proxy to plugin
-				pluginArgs := []string{}
-				if len(os.Args) > 2 {
-					pluginArgs = os.Args[2:]
-				}
-				if err := plugin.ProxyCommand(cmdName, pluginArgs); err != nil {
-					fmt.Fprintf(os.Stderr, "Plugin error: %v\n", err)
-					os.Exit(1)
-				}
-				return nil
-			}
-		}
-	}
-
-	if err := RootCmd.Execute(); err != nil {
-		return err
-	}
-	// Read custom exit code set by commands (e.g. status).
-	if ctx := RootCmd.Context(); ctx != nil {
-		if code, ok := ctx.Value(exitCodeKey).(int); ok && code != 0 {
-			os.Exit(code)
-		}
-	}
-	return nil
-}
-
-// checkNotInSourceRepo detects if the user is running nself from within the
-// nself CLI source repository (or any Go CLI source tree with cmd/ + internal/).
-// This prevents generating docker-compose.yml, nginx/, ssl/, .env, and other
-// runtime artifacts inside the source directory — a common mistake.
-func checkNotInSourceRepo() error {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil // can't determine — allow
-	}
-
-	// Allow override for testing
-	if os.Getenv("NSELF_ALLOW_SOURCE_DIR") == "1" {
-		return nil
-	}
-
-	// Detect Go CLI source repo: cmd/commands/ + internal/ + go.mod
-	markers := []string{
-		filepath.Join(cwd, "cmd", "commands"),
-		filepath.Join(cwd, "internal"),
-		filepath.Join(cwd, "go.mod"),
-	}
-	allExist := true
-	for _, m := range markers {
-		if _, err := os.Stat(m); err != nil {
-			allExist = false
-			break
-		}
-	}
-	if !allExist {
-		return nil
-	}
-
-	// Additional check: go.mod must contain "module nself"
-	data, err := os.ReadFile(filepath.Join(cwd, "go.mod"))
-	if err != nil {
-		return nil
-	}
-	if len(data) < 20 {
-		return nil
-	}
-	// Check first line for "module nself"
-	firstLine := string(data[:min(len(data), 100)])
-	if firstLine == "" {
-		return nil
-	}
-	for _, sig := range []string{"module nself", "github.com/nself-org/cli/cmd", "github.com/nself-org/cli/internal"} {
-		if contains(firstLine, sig) {
-			return fmt.Errorf(`cannot run nself commands inside the CLI source repository
-
-You are in: %s
-
-This directory contains the nself CLI source code (cmd/, internal/, go.mod).
-Running nself here would generate docker-compose.yml, nginx configs, SSL certs,
-and other runtime artifacts inside the source tree.
-
-To fix:
-  1. cd to your actual project directory
-  2. Run: nself init
-  3. Then: nself start
-
-To override (testing only): export NSELF_ALLOW_SOURCE_DIR=1`, cwd)
-		}
-	}
-
-	return nil
-}
-
-// isSourceSafeCommand returns true for commands that are safe to run from
-// anywhere, including the source repository.
-func isSourceSafeCommand(name string) bool {
-	safe := map[string]bool{
-		"help": true, "version": true, "completion": true,
-		"update": true, "upgrade": true, "doctor": true, "nself": true,
-	}
-	return safe[name]
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && findSubstr(s, substr))
-}
-
-func findSubstr(s, sub string) bool {
-	for i := 0; i <= len(s)-len(sub); i++ {
-		if s[i:i+len(sub)] == sub {
-			return true
-		}
-	}
-	return false
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-// resolveRegistryPath returns the path to the deprecation registry YAML.
-// It looks next to the executable first (installed binary), then falls back
-// to a development-tree path relative to the working directory.
-func resolveRegistryPath() string {
-	// Option 1: next to the installed binary (production)
-	if exe, err := os.Executable(); err == nil {
-		candidate := filepath.Join(filepath.Dir(exe), "internal", "deprecation", "registry.yaml")
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate
-		}
-	}
-	// Option 2: relative to cwd (development / `make build` in repo root)
-	if cwd, err := os.Getwd(); err == nil {
-		candidate := filepath.Join(cwd, "internal", "deprecation", "registry.yaml")
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate
-		}
-	}
-	// Fallback: let LoadRegistry return a "not found" error gracefully
-	return filepath.Join("internal", "deprecation", "registry.yaml")
 }

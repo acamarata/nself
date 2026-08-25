@@ -100,7 +100,7 @@ Note: `plugins-pro` is a private repository. Source access is granted to ɳSelf+
 ## See Also
 
 - [[plugin-claw]], ɳClaw assistant runtime that consumes news
-- [[nself-ai-gateway]], AI gateway providing summarization for article ingestion
+- [[plugin-nself-ai-gateway]], AI gateway providing summarization for article ingestion
 - [[plugin-notify]], delivers breaking-news alerts
 - [[bundle-nclaw]], bundle that includes this plugin
 - [[Plugin-Licensing]], tier comparison

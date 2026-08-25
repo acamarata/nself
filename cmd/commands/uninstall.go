@@ -15,9 +15,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// CLI-R19: `uninstall` is retired in favour of `reset`, whose flags now cover
+// the same three modes. It stays REGISTERED (hidden) rather than being argv-
+// rewritten onto `reset --purge`, because the two commands' defaults differ in
+// how destructive they are: bare `nself uninstall` keeps database volumes,
+// bare `nself reset` removes them. Rewriting one onto the other would turn a
+// safe habit into data loss. Hidden-but-registered means the old invocation
+// behaves EXACTLY as before, and the deprecation warning points at the
+// equivalent reset flag.
 var uninstallCmd = &cobra.Command{
-	Use:   "uninstall",
-	Short: "Remove nSelf project data and generated files",
+	Use:    "uninstall",
+	Hidden: true,
+	Short:  "Deprecated: use `nself reset` (see --keep-data / --purge)",
 	Long: `Remove nSelf-generated files and containers from the current project.
 
 This command is interactive by default. Use --yes to skip confirmation prompts.

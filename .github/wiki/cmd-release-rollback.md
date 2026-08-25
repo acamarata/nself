@@ -1,48 +1,14 @@
 # nself release-rollback
 
-> Roll back distribution surfaces to a prior release version.
+> Moved. This command now lives at `nself release rollback`.
 
-## Synopsis
+<!-- Redirect stub. GitHub Wiki has no server-side redirects, so this page stays
+     in place for bookmarks and external links. -->
 
-```bash
-nself release-rollback <version> <prior-version> [flags]
-```
+`nself release rollback` is the current spelling. The old top-level spelling still works and
+prints a deprecation warning naming the new one, so nothing you have scripted
+breaks — see [[deprecation-registry]] for the policy.
 
-## Description
-
-`nself release-rollback` reverts the Homebrew tap formula, ping_api environment,
-and Docker Admin image tag to a previously published version. It also writes a
-changelog entry recording the rollback.
-
-This command does not roll back production deployments or Vercel subapps. Use
-`nself deploy rollback` for live deployment rollback.
-
-Deleting git tags is opt-in and destructive. Pass `--delete-tags` only when you
-need to retract a version from GitHub Releases entirely.
-
-## Flags
-
-| Flag | Short | Type | Default | Description |
-|------|-------|------|---------|-------------|
-| `--dry-run` | `–` | bool | `false` | Simulate all rollback steps without making external changes |
-| `--json` | `–` | bool | `false` | Emit structured JSON output instead of human-readable progress |
-| `--delete-tags` | `–` | bool | `false` | Delete git tags for `<version>` after rolling back (destructive) |
-
-## Examples
-
-```bash
-# Roll back v1.2.0 and restore v1.1.9 across distribution surfaces
-nself release-rollback v1.2.0 v1.1.9
-
-# Rehearse a rollback without touching anything
-nself release-rollback v1.2.0 v1.1.9 --dry-run
-```
-
-## See Also
-
-- [[cmd-release]], run the full release cascade
-- [[cmd-release-check]], pre-flight validation before releasing
-- [[cmd-release-status]], check which surfaces are live
-- [[cmd-deploy]], roll back live production deployments
+**Read the current documentation here: [[cmd-release]]**
 
 ← [[Commands]] | [[Home]] →

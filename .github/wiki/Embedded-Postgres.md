@@ -88,6 +88,6 @@ Backup files are written to `~/.nself/backups/` by default.
 
 - [[cmd-start]] — `nself start` flag reference
 - [[Architecture]] — full ɳSelf stack architecture
-- [[backup]] — backup and restore
+- [[cmd-backup]] — backup and restore
 
 ← [[Architecture]] | [[Home]] →

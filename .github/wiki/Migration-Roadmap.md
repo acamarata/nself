@@ -63,7 +63,7 @@ nself doctor   # all checks should pass
 ### Anticipated deprecations entering Phase 1 (v1.1.0)
 
 No CLI commands are currently planned for deprecation in v1.1.0.
-Any deprecations will follow the [[Deprecation Cycle|.claude/docs/doctrines/deprecation-cycle.md]]
+Any deprecations will follow the deprecation cycle doctrine (`.claude/docs/doctrines/deprecation-cycle.md`)
 3-phase policy and will emit warnings before removal.
 
 ---

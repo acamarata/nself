@@ -29,6 +29,34 @@ import (
 // For free plugins, it tries the R2-backed worker URL first and falls back to
 // GitHub Releases on 5xx responses (S67-T03).
 func downloadPlugin(ctx context.Context, name, version, repository string) (string, error) {
+	return downloadPluginPackage(ctx, name, version, repository, "")
+}
+
+// downloadPluginPackage fetches a plugin package, preferring a build for the
+// running platform when the plugin ships a command binary.
+//
+// binaryName is empty for a service plugin, whose package is source and works
+// everywhere. For a CLI plugin it is the command binary's name, and the package
+// has to contain a build for THIS platform — a Linux binary is of no use to
+// someone on macOS. Those live as per-platform release assets, so they are
+// tried first, with the generic package as the fallback for a plugin whose
+// release predates per-platform assets.
+func downloadPluginPackage(ctx context.Context, name, version, repository, binaryName string) (string, error) {
+	// Platform-specific package first, for a plugin that provides a command.
+	if binaryName != "" {
+		if platform, err := PlatformArch(); err == nil {
+			repo := repository
+			if repo == "" {
+				repo = "https://github.com/nself-org/plugins"
+			}
+			platformURL := binaryPluginDownloadURL(strings.TrimSuffix(repo, ".git"), name, version, platform)
+			if tmp, err := downloadFromURL(ctx, platformURL, nil); err == nil {
+				return tmp, nil
+			}
+			// Fall through: no per-platform asset for this release.
+		}
+	}
+
 	primaryURL := buildDownloadURL(name, version, repository)
 
 	var extraHeaders map[string]string

@@ -48,7 +48,7 @@ nself plugin logs ai -f --grep "request"
 ## See Also
 
 - [[cmd-plugin-debug]] — Attach a debugger to a running plugin
-- [[cmd-plugin-status]] — Show plugin status
+- [[cmd-plugin]] — Show plugin status
 - [[cmd-plugin-dev]] — Start a plugin in development mode
 
 ← [[Commands]] | [[Home]] →

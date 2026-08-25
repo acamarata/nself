@@ -1054,7 +1054,7 @@ func TestCollectDomains_FrontendApp_EmptyRoute(t *testing.T) {
 
 func TestCollectDomains_ExtraSSLDomains(t *testing.T) {
 	g := NewGenerator(&config.Config{
-		BaseDomain:     "myapp.local",
+		BaseDomain:      "myapp.local",
 		ExtraSSLDomains: "extra1.example.com,extra2.example.com",
 	})
 	domains := g.CollectDomains()
@@ -1075,7 +1075,7 @@ func TestCollectDomains_DeduplicatesEntries(t *testing.T) {
 	// Both FrontendApp route and ExtraSSLDomains contain the same domain —
 	// it should appear exactly once.
 	g := NewGenerator(&config.Config{
-		BaseDomain:     "myapp.local",
+		BaseDomain:      "myapp.local",
 		ExtraSSLDomains: "extra.myapp.local",
 		FrontendApps: []config.FrontendApp{
 			{Route: "extra.myapp.local"},

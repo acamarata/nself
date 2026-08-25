@@ -1,108 +1,40 @@
 # nself federation
 
-> Manage GraphQL Federation for multi-service nSelf deployments (opt-in, requires `NSELF_FEDERATION=true`).
+<!-- BEGIN PROSE:summary -->
+> Moved to a plugin (CLI-R11). Install it to keep using `nself federation`.
+<!-- END PROSE:summary -->
 
-## Synopsis
+## This command moved
 
-```bash
-nself federation <subcommand> [flags]
-```
-
-## Description
-
-`nself federation` manages the Apollo Router supergraph that federates Hasura and plugin subgraphs into a single unified GraphQL API. Federation is disabled by default. Enable it by setting `NSELF_FEDERATION=true` in your `.env` and running `nself build`.
-
-When federation is enabled, `nself build` collects all installed plugins with `graphql.enabled: true`, adds Hasura as the core subgraph, composes a supergraph schema via `rover supergraph compose`, and injects Apollo Router (Custom Service slot CS_7, port 4000) into `docker-compose.yml`. All `/v1/graphql` traffic routes through Apollo Router instead of directly to Hasura.
-
-The composed supergraph schema and router configuration are written to `.nself/federation/`. The `supergraph.yaml` and `router.yaml` files in that directory are managed by nSelf and regenerated on each build.
-
-## Subcommands
-
-| Subcommand | Description |
-|-----------|-------------|
-| `compose` | Re-compose supergraph schema from installed plugin subgraphs |
-| `status` | Show subgraph health and schema composition status |
-| `introspect` | Print the full supergraph schema to stdout |
-
-## Flags
-
-### nself federation status
-
-| Flag | Short | Type | Default | Description |
-|------|-------|------|---------|-------------|
-| `--json` | `–` | bool | false | Output status as JSON |
-
-### nself federation compose
-
-No flags.
-
-### nself federation introspect
-
-No flags.
-
-## Subgraph Configuration
-
-Plugins declare federation participation in their `plugin.yaml` manifest via a `graphql` block:
-
-```yaml
-graphql:
-  enabled: true
-  subgraph_name: ai          # unique lowercase name in the supergraph
-  subgraph_url: http://127.0.0.1:${PORT}/graphql
-  schema_path: schema.graphql  # optional static SDL for rover compose
-  entities:
-    - type: User
-      key: id
-```
-
-`subgraph_name` must be a valid GraphQL SDL name (`[a-z][a-z0-9_]*`). `subgraph_url` may use `${PORT}`, which is interpolated from the plugin's declared port at build time. Either `schema_path` or `subgraph_url` must be non-empty for `rover supergraph compose` to succeed.
-
-Hasura is always included as a subgraph; its URL is derived from `HASURA_PORT` in your `.env`.
-
-## Examples
+`federation` was extracted from the core binary into the `federation` plugin
+as part of [CLI-R11](https://github.com/nself-org/cli/blob/main/.claude) (the
+thin-core extraction). The command surface is unchanged — only where the
+code lives changed.
 
 ```bash
-# Enable federation and rebuild
-NSELF_FEDERATION=true nself build
-```
-
-```bash
-# Re-compose after installing a plugin that exposes a subgraph
+nself install federation
 nself federation compose
-```
-
-```bash
-# Check all subgraph health
 nself federation status
-```
-
-```bash
-# Check subgraph health in JSON format
 nself federation status --json
-```
-
-```bash
-# Inspect the composed supergraph schema
 nself federation introspect
 ```
 
-```bash
-# Pipe the schema into a diff tool to detect drift
-nself federation introspect > supergraph-new.graphql
-diff supergraph-old.graphql supergraph-new.graphql
-```
+Until it is installed, `nself federation ...` prints an install hint
+pointing here. Full documentation (subgraph configuration, flags, examples)
+now lives with the plugin:
+https://github.com/nself-org/plugins/tree/main/free/federation
 
-```bash
-# Rebuild the stack after a composition change
-nself federation compose && nself start
-```
+Federation stays a free MIT plugin (no license required): it is an opt-in
+architecture feature (`NSELF_FEDERATION=true`), not a licensed one.
 
 ## See Also
 
-- [cmd-build.md](cmd-build.md) — rebuild docker-compose and nginx configs after federation changes
-- [cmd-plugin.md](cmd-plugin.md) — install plugins that expose GraphQL subgraphs
-- [cmd-status.md](cmd-status.md) — view the running state of your nSelf install
-- [cmd-doctor.md](cmd-doctor.md) — verify environment and configuration health
-- [cmd-db.md](cmd-db.md) — manage the Postgres database backing the federated schema
+<!-- BEGIN PROSE:see-also -->
+- [[cmd-install]], plugin/bundle install sugar
+- [[cmd-plugin]], plugin lifecycle management
+- [[cmd-build]], rebuild docker-compose and nginx configs after federation changes
+- [[cmd-status]], view the running state of your nSelf install
+- [[Commands]], full command index
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

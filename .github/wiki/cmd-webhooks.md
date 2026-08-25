@@ -1,50 +1,29 @@
 # nself webhooks
 
-> Manage webhook processing and outbox.
+**This command moved to a plugin.**
 
-## Synopsis
+`nself webhooks` is no longer part of the CLI core. It inspects the durable
+outbox the webhooks delivery service writes to, so it now ships with that
+service rather than separately.
 
-```
-nself webhooks <subcommand> [flags]
-```
-
-## Description
-
-`nself webhooks` manages the durable outbox queue used by the webhook subsystem. When a webhook event cannot be written to Postgres at receipt time (transient DB outage, network blip), the event is appended to a durable on-disk outbox at `/var/lib/nself/webhook-outbox/` (or the path in `NSELF_WEBHOOK_OUTBOX_DIR`) so it can be retried later.
-
-`webhooks outbox status` reports the outbox directory, current depth (number of queued events), and the file names of pending events. Output can be table (default) or JSON for machine consumers.
-
-This command is read-only today; processing of queued events is performed by the webhook worker on a schedule, not by the CLI.
-
-## Subcommands
-
-| Name | Description |
-|------|-------------|
-| `outbox status` | Show current outbox status |
-
-## Flags
-
-### `webhooks outbox status`
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--format`, `-f` | `text` | Output format: `text` or `json` |
-
-## Examples
+## Install
 
 ```bash
-# Show outbox depth and queued event filenames
-nself webhooks outbox status
+nself install webhooks
+```
 
-# JSON form for a metrics pipeline
+The webhooks plugin provides both the delivery service and this command.
+
+## Commands
+
+```bash
+nself webhooks outbox status
 nself webhooks outbox status --format json
 ```
 
-## See Also
+`NSELF_WEBHOOK_OUTBOX_DIR` overrides the outbox location, which defaults to
+`/var/lib/nself/webhook-outbox`.
 
-- [[cmd-queue]], async job queues
-- [[cmd-watchdog]], self-healing watchdog
-- [[cmd-status]], service health
-- [[Commands]], full command index
+---
 
-← [[Commands]] | [[Home]] →
+← [[Commands]] · [[Plugin-Overview]] · [[Home]]

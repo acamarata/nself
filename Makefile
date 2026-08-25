@@ -12,13 +12,54 @@ LDFLAGS := -s -w \
 	-X $(MODULE)/internal/license.licensePubKeyHex=$(NSELF_LICENSE_PUBKEY_HEX)
 BUILDFLAGS := -trimpath
 
-.PHONY: build clean test vet install cross dist verify-prod sport-f21 sbom man
+.PHONY: build clean test vet install cross dist verify-prod sport-f21 sport-f02 cmd-inventory core-services wiki-commands wiki-check parity sbom man fmt fmt-check
 
 verify-prod:
 	@bash scripts/prod-verify/p87-verification.sh
 
 sport-f21:
 	@bash scripts/sport/generate-f21.sh
+
+## cmd-inventory — CLI-R06. Regenerate the command inventory from the cobra tree.
+## Writes .github/command-inventory.json and .github/wiki/COMMANDS.md.
+## Set NSELF_SPORT_DIR to also refresh SPORT F02 (it lives in the PPI, not here).
+## internal/repoqa asserts the committed copies match, so run this after adding,
+## renaming, or removing any command.
+cmd-inventory:
+	@bash scripts/sport/generate-f02.sh
+
+sport-f02: cmd-inventory
+
+## core-services — CLI-R07. Regenerate .github/wiki/Core-Services.md from the
+## compose service catalog. Set NSELF_SPORT_DIR to also refresh SPORT F08.
+core-services:
+	@bash scripts/sport/generate-core-services.sh
+
+## wiki-commands — CLI-R08. Regenerate one wiki page per top-level command, plus
+## the sidebar index and llms.txt. Human prose inside PROSE blocks is preserved;
+## only the cobra-derived parts are rewritten. Use -report to list pages that
+## still carry placeholder prose.
+wiki-commands:
+	@CGO_ENABLED=0 go run -mod=vendor ./tools/wikigen -report
+
+## wiki-check — verify the wiki is current and every [[link]] resolves.
+wiki-check:
+	@CGO_ENABLED=0 go run -mod=vendor ./tools/wikigen -check
+	@bash scripts/ci/wiki-link-audit.sh
+
+## mcp-docs — CLI-R15. Print the current MCP tool/resource/prompt list,
+## generated from cmd/commands/mcp*.go — paste into cmd-mcp.md's PROSE blocks
+## by hand after adding/removing a tool, resource, or prompt.
+mcp-docs:
+	@CGO_ENABLED=0 go run -mod=vendor ./tools/mcpdoc
+
+## parity — CLI-R17. Regenerate the four-surface parity matrix (wiki page, MCP
+## tool, env var docs, OpenAPI route) for every top-level command. Writes
+## .github/surface-parity.md and .github/surface-parity.json. internal/repoqa
+## asserts the committed copies match; run this after adding, renaming, or
+## removing a command, an MCP tool, or an env var.
+parity:
+	@CGO_ENABLED=0 go run -mod=vendor ./tools/parity
 
 ## Q04 — SBOM generation (local dev target)
 ## Requires: syft (https://github.com/anchore/syft)
@@ -67,6 +108,14 @@ test:
 
 vet:
 	CGO_ENABLED=0 go vet -mod=vendor ./...
+
+## fmt — format all first-party Go source (cmd/ internal/ tools/).
+fmt:
+	gofmt -w cmd internal tools
+
+## fmt-check — CLI-R01 gate. Same script CI runs; fails on any unformatted file.
+fmt-check:
+	@bash scripts/ci/gofmt-check.sh
 
 cross: cross-linux cross-darwin
 

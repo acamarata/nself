@@ -2,7 +2,7 @@
 //
 // Usage:
 //
-//	reg, err := deprecation.LoadRegistry("internal/deprecation/registry.yaml")
+//	reg, err := deprecation.LoadEmbeddedRegistry()
 //	if err != nil {
 //	    // warn in debug log, do not crash
 //	}
@@ -50,15 +50,23 @@ type Registry struct {
 	index map[string]Item // keyed by Item.Name
 }
 
-// LoadRegistry reads the YAML registry file and returns a Registry.
+// LoadRegistry reads the YAML registry file at path and returns a Registry.
 // If the file does not exist or fails to parse, it returns an empty
 // Registry and a non-nil error (caller should log in debug mode, not crash).
+//
+// Production code should call LoadEmbeddedRegistry instead: a path-based load
+// cannot work for an installed single-file binary. See CLI-R03.
 func LoadRegistry(path string) (*Registry, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return &Registry{index: make(map[string]Item)}, fmt.Errorf("deprecation: registry not found at %s: %w", path, err)
 	}
+	return parseRegistry(data)
+}
 
+// parseRegistry builds a Registry from raw YAML bytes. On a parse failure it
+// returns an empty (but non-nil, usable) Registry alongside the error.
+func parseRegistry(data []byte) (*Registry, error) {
 	var rf registryFile
 	if err := yaml.Unmarshal(data, &rf); err != nil {
 		return &Registry{index: make(map[string]Item)}, fmt.Errorf("deprecation: failed to parse registry: %w", err)
@@ -69,6 +77,24 @@ func LoadRegistry(path string) (*Registry, error) {
 		reg.index[item.Name] = item
 	}
 	return reg, nil
+}
+
+// Len reports how many deprecation entries the registry holds.
+func (r *Registry) Len() int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.index)
+}
+
+// Names returns every registered deprecation name. Order is unspecified.
+func (r *Registry) Names() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]string, 0, len(r.index))
+	for name := range r.index {
+		out = append(out, name)
+	}
+	return out
 }
 
 // Lookup returns the Item for the given name and true if found.

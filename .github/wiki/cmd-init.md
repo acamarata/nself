@@ -1,6 +1,8 @@
 # nself init
 
+<!-- BEGIN PROSE:summary -->
 > Initialize a new ɳSelf project with an interactive configuration wizard.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
@@ -10,63 +12,12 @@ nself init [flags]
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself init` launches an interactive setup wizard that creates a pristine `.env` configuration for a new ɳSelf project. It prompts for your project name, base domain, and email, then auto-generates cryptographically secure secrets (Postgres password, Hasura admin secret, JWT key).
 
 You can choose which optional services to enable during init (Redis, MinIO, MeiliSearch, Mailpit, Monitoring). Each selection updates the generated `.env` accordingly. All values are validated before being written, domain format, password strength, and required fields are all checked.
 
 After `nself init` completes, run `nself build` to generate `docker-compose.yml` and nginx configs, then `nself start` to boot the stack.
-
-## Flags
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--wizard` | false | Run the full 10-step interactive wizard |
-| `--interactive` | false | Explicitly enable interactive wizard |
-| `--non-interactive` | false | Use all defaults without prompts (CI-safe) |
-| `--fast` | false | Skip advanced options, use smart defaults |
-| `--demo` | false | Auto-configure with all services enabled |
-| `--full` | false | Create `.env.dev`, `.env.staging`, `.env.prod`, `.env.secrets` |
-| `--force` | false | Overwrite existing configuration |
-| `--template` | `""` | Use a specific template: `express`, `fastapi`, `go`, `rust`, or any bundled clone template |
-| `--no-seed` | false | Skip seed data when scaffolding a clone template (omits `002_seed.sql`) |
-| `--dry-run` | false | Print files that would be written without writing them (clone templates only) |
-| `--name` | `""` | Project name (sets `PROJECT_NAME` in generated `.env`) |
-| `--domain` | `""` | Base domain (skips interactive domain prompt, e.g. `myapp.dev`) |
-| `--profile` | `""` | Resource profile: `tiny` for small VPS (starts Postgres and nginx only; Hasura and Auth are opt-in). Recommended for servers with less than 1 GB RAM. See [[install/tiny-vps]]. |
-| `--skip-validation` | false | Skip configuration validation |
-| `--quiet` | false | Suppress output messages |
-| `--help`, `-h` | — | Show help |
-
-## Examples
-
-```bash
-# Minimal interactive setup
-nself init
-
-# Full 10-step wizard
-nself init --wizard
-
-# All services enabled (demo/evaluation)
-nself init --demo
-
-# Create all env files at once
-nself init --full
-
-# Smart defaults, no prompts
-nself init --fast
-
-# Non-interactive — all defaults, safe for CI
-nself init --non-interactive
-
-# Small VPS (512 MB–1 GB RAM): start with Postgres + nginx only
-nself init --profile=tiny
-
-# Skip prompts by supplying name and domain directly
-nself init --name myapp --domain myapp.dev
-
-# Start from a Go project template
-nself init --template go --name myapi --domain myapi.local
-```
 
 ## Clone Templates
 
@@ -154,5 +105,73 @@ To opt in:
 export NSELF_TELEMETRY_OPT_IN=1
 nself init --fast
 ```
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--cs-template` | `""` | Scaffold a custom service at init time: specify language (go, node, python, rust, other) |
+| `--demo` | `false` | Auto-configure with all services enabled |
+| `--domain` | `""` | Base domain (skips interactive domain selection, e.g. myapp.dev) |
+| `--dry-run` | `false` | Print files that would be written without writing them (clone templates only) |
+| `--fast` | `false` | Skip advanced options, use smart defaults |
+| `--force` | `false` | Overwrite existing configuration |
+| `--full` | `false` | Create all environment files (.env.dev, .env.staging, .env.prod, .env.secrets) |
+| `--interactive` | `false` | Explicitly enable interactive wizard |
+| `--list-presets` | `false` | List all available project presets and exit |
+| `--name` | `""` | Project name (sets PROJECT_NAME in generated .env) |
+| `--no-pgvector` | `false` | Skip pgvector extension and RAG scaffold tables (sets PGVECTOR_ENABLED=false) |
+| `--no-seed` | `false` | Skip seed data when scaffolding a clone template |
+| `--non-interactive` | `false` | Use all defaults without prompts |
+| `--preset` | `""` | Use a project-type preset: b2b-saas, mobile-backend, ai-assistant, community-forum, media-hosting, dev, sentry, nclaw-app |
+| `--profile` | `""` | Resource profile: 'tiny' for small VPS (Postgres+nginx only) |
+| `--quiet` | `false` | Suppress output messages |
+| `--skip-validation` | `false` | Skip configuration validation |
+| `--template` | `""` | Use a built-in, clone, or marketplace template (e.g. airbnb-clone, go, rust) |
+| `--wizard` | `false` | Run the full 10-step interactive wizard |
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Examples
+
+<!-- BEGIN PROSE:examples -->
+```bash
+# Minimal interactive setup
+nself init
+
+# Full 10-step wizard
+nself init --wizard
+
+# All services enabled (demo/evaluation)
+nself init --demo
+
+# Create all env files at once
+nself init --full
+
+# Smart defaults, no prompts
+nself init --fast
+
+# Non-interactive — all defaults, safe for CI
+nself init --non-interactive
+
+# Small VPS (512 MB–1 GB RAM): start with Postgres + nginx only
+nself init --profile=tiny
+
+# Skip prompts by supplying name and domain directly
+nself init --name myapp --domain myapp.dev
+
+# Start from a Go project template
+nself init --template go --name myapi --domain myapi.local
+```
+<!-- END PROSE:examples -->
+
+## See Also
+
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

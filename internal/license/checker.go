@@ -23,10 +23,10 @@ import (
 
 // bundleValidateResponse is the JSON body from /license/validate?bundle=<name>.
 type bundleValidateResponse struct {
-	Valid   bool   `json:"valid"`
-	Tier    string `json:"tier"`
-	Reason  string `json:"reason,omitempty"`
-	Bundle  string `json:"bundle,omitempty"`
+	Valid   bool     `json:"valid"`
+	Tier    string   `json:"tier"`
+	Reason  string   `json:"reason,omitempty"`
+	Bundle  string   `json:"bundle,omitempty"`
 	Plugins []string `json:"plugins,omitempty"`
 }
 

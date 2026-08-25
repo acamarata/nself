@@ -1,49 +1,14 @@
 # nself release-status
 
-> View the live deployment status of all release distribution surfaces.
+> Moved. This command now lives at `nself release status`.
 
-## Synopsis
+<!-- Redirect stub. GitHub Wiki has no server-side redirects, so this page stays
+     in place for bookmarks and external links. -->
 
-```bash
-nself release-status [flags]
-```
+`nself release status` is the current spelling. The old top-level spelling still works and
+prints a deprecation warning naming the new one, so nothing you have scripted
+breaks — see [[deprecation-registry]] for the policy.
 
-## Description
-
-`nself release-status` polls six distribution surfaces and reports whether each
-is serving the expected version: the CLI binary (GitHub Releases), the Admin Docker
-image (Docker Hub), the Homebrew tap formula, the ping_api canary, the web/org
-marketing site, and the overall Vercel deployment.
-
-Each surface is reported as `fresh`, `stale`, or `unknown`. A `stale` result means
-the surface has not yet propagated the latest release. An `unknown` result means
-the surface did not respond within the timeout window.
-
-## Flags
-
-| Flag | Short | Type | Default | Description |
-|------|-------|------|---------|-------------|
-| `--json` | `–` | bool | `false` | Emit structured JSON output instead of human-readable table |
-| `--timeout` | `–` | duration | `30s` | Maximum time to wait for each surface to respond |
-
-## Examples
-
-```bash
-# Check release status across all surfaces
-nself release-status
-
-# Check with a longer timeout for slow networks
-nself release-status --timeout 60s
-
-# Emit JSON for scripting or CI dashboards
-nself release-status --json
-```
-
-## See Also
-
-- [[cmd-release]], run the full release cascade
-- [[cmd-release-check]], pre-flight validation before releasing
-- [[cmd-release-rollback]], revert distribution surfaces to a prior version
-- [[cmd-status]], check the live stack status on this machine
+**Read the current documentation here: [[cmd-release]]**
 
 ← [[Commands]] | [[Home]] →

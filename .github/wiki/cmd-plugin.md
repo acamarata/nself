@@ -1,6 +1,8 @@
 # nself plugin
 
+<!-- BEGIN PROSE:summary -->
 > Install, remove, update, and manage ɳSelf plugins.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
@@ -10,54 +12,12 @@ nself plugin <subcommand> [flags]
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself plugin` manages the ɳSelf plugin ecosystem. Plugins extend the CLI and your backend stack with new capabilities. Free plugins (MIT licensed) install without a key. Pro plugins require a valid membership license key, set one with `nself license set`.
 
 When you install a plugin, ɳSelf checks your license tier against the plugin's requirements, downloads the plugin binary and Docker image, registers the plugin with the stack, and prepares database migrations. Run `nself build` and `nself restart` after installing plugins to include them in the generated `docker-compose.yml`.
 
 Unknown subcommands are proxied to the matching plugin binary: `nself plugin ai <action>` calls `nself-ai <action>`. This allows installed plugins to expose their own subcommands through the ɳSelf CLI namespace.
-
-## Subcommands
-
-| Subcommand | Description |
-|------------|-------------|
-| `list` | List available and installed plugins (beta and planned plugins show status badges) |
-| `install <plugin> [plugin...]` | Install one or more plugins (license check enforced for pro plugins; planned plugins are rejected) |
-| `remove <name>` | Remove a plugin and clean up its data, ports, and service entries |
-| `update [name]` | Update a specific plugin, or all installed plugins if no name given |
-| `updates` | Check for available updates across all installed plugins |
-| `refresh` | Force refresh the remote registry cache |
-| `start <name>` | Start a plugin service container |
-| `stop <name>` | Stop a plugin service container |
-| `disable <name>` | Disable a plugin (excluded from compose on next build) |
-| `enable <name>` | Re-enable a previously disabled plugin |
-| `status [name]` | Show plugin health (all or specific) |
-| `inventory` | List installed plugins with version, tier, and status |
-| `info <name>` | Show detailed information about a plugin |
-| `new <name>` | Scaffold a new plugin project (preferred; see [[cmd-plugin-init]]) |
-| `submit [path]` | Validate a plugin for submission (no actual upload in CI; use `--strict` for full checks) |
-| `marketplace` | Browse the plugin marketplace (subcommands: `list`, `search`, `info`) |
-| `compat-check` | Check installed plugins for CLI version compatibility (exits 1 on any incompatible plugin; see [[cmd-plugin-compat-check]]) |
-| `dev <name>` | Start a plugin in development mode with live reload (see [[cmd-plugin-dev]]) |
-| `link <local-path>` | Link a local plugin directory into the running stack (see [[cmd-plugin-link]]) |
-| `unlink <name>` | Remove a plugin from the development-linked set (see [[cmd-plugin-unlink]]) |
-| `test <name>` | Run unit and smoke tests for a plugin (see [[cmd-plugin-test]]) |
-| `debug <name>` | Attach a Delve debugger to a running plugin process (see [[cmd-plugin-debug]]) |
-| `logs <name>` | Tail logs from a plugin container (see [[cmd-plugin-logs]]) |
-
-## Flags
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--key` | `""` | License key for pro plugins (`install`) |
-| `--version` | `""` | Install a specific version (`install`) |
-| `--force` | false | `install`: required when `NSELF_LICENSE_SKIP_VERIFY=1` is set; `remove`: remove even if dependents exist |
-| `--keep-data` | false | Preserve database data when removing |
-| `--installed` | false | Show only installed plugins (for `list`) |
-| `--show-eol` | false | Include end-of-life plugins in `list` output (hidden by default) |
-| `--allow-eol` | false | Allow installing or updating an EOL plugin (not recommended) |
-| `--category` | `""` | Filter by category (for `list`) |
-| `--detailed` | false | Show detailed information |
-| `--help`, `-h` | — | Show help |
 
 ## Plugin Status Badges
 
@@ -82,8 +42,80 @@ EOL plugins are hidden from `nself plugin list` by default. Use `--show-eol` to 
 
 See [[Plugin-Status-Badges]] for the full reference.
 
+## Install telemetry
+
+After a successful `nself plugin install`, the CLI sends a single fire-and-forget event to `plugins.nself.org/plugins/:name/install-event`. This increments the public download counter shown in the plugin marketplace.
+
+The event body contains one field: `instanceId`, which is an opaque SHA-256 hash of a machine-local identifier. No hostname, IP address, username, or project name is transmitted. The event is deduplicated per (instance, plugin) per ISO week, so reinstalling the same plugin in the same week does not double-count. If the network is unavailable, the event is silently dropped with no retry.
+
+To opt out, set `NSELF_DISABLE_TELEMETRY=1` in your environment or `.env.local`.
+
+## Official by name, third-party by URL
+
+`nself plugin install <name>` resolves against the official plugins.nself.org registry: license-checked for pro tiers, and its tarball is Ed25519-signature-verified against a registry-pinned author key.
+
+`nself plugin install <https-url>` installs directly from an arbitrary URL instead, for plugins that aren't in the registry. This path:
+
+- Never contacts the official registry — no license check, no EOL/deprecation lifecycle handling, no install telemetry.
+- Is **not** signature-verified. There is no registry-pinned key to check an arbitrary URL's tarball against.
+- Verifies a checksum only when you pass `--checksum <sha256>` yourself (obtained out-of-band, e.g. from the plugin's README or release notes) — the same trust model as `pip install --hash=` or a Homebrew formula. Without `--checksum`, the download's integrity is unverified and the CLI says so.
+- Always prints a warning naming the source host and asks for interactive confirmation before downloading anything, unless you pass `--yes` (for CI/non-interactive use).
+- Requires `https://` (plain `http://` is rejected, except against `localhost`/`127.0.0.1` for local development).
+
+`nself plugin outdated` and `nself plugin list --detailed` skip plugins that came from a third-party URL when comparing against the registry — there's nothing registered to compare them to.
+
+## Freshness
+
+`nself plugin list --detailed` prints an `Updated` column per plugin, sourced from the registry entry's (or local `plugin.json`'s) `updated_at` field when present. As of the current plugins.nself.org registry, no plugin carries a per-plugin `updated_at` — only a registry-wide snapshot timestamp, which `--detailed` prints as a `Registry snapshot: <timestamp>` header line instead of a per-row value. The column is plumbing ready for the day the registry starts sending a per-plugin value; it never fabricates one.
+
+`nself plugin outdated` compares every installed plugin's version against the registry and lists the ones behind, with `--json` for scripting. It exits `0` when everything is current and `1` when at least one plugin is outdated, so it composes in CI.
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `audit-tables` | Audit np_* table row counts and multi-tenant isolation compliance |
+| `compat-check` | Check installed plugins against the current CLI version |
+| `debug` | Attach a dlv debugger to a running plugin process |
+| `dev` | Start a plugin in development mode with hot-reload |
+| `disable` | Disable a plugin (excluded from compose on next build) |
+| `enable` | Re-enable a previously disabled plugin |
+| `info` | Show detailed plugin information |
+| `init` | Scaffold a new plugin project |
+| `install` | Install one or more plugins (license check for pro); a plugin arg may be a name or an https:// URL |
+| `inventory` | List installed plugins with version, tier, and status |
+| `link` | Register a local plugin directory as a shadow override |
+| `list` | List available and installed plugins |
+| `logs` | Tail logs from a plugin container |
+| `marketplace` | Browse the ɳSelf plugin marketplace |
+| `new` | Scaffold a new plugin project (deprecated: use 'init') |
+| `outdated` | List installed plugins with a newer version available |
+| `refresh` | Force refresh the registry cache |
+| `remove` | Remove a plugin |
+| `search` | Search plugins by name, description, or tag |
+| `start` | Start a plugin service |
+| `status` | Show plugin status |
+| `stop` | Stop a plugin service |
+| `submit` | Validate a plugin for submission to the registry |
+| `test` | Run a plugin's test suite (unit + smoke install/uninstall) |
+| `unlink` | Remove a local plugin shadow, restoring the registry version |
+| `update` | Update a specific plugin or all plugins |
+| `updates` | Check for available plugin updates |
+<!-- END GENERATED:subcommands -->
+
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
 ```bash
 # List all available plugins
 nself plugin list
@@ -127,6 +159,24 @@ nself plugin update
 # Check for available updates without installing
 nself plugin updates
 
+# List installed plugins that are behind the registry version (exits 1 if any are)
+nself plugin outdated
+
+# Same, as JSON for scripting
+nself plugin outdated --json
+
+# Show freshness (Updated column + registry snapshot timestamp)
+nself plugin list --detailed
+
+# Install a third-party plugin directly from a URL (prompts for confirmation)
+nself plugin install https://example.com/releases/my-plugin-1.0.0.tar.gz
+
+# Same, verifying against a checksum you obtained from the source yourself
+nself plugin install https://example.com/releases/my-plugin-1.0.0.tar.gz --checksum <sha256>
+
+# Same, non-interactively for CI (still prints the third-party warning)
+nself plugin install https://example.com/releases/my-plugin-1.0.0.tar.gz --yes
+
 # Show installed plugins with version and tier
 nself plugin inventory
 
@@ -150,17 +200,11 @@ nself plugin list --show-eol
 # Install an EOL plugin (not recommended — use only when a replacement is unavailable)
 nself plugin install old-plugin --allow-eol
 ```
+<!-- END PROSE:examples -->
 
-## Install telemetry
+## See Also
 
-After a successful `nself plugin install`, the CLI sends a single fire-and-forget event to `plugins.nself.org/plugins/:name/install-event`. This increments the public download counter shown in the plugin marketplace.
-
-The event body contains one field: `instanceId`, which is an opaque SHA-256 hash of a machine-local identifier. No hostname, IP address, username, or project name is transmitted. The event is deduplicated per (instance, plugin) per ISO week, so reinstalling the same plugin in the same week does not double-count. If the network is unavailable, the event is silently dropped with no retry.
-
-To opt out, set `NSELF_DISABLE_TELEMETRY=1` in your environment or `.env.local`.
-
-## See also
-
+<!-- BEGIN PROSE:see-also -->
 - [[cmd-plugin-compat-check]] — compatibility check reference
 - [[cmd-plugin-dev]] — plugin author dev mode
 - [[cmd-plugin-link]] — link a local plugin directory into the stack
@@ -171,5 +215,6 @@ To opt out, set `NSELF_DISABLE_TELEMETRY=1` in your environment or `.env.local`.
 - [[cmd-plugin-marketplace]] — browse the marketplace
 - [[Plugin-Status-Badges]] — lifecycle status reference
 - [[Plugin-Licensing]] — license tiers and key format
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

@@ -2,7 +2,9 @@
 // port-holder identification utilities for the nSelf CLI.
 //
 // Purpose: Single source of truth for all nSelf service ports used by the CLI.
-//   These constants must match F10-PORT-REGISTRY.md in the canonical SPORT.
+//
+//	These constants must match F10-PORT-REGISTRY.md in the canonical SPORT.
+//
 // Inputs: None (compile-time constants).
 // Outputs: Typed int constants for use in CLI commands.
 // Constraints: Never hardcode these values elsewhere in cli/; always import.

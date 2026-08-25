@@ -1,29 +1,23 @@
 # nself ssl
 
+<!-- BEGIN PROSE:summary -->
 > Manage SSL certificates for ɳSelf services and custom domains.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
 ```
-nself ssl <subcommand>
+nself ssl <subcommand> [flags]
 ```
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself ssl` manages the SSL certificates used by nginx to serve HTTPS traffic for all ɳSelf services. Certificates are generated automatically during `nself build`, but you can use this command to check their status or force regeneration without a full rebuild.
 
 Use `nself ssl setup` to provision wildcard certificates via DNS-01 challenge for the configured base domain. Use `nself ssl add` to provision a certificate for a single external custom domain and generate the corresponding nginx server block automatically.
 
 Certificates written by `ssl setup` and `ssl add` land in `ssl/{domain}/` inside the project directory, which nginx reads via its `./ssl:/etc/nginx/ssl:ro` volume mount.
-
-## Subcommands
-
-| Subcommand | Description |
-|------------|-------------|
-| `status` | Show certificate expiry, covered domains (SANs), and CA trust status |
-| `renew` | Force regeneration of SSL certificates |
-| `setup` | Provision a wildcard or multi-domain certificate via DNS-01 challenge |
-| `add <domain>` | Provision a certificate for a single custom domain and generate an nginx server block |
 
 ## nself ssl setup
 
@@ -88,9 +82,30 @@ The generated conf file (`nginx/conf.d/custom-custom-example-com.conf`) includes
 - TLS on port 443 with HTTP/2
 - Security headers: `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Strict-Transport-Security`
 - `proxy_pass` block (when `--upstream` is set) or placeholder `return 200`
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `add` | Provision an SSL certificate for a single domain |
+| `renew` | Reload nginx and optionally renew certificates |
+| `setup` | Set up SSL certificates via DNS-01 challenge |
+| `status` | Show SSL certificate status |
+<!-- END GENERATED:subcommands -->
 
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
 ```bash
 # Check certificate status and expiry
 nself ssl status
@@ -114,11 +129,14 @@ Certificate: ssl/cert.pem
   CA trust:   trusted (mkcert CA installed)
   SANs:       localhost, *.localhost, api.localhost, auth.localhost
 ```
+<!-- END PROSE:examples -->
 
 ## See Also
 
+<!-- BEGIN PROSE:see-also -->
 - [[Guide-SSL-Setup]], full SSL setup walkthrough
 - [[Config-Nginx]], nginx configuration reference
 - [[Guide-Production-Deployment]], production server setup
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

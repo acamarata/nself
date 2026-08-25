@@ -15,13 +15,17 @@
 **Commands**
 - [[Commands]], Overview
 - _Lifecycle:_ [[cmd-init]] · [[cmd-build]] · [[cmd-start]] · [[cmd-stop]] · [[cmd-restart]] · [[cmd-dev]]
-- _Monitoring:_ [[cmd-status]] · [[cmd-logs]] · [[cmd-health]] · [[cmd-urls]] · [[cmd-doctor]] · [[cmd-monitor]] · [[cmd-alerts]] · [[cmd-sentry]] · [[cmd-watchdog]] · [[cmd-dogfood]]
+- _Monitoring:_ [[cmd-status]] · [[cmd-logs]] · [[cmd-health]] · [[cmd-urls]] · [[cmd-doctor]] · [[cmd-monitor]] · [[cmd-alerts]] · [[cmd-sentry]] · [[cmd-watchdog]]
 - _Data:_ [[cmd-db]] · [[cmd-backup]] · [[cmd-dr]] · [[cmd-queue]] · [[cmd-webhooks]]
 - _Config:_ [[cmd-config]] · [[cmd-service]] · [[cmd-env]] · [[cmd-promote]]
 - _Networking:_ [[cmd-ssl]] · [[cmd-trust]] · [[cmd-dns-setup]]
-- _Security:_ [[cmd-security]] · [[cmd-secrets]] · [[cmd-waf]]
+- _Security:_ [[cmd-security]] · [[cmd-secrets]]
 - _Tenancy:_ [[cmd-tenant]] · [[cmd-billing]]
-- _Plugins:_ [[cmd-plugin]] · [[cmd-license]]
+<<<<<<< HEAD
+- _Plugins:_ [[cmd-plugin]] · [[cmd-license]] · [[cmd-dogfood]] (extracted, CLI-R11) · [[cmd-k8s]] (extracted, CLI-R11)
+=======
+- _Plugins:_ [[cmd-plugin]] · [[cmd-license]] · [[cmd-dogfood]] (extracted, CLI-R11) · [[cmd-encryption]] (extracted, CLI-R11) · [[cmd-waf]] (extracted, CLI-R11) · [[cmd-federation]] (extracted, CLI-R11) · [[cmd-mail]] (extracted, CLI-R11) · [[cmd-dlq]] (extracted, CLI-R11)
+>>>>>>> worktree-agent-af24993dee207e6e9
 - _AI:_ [[cmd-ai]] · [[cmd-claw]] · [[cmd-model]]
 - _Templates:_ [[cmd-template]]
 - _Utilities:_ [[cmd-exec]] · [[cmd-clean]] · [[cmd-reset]] · [[cmd-update]] · [[cmd-upgrade]] · [[cmd-version]] · [[cmd-admin]] · [[cmd-migrate]] · [[cmd-migrate-firebase]] · [[cmd-migrate-supabase]] · [[cmd-completion]]
@@ -37,11 +41,11 @@
 - [[Feature-Email]]
 - [[Feature-Monitoring]]
 - [[Feature-Plugins]]
-- [[Feature-ɳClaw]], AI Assistant
-- [[Feature-ɳChat]], Messaging
-- [[Feature-ɳTV]], Media Player
-- [[Feature-ɳFamily]], Family Social
-- [[Feature-ɳCloud]], Managed Hosting
+- [[Feature-nClaw]], AI Assistant
+- [[Feature-nChat]], Messaging
+- [[Feature-nTV]], Media Player
+- [[Feature-nFamily]], Family Social
+- [[Feature-nCloud]], Managed Hosting
 - [[Feature-Memory-Rooms]], Knowledge Organization
 - [[Feature-Agent-Dashboard]], Agent Metrics
 - [[Feature-Image-Generation]], AI Image Generation
@@ -104,9 +108,9 @@
  - [[plugin-access-controls]]
  - [[plugin-activity-feed]]
  - [[plugin-admin-api]]
- - [[nself-ai-gateway]]
- - [[nself-ai-cc]]
- - [[nself-ai-mcp]]
+ - [[plugin-nself-ai-gateway]]
+ - [[plugin-nself-ai-mcp]]
+ - [[plugin-nself-ai-mcp]]
  - [[plugin-analytics]]
  - [[plugin-auth]]
  - [[plugin-backup-pro]]
@@ -224,7 +228,7 @@
 
 **Reference**
 - [[API-Reference]]
-- [[reference-error-codes]], Error Codes
+- [[error-codes]], Error Codes
 
 ---
 
@@ -274,3 +278,30 @@
 ---
 
 [[Changelog]]
+
+---
+
+<!-- BEGIN GENERATED:command-list -->
+
+**All commands (52)**
+
+- _A:_ [[cmd-account]] · [[cmd-admin]]
+- _B:_ [[cmd-backup]] · [[cmd-build]] · [[cmd-bundle]]
+- _C:_ [[cmd-ci]] · [[cmd-clean]] · [[cmd-completion]] · [[cmd-config]]
+- _D:_ [[cmd-db]] · [[cmd-deploy]] · [[cmd-dev]] · [[cmd-doctor]]
+- _E:_ [[cmd-env]] · [[cmd-exec]]
+- _F:_ [[cmd-flags]] · [[cmd-functions]]
+- _G:_ [[cmd-generate]]
+- _H:_ [[cmd-health]] · [[cmd-help-topics]]
+- _I:_ [[cmd-init]] · [[cmd-install]]
+- _L:_ [[cmd-license]] · [[cmd-login]] · [[cmd-logout]] · [[cmd-logs]]
+- _M:_ [[cmd-maintenance]] · [[cmd-man]] · [[cmd-mcp]] · [[cmd-migrate]]
+- _O:_ [[cmd-oauth]] · [[cmd-ops]]
+- _P:_ [[cmd-plugin]] · [[cmd-promote]]
+- _R:_ [[cmd-release]] · [[cmd-remove]] · [[cmd-reset]] · [[cmd-restart]]
+- _S:_ [[cmd-secrets]] · [[cmd-security]] · [[cmd-self-heal]] · [[cmd-service]] · [[cmd-start]] · [[cmd-status]] · [[cmd-stop]]
+- _T:_ [[cmd-telemetry]] · [[cmd-template]] · [[cmd-trust]]
+- _U:_ [[cmd-update]] · [[cmd-urls]]
+- _V:_ [[cmd-verify-sbom]] · [[cmd-version]]
+
+<!-- END GENERATED:command-list -->

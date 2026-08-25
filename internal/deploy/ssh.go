@@ -2,9 +2,10 @@
 // This file implements the SSH deploy helper used by 'nself deploy --env staging|prod' (G-003).
 //
 // Required env vars:
-//   NSELF_DEPLOY_HOST   - Remote host in user@host:/remote/path format
-//   NSELF_DEPLOY_USER   - SSH user (overridden by the user@host prefix when set)
-//   NSELF_DEPLOY_KEY_PATH - Path to SSH private key (default: ~/.ssh/id_ed25519)
+//
+//	NSELF_DEPLOY_HOST   - Remote host in user@host:/remote/path format
+//	NSELF_DEPLOY_USER   - SSH user (overridden by the user@host prefix when set)
+//	NSELF_DEPLOY_KEY_PATH - Path to SSH private key (default: ~/.ssh/id_ed25519)
 package deploy
 
 import (

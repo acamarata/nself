@@ -53,9 +53,9 @@ License-gated. Install with a valid `nself_pro_*` key. Source: `plugins-pro/paid
 
 | Plugin | Description |
 |--------|-------------|
-| [[nself-ai-gateway]] | Provider key vault, request routing, quota enforcement (port 3761) |
-| [[nself-ai-cc]] | PTY session relay for AI CLI binaries (port 3760) |
-| [[nself-ai-mcp]] | MCP tool server for AI gateway (port 3762) |
+| [[plugin-nself-ai-gateway]] | Provider key vault, request routing, quota enforcement (port 3761) |
+| [[plugin-nself-ai-mcp]] | PTY session relay for AI CLI binaries (port 3760) |
+| [[plugin-nself-ai-mcp]] | MCP tool server for AI gateway (port 3762) |
 | [[plugin-browser]] | Headless browser as a service |
 | [[plugin-claw]] | Core ɳClaw assistant runtime |
 | [[plugin-claw-budget]] | Budget, ledger, and financial memory |

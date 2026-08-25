@@ -1,6 +1,7 @@
 # nSelf CLI + Plugin Deprecation Registry
-# Read at startup by internal/deprecation.LoadRegistry() (CLI items)
-# and internal/deprecation.LoadPluginRegistry() (plugin API items).
+# Compiled into the binary via go:embed (internal/deprecation/embedded.go) and read
+# at startup by LoadEmbeddedRegistry() (CLI items) and LoadPluginRegistry()
+# (plugin API items). Override for previews/tests with NSELF_DEPRECATION_REGISTRY.
 #
 # CLI Schema (items[]):
 #   name:        string   # CLI command/flag name (e.g. "nself old-cmd" or "--old-flag")
@@ -34,6 +35,449 @@ items:
     since: "v1.0.9"
     replacement: "nTV bundle — run: nself plugin install nTV"
     docs_url: "https://nself.org/docs/migrate/v1-0-8-to-v1-0-9"
+    phase: 1
+
+  # Legacy hidden aliases kept for pre-v1 muscle memory (cmd/commands/aliases.go).
+  # They keep working; the warning points at the canonical spelling.
+  - name: "nself up"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself start"
+    docs_url: "https://nself.org/docs/cli/start"
+    phase: 1
+
+  - name: "nself down"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself stop"
+    docs_url: "https://nself.org/docs/cli/stop"
+    phase: 1
+
+  # CLI-R09 consolidation. Every old spelling still works: cmd/commands/
+  # legacy_spellings.go rewrites argv onto the canonical path, so flags and
+  # positional arguments behave identically.
+  - name: "nself release-check"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself release check"
+    docs_url: "https://nself.org/docs/cli/release"
+    phase: 1
+
+  - name: "nself release-rollback"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself release rollback"
+    docs_url: "https://nself.org/docs/cli/release"
+    phase: 1
+
+  - name: "nself release-status"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself release status"
+    docs_url: "https://nself.org/docs/cli/release"
+    phase: 1
+
+  - name: "nself migrate-from-v099"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself migrate from-v099"
+    docs_url: "https://nself.org/docs/migrate/from-v0.9"
+    phase: 1
+
+  - name: "nself dns-setup"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself trust dns"
+    docs_url: "https://nself.org/docs/cli/trust"
+    phase: 1
+
+  - name: "nself ollama"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself model ollama"
+    docs_url: "https://nself.org/docs/cli/model"
+    phase: 1
+
+  - name: "nself feature"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself config features"
+    docs_url: "https://nself.org/docs/cli/config"
+    phase: 1
+
+  - name: "nself pitr"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself backup pitr"
+    docs_url: "https://nself.org/docs/cli/backup"
+    phase: 1
+
+  - name: "nself ssl"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself trust ssl"
+    docs_url: "https://nself.org/docs/cli/trust"
+    phase: 1
+
+  - name: "nself upgrade"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself update upgrade"
+    docs_url: "https://nself.org/docs/cli/update"
+    phase: 1
+
+  - name: "nself flag"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself flags"
+    docs_url: "https://nself.org/docs/cli/flags"
+    phase: 1
+
+  # CLI-R19. `uninstall` stays registered (hidden) rather than being rewritten:
+  # bare `uninstall` keeps database volumes while bare `reset` removes them, so
+  # a blanket redirect would turn a safe habit into data loss. The replacement
+  # named here is the flag that matches what `uninstall` actually did.
+  - name: "nself uninstall"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself reset --keep-data (or --purge for the full wipe)"
+    docs_url: "https://nself.org/docs/cli/reset"
+    phase: 1
+
+  # CLI-R11 thin-core extraction, first slice. Unlike the phase-1 entries
+  # above, `dogfood` has no new home inside core — it moved to a plugin
+  # entirely, so there is no argv rewrite in cmd/commands/legacy_spellings.go
+  # for it. Once cmd/commands/dogfood.go is deleted, `nself dogfood` becomes
+  # an unrecognized top-level command and root.go's Execute() routes it
+  # straight to internal/plugin.ProxyCommand — which prints its own
+  # "unknown command ... install it with: nself install dogfood" message
+  # BEFORE cobra ever reaches PersistentPreRunE, so this registry entry is
+  # not consulted by the current code path. It is recorded here so the
+  # replacement text is pinned and reviewable, and so a future wiring of
+  # ProxyCommand into the deprecation registry (tracked as a CLI-R11 follow-up,
+  # not part of this ticket) has a single source of truth to read from. The
+  # wording below intentionally matches ProxyCommand's own hint so the two
+  # never contradict even though only one of them is reachable today.
+  - name: "nself dogfood"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install dogfood"
+    docs_url: "https://nself.org/docs/plugins/dogfood"
+    # Phase 1, not 3. Phase 3 means "removed", and the deprecation-cycle
+    # workflow rightly refuses a jump straight to it without a prior warning
+    # release. But it is also the wrong classification: a CLI-R11 extraction
+    # RELOCATES a command, it does not delete it. `nself dogfood ...` works
+    # exactly as before once `nself install dogfood` has run, which is what
+    # phase 1 describes.
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Same reasoning as `nself dogfood` above:
+  # relocated to a plugin, not removed, so phase 1 (not 3). This entry IS
+  # live on the proxy path: since commit bb083973 wired warnRelocatedCommand
+  # into root.go's Execute(), an unrecognized `nself k8s` prints this entry's
+  # [DEPRECATED] notice before plugin.ProxyCommand ever runs. See
+  # TestRelocatedCommandEntriesAreWiredToTheProxy.
+  - name: "nself k8s"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install k8s"
+    docs_url: "https://nself.org/docs/plugins/k8s"
+
+  # relocated to a plugin, not removed, so phase 1 (not 3). Unlike the
+  # dogfood entry's comment above (written before root.go's Execute() wired
+  # warnRelocatedCommand into the unknown-command path — see commit
+  # bb083973), this one IS live on that path: an unrecognized `nself soak`
+  # prints this entry's [DEPRECATED] notice before plugin.ProxyCommand ever
+  # runs. See TestRelocatedCommandEntriesAreWiredToTheProxy.
+  - name: "nself soak"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install soak"
+    docs_url: "https://nself.org/docs/plugins/soak"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Live on the proxy path, same as `nself
+  # soak` above. Only the docs-audit subcommand moved — internal/audit's
+  # table_audit.go (`nself plugin audit-tables`) and event_log.go (security
+  # event log) stayed in core, so this entry names `audit` itself, not a
+  # sibling command.
+  - name: "nself audit"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install audit"
+    docs_url: "https://nself.org/docs/plugins/audit"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Live on the proxy path, same as the entries
+  # above. This is the first PAID (Business+ tier) extraction in this batch:
+  # the plugin at plugins-pro/paid/pentest-kit/ still gates on the same
+  # requirePentestKit() license check, just reimplemented locally since
+  # internal/license is unreachable across the module boundary.
+  - name: "nself pentest-kit"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install pentest-kit"
+    docs_url: "https://nself.org/docs/plugins/pentest-kit"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Live on the proxy path, same as the entries
+  # above. internal/plugin.ListInstalled() is unreachable across the module
+  # boundary and genuinely core-shared, so this plugin's internal/plugininfo
+  # reimplements only the narrow tier read this command needs — see that
+  # package's doc comment for the exact scope of the simplification.
+  - name: "nself costs"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install costs"
+    docs_url: "https://nself.org/docs/plugins/costs"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Live on the proxy path, same as the entries
+  # above. internal/gdpr was exclusive to these commands (confirmed via
+  # grep before moving) and moved wholesale; only internal/database's single
+  # SanitizeIdentifier function had to be copied into the plugin's own
+  # internal/database package.
+  - name: "nself gdpr"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install gdpr"
+    docs_url: "https://nself.org/docs/plugins/gdpr"
+
+  # CLI-R11 thin-core extraction. Same shape as `nself dogfood` above: moved
+  # to a plugin entirely, not rewritten to a new core subcommand, so this
+  # entry is not consulted by the current ProxyCommand code path (see the
+  # dogfood entry's comment for the full explanation). Phase 1, not 3, for
+  # the same reason: the command is relocated, not removed.
+  - name: "nself encryption"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install encryption"
+    docs_url: "https://nself.org/docs/plugins/encryption"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Same shape as `nself dogfood`/`nself
+  # encryption` above: moved to a plugin entirely, not rewritten to a new
+  # core subcommand. Phase 1, not 3, for the same reason: relocated, not
+  # removed.
+  - name: "nself waf"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install waf"
+    docs_url: "https://nself.org/docs/plugins/waf"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Same shape as the entries above: moved to
+  # a plugin entirely, not rewritten to a new core subcommand. Phase 1, not
+  # 3, for the same reason: relocated, not removed.
+  - name: "nself federation"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install federation"
+    docs_url: "https://nself.org/docs/plugins/federation"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Same shape as the entries above: moved to
+  # a plugin entirely, not rewritten to a new core subcommand. Phase 1, not
+  # 3, for the same reason: relocated, not removed.
+  - name: "nself mail"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install mail"
+    docs_url: "https://nself.org/docs/plugins/mail"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Same shape as the entries above: moved to
+  # a plugin entirely, not rewritten to a new core subcommand. Phase 1, not
+  # 3, for the same reason: relocated, not removed.
+  - name: "nself dlq"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install dlq"
+    docs_url: "https://nself.org/docs/plugins/dlq"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Same shape as the entries above: moved to
+  # a plugin entirely, not rewritten to a new core subcommand. Phase 1, not
+  # 3, for the same reason: relocated, not removed. `monitor` had no
+  # internal/ package of its own (the dashboard list was inline in the
+  # command file), so this is a pure copy with nothing left behind in core.
+  - name: "nself monitor"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install monitor"
+    docs_url: "https://nself.org/docs/plugins/monitor"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Same shape as the entries above: moved to
+  # a plugin entirely, not rewritten to a new core subcommand. Phase 1, not
+  # 3, for the same reason: relocated, not removed. internal/alerts had no
+  # dependency beyond the standard library and moved wholesale; the one
+  # core-side caller of the package (internal/admin/alerts.go, describing
+  # two static admin alert rules, never called outside its own test) now
+  # defines its own minimal type instead of importing the extracted package.
+  - name: "nself alerts"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install alerts"
+    docs_url: "https://nself.org/docs/plugins/alerts"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. Same shape as the entries above: moved to
+  # a plugin entirely, not rewritten to a new core subcommand. Phase 1, not
+  # 3, for the same reason: relocated, not removed. internal/watchdog
+  # depended on internal/health.DockerClient, which lives in the same core
+  # file cli/cmd/commands/start.go (a golden-path command) also uses and
+  # therefore could not move — the plugin reimplements only that narrow
+  # docker-CLI adapter locally instead of forking internal/health.
+  - name: "nself watchdog"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install watchdog"
+    docs_url: "https://nself.org/docs/plugins/watchdog"
+
+  # CLI-R11 thin-core extraction (AI family). Same shape as the entries
+  # above: moved to a plugin entirely, not rewritten to a new core
+  # subcommand. Phase 1, not 3, for the same reason: relocated, not removed.
+  # `ai`, `ai-studio`, `gateway`, `gauth`, and `model` were evaluated
+  # together as one candidate "AI family" plugin, but internal/plugin's
+  # ProxyCommand resolves exactly one binary per top-level command word
+  # (nself-<cmdName>, keyed on os.Args[1]) and PluginManifest carries exactly
+  # one binaryName — there is no mechanism for one plugin.json to publish
+  # multiple command binaries. Each top-level word that left core therefore
+  # got its own plugin. `ai` itself stayed in core: `ai local install` and
+  # `ai local models` depend on internal/installer, which `doctor` (golden
+  # path, never extracted) also depends on for `installer.Install` and
+  # `installer.MemAvailableMB` — extracting `ai` would force duplicating
+  # that whole package into a plugin module unreachable from core, which is
+  # a worse outcome than leaving the family in core. `ollama` never had its
+  # own entry here: CLI-R09 already folded it under `model` as a
+  # subcommand (see the "nself ollama" entry above, and legacy_spellings.go),
+  # so it travels with the model plugin, not a plugin of its own.
+  - name: "nself ai-studio"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install ai-studio"
+    docs_url: "https://nself.org/docs/plugins/ai-studio"
+    phase: 1
+
+  - name: "nself gateway"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install gateway"
+    docs_url: "https://nself.org/docs/plugins/gateway"
+    phase: 1
+
+  - name: "nself gauth"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install gauth"
+    docs_url: "https://nself.org/docs/plugins/gauth"
+    phase: 1
+
+  # `model` also carries the `ollama` subcommand along with it (see note
+  # above) — a bare `nself ollama ...` rewrites to `nself model ollama ...`
+  # (legacy_spellings.go), which then hits this same relocated-command path
+  # since `model` is what left core, not `ollama`.
+  - name: "nself model"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install model"
+    docs_url: "https://nself.org/docs/plugins/model"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. `claw` is the largest single extraction
+  # (~3300 lines across 17 files). The plugin's registry NAME is "claw-cli",
+  # not "claw" — plugins-pro/registry.json already registers a paid backend
+  # service plugin named "claw" (plugins-pro/paid/claw, the ɳClaw bundle
+  # backend that this CLI surface talks to over HTTP), and the merged
+  # registry plugins.nself.org/registry.json resolves `nself install <name>`
+  # by an exact, flat name match (internal/plugin/paths.go's findPlugin) —
+  # two entries named "claw" would collide. binaryName is still "nself-claw"
+  # (plugin.json overrides the name-derived default) since ProxyCommand
+  # resolves nself-<cmdName>, keyed on the command word the user types
+  # ("claw"), not the plugin's registry name.
+  #
+  # Known inconsistency this creates: internal/plugin.ProxyCommand's own
+  # "unknown command" fallback (router.go, used by every plugin uniformly)
+  # hardcodes its install hint as `nself install <cmdName>` — it will say
+  # "nself install claw" for an uninstalled claw plugin, which is wrong; only
+  # THIS registry entry's replacement text (surfaced by warnRelocatedCommand,
+  # which runs first) says the correct "nself install claw-cli". Fixing
+  # ProxyCommand's fallback to consult the deprecation registry would help
+  # every future name != registry-name extraction, not just this one, but is
+  # a shared-file change out of this ticket's scope and touches code other
+  # CLI-R11 extraction batches are concurrently editing — left as a follow-up.
+  - name: "nself webhooks"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install webhooks"
+    docs_url: "https://nself.org/docs/plugins/webhooks"
+    phase: 1
+  - name: "nself tenant"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install tenant"
+    docs_url: "https://nself.org/docs/plugins/tenant"
+    phase: 1
+  - name: "nself billing"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install tenant"
+    docs_url: "https://nself.org/docs/plugins/tenant"
+    phase: 1
+  - name: "nself queue"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install queue"
+    docs_url: "https://nself.org/docs/plugins/queue"
+    phase: 1
+  - name: "nself dr"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install dr"
+    docs_url: "https://nself.org/docs/plugins/dr"
+    phase: 1
+  - name: "nself api"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install api"
+    docs_url: "https://nself.org/docs/plugins/api"
+    phase: 1
+  - name: "nself sentry"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install sentry"
+    docs_url: "https://nself.org/docs/plugins/sentry"
+    phase: 1
+  - name: "nself sentry-server"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install sentry"
+    docs_url: "https://nself.org/docs/plugins/sentry"
+    phase: 1
+  - name: "nself ai"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install ai-cli"
+    docs_url: "https://nself.org/docs/plugins/ai-cli"
+    phase: 1
+  - name: "nself region"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install region"
+    docs_url: "https://nself.org/docs/plugins/region"
+    phase: 1
+  - name: "nself infra"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install infra"
+    docs_url: "https://nself.org/docs/plugins/infra"
+    phase: 1
+  - name: "nself claw"
+    type: command
+    since: "v1.3.0"
+    replacement: "nself install claw-cli"
+    docs_url: "https://nself.org/docs/plugins/claw-cli"
     phase: 1
 
 # =============================================================================

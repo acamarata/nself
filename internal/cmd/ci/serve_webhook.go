@@ -1,11 +1,14 @@
 // Package ci — serve_webhook.go
 //
 // Purpose: GitHub webhook handler: signature verification, payload parsing,
-//   ref/SHA extraction, and async job dispatch to the worker pool.
+//
+//	ref/SHA extraction, and async job dispatch to the worker pool.
+//
 // Inputs:  HTTP POST with X-Hub-Signature-256 + X-GitHub-Event headers
 // Outputs: 202 Accepted (async dispatch) or error status; gate job enqueued
 // Constraints: HMAC-SHA256 with shared secret; supports push + pull_request
-//   event types; ignores deleted-branch pushes; SPORT CLI-CMD-CI-SERVE-001
+//
+//	event types; ignores deleted-branch pushes; SPORT CLI-CMD-CI-SERVE-001
 package ci
 
 import (
@@ -44,7 +47,7 @@ type githubPushPayload struct {
 
 // githubPRPayload is the minimal subset of a GitHub pull_request event.
 type githubPRPayload struct {
-	Action string `json:"action"` // "opened", "synchronize", "reopened"
+	Action      string `json:"action"` // "opened", "synchronize", "reopened"
 	PullRequest struct {
 		Head struct {
 			SHA  string `json:"sha"`
@@ -188,9 +191,3 @@ func verifySignature(secret, header string, body []byte) error {
 }
 
 // min returns the smaller of a and b (Go 1.21+ has builtin min; keep explicit for 1.22 compat).
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

@@ -1,7 +1,7 @@
 # CLI Reference — E6 AI Gateway Trio
 
 This page documents the ten commands added or updated in E6 (Gateway Unification).
-Full command reference: [[COMMANDS]] | Architecture: [[Architecture-Microkernel]]
+Full command reference: [[Commands]] | Architecture: [[Architecture-Microkernel]]
 
 ---
 
@@ -18,7 +18,7 @@ Manage the nSelf AI gateway (nself-ai-gateway, port 3761).
 | `nself gateway quota` | Show current quota usage (today, per provider/model) |
 | `nself gateway routes` | List active provider routing rules |
 
-Full reference: [[commands/cmd-gateway]]
+Full reference: [[cmd-gateway]]
 
 ---
 
@@ -51,9 +51,9 @@ All three ports are centralized in `cli/internal/ports/ports.go` (constants `AIC
 
 ## Related
 
-- [[commands/cmd-gateway]] — full gateway command reference
+- [[cmd-gateway]] — full gateway command reference
 - [[commands/cmd-claw-session]] — full claw session reference
 - [[Config-Env-Vars]] — environment variables reference (see § AI Gateway Trio)
-- [[COMMANDS]] — complete command index
+- [[Commands]] — complete command index
 
 [[Home]]

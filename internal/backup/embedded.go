@@ -72,7 +72,8 @@ func embeddedBackupDir(cfg *config.Config) (string, error) {
 // partial backup files from being visible to concurrent readers.
 //
 // The backup file name format: <timestamp>-embedded.dump  (pg custom format)
-//                          or: <timestamp>-embedded.sql   (SQL fallback)
+//
+//	or: <timestamp>-embedded.sql   (SQL fallback)
 func BackupEmbedded(ctx context.Context, cfg *config.Config) (*EmbeddedBackupResult, error) {
 	backupDir, err := embeddedBackupDir(cfg)
 	if err != nil {

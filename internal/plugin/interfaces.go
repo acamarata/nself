@@ -16,6 +16,10 @@ type LicenseClient interface {
 // Registry represents the full plugin registry response.
 type Registry struct {
 	Plugins []PluginManifest
+	// FetchedAt is the registry-wide snapshot timestamp reported by the live
+	// endpoint's top-level "fetchedAt" field (CLI-R16). Empty for registries
+	// that don't send it (e.g. the GitHub raw fallback).
+	FetchedAt string
 }
 
 // EnvVar describes an environment variable required or used by a plugin.
@@ -121,11 +125,19 @@ type PluginManifest struct {
 	ArchSupport          []string `json:"arch_support,omitempty"`
 
 	// Implementation
-	Language       string `json:"language,omitempty"`
-	Runtime        string `json:"runtime,omitempty"`
-	Port           int    `json:"port,omitempty"`
-	EntryPoint     string `json:"entryPoint,omitempty"`
-	CLI            string `json:"cli,omitempty"`
+	Language   string `json:"language,omitempty"`
+	Runtime    string `json:"runtime,omitempty"`
+	Port       int    `json:"port,omitempty"`
+	EntryPoint string `json:"entryPoint,omitempty"`
+	CLI        string `json:"cli,omitempty"`
+	// PluginType distinguishes a plugin that adds a CLI command ("cli") from
+	// one that runs as a service. Only a "cli" plugin gets its binary published
+	// into the directory ProxyCommand searches — see cli_binary.go.
+	PluginType string `json:"pluginType,omitempty"`
+	// BinaryName overrides the nself-<name> convention for the published
+	// binary. ProxyCommand resolves nself-<command>, so this should only differ
+	// when the command name differs from the plugin name.
+	BinaryName     string `json:"binaryName,omitempty"`
 	HealthEndpoint string `json:"health_endpoint,omitempty"`
 	PackageManager string `json:"packageManager,omitempty"`
 	Framework      string `json:"framework,omitempty"`
@@ -135,12 +147,14 @@ type PluginManifest struct {
 	Views  []string `json:"views,omitempty"`
 
 	// API
-	APIEndpoints []string     `json:"apiEndpoints,omitempty"`
-	Webhooks     []string     `json:"webhooks,omitempty"`
-	CLICommands  []CLICommand `json:"cliCommands,omitempty"`
+	APIEndpoints APIEndpointList `json:"apiEndpoints,omitempty"`
+	// WebhookNames, not []string: real manifests use both an array of event
+	// names and an object keyed by event name. See webhooks.go.
+	Webhooks    WebhookNames `json:"webhooks,omitempty"`
+	CLICommands []CLICommand `json:"cliCommands,omitempty"`
 
 	// Environment
-	EnvVars []EnvVar `json:"envVars,omitempty"`
+	EnvVars EnvVarList `json:"envVars,omitempty"`
 
 	// Dependencies
 	Dependencies         []string           `json:"dependencies,omitempty"`
@@ -160,7 +174,7 @@ type PluginManifest struct {
 	MultiApp MultiApp `json:"multiApp,omitempty"`
 
 	// Permissions
-	Permissions []string `json:"permissions,omitempty"`
+	Permissions PermissionSet `json:"permissions,omitempty"`
 
 	// Compatibility
 	Compat *CompatBlock `json:"compat,omitempty"`
@@ -203,4 +217,12 @@ type PluginManifest struct {
 	// Format: Ed25519Sign(privateKey, sha256(tarball)).
 	// Pinned in registry alongside AuthorPublicKey.
 	Signature string `json:"signature,omitempty"`
+
+	// UpdatedAt is a per-plugin freshness timestamp (CLI-R16). The live
+	// plugins.nself.org registry does not send this field as of 2026-08-23 —
+	// only a registry-wide "fetchedAt" (see Registry.FetchedAt /
+	// RegistryFetchedAt). This field is plumbing: `nself plugin list
+	// --detailed` displays it when present (registry entry or local
+	// plugin.json) and shows nothing invented when it is not.
+	UpdatedAt string `json:"updated_at,omitempty"`
 }

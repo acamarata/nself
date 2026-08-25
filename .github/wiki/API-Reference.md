@@ -467,7 +467,7 @@ Error body format:
 
 ## Related Pages
 
-- [[Feature-ɳClaw]] -- ɳClaw feature overview
+- [[Feature-nClaw]] -- ɳClaw feature overview
 - [[Plugin-Architecture]] -- how plugins are structured
 - [[Security-Architecture]] -- auth model and rate limiting
 - [[Config-Env-Vars]] -- environment variable reference

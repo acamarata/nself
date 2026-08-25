@@ -34,5 +34,5 @@ nself ai chat --provider gemini "ping"  # round-trips a real Gemini call
 
 - [[Plugins-AI-OAuth]], full reference (consent flow, scope list, troubleshooting)
 - [[plugin-google]], google plugin and shared OAuth client
-- [[ai-pool]], `nself ai pool` command reference
+- [[Plugins-AI-OAuth]], `nself ai pool` command reference
 - [[Home]]

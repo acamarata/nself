@@ -1,0 +1,5 @@
+# CLI-R12 ratchet. Number of non-test Go files allowed to exceed 300 lines.
+# May only go DOWN. internal/repoqa/file_size_test.go fails if the real count
+# rises above this, and separately if this number is left higher than reality.
+# Lower it in the same commit that splits a file.
+7

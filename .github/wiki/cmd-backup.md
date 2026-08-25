@@ -1,166 +1,295 @@
 # nself backup
 
+<!-- BEGIN PROSE:summary -->
 > Backup operations: create, list, restore, verify, prune, config, status, init-key.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
 ```
-nself backup <subcommand> [flags] [args]
+nself backup <subcommand> [flags]
 ```
 
 ## Description
 
-`nself backup` covers the full life cycle of project backups: full Postgres dumps, write-ahead-log (WAL) checkpoints, MinIO object snapshots, configuration metadata, and combined backups. Backups can be encrypted with age (one keypair per project) and pruned by retention policy.
+<!-- BEGIN PROSE:description -->
+Backup, restore, verify, and schedule ɳSelf project data.
 
-Subcommands include `create` (one-shot full or incremental), `list` (filter by remote, environment, age), `restore` (from any backup ID or `latest`, with partial restore options), `verify` (checksum or full restore-test in a disposable container), and `prune` (apply daily/weekly/monthly retention).
+---
+## backup stream
 
-Note: Point-in-time recovery (PITR) ships as a dedicated `nself pitr` command (`enable`, `disable`, `status`, `base-backup`, `restore`) in v1.1.1. The `--point-in-time` flag on `backup` itself was removed; use `nself pitr restore` for WAL replay.
+Stream a live backup to S3, R2, Backblaze B2, GCS, or Azure Blob. No temp files written.
 
-`backup config --install-cron` installs systemd timers for full backups, WAL checkpoints, prune cycles, and weekly verify drills so an operator can hand off to automation.
+### Pipeline
 
-## Subcommands
+```
+pg_dump (streaming) | age (encrypt) | rclone rcat (multipart upload)
+```
 
-| Name | Description |
-|------|-------------|
-| `create` | Create a new backup |
-| `list` | List available backups |
-| `restore <backup-id\|latest>` | Restore from a backup |
-| `verify <backup-id\|latest>` | Verify backup integrity |
-| `prune` | Remove old backups by retention policy |
-| `config` | View or install backup configuration (systemd timers) |
-| `status` | Show backup subsystem status |
-| `init-key` | Generate age encryption keypair for backups |
+### Usage
+
+```bash
+nself backup stream --to <url> [--recipient <key>] [--dry-run]
+```
+
+### Flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `--to` | `NSELF_BACKUP_DESTINATION` | Destination URL (rclone remote path) |
+| `--recipient` | `NSELF_BACKUP_RECIPIENT` | Encryption recipient: age key, SSH key, or `github:<user>` (repeatable) |
+| `--dry-run` | false | Preview without running |
+
+### Examples
+
+```bash
+# Stream encrypted backup to S3
+nself backup stream --to s3:mybucket/backups --recipient age1abc123
+
+# Use GitHub SSH keys for encryption
+nself backup stream --to r2:mybucket/backups --recipient github:myusername
+
+# Use env-configured destination (no flags needed)
+nself backup stream
+
+# Dry run to confirm destination
+nself backup stream --to b2:mybucket --dry-run
+```
+
+### Requirements
+
+- `pg_dump` on PATH
+- `rclone` on PATH (configured with target remote)
+- `age` on PATH (only required when encryption recipients are specified)
+
+### Environment variables
+
+| Variable | Description |
+|---|---|
+| `NSELF_BACKUP_DESTINATION` | Default destination URL |
+| `NSELF_BACKUP_RECIPIENT` | Default age/SSH public key (space-separated for multiple) |
+| `NSELF_BACKUP_CHUNK_MB` | Multipart chunk size in MB (default: 64, handled by rclone) |
+| `AWS_ACCESS_KEY_ID` | S3/R2/B2 access key |
+| `AWS_SECRET_ACCESS_KEY` | S3/R2/B2 secret key |
+
+---
+
+## backup restore-remote
+
+Restore a backup directly from a remote URL. No local disk space required.
+
+### Pipeline
+
+```
+rclone cat <from> | age --decrypt | pg_restore
+```
+
+### Usage
+
+```bash
+nself backup restore-remote --from <url> [--key <identity-file>] [--yes]
+```
+
+### Flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `--from` | — | Source URL (rclone remote path) |
+| `--key` | `~/.config/nself/age-key.txt` | Path to age identity file |
+| `--yes` | false | Skip confirmation on production |
+
+### Examples
+
+```bash
+# Restore encrypted backup from S3
+nself backup restore-remote --from s3:mybucket/backups/myproject_stream_20260423.sql.age \
+  --key ~/.config/nself/age-key.txt
+
+# Restore unencrypted backup
+nself backup restore-remote --from r2:mybucket/backups/myproject_stream_20260423.sql
+```
+
+---
+
+## backup resume
+
+Resume a previously interrupted streaming backup.
+
+Since rclone `rcat` uploads are not resumable at the protocol level, resume re-streams the full backup and overwrites the partial remote object at the same key.
+
+### Usage
+
+```bash
+nself backup resume <backup-id>
+```
+
+Resume state is stored in `~/.nself/backup-state/<id>.json`.
+
+---
+
+## backup schedule
+
+Install a systemd timer to run `nself backup stream` on a cron schedule.
+
+### Usage
+
+```bash
+nself backup schedule --cron "0 2 * * *" --to <url> [--recipient <key>] [--dry-run]
+```
+
+### Flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `--cron` | — | Cron expression (e.g. `0 2 * * *`) |
+| `--to` | `NSELF_BACKUP_DESTINATION` | Destination URL |
+| `--recipient` | — | Default encryption recipient |
+| `--unit-dir` | `/etc/systemd/system` | Systemd unit directory |
+| `--dry-run` | false | Print unit files without writing |
+
+### Examples
+
+```bash
+# Schedule nightly encrypted backup at 02:00 UTC
+nself backup schedule --cron "0 2 * * *" --to s3:mybucket/backups --recipient age1abc123
+
+# Preview the systemd units
+nself backup schedule --cron "0 2 * * *" --to r2:mybucket --dry-run
+```
+
+### Status
+
+After scheduling, check the timer with:
+
+```bash
+nself backup status
+systemctl status nself-backup-stream.timer
+```
+
+---
+
+## backup create
+
+Create a local backup (written to `BACKUP_DIR`, default `./backups`).
+
+```bash
+nself backup create [--type full|wal|metadata|minio|all] [--encrypt] [--tag <label>] [--dry-run]
+```
+
+---
+
+## backup restore
+
+Restore from a local backup file.
+
+```bash
+nself backup restore <backup-id|latest> [--only pg,minio,metadata] [--decrypt-key <file>] [--yes]
+```
+
+---
+
+## backup verify
+
+Verify backup integrity, optionally running a restore test in a temporary container.
+
+```bash
+nself backup verify <backup-id|latest> [--restore-test] [--cleanup] [--keep]
+```
+
+---
+
+## backup list
+
+List backups in the local backup directory.
+
+```bash
+nself backup list [--remote <name>] [--since 24h] [--format table|json]
+```
+
+---
+
+## backup prune
+
+Remove backups beyond the retention policy.
+
+```bash
+nself backup prune [--keep-daily 7] [--keep-weekly 4] [--keep-monthly 12] [--dry-run]
+```
+
+---
+
+## backup status
+
+Show backup subsystem status: last run, next scheduled run, retention policy.
+
+```bash
+nself backup status [--format json]
+```
+
+---
+
+## backup init-key
+
+Generate an age encryption keypair for backup encryption.
+
+```bash
+nself backup init-key
+```
+
+Outputs the public key to add to `.env` as `BACKUP_AGE_RECIPIENTS`.
+
+---
+
+## Related
+
+- [[cmd-pitr]], point-in-time recovery via WAL archiving
+- [[Home]]
+<!-- END PROSE:description -->
 
 ## Flags
 
-### `backup create`
-
+<!-- BEGIN GENERATED:flags -->
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--type` | `full` | Backup type: `full`, `wal`, `metadata`, `minio`, `all` |
-| `--remote` | `""` | Remote name override |
-| `--encrypt` | false | Force encryption on |
-| `--no-encrypt` | false | Force encryption off |
-| `--tag` | `""` | Human label for this backup |
-| `--dry-run` | false | Preview only |
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
 
-### `backup list`
+## Subcommands
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--remote` | `""` | Filter by remote name |
-| `--env` | `""` | Filter by environment |
-| `--since` | `""` | Show backups newer than duration (e.g. `24h`, `7d`) |
-| `--format` | `table` | Output format: `table` or `json` |
-
-### `backup restore <backup-id\|latest>`
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--to` | `""` | Restore to alternate directory |
-| `--only` | `""` | Restore subset: `pg`, `minio`, `metadata` (comma-separated) |
-| `--decrypt-key` | `""` | Path to age identity file |
-| `--yes` | false | Skip confirmation |
-
-Note: `--point-in-time` is not a flag on `backup restore`. Use `nself pitr restore` (v1.1.1) for WAL-replay point-in-time recovery via pgbackrest.
-
-### `backup verify <backup-id\|latest>`
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--restore-test` | false | Spin up test container and restore |
-| `--cleanup` | true | Remove test container after verify |
-| `--keep` | false | Keep test container for inspection |
-
-#### `--restore-test` deep restore verification
-
-When `--restore-test` is set, `backup verify` goes beyond the default checksum check:
-
-1. Spins up an ephemeral Postgres container on a random local port.
-2. Restores the target `.dump` file via `pg_restore` into the container.
-3. Runs the full smoke-query catalog (5+ system tables): user table count, live tuple count, `auth.users` presence, `hdb_catalog.hdb_metadata` presence, and `np_claw_conversations` presence. A zero user-table count triggers an explicit "row count mismatch, schema-only restore detected" failure.
-4. Runs a sentinel CRUD round-trip: creates a temp schema, inserts a sentinel row, reads it back, and drops the schema. Completes in under 2 seconds. Cleaned up in defer even on panic.
-5. Reports pass/fail with JSON output suitable for cron consumption.
-6. Tears down the container and volume via `defer`, cleanup happens even on failure.
-
-Exit code 0 = restore verified. Non-zero = verify failed. JSON output:
-
-```json
-{"backup_id":"latest","verified":true,"started_at":"2026-04-20T02:00:01Z","duration":"47.3s","method":"restore-test","details":"file size: 104857600 bytes"}
-```
-
-Use `--keep` to inspect the restored database before teardown (useful for debugging silent data corruption).
-
-Note: `--restore-test` is the correct flag (not `--test-restore`). This is verified in `cli/internal/backup/verify.go` field `RestoreTest`.
-
-Cross-link: [DR Runbook](operations/dr-runbook.md) uses `backup verify --restore-test` as the weekly automated integrity check.
-
-### `backup prune`
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--dry-run` | false | Preview only |
-| `--keep-daily` | `7` | Keep last N daily backups |
-| `--keep-weekly` | `4` | Keep last N weekly backups |
-| `--keep-monthly` | `12` | Keep last N monthly backups |
-| `--format` | `""` | Output format: `json` |
-
-### `backup config`
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--format` | `""` | Output format: `json` |
-| `--install-cron` | false | Install systemd timers for backup, WAL, prune, verify |
-| `--full-at` | `03:00` | Full backup time UTC (HH:MM) when `--install-cron` |
-| `--wal-every` | `15m` | WAL checkpoint interval when `--install-cron` |
-| `--prune-at` | `04:00` | Prune time UTC (HH:MM) when `--install-cron` |
-| `--verify-on` | `Sun` | Weekly restore-test day when `--install-cron` |
-| `--verify-at` | `05:00` | Weekly restore-test time UTC when `--install-cron` |
-| `--remote` | `""` | Override configured remote when `--install-cron` |
-| `--unit-dir` | `/etc/systemd/system` | Systemd unit directory when `--install-cron` |
-| `--dry-run` | false | Print unit files without writing when `--install-cron` |
-
-### `backup status`
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--format` | `""` | Output format: `json` |
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `config` | View backup configuration |
+| `create` | Create a new backup |
+| `drill` | Run a DR drill: restore latest backup into scratch DB and measure RTO |
+| `init-key` | Generate age encryption keypair for backups |
+| `list` | List available backups |
+| `pitr` | Point-in-time recovery: enable, disable, status, base-backup, restore |
+| `prune` | Remove old backups by retention policy |
+| `restore` | Restore from a backup |
+| `restore-remote` | Restore a backup directly from a remote URL |
+| `resume` | Resume an interrupted streaming backup |
+| `schedule` | Schedule recurring streaming backups via systemd timers |
+| `status` | Show backup subsystem status |
+| `stream` | Stream an encrypted backup directly to a remote destination |
+| `verify` | Verify backup integrity |
+<!-- END GENERATED:subcommands -->
 
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
+<!-- TODO(docs): needs human prose -->
+
 ```bash
-# Generate the age keypair before first encrypted backup
-nself backup init-key
-
-# Create a full encrypted backup tagged for traceability
-nself backup create --type full --encrypt --tag pre-deploy
-
-# List backups newer than a week, JSON for piping
-nself backup list --since 7d --format json
-
-# Restore latest backup, restoring only Postgres data
-nself backup restore latest --only pg --yes
-
-# Verify the latest backup with a real restore-test container
-nself backup verify latest --restore-test
-
-# Install systemd timers so backups run automatically
-sudo nself backup config --install-cron --full-at 02:30
+nself backup
 ```
-
-## Archive Format
-
-`nself backup` creates archives that follow the `nself-backup-v1` spec. The spec covers the archive filename pattern, `manifest.json` structure, `checksums.sha256` format, encryption contract, and the exact extraction order used by `restore`. See `.claude/docs/operations/BACKUP-FORMAT.md`.
-
-## Security
-
-`backup create --type metadata` exports Hasura metadata by running `hasura-cli` inside the `_hasura` container. The Hasura admin secret is passed to `docker exec` via the `-e HASURA_GRAPHQL_ADMIN_SECRET=<value>` flag. This keeps the secret in the container's environment and out of the process-table argv, which would otherwise be readable by any local user via `ps aux` (CWE-214). No user-facing change is required; this is an internal implementation detail.
+<!-- END PROSE:examples -->
 
 ## See Also
 
-- [[cmd-dr]], disaster recovery operations
-- [[cmd-secrets]], manage encryption keys
-- [[cmd-db]], database operations
-- [[Commands]], full command index
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

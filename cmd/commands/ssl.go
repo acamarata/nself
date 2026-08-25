@@ -55,7 +55,9 @@ Exits non-zero on failure.`,
 func init() {
 	sslCmd.AddCommand(sslStatusCmd)
 	sslCmd.AddCommand(sslRenewCmd)
-	RootCmd.AddCommand(sslCmd)
+	// CLI-R11 core list: `trust` absorbs dns-setup and ssl. The old top-level
+	// spelling keeps working through legacy_spellings.go.
+	trustCmd.AddCommand(sslCmd)
 }
 
 // checkDomainTLS connects to host:443 with TLS and returns the leaf certificate.

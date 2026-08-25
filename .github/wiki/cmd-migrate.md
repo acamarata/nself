@@ -1,15 +1,18 @@
 # nself migrate
 
+<!-- BEGIN PROSE:summary -->
 > Detect and migrate ɳSelf v0.9.x projects to the current v1.x format.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
 ```
-nself migrate [subcommand] [flags]
+nself migrate <subcommand> [flags]
 ```
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself migrate` detects and migrates v0.9.x project artifacts to the current v1.x format. Running `nself migrate` without a subcommand performs a detection scan, the same as `nself migrate detect`, and reports which v0.9 artifacts are present.
 
 The `run` subcommand performs the full automated migration: it stops running containers, backs up the current project state to `.nself/backup/{timestamp}/`, moves nginx configs from the flat `nginx/` layout to `nginx/sites/` (v1 layout), regenerates `docker-compose.yml`, and prints a summary of every change made. The migration is idempotent: running it on an already-migrated project exits cleanly with no changes.
@@ -20,21 +23,27 @@ If anything goes wrong, use `nself migrate rollback` to restore from the automat
 
 > **Note:** `nself migrate` manages v0.9→v1 project migration. For database schema migrations within a v1 project, see [[cmd-db]].
 
-## Subcommands
+## Env cascade order migration (CLI-R18)
 
-| Subcommand | Description |
-|------------|-------------|
-| `detect` | Detect v0.9 artifacts in the current project and print a summary |
-| `run` | Full v0.9→v1 migration: stop containers, backup, move configs, regenerate |
-| `rollback` | Restore from the most recent migration backup |
+Every bare `nself migrate` run also checks the project's `.env` cascade for CLI-R18 drift, independent of the v0.9→v1 artifact scan above. CLI-R18 changed the load order (later wins) from:
 
-## Flags
+```
+.env.dev → .env.{staging|prod} → .env.secrets → .env.local → .env → .env.ai
+```
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--backup` | `""` | Specific backup timestamp to restore (for `rollback`, e.g. `20260417-143022`) |
-| `--list` | false | List available backups with timestamps and sizes (for `rollback`) |
-| `--help`, `-h` | — | Show help |
+to:
+
+```
+.env → .env.{dev|staging|prod} → .env.secrets → .env.local
+```
+
+with `.env.ai` eliminated as a cascade layer — its content folds into `.env.secrets`. For every variable whose winning file or value would differ between the two orders, `nself migrate`:
+
+- **Auto-fixes** the common case (bare `.env` or `.env.ai` used to win over `.env.secrets`/`.env.{env}`): writes the pre-migration effective value into `.env.secrets`, so the resolved config doesn't silently change. A folded `.env.ai` is archived to `.env.ai.migrated` once every one of its keys is resolved this way.
+- **Flags for manual review** the two shapes it refuses to guess on: a personal `.env.local` override that a committed file was incorrectly shadowing (fixing this automatically would either perpetuate the bug or silently override your personal file), and a dev-only value that was leaking into staging/prod under the old always-load-`.env.dev` quirk (baking that leak into `.env.secrets` would just relocate the bug).
+- **Reports "no change needed"** when the two orders already resolve identically — the common case for most projects.
+
+Set `NSELF_LEGACY_ENV_ORDER=1` to keep a project on the old order temporarily (one minor version, with a warning on every use) while you review flagged items. See [[cmd-env]] → `env explain` to inspect the cascade in effect at any time, and [[Config-Env-Vars]] for the full reference.
 
 ## Plugin re-install warning
 
@@ -62,9 +71,36 @@ A v0.9 test fixture lives at `internal/migration/testdata/v0.9-fixture/`. The Gi
 ```bash
 go test -mod=vendor -run TestE2E ./internal/migration/...
 ```
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--from-bash` | `false` | Migrate from a v0.9.9 Bash-era project (alias for: nself migrate from-bash) |
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `detect` | Detect v1 artifacts in the current project |
+| `firebase` | Generate ɳSelf migration artifacts from a Firebase export |
+| `from-bash` | Migrate a v0.9.9 Bash-era project to the current ɳSelf CLI |
+| `from-v099` | Migrate v0.9.9 home-level state (license key, channel, ssh keys) to v1.x layout |
+| `generate` | Generate a SQL migration from a natural-language description |
+| `rollback` | Restore a v1 backup created by migrate run |
+| `run` | Migrate v1 project to v2 |
+| `supabase` | Migrate a Supabase project to ɳSelf |
+| `watch` | Watch model files and propose SQL migrations on change |
+<!-- END GENERATED:subcommands -->
 
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
 ```bash
 # Scan for v0.9 artifacts (non-destructive)
 nself migrate
@@ -84,5 +120,13 @@ nself migrate rollback --backup 20260417-143022
 ```
 
 See [[Upgrade-From-v0.9]] for the full step-by-step migration guide.
+<!-- END PROSE:examples -->
+
+## See Also
+
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

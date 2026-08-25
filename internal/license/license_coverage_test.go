@@ -289,7 +289,7 @@ func TestVerifySignature_RotationWindow_BadHex(t *testing.T) {
 		KeyHash:        HashKey("nself_pro_rotation_badhex"),
 		Tier:           "pro",
 		Signature:      "not-valid-hex!!!", // hex.DecodeString fails
-		SignatureKeyID: 99,                  // mismatch → first loop skips, second loop: hex decode fails → return false
+		SignatureKeyID: 99,                 // mismatch → first loop skips, second loop: hex decode fails → return false
 	}
 
 	if entry.VerifySignature() {

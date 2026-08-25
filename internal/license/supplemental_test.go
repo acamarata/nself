@@ -3,7 +3,7 @@
 //
 //   - realClock.Now()        (0%  → 100%)
 //   - tryRemote paths        (56.8% → ~90%): 403, 4xx non-401/403,
-//                            200+invalid JSON, missing sig header
+//     200+invalid JSON, missing sig header
 //   - printEvent             (54.5% → ~100%): all three result branches
 //   - DeleteCache error path (66.7% → 100%)
 //   - ReadCache corrupt JSON (83.3% → 90%+)

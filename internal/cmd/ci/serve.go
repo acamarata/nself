@@ -1,13 +1,16 @@
 // Package ci — serve.go
 //
 // Purpose: HTTP webhook server for nself ci serve. Listens for GitHub push and
-//   pull_request events, verifies HMAC-SHA256 signatures, and dispatches gate
-//   jobs to a bounded worker pool. Each job runs in an ephemeral Docker
-//   container so a runaway build cannot starve the host.
+//
+//	pull_request events, verifies HMAC-SHA256 signatures, and dispatches gate
+//	jobs to a bounded worker pool. Each job runs in an ephemeral Docker
+//	container so a runaway build cannot starve the host.
+//
 // Inputs:  ServeConfig (addr, secret, concurrency, workdir, timeout)
 // Outputs: HTTP server; /healthz 200 OK; / info page; GitHub commit status per job
 // Constraints: stdlib only (no external HTTP frameworks); Docker + gh on PATH;
-//   graceful shutdown on SIGINT/SIGTERM; SPORT CLI-CMD-CI-SERVE-001
+//
+//	graceful shutdown on SIGINT/SIGTERM; SPORT CLI-CMD-CI-SERVE-001
 package ci
 
 import (

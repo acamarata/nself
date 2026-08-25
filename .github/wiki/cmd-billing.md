@@ -1,69 +1,18 @@
 # nself billing
 
-> **SHIPPED (v1.1.1):** `billing usage`, `billing invoice-preview`, `billing report`, and `billing retry-event` are all live. Stripe is the backing integration for `invoice-preview` and `retry-event`.
+**This command moved to a plugin.**
 
-> Billing operations: usage, invoice-preview, report, retry-event.
+`nself billing` is no longer part of the CLI core.
 
-## Synopsis
-
-```
-nself billing <subcommand> [flags] [args]
-```
-
-## Description
-
-`nself billing` exposes per-tenant billing and usage metering for multi-tenant ɳSelf deployments. It reports usage metrics, generates billing reports across tenants, and retries failed Stripe outbox events.
-
-`billing usage` queries the metering store for a single tenant and a month, optionally as CSV or JSON. `billing report` rolls usage up across tenants for a billing period and is suitable for accounting export. `billing retry-event` re-enqueues a failed Stripe outbox event by ID, useful when transient API errors leave events stuck.
-
-`billing invoice-preview` is reserved: the underlying Stripe integration is pending. The command currently returns a clear error pointing operators to `billing usage` and the Stripe dashboard.
-
-## Subcommands
-
-| Name | Description |
-|------|-------------|
-| `usage <tenant-id>` | Show usage metrics for a tenant |
-| `invoice-preview <tenant-id>` | Preview next Stripe invoice (Stripe integration pending) |
-| `report` | Generate billing report across tenants |
-| `retry-event <id>` | Re-enqueue a failed Stripe outbox event |
-
-## Flags
-
-### `billing usage <tenant-id>`
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--month` | `""` | Filter by month (`YYYY-MM`) |
-| `--format` | `csv` | Output format: `csv` or `json` |
-
-### `billing report`
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--tenant` | `""` | Filter by tenant slug |
-| `--month` | `""` | Filter by month (`YYYY-MM`) |
-| `--format` | `table` | Output format: `table` or `json` |
-
-## Examples
+## Install
 
 ```bash
-# Show usage for a tenant for the current month
-nself billing usage acme-corp
-
-# Pull JSON usage for last month for finance
-nself billing usage acme-corp --month 2026-03 --format json
-
-# Generate a tabular billing report across all tenants for the month
-nself billing report --month 2026-03
-
-# Retry a stuck Stripe outbox event by ID
-nself billing retry-event evt_1JxYXz2eZvKYlo2C
+nself install tenant
 ```
 
-## See Also
+Once installed, `nself billing ...` works exactly as before — the CLI proxies the
+command to the plugin, and passes it the project settings its manifest declares.
 
-- [[cmd-tenant]], tenant lifecycle management
-- [[cmd-license]], license keys
-- [[Commands]], full command index
+---
 
-← [[Commands]] | [[Home]] →
+← [[Commands]] · [[Plugin-Overview]] · [[Home]]

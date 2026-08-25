@@ -10,7 +10,7 @@
 #   3.  nself init --preset b2b-saas
 #   4.  nself build
 #   5.  nself start
-#   6.  Wait for all services healthy (60s timeout)
+#   6.  Wait for all services healthy (GOLDEN_PATH_HEALTH_TIMEOUT, default 60s)
 #   7.  nself doctor --quick  (exit 0)
 #   8.  nself plugin install ai
 #   9.  nself plugin install claw
@@ -184,7 +184,11 @@ run_step() {
 }
 
 wait_healthy() {
-  local timeout=60
+  # CLI-R05: 60s was too tight on a cold CI runner — postgres + hasura + auth
+  # + nginx have to pull and boot before `doctor --quick` can pass, and the
+  # weekly scheduled run failed on exactly this while local runs passed.
+  # GOLDEN_PATH_HEALTH_TIMEOUT overrides it; CI sets 240.
+  local timeout="${GOLDEN_PATH_HEALTH_TIMEOUT:-60}"
   local interval=3
   local elapsed=0
   log "Waiting for services healthy (timeout ${timeout}s)..."

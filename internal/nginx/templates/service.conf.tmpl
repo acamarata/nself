@@ -26,9 +26,11 @@ server {
 {{if .HasSSL}}
     ssl_certificate /etc/nginx/ssl/certificates/{{.SSLDir}}/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/certificates/{{.SSLDir}}/privkey.pem;
+{{- if .HasTrustedChain}}
     ssl_trusted_certificate /etc/nginx/ssl/certificates/{{.SSLDir}}/chain.pem;
     ssl_stapling on;
     ssl_stapling_verify on;
+{{- end}}
 {{end}}
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;

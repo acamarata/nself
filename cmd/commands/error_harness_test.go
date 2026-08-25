@@ -48,30 +48,10 @@ var errorHarnessCases = []errorHarnessCase{
 	{"admin", []string{"admin", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"admin", []string{"admin", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── ai ─────────────────────────────────────────────────────────────────
-	{"ai", []string{"ai"}, "(a) no project dir"},
-	{"ai", []string{"ai", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"ai", []string{"ai", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── alerts ─────────────────────────────────────────────────────────────
-	{"alerts", []string{"alerts"}, "(a) no project dir"},
-	{"alerts", []string{"alerts", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"alerts", []string{"alerts", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── audit ──────────────────────────────────────────────────────────────
-	{"audit", []string{"audit"}, "(a) no project dir"},
-	{"audit", []string{"audit", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"audit", []string{"audit", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── backup ─────────────────────────────────────────────────────────────
 	{"backup", []string{"backup"}, "(a) no project dir"},
 	{"backup", []string{"backup", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"backup", []string{"backup", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── billing ────────────────────────────────────────────────────────────
-	{"billing", []string{"billing"}, "(a) no project dir"},
-	{"billing", []string{"billing", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"billing", []string{"billing", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── build ──────────────────────────────────────────────────────────────
 	{"build", []string{"build"}, "(a) no project dir"},
@@ -82,11 +62,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"bundle", []string{"bundle"}, "(a) no project dir"},
 	{"bundle", []string{"bundle", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"bundle", []string{"bundle", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── claw ───────────────────────────────────────────────────────────────
-	{"claw", []string{"claw"}, "(a) no project dir"},
-	{"claw", []string{"claw", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"claw", []string{"claw", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── clean ──────────────────────────────────────────────────────────────
 	{"clean", []string{"clean"}, "(a) no project dir"},
@@ -103,11 +78,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"completion", []string{"completion", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"completion", []string{"completion", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── costs ──────────────────────────────────────────────────────────────
-	{"costs", []string{"costs"}, "(a) no project dir — costs reads plugin dir; succeeds gracefully"},
-	{"costs", []string{"costs", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"costs", []string{"costs", "--format", "badformat_xyz"}, "(c) unknown format"},
-
 	// ── config ─────────────────────────────────────────────────────────────
 	{"config", []string{"config"}, "(a) no project dir"},
 	{"config", []string{"config", "--no-such-flag-xyz"}, "(b) invalid flag"},
@@ -122,11 +92,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"deploy", []string{"deploy"}, "(a) no project dir"},
 	{"deploy", []string{"deploy", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"deploy", []string{"deploy", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── gateway ────────────────────────────────────────────────────────────
-	{"gateway", []string{"gateway"}, "(a) no subcommand — shows help"},
-	{"gateway", []string{"gateway", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"gateway", []string{"gateway", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── dev ────────────────────────────────────────────────────────────────
 	{"dev", []string{"dev"}, "(a) no project dir"},
@@ -143,16 +108,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"doctor", []string{"doctor", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"doctor", []string{"doctor", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── dogfood ────────────────────────────────────────────────────────────
-	{"dogfood", []string{"dogfood"}, "(a) no project dir"},
-	{"dogfood", []string{"dogfood", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"dogfood", []string{"dogfood", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── dr ─────────────────────────────────────────────────────────────────
-	{"dr", []string{"dr"}, "(a) no project dir"},
-	{"dr", []string{"dr", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"dr", []string{"dr", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── env ────────────────────────────────────────────────────────────────
 	{"env", []string{"env"}, "(a) no project dir"},
 	{"env", []string{"env", "--no-such-flag-xyz"}, "(b) invalid flag"},
@@ -164,9 +119,9 @@ var errorHarnessCases = []errorHarnessCase{
 	{"exec", []string{"exec", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── feature ────────────────────────────────────────────────────────────
-	{"feature", []string{"feature"}, "(a) no project dir"},
-	{"feature", []string{"feature", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"feature", []string{"feature", "unknownsub_xyz"}, "(c) unknown sub"},
+	{"config features", []string{"config", "features"}, "(a) no project dir"},
+	{"config features", []string{"config", "features", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"config features", []string{"config", "features", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── functions ──────────────────────────────────────────────────────────
 	{"functions", []string{"functions"}, "(a) no project dir"},
@@ -208,29 +163,15 @@ var errorHarnessCases = []errorHarnessCase{
 	{"man", []string{"man", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"man", []string{"man", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	{"mail", []string{"mail"}, "(a) no project dir"},
-	{"mail", []string{"mail", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"mail", []string{"mail", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── migrate ────────────────────────────────────────────────────────────
 	{"migrate", []string{"migrate"}, "(a) no project dir"},
 	{"migrate", []string{"migrate", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"migrate", []string{"migrate", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── migrate-from-v099 ──────────────────────────────────────────────────
-	{"migrate-from-v099", []string{"migrate-from-v099"}, "(a) no project dir"},
-	{"migrate-from-v099", []string{"migrate-from-v099", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"migrate-from-v099", []string{"migrate-from-v099", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── model ──────────────────────────────────────────────────────────────
-	{"model", []string{"model"}, "(a) shows help (no project required)"},
-	{"model", []string{"model", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"model", []string{"model", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── monitor ────────────────────────────────────────────────────────────
-	{"monitor", []string{"monitor"}, "(a) no project dir"},
-	{"monitor", []string{"monitor", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"monitor", []string{"monitor", "unknownsub_xyz"}, "(c) unknown sub"},
+	{"migrate from-v099", []string{"migrate", "from-v099"}, "(a) no project dir"},
+	{"migrate from-v099", []string{"migrate", "from-v099", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"migrate from-v099", []string{"migrate", "from-v099", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── plugin ─────────────────────────────────────────────────────────────
 	{"plugin", []string{"plugin"}, "(a) no project dir"},
@@ -241,11 +182,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"promote", []string{"promote"}, "(a) no project dir"},
 	{"promote", []string{"promote", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"promote", []string{"promote", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── queue ──────────────────────────────────────────────────────────────
-	{"queue", []string{"queue"}, "(a) no project dir"},
-	{"queue", []string{"queue", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"queue", []string{"queue", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── reset ──────────────────────────────────────────────────────────────
 	{"reset", []string{"reset"}, "(a) no project dir"},
@@ -297,11 +233,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"telemetry", []string{"telemetry", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"telemetry", []string{"telemetry", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── tenant ─────────────────────────────────────────────────────────────
-	{"tenant", []string{"tenant"}, "(a) no project dir"},
-	{"tenant", []string{"tenant", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"tenant", []string{"tenant", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── trust ──────────────────────────────────────────────────────────────
 	{"trust", []string{"trust"}, "(a) no project dir"},
 	{"trust", []string{"trust", "--no-such-flag-xyz"}, "(b) invalid flag"},
@@ -328,49 +259,33 @@ var errorHarnessCases = []errorHarnessCase{
 	{"version", []string{"version", "unknownsub_xyz"}, "(c) unknown sub"},
 	{"version", []string{"version", "--format", "INVALIDFORMAT_XYZ"}, "(a) bad format"},
 
-	// ── waf ────────────────────────────────────────────────────────────────
-	{"waf", []string{"waf"}, "(a) no project dir"},
-	{"waf", []string{"waf", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"waf", []string{"waf", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── watchdog ───────────────────────────────────────────────────────────
-	{"watchdog", []string{"watchdog"}, "(a) no project dir"},
-	{"watchdog", []string{"watchdog", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"watchdog", []string{"watchdog", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── self-heal ──────────────────────────────────────────────────────────
 	{"self-heal", []string{"self-heal"}, "(a) no routine selected (shows help)"},
 	{"self-heal", []string{"self-heal", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"self-heal", []string{"self-heal", "--dry-run"}, "(c) dry-run no flags (shows help)"},
-
-	// ── webhooks ───────────────────────────────────────────────────────────
-	{"webhooks", []string{"webhooks"}, "(a) no project dir"},
-	{"webhooks", []string{"webhooks", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"webhooks", []string{"webhooks", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── account ────────────────────────────────────────────────────────────
 	{"account", []string{"account"}, "(a) no project dir"},
 	{"account", []string{"account", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"account", []string{"account", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── api ────────────────────────────────────────────────────────────────
-	{"api", []string{"api"}, "(a) no project dir"},
-	{"api", []string{"api", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"api", []string{"api", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── dlq ────────────────────────────────────────────────────────────────
-	{"dlq", []string{"dlq"}, "(a) no project dir"},
-	{"dlq", []string{"dlq", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"dlq", []string{"dlq", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── dns-setup ──────────────────────────────────────────────────────────
-	{"dns-setup", []string{"dns-setup"}, "(a) no project dir"},
-	{"dns-setup", []string{"dns-setup", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"dns-setup", []string{"dns-setup", "unknownsub_xyz"}, "(c) unknown sub"},
+	{"trust dns", []string{"trust", "dns"}, "(a) no project dir"},
+	{"trust dns", []string{"trust", "dns", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"trust dns", []string{"trust", "dns", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── flag ───────────────────────────────────────────────────────────────
-	{"flag", []string{"flag"}, "(a) no project dir"},
-	{"flag", []string{"flag", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	// CLI-R09 renamed `flag` to `flags`; `flag` stays as a cobra alias, so both
+	// spellings are exercised here.
+	// CLI-R19 install/remove sugar.
+	{"install", []string{"install"}, "(a) missing required arg"},
+	{"install", []string{"install", "waf", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"remove", []string{"remove"}, "(a) missing required arg"},
+	{"remove", []string{"remove", "waf", "--no-such-flag-xyz"}, "(b) invalid flag"},
+
+	{"flags", []string{"flags"}, "(a) no project dir"},
+	{"flags", []string{"flags", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"flags", []string{"flag"}, "(c) legacy alias still routes"},
 	{"flag", []string{"flag", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── oauth ──────────────────────────────────────────────────────────────
@@ -378,54 +293,10 @@ var errorHarnessCases = []errorHarnessCase{
 	{"oauth", []string{"oauth", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"oauth", []string{"oauth", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── soak ───────────────────────────────────────────────────────────────
-	{"soak", []string{"soak"}, "(a) no project dir"},
-	{"soak", []string{"soak", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"soak", []string{"soak", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── ai-studio ──────────────────────────────────────────────────────────
-	// ai-studio root returns cmd.Help() (nil) — same pattern as model.
-	{"ai-studio", []string{"ai-studio"}, "(a) shows help (no project required)"},
-	{"ai-studio", []string{"ai-studio", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"ai-studio", []string{"ai-studio", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── encryption ─────────────────────────────────────────────────────────
-	{"encryption", []string{"encryption"}, "(a) no project dir"},
-	{"encryption", []string{"encryption", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"encryption", []string{"encryption", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── federation ─────────────────────────────────────────────────────────
-	{"federation", []string{"federation"}, "(a) no project dir"},
-	{"federation", []string{"federation", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"federation", []string{"federation", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── gdpr ───────────────────────────────────────────────────────────────
-	{"gdpr", []string{"gdpr"}, "(a) no project dir"},
-	{"gdpr", []string{"gdpr", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"gdpr", []string{"gdpr", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── generate ───────────────────────────────────────────────────────────
 	{"generate", []string{"generate"}, "(a) no project dir"},
 	{"generate", []string{"generate", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"generate", []string{"generate", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── gauth ──────────────────────────────────────────────────────────────
-	// gauth root returns cmd.Help() (nil) — soft case (no project required).
-	{"gauth", []string{"gauth"}, "(a) shows help (no project required)"},
-	{"gauth", []string{"gauth", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"gauth", []string{"gauth", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── infra ──────────────────────────────────────────────────────────────
-	// infra root returns cmd.Help() (nil) — soft case.
-	{"infra", []string{"infra"}, "(a) shows help (no project required)"},
-	{"infra", []string{"infra", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"infra", []string{"infra", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── k8s ────────────────────────────────────────────────────────────────
-	// k8s root returns cmd.Help() (nil) — soft case.
-	{"k8s", []string{"k8s"}, "(a) shows help (no project required)"},
-	{"k8s", []string{"k8s", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"k8s", []string{"k8s", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── maintenance ────────────────────────────────────────────────────────
 	// maintenance root returns cmd.Help() (nil) — soft case.
@@ -438,29 +309,11 @@ var errorHarnessCases = []errorHarnessCase{
 	{"mcp", []string{"mcp", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"mcp", []string{"mcp", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── ollama ─────────────────────────────────────────────────────────────
-	// ollama root returns cmd.Help() (nil) — soft case.
-	{"ollama", []string{"ollama"}, "(a) shows help (no project required)"},
-	{"ollama", []string{"ollama", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"ollama", []string{"ollama", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── pentest-kit ────────────────────────────────────────────────────────
-	// pentest-kit root returns cmd.Help() (nil) — soft case.
-	{"pentest-kit", []string{"pentest-kit"}, "(a) shows help (no project required)"},
-	{"pentest-kit", []string{"pentest-kit", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"pentest-kit", []string{"pentest-kit", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── pitr ───────────────────────────────────────────────────────────────
 	// pitr root returns cmd.Help() (nil) — soft case.
-	{"pitr", []string{"pitr"}, "(a) shows help (no project required)"},
-	{"pitr", []string{"pitr", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"pitr", []string{"pitr", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── region ─────────────────────────────────────────────────────────────
-	// region root returns cmd.Help() (nil) — soft case.
-	{"region", []string{"region"}, "(a) shows help (no project required)"},
-	{"region", []string{"region", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"region", []string{"region", "unknownsub_xyz"}, "(c) unknown sub"},
+	{"backup pitr", []string{"backup", "pitr"}, "(a) shows help (no project required)"},
+	{"backup pitr", []string{"backup", "pitr", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"backup pitr", []string{"backup", "pitr", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── template ───────────────────────────────────────────────────────────
 	// template root returns cmd.Help() (nil) — soft case.
@@ -481,37 +334,25 @@ var errorHarnessCases = []errorHarnessCase{
 	{"release", []string{"release", "1.0.0", "extra-arg"}, "(c) wrong arity"}, // ExactArgs(1) rejects before RunE; avoids slow subprocess cascade
 
 	// ── release-check ──────────────────────────────────────────────────────
-	{"release-check", []string{"release-check"}, "(a) no project dir"},
-	{"release-check", []string{"release-check", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"release-check", []string{"release-check", "1.0.0", "extra-arg"}, "(c) wrong arity"}, // ExactArgs(1) rejects before RunE; avoids slow gate suite
+	{"release check", []string{"release", "check"}, "(a) no project dir"},
+	{"release check", []string{"release", "check", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"release check", []string{"release", "check", "1.0.0", "extra-arg"}, "(c) wrong arity"}, // ExactArgs(1) rejects before RunE; avoids slow gate suite
 
 	// ── release-rollback ───────────────────────────────────────────────────
-	{"release-rollback", []string{"release-rollback"}, "(a) no project dir"},
-	{"release-rollback", []string{"release-rollback", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"release-rollback", []string{"release-rollback", "1.0.0", "0.9.0", "extra-arg"}, "(c) wrong arity"}, // ExactArgs(2) rejects before RunE
+	{"release rollback", []string{"release", "rollback"}, "(a) no project dir"},
+	{"release rollback", []string{"release", "rollback", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"release rollback", []string{"release", "rollback", "1.0.0", "0.9.0", "extra-arg"}, "(c) wrong arity"}, // ExactArgs(2) rejects before RunE
 
 	// ── release-status ─────────────────────────────────────────────────────
-	{"release-status", []string{"release-status"}, "(a) no project dir"},
-	{"release-status", []string{"release-status", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"release-status", []string{"release-status", "unknownsub_xyz"}, "(c) unknown sub"},
+	{"release status", []string{"release", "status"}, "(a) no project dir"},
+	{"release status", []string{"release", "status", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"release status", []string{"release", "status", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── ops ────────────────────────────────────────────────────────────────
 	// ops root returns cmd.Help() (nil) — soft case (no project required).
 	{"ops", []string{"ops"}, "(a) shows help (no project required)"},
 	{"ops", []string{"ops", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"ops", []string{"ops", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── sentry ─────────────────────────────────────────────────────────────
-	// sentry root returns cmd.Help() (nil) — soft case (no project required).
-	{"sentry", []string{"sentry"}, "(a) shows help (no project required)"},
-	{"sentry", []string{"sentry", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"sentry", []string{"sentry", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── sentry-server ──────────────────────────────────────────────────────
-	// sentry-server root returns cmd.Help() (nil) — soft case (no project required).
-	{"sentry-server", []string{"sentry-server"}, "(a) shows help (no project required)"},
-	{"sentry-server", []string{"sentry-server", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"sentry-server", []string{"sentry-server", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── uninstall ──────────────────────────────────────────────────────────
 	{"uninstall", []string{"uninstall"}, "(a) no project dir"},

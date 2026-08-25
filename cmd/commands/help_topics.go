@@ -67,8 +67,17 @@ var helpTopics = map[string]helpTopic{
 	"envs": {
 		Title:   "Environments",
 		Summary: "Managing multiple environments (dev, staging, production)",
-		Body: `  nSelf uses an environment cascade:
-    .env.dev → .env.local → .env.staging/.env.prod → .env.secrets → .env.computed
+		Body: `  nSelf uses an environment cascade (later wins):
+    .env → .env.{dev|staging|prod} → .env.secrets → .env.local
+
+  .env is the shared, committed base. Exactly one of .env.dev/.env.staging/
+  .env.prod loads, matching ENV. .env.secrets never ships in git. .env.local
+  is your personal override and always wins.
+
+  Inspect the cascade:
+    nself env explain             # list every file, existence, precedence
+    nself env explain VAR         # which file wins for VAR (redacted by
+                                   # default; add --reveal to see the value)
 
   Switch at runtime:
     nself start --env staging
@@ -77,6 +86,14 @@ var helpTopics = map[string]helpTopic{
 
   Full-environment init:
     nself init --full    # generates .env.dev, .env.staging, .env.prod, .env.secrets
+
+  Upgrading an older project: this cascade order changed in CLI-R18 (older
+  releases loaded .env.dev -> .env.{staging|prod} -> .env.secrets ->
+  .env.local -> .env -> .env.ai). Run 'nself migrate' once — it detects any
+  variable whose effective value would change and fixes it automatically
+  wherever that's safe, or flags it for your review otherwise. The old order
+  can be restored temporarily with NSELF_LEGACY_ENV_ORDER=1 (removed one
+  minor version after this change; every use prints a warning).
 
   Docs: https://nself.org/docs/environments`,
 	},

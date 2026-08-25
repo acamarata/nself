@@ -71,5 +71,5 @@ The `/gallery` route in claw-web shows all generated images as cards. Each card 
 
 ## Related
 
-- [[Feature-ɳClaw]] -- ɳClaw overview
+- [[Feature-nClaw]] -- ɳClaw overview
 - [[Feature-Agent-Dashboard]] -- Agent metrics

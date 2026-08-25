@@ -41,7 +41,7 @@ nself migrate from-bash            # Detect and print step-by-step guide
 nself migrate from-bash --auto     # Run automatable steps after confirmation
 ```
 
-This handles `.nself/config.sh`, hand-written `docker-compose.yml`, `nself.sh`, and `.envrc`. See [[Migrate-From-Bash]] for the full per-project flow.
+This handles `.nself/config.sh`, hand-written `docker-compose.yml`, `nself.sh`, and `.envrc`. See [[Upgrade-From-v0.9]] for the full per-project flow.
 
 ## Plugin Renames and Deprecated Commands
 
@@ -70,7 +70,7 @@ Per-project rollback uses the existing `nself migrate rollback` command on the p
 
 ## Cross-References
 
-- [[Migrate-From-Bash]], per-project Bash-era migration
+- [[Upgrade-From-v0.9]], per-project Bash-era migration
 - [[Upgrading]], general upgrade flow
-- [[License-Workflow]], license verification after migration
+- [[Licensing-Guide]], license verification after migration
 - [[Home]]

@@ -132,8 +132,8 @@ Source-available (license required to run): [`plugins-pro/paid/cloudflare/`](htt
 - [[plugin-cdn]], cache purge and signed URLs (multi-provider)
 - [[plugin-ddns]], dynamic DNS updates
 - [[plugin-object-storage]], S3-compatible storage
-- [[Plugins]]
+- [[Plugin-Overview]]
 
 ---
 
-← [[Plugins]] | [[Home]] →
+← [[Plugin-Overview]] | [[Home]] →

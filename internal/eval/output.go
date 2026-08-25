@@ -35,7 +35,9 @@ const (
 // WriteResult writes the eval run result in the requested format.
 // Purpose: Dispatch to the correct formatter and write artifact file.
 // Inputs:  w — output writer; result — run result; format — one of json/table/summary;
-//   repoRoot — path where {repoRoot}/.nself-ci/artifacts/ is written.
+//
+//	repoRoot — path where {repoRoot}/.nself-ci/artifacts/ is written.
+//
 // Outputs: formatted text to w; eval-results.json on disk.
 // Constraints: Always writes JSON artifact regardless of format flag.
 func WriteResult(w io.Writer, result EvalRunResult, format, repoRoot string) error {

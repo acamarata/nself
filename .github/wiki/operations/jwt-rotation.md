@@ -246,5 +246,5 @@ nself self-heal --jwt --to-file /run/secrets/jwt-new-key --no-print
 ## See also
 
 - [[operations/self-healing]] — overview of all self-healing routines
-- [[security/jwt-configuration]] — JWT algorithm and key configuration for Hasura
+- [[Config-Auth]] — JWT algorithm and key configuration for Hasura
 - [[Home]]

@@ -28,10 +28,26 @@ Use --yes to skip the interactive confirmation (for CI/CD pipelines).`,
 func init() {
 	resetCmd.Flags().Bool("yes", false, "Skip confirmation prompt (for CI/CD)")
 	resetCmd.Flags().Bool("no-monorepo", false, "Disable automatic monorepo backend detection")
+	// CLI-R19: reset absorbs the retired `uninstall` command's two non-default
+	// modes so the replacement named in the deprecation warning actually exists.
+	// Both delegate to runUninstall, which is the original implementation — a
+	// second copy would drift on exactly the paths that delete data.
+	resetCmd.Flags().Bool("keep-data", false, "Remove containers and generated files but keep database volumes")
+	resetCmd.Flags().Bool("purge", false, "Remove everything including database volumes (DESTRUCTIVE)")
 	RootCmd.AddCommand(resetCmd)
 }
 
-func runReset(cmd *cobra.Command, _ []string) error {
+func runReset(cmd *cobra.Command, args []string) error {
+	// --keep-data and --purge select the behaviour the retired `uninstall`
+	// command had under those flags. Bare `nself reset` keeps its own, older
+	// meaning (remove volumes and generated files, preserve .env), which is
+	// why this dispatch exists rather than a blanket redirect.
+	keepData, _ := cmd.Flags().GetBool("keep-data")
+	purge, _ := cmd.Flags().GetBool("purge")
+	if keepData || purge {
+		return runUninstall(cmd, args)
+	}
+
 	skipConfirm, _ := cmd.Flags().GetBool("yes")
 
 	cwd, err := os.Getwd()

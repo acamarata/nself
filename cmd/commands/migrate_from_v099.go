@@ -1,6 +1,6 @@
 // migrate_from_v099.go
 //
-// `nself migrate-from-v099` is the operator-facing entry point for the
+// `nself migrate from-v099` is the operator-facing entry point for the
 // home-level v0.9.9 → v1.x migration shim (see internal/migrate/v099_shim.go).
 //
 // It is intentionally a separate top-level command (not a subcommand of
@@ -26,7 +26,7 @@ import (
 )
 
 var migrateFromV099Cmd = &cobra.Command{
-	Use:   "migrate-from-v099",
+	Use:   "from-v099",
 	Short: "Migrate v0.9.9 home-level state (license key, channel, ssh keys) to v1.x layout",
 	Long: `Detect and migrate v0.9.9 (Bash-era) home-level state to the current
 v1.x layout.
@@ -47,9 +47,9 @@ your license with:
     nself license verify
 
 Examples:
-  nself migrate-from-v099           # Interactive: prompts before acting
-  nself migrate-from-v099 --yes     # Non-interactive (CI / scripted use)
-  nself migrate-from-v099 --check   # Detect only, do not migrate
+  nself migrate from-v099           # Interactive: prompts before acting
+  nself migrate from-v099 --yes     # Non-interactive (CI / scripted use)
+  nself migrate from-v099 --check   # Detect only, do not migrate
 
 See also: nself migrate from-bash    (per-project Bash-era artifact migration)
 Wiki: https://github.com/nself-org/cli/wiki/migration/v099-to-v1x`,
@@ -59,7 +59,7 @@ Wiki: https://github.com/nself-org/cli/wiki/migration/v099-to-v1x`,
 func init() {
 	migrateFromV099Cmd.Flags().Bool("yes", false, "Skip the confirmation prompt (non-interactive)")
 	migrateFromV099Cmd.Flags().Bool("check", false, "Detect legacy state without migrating")
-	RootCmd.AddCommand(migrateFromV099Cmd)
+	migrateCmd.AddCommand(migrateFromV099Cmd)
 }
 
 func runMigrateFromV099(cmd *cobra.Command, args []string) error {

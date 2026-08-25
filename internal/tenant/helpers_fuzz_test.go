@@ -7,7 +7,7 @@ import (
 
 // FuzzSanitize verifies that sanitize() never allows a raw single-quote through.
 // After sanitize(), the output must not contain an unescaped single quote —
-// every ' must appear as ''.
+// every ' must appear as ”.
 func FuzzSanitize(f *testing.F) {
 	// Seed with SQL injection payloads.
 	f.Add("normal")
@@ -142,7 +142,7 @@ func TestValidateUUID_known(t *testing.T) {
 	invalid := []string{
 		"",
 		"not-a-uuid",
-		"550e8400-e29b-41d4-a716-44665544000",  // too short
+		"550e8400-e29b-41d4-a716-44665544000",   // too short
 		"550e8400-e29b-41d4-a716-4466554400000", // too long
 		"'; DROP TABLE t; --",
 		"550e8400 e29b 41d4 a716 446655440000", // spaces not hyphens

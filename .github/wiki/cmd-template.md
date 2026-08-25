@@ -1,6 +1,8 @@
 # nself template
 
-> Browse, install, and publish full-stack app templates from the nSelf registry.
+<!-- BEGIN PROSE:summary -->
+> Browse, install, and publish full-stack app templates from the ɳSelf Template Marketplace.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
@@ -10,127 +12,216 @@ nself template <subcommand> [flags]
 
 ## Description
 
-`nself template` provides access to the nSelf template registry: a catalog of community and official full-stack starter templates. Each template bundles Postgres schema, Hasura metadata, seed data, and a Flutter starter in a single archive.
+<!-- BEGIN PROSE:description -->
+Templates are full-stack app packages that include a Postgres schema, Hasura metadata, seed data, and an optional Flutter starter. They follow the same manifest format as `nself init` language scaffolds but are community-authored and distributed through the ɳSelf Template Marketplace at `nself.org/templates`.
 
-Templates can be listed, inspected, and applied during project init:
+Use `nself template list` to browse from the CLI, `nself template info <slug>` to inspect a specific template, and `nself init --template <slug>` to install one into a new project directory.
+
+Authors publish via `nself template publish` and receive 80% revenue share on paid templates (requires a KYC-approved author account, see [B55 plugin-author-revenue-share](https://nself.org/docs/developers/revenue-share)).
+
+## Bundled Clone Templates
+
+Six clone templates are embedded directly in the CLI binary. They work without any network access and are available on every install regardless of connectivity or license tier.
+
+| Template | Version | Required plugins | Description |
+|---|---|---|---|
+| `airbnb-clone` | 1.0.0 | `auth`, `notify`, `photos` | Property rental marketplace with listings, bookings, and reviews |
+| `discord-clone` | 1.0.0 | `chat`, `realtime`, `auth`, `moderation` | Real-time messaging platform with servers, channels, and roles |
+| `notion-clone` | 1.0.0 | `cms`, `auth`, `realtime` | Collaborative note-taking with workspaces, pages, and blocks |
+| `slack-clone` | 1.0.0 | `chat`, `livekit`, `realtime`, `auth`, `notify` | Team messaging with threads, reactions, and voice/video |
+| `substack-clone` | 1.0.0 | `cms`, `notify`, `auth` | Newsletter platform with subscriber tiers and post publishing |
+| `zoom-clone` | 1.0.0 | `livekit`, `recording`, `auth`, `notify` | Video meeting platform with lobby, recording, and participant management |
+
+All bundled templates are free (no license check). Scaffold one with:
 
 ```bash
-nself init --template saas-starter ./my-app
+nself init --template <name> [dest-dir]
 ```
 
-This command also covers publishing new templates and applying incremental schema migrations from an installed template's `migrations/` directory.
+See [[cmd-init]] for the `--no-seed` and `--dry-run` flags.
 
-Two template sources are available:
+## nself template list
 
-- **Bundled:** embedded in the CLI binary, always available offline
-- **Registry:** community templates at `nself.org/templates`, fetched on demand (graceful fallback when unavailable)
-
-## Subcommands
-
-| Subcommand | Description |
-|------------|-------------|
-| `list` | List available templates from bundled store and the online registry |
-| `info <slug>` | Show full detail for a single template |
-| `publish` | Validate and submit a template to the nSelf registry |
-| `update` | Apply incremental SQL migrations from the installed template |
-
-## Flags
-
-### `nself template list`
+```
+nself template list [flags]
+```
 
 | Flag | Default | Description |
-|------|---------|-------------|
-| `--category` | `""` | Filter by category: `saas`, `marketplace`, `social`, `productivity`, `media`, `ecommerce` |
+|---|---|---|
+| `--category` | | Filter by category: saas, marketplace, social, productivity, media, ecommerce |
 | `--free` | false | Show free templates only |
-| `--sort` | `installs` | Sort by: `installs`, `rating`, `newest`, `price` |
-| `--json` | false | Output raw JSON (includes both bundled and registry entries) |
-
-### `nself template info`
-
-| Flag | Default | Description |
-|------|---------|-------------|
+| `--sort` | installs | Sort by: installs, rating, newest, price |
 | `--json` | false | Output raw JSON |
 
-### `nself template publish`
+**Examples:**
+
+```bash
+nself template list
+nself template list --category saas
+nself template list --free --sort rating
+nself template list --json
+```
+
+## nself template info
+
+```
+nself template info <slug> [flags]
+```
 
 | Flag | Default | Description |
-|------|---------|-------------|
-| `--tarball` | `""` | Path to the compiled template tarball (`.tar.gz`). Required. |
-| `--manifest` | `template.yml` | Path to the template manifest file |
+|---|---|---|
+| `--json` | false | Output raw JSON |
 
-### `nself template update`
+**Examples:**
+
+```bash
+nself template info saas-starter
+nself template info media-server --json
+```
+
+## nself init --template (marketplace)
+
+When the slug passed to `--template` is not a built-in language scaffold (express, fastapi, go, rust), it is resolved against the marketplace registry, downloaded, its SHA256 checksum verified, and extracted into the destination directory.
+
+```bash
+nself init --template <slug> [dest-dir]
+```
 
 | Flag | Default | Description |
-|------|---------|-------------|
-| `--force` | false | Allow destructive migrations containing `DROP` or `TRUNCATE` |
-| `--dry-run` | false | Show pending migrations without applying them |
+|---|---|---|
+| `--force` | false | Overwrite destination directory if non-empty |
+| `--quiet` | false | Suppress output messages |
+
+**Examples:**
+
+```bash
+nself init --template saas-starter ./my-saas
+nself init --template media-server /srv/media --force
+```
+
+Paid templates require an active license key:
+
+```bash
+nself license set nself_pro_<your-key>
+nself init --template marketplace-starter ./shop
+```
+
+After installation the CLI prints the required plugins list. Install them with:
+
+```bash
+nself plugin install auth notify cms
+nself start
+```
+
+## nself template publish
+
+```
+nself template publish [flags]
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--tarball` | | Path to the compiled template archive (.tar.gz) , required |
+| `--manifest` | template.yml | Path to the template manifest file |
+
+The command validates the `template.yml` manifest, computes the SHA256 of the tarball, and prints submission instructions. Final upload and review happen through the author portal at `nself.org/developers/templates`.
+
+**Manifest format (template.yml):**
+
+```yaml
+slug: saas-starter
+display_name: SaaS Starter
+description: Multi-tenant SaaS with billing, auth, and dashboard
+version: "1.2.0"
+price_usd: 0
+category: saas
+required_plugins:
+  - auth
+  - notify
+  - cms
+preview_url: https://saas-starter-demo.nself.org
+cli_min_version: "1.0.9"
+```
+
+**Example:**
+
+```bash
+tar -czf dist/my-template.tar.gz schema/ metadata/ seed/ flutter/
+nself template publish --tarball dist/my-template.tar.gz --manifest template.yml
+```
+
+## nself template update
+
+```
+nself template update [flags]
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--force` | false | Allow destructive migrations (DROP, TRUNCATE) , requires confirmation |
+| `--dry-run` | false | Print pending migrations without applying them |
+
+Runs incremental `.sql` files from the project's `migrations/` directory. Only additive changes are applied without flags. Destructive migrations require `--force` plus an explicit prompt.
+
+**Examples:**
+
+```bash
+nself template update --dry-run
+nself template update
+nself template update --force
+```
 
 ## Environment variables
 
 | Variable | Description |
-|----------|-------------|
-| `NSELF_TEMPLATE_REGISTRY_URL` | Override the registry API base URL (default: `https://nself.org/api/templates`) |
+|---|---|
+| `NSELF_TEMPLATE_REGISTRY_URL` | Override the default template registry URL (`https://nself.org/api/templates`) |
+| `NSELF_LICENSE_KEY` | License key , required for paid template downloads |
+
+## Related
+
+- [[cmd-init]], Project initialisation including built-in language scaffolds
+- [[cmd-plugin]], Plugin management
+- [Template Marketplace](https://nself.org/templates), Browse templates in the browser
+- [Publish a template](https://nself.org/docs/templates/publish-template), Author guide
+
+[[Home]]
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `info` | Show detail for a single template |
+| `list` | List available app templates |
+| `publish` | Submit a template to the ɳSelf registry |
+| `update` | Apply incremental migrations for the installed template |
+<!-- END GENERATED:subcommands -->
 
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
+<!-- TODO(docs): needs human prose -->
+
 ```bash
-# List all templates (bundled + registry)
-nself template list
-
-# Filter by category
-nself template list --category saas
-
-# Free templates only, sorted by newest
-nself template list --free --sort newest
-
-# Detail for the saas-starter template
-nself template info saas-starter
-
-# Apply a template during init
-nself init --template saas-starter ./my-app
-
-# Preview pending schema migrations (dry run)
-nself template update --dry-run
-
-# Apply pending migrations
-nself template update
-
-# Apply a migration that includes DROP statements
-nself template update --force
-
-# Compute tarball SHA256 and print submission instructions
-nself template publish --tarball ./dist/my-template.tar.gz
-
-# Use a non-default manifest path
-nself template publish --tarball ./dist/my-template.tar.gz --manifest my-template.yml
+nself template
 ```
-
-## Publishing a template
-
-Templates are submitted via the web form at `nself.org/developers/templates`. `nself template publish` validates your manifest locally and prints the tarball SHA256 needed for the submission form. The publishing workflow is:
-
-1. Build your template archive: `tar -czf dist/my-template.tar.gz schema/ metadata/ seed/ flutter/`
-2. Run `nself template publish --tarball ./dist/my-template.tar.gz` to validate and get the SHA256.
-3. Upload the tarball to a public URL (e.g. a GitHub release).
-4. Fill in the submission form at `https://nself.org/developers/templates`.
-
-Author review and approval typically takes 1-3 business days.
-
-## Manifest required fields
-
-A valid `template.yml` must include these fields:
-
-```yaml
-slug: my-template
-display_name: My Template
-version: 1.0.0
-category: saas
-```
+<!-- END PROSE:examples -->
 
 ## See Also
 
-- [[cmd-init]] — scaffold a project from a template
-- [[cmd-db]] — run schema migrations on a live project
-- [[Plugin-Dev-Guide]] — build and publish plugins
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

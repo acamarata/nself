@@ -7,7 +7,6 @@
 // operation correctly across both models — most importantly enable/disable,
 // which must edit compose files for Model A but only flip the .disabled
 // marker for Model B.
-//
 package model
 
 import (

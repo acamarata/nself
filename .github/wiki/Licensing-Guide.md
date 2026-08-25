@@ -210,9 +210,9 @@ All payment processing goes through Stripe:
 - [[Plugin-Licensing]] -- technical details of the plugin license system
 - [[Plugin-Overview]] -- full plugin catalog
 - [[Plugin-Install]] -- how to install plugins
-- [[Feature-ɳClaw]] -- ɳClaw plugin bundle details
-- [[Feature-ɳTV]] -- nMedia plugin bundle details
-- [[Feature-ɳCloud]] -- managed hosting (separate from plugin licenses)
+- [[Feature-nClaw]] -- ɳClaw plugin bundle details
+- [[Feature-nTV]] -- nMedia plugin bundle details
+- [[Feature-nCloud]] -- managed hosting (separate from plugin licenses)
 
 ---
 

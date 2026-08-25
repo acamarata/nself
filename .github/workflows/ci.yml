@@ -10,6 +10,33 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  fmt:
+    name: gofmt
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      # CLI-R01: this gate did not exist before 2026-08-23, which is how 30
+      # unformatted files reached main while the PRI claimed `gofmt -l .` was
+      # enforced. scripts/ci/gofmt-check.sh is the single source of the rule so
+      # the local `make fmt-check` and this job can never disagree.
+      - name: gofmt check
+        run: bash scripts/ci/gofmt-check.sh
+
+      # A duplicate mapping key (two `if:` on one step) parses fine in most YAML
+      # tooling but GitHub rejects the whole file, reporting only "this run
+      # likely failed because of a workflow file issue". Catch it here instead
+      # of burning a push cycle.
+      - name: workflow YAML lint
+        run: bash scripts/ci/workflow-lint.sh
+
   ci:
     name: Vet, Build & Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

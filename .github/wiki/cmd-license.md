@@ -1,15 +1,18 @@
 # nself license
 
+<!-- BEGIN PROSE:summary -->
 > Manage your ɳSelf Pro membership license key.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
 ```
-nself license <subcommand>
+nself license <subcommand> [flags]
 ```
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself license` manages the Pro membership license key used to install paid plugins. The key is stored locally at `~/.nself/license/key` with permissions `0600` (readable only by the current user).
 
 Set your key once with `nself license set` and all subsequent `nself plugin install` commands for Pro plugins will use it automatically. The key is validated server-side against `ping.nself.org`, the CLI does not decode or verify the key locally.
@@ -38,19 +41,7 @@ When the ɳClaw plugin is running and `NSELF_LICENSE_TIER` is configured, the cl
 
 The budget is seeded with `source='tier_default'`. If you have manually set a budget via `nself ai budget set --cap <amount>`, the manual override is preserved and the tier default is NOT applied. Set `NSELF_LICENSE_TIER` in your `.env.dev` or `.env.prod` to enable this behavior.
 
-## Subcommands
-
-| Subcommand | Description |
-|------------|-------------|
-| `set <key>` | Save a Pro license key to `~/.nself/license/key` |
-| `show` | Display the saved key (masked) and tier |
-| `validate` | Validate the saved key against `ping.nself.org` |
-| `clear` | Remove the saved license key |
-| `upgrade` | Open the pricing page in your browser |
-| `tail` | Stream live license validation events from ping_api |
-
 ---
-
 ## nself license tail
 
 Stream live license validation events from `ping.nself.org` in real time.
@@ -102,9 +93,45 @@ nself license tail --filter key=nself_pro_abc123
 # Combine filters
 nself license tail --filter result=denied --filter plugin=ai
 ```
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `add` | Add one or more license keys |
+| `clear` | Remove all saved license keys |
+| `export` | Export signed license cache for air-gap transfer |
+| `health` | Validate format, ping server, and report cache integrity |
+| `import` | Import a previously exported license cache file |
+| `list` | Show all configured licenses (alias for status) |
+| `migrate` | Migrate legacy license key to a ɳSelf account |
+| `refresh` | Force-refresh license validation against ping.nself.org |
+| `remove` | Remove a license key by value or product name |
+| `restore` | Reactivate dormant plugins with a new license key |
+| `revalidate` | Force a fresh validation against ping.nself.org and update the cache |
+| `revoke` | Mark local license as revoked and wipe the stored key |
+| `set` | Replace all keys with a single key |
+| `show` | Display license tier, bundles, plugins, and cache expiry |
+| `simulate-offline` | Simulate being offline for N days (testing only) |
+| `status` | Show all configured licenses and plugin coverage |
+| `tail` | Stream live license validation events from ping_api |
+| `upgrade` | Open pricing page in browser |
+| `validate` | Validate key against ping.nself.org |
+<!-- END GENERATED:subcommands -->
 
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
 ```bash
 # Save your license key
 nself license set nself_pro_xxxxx...
@@ -130,5 +157,13 @@ Tier:        Pro
 Status:      ✓ active
 Stored at:   ~/.nself/license/key
 ```
+<!-- END PROSE:examples -->
+
+## See Also
+
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

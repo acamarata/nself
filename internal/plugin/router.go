@@ -2,7 +2,6 @@ package plugin
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,7 +9,8 @@ import (
 )
 
 // ExitCodeError is returned when a plugin process exits with a non-zero code.
-// The caller (main) should call os.Exit with Code.
+// main() reads ExitCode() and mirrors the plugin's status; the message is not
+// printed, because the plugin already wrote its own output to the terminal.
 type ExitCodeError struct {
 	Code int
 }
@@ -18,6 +18,13 @@ type ExitCodeError struct {
 func (e *ExitCodeError) Error() string {
 	return fmt.Sprintf("plugin exited with code %d", e.Code)
 }
+
+// ExitCode satisfies the interface main() and errs.ExitCodeFor look for.
+func (e *ExitCodeError) ExitCode() int { return e.Code }
+
+// Silent reports that main() must not print this error: the plugin subprocess
+// inherited stdout/stderr and has already reported the failure itself.
+func (e *ExitCodeError) Silent() bool { return true }
 
 // pluginBinDir returns the directory where plugin binaries are installed.
 // This is ~/.nself/plugins/bin/ (or /tmp/.nself/plugins/bin/ as fallback).
@@ -35,6 +42,19 @@ func pluginBinDir() string {
 // For security, the binary is looked up ONLY in the plugin bin directory,
 // never via the full system PATH. This prevents PATH hijacking attacks.
 func ProxyCommand(cmdName string, args []string) error {
+	return ProxyCommandWithHint(cmdName, args, "nself install "+cmdName)
+}
+
+// ProxyCommandWithHint is ProxyCommand with control over the install hint in
+// the not-found error.
+//
+// The generic hint assumes the plugin is named after the command, which is not
+// always true: `claw` lives in a plugin called `claw-cli`, because a paid
+// `claw` service plugin already owns that name. When the deprecation registry
+// has already told the user the right thing to install, passing an empty hint
+// here stops the proxy contradicting it — the user was being shown
+// "use 'nself install claw-cli'" and "nself install claw" one line apart.
+func ProxyCommandWithHint(cmdName string, args []string, installHint string) error {
 	pluginBinary := fmt.Sprintf("nself-%s", cmdName)
 
 	// S-002: Only look in the plugin bin directory, never the full PATH.
@@ -46,12 +66,38 @@ func ProxyCommand(cmdName string, args []string) error {
 
 	path := candidate
 	if _, err := os.Stat(path); err != nil {
-		slog.Warn("plugin binary not found", "command", cmdName, "plugin", pluginBinary, "install_hint", "nself plugin install "+cmdName)
-		return fmt.Errorf("plugin binary not found: %s", pluginBinary)
+		// CLI-R19: an unknown command is the moment a user most needs to be told
+		// how to get it, so the actionable message — `nself install X` — goes in
+		// the returned error.
+		//
+		// It deliberately does NOT also go to slog. The CLI never calls
+		// slog.SetDefault, so slog.Warn here reached the user as a raw
+		// timestamped line above the real error:
+		//
+		//   2026/08/25 10:16:19 WARN plugin binary not found command=gateway ...
+		//   Plugin error: unknown command "gateway" ...
+		//
+		// which is both duplicated and the wrong register for a terminal. An
+		// earlier comment claimed a normal terminal never shows it; running the
+		// binary showed otherwise.
+		if installHint == "" {
+			return fmt.Errorf("unknown command %q, and no plugin named %q is installed", cmdName, cmdName)
+		}
+		return fmt.Errorf("unknown command %q, and no plugin named %q is installed.\n\nIf this is an nSelf plugin, install it with:\n  %s",
+			cmdName, cmdName, installHint)
 	}
 
-	// Prepare the command
+	// Prepare the command.
+	//
+	// The plugin inherits this process's environment, plus whichever project
+	// settings its manifest declares. Without the latter a command plugin sees
+	// nothing from the project's .env cascade — it runs on the user's machine,
+	// not in a container compose has populated — and would have to re-implement
+	// the cascade that CLI-R18 made canonical.
 	cmd := exec.Command(path, args...)
+	if extra := pluginEnvForCommand(cmdName); len(extra) > 0 {
+		cmd.Env = append(os.Environ(), extra...)
+	}
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -65,4 +111,21 @@ func ProxyCommand(cmdName string, args []string) error {
 	}
 
 	return nil
+}
+
+// pluginEnvForCommand resolves the declared project settings for an installed
+// plugin providing cmdName.
+//
+// Reads the plugin's own manifest from where it was installed. A missing or
+// unreadable manifest means nothing is declared, so nothing is passed —
+// degrading to the previous behaviour rather than failing the invocation.
+func pluginEnvForCommand(cmdName string) []string {
+	// Installed plugins sit alongside the bin directory the proxy reads, so
+	// deriving the path from pluginBinDir keeps the two from drifting apart.
+	installed := filepath.Join(filepath.Dir(pluginBinDir()), cmdName)
+	m := readPluginManifest(installed)
+	if m == nil {
+		return nil
+	}
+	return PluginEnv(".", m)
 }

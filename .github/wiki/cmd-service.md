@@ -1,6 +1,8 @@
 # nself service
 
+<!-- BEGIN PROSE:summary -->
 > Enable, disable, and list optional ɳSelf services.
+<!-- END PROSE:summary -->
 
 ## Synopsis
 
@@ -10,21 +12,12 @@ nself service <subcommand> [flags]
 
 ## Description
 
+<!-- BEGIN PROSE:description -->
 `nself service` manages the optional services in your ɳSelf stack. The four core services (PostgreSQL, Hasura, Auth, Nginx) are always included. The six optional services, Redis, MinIO, Email, Functions, Search, and Admin, are controlled through this command.
 
 Enabling or disabling a service writes to your `.env` file. After changing service state, run `nself build` to regenerate `docker-compose.yml` with the updated service set, then `nself restart` to apply the changes.
 
 **MLflow** is no longer an optional service. Use `nself plugin install mlflow` instead.
-
-## Subcommands
-
-| Subcommand | Description |
-|------------|-------------|
-| `enable <name>` | Enable an optional service |
-| `disable <name>` | Disable an optional service |
-| `list` | List all optional services with enabled/disabled status |
-| `upgrade <name> <version>` | Pin a service to a specific image version |
-| `configure <service>` | Configure a service (e.g. email provider presets) |
 
 ## Available Services (6)
 
@@ -37,17 +30,39 @@ Enabling or disabling a service writes to your `.env` file. After changing servi
 | `search` | `SEARCH_ENABLED` | `meilisearch` |
 | `monitoring` | `MONITORING_ENABLED` | — |
 | `admin` | `NSELF_ADMIN_ENABLED` | — |
+<!-- END PROSE:description -->
 
 ## Flags
 
+<!-- BEGIN GENERATED:flags -->
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--env` | current | Target environment file |
-| `--json` | false | Output as JSON array (for `list`) |
+| `--env` | `""` | Target environment (reads .env.{env}) |
 | `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `add` | Scaffold a custom service (CS_N slot) into the current project |
+| `configure` | Configure service settings (e.g. email provider presets) |
+| `disable` | Disable an optional service |
+| `enable` | Enable an optional service |
+| `list` | List all optional services with enabled/disabled status |
+| `ps` | Show status of all ɳSelf stack services |
+| `restart` | Restart a named ɳSelf service |
+| `scale` | Set the replica count for a named service |
+| `start` | Start a named ɳSelf service |
+| `stop` | Stop a named ɳSelf service (container preserved) |
+| `update` | Pull the latest image for a service and restart it |
+| `upgrade` | Pin a service to a specific image version |
+<!-- END GENERATED:subcommands -->
 
 ## Examples
 
+<!-- BEGIN PROSE:examples -->
 ```bash
 # List all optional services
 nself service list
@@ -74,5 +89,13 @@ nself service disable meilisearch
 # After changing services, rebuild and restart
 nself build && nself restart
 ```
+<!-- END PROSE:examples -->
+
+## See Also
+
+<!-- BEGIN PROSE:see-also -->
+- [[Commands]] — full command index
+- [[Core-Services]] — what a stack is made of
+<!-- END PROSE:see-also -->
 
 ← [[Commands]] | [[Home]] →

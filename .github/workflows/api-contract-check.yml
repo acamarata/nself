@@ -43,12 +43,30 @@ jobs:
           # This is a semantic check: verify commands that were in F19 still exist in HEAD
           KNOWN_COMMANDS="admin ai alerts audit backup billing build claw clean completion config db deploy dev dns-setup doctor dogfood dr env exec health init license logs migrate monitor plugin promote queue reset restart secrets security service ssl start status stop tenant trust update upgrade urls version waf watchdog webhooks"
 
+          # A command may legitimately leave the core binary for a plugin
+          # (CLI-R11 thin-core extraction) — but only if the user is told where
+          # it went. internal/deprecation/registry.yaml is that promise, and
+          # root.go's warnRelocatedCommand is what surfaces it on the proxy
+          # path. So an absent command counts as a contract break UNLESS it has
+          # a registry entry naming its replacement. That is a stronger rule
+          # than the free-text BREAKING-CHANGE-OK annotation below, and it
+          # applies automatically to every future extraction.
           MISSING=""
+          RELOCATED=""
           for cmd in $KNOWN_COMMANDS; do
-            if ! ./nself "$cmd" --help > /dev/null 2>&1; then
-              MISSING="$MISSING $cmd"
+            if ./nself "$cmd" --help > /dev/null 2>&1; then
+              continue
             fi
+            if grep -q "name: \"nself ${cmd}\"" internal/deprecation/registry.yaml; then
+              RELOCATED="$RELOCATED $cmd"
+              continue
+            fi
+            MISSING="$MISSING $cmd"
           done
+
+          if [ -n "$RELOCATED" ]; then
+            echo "Relocated to plugins, with a deprecation entry naming the replacement:$RELOCATED"
+          fi
 
           if [ -n "$MISSING" ]; then
             echo "breaking_found=true" >> "$GITHUB_OUTPUT"

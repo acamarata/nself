@@ -6,23 +6,19 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/nself-org/cli/internal/build"
-	"github.com/nself-org/cli/internal/compose"
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/database"
 	"github.com/nself-org/cli/internal/docker"
 	"github.com/nself-org/cli/internal/embedded"
 	"github.com/nself-org/cli/internal/errs"
 	"github.com/nself-org/cli/internal/health"
-	"github.com/nself-org/cli/internal/license"
 	"github.com/nself-org/cli/internal/lifecycle"
 	"github.com/nself-org/cli/internal/migration"
-	"github.com/nself-org/cli/internal/plugin"
 	"github.com/nself-org/cli/internal/ports"
 	"github.com/nself-org/cli/internal/search"
 	"github.com/nself-org/cli/internal/ssl"
@@ -75,141 +71,6 @@ func init() {
 Overrides NSELF_PROFILE env var. Has no effect when --skip-build is set.`)
 
 	RootCmd.AddCommand(startCmd)
-}
-
-// startOpts holds the resolved flags for the start command.
-type startOpts struct {
-	verbose          bool
-	debug            bool
-	skipHealthChecks bool
-	timeout          int
-	fresh            bool
-	cleanStart       bool
-	quick            bool
-	skipPortCheck    bool
-	skipBuild        bool
-	skipPlugins      bool
-	watch            bool
-	quiet            bool
-	embeddedPG       bool
-	skipDBInit       bool
-	// profile is forwarded to an automatic rebuild when the compose file is
-	// stale. It has no effect when --skip-build is set.
-	profile compose.ProfileName
-}
-
-func resolveStartOpts(cmd *cobra.Command) (startOpts, error) {
-	verbose, _ := cmd.Flags().GetBool("verbose")
-	debug, _ := cmd.Flags().GetBool("debug")
-	skipHealth, _ := cmd.Flags().GetBool("skip-health-checks")
-	timeout, _ := cmd.Flags().GetInt("timeout")
-	fresh, _ := cmd.Flags().GetBool("fresh")
-	forceRecreate, _ := cmd.Flags().GetBool("force-recreate")
-	cleanStart, _ := cmd.Flags().GetBool("clean-start")
-	quick, _ := cmd.Flags().GetBool("quick")
-	skipPortCheck, _ := cmd.Flags().GetBool("skip-port-check")
-	skipBuild, _ := cmd.Flags().GetBool("skip-build")
-	skipPlugins, _ := cmd.Flags().GetBool("skip-plugins")
-	watch, _ := cmd.Flags().GetBool("watch")
-	quiet, _ := cmd.Flags().GetBool("quiet")
-	embeddedPG, _ := cmd.Flags().GetBool("embedded-pg")
-	// NSELF_EMBEDDED_PG env var is the fallback when the flag is not set.
-	if !embeddedPG && os.Getenv("NSELF_EMBEDDED_PG") == "true" {
-		embeddedPG = true
-	}
-	skipDBInit, _ := cmd.Flags().GetBool("skip-db-init")
-	// NSELF_SKIP_DB_INIT env var allows CI pipelines to set this without modifying scripts.
-	if !skipDBInit && os.Getenv("NSELF_SKIP_DB_INIT") == "true" {
-		skipDBInit = true
-	}
-
-	// ── Profile resolution ────────────────────────────────────────────
-	// Priority: --profile flag > NSELF_PROFILE env var > default ("app").
-	profileStr, _ := cmd.Flags().GetString("profile")
-	if profileStr == "" {
-		profileStr = os.Getenv("NSELF_PROFILE")
-	}
-	profile := compose.ProfileName(profileStr)
-	if _, known := compose.ProfileForName(profile); !known && profileStr != "" {
-		ui.Warn(fmt.Sprintf("Unknown profile %q — valid values: %s. Falling back to \"app\".", profileStr, strings.Join(compose.ValidProfiles(), ", ")))
-		profile = compose.ProfileApp
-	}
-
-	// --force-recreate is an alias for --fresh.
-	if forceRecreate {
-		fresh = true
-	}
-
-	// --quick overrides timeout and required percentage.
-	if quick {
-		timeout = 30
-	}
-
-	// Clamp timeout to valid range.
-	if timeout < 30 {
-		timeout = 30
-	}
-	if timeout > 600 {
-		timeout = 600
-	}
-
-	return startOpts{
-		verbose:          verbose,
-		debug:            debug,
-		skipHealthChecks: skipHealth,
-		timeout:          timeout,
-		fresh:            fresh,
-		cleanStart:       cleanStart,
-		quick:            quick,
-		skipPortCheck:    skipPortCheck,
-		skipBuild:        skipBuild,
-		skipPlugins:      skipPlugins,
-		watch:            watch,
-		quiet:            quiet,
-		embeddedPG:       embeddedPG,
-		skipDBInit:       skipDBInit,
-		profile:          profile,
-	}, nil
-}
-
-// isFirstStart returns true when ~/.config/nself/onboarding.json does not yet
-// contain a "start_completed" entry. It writes the marker on first call.
-func isFirstStart() bool {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return false
-	}
-	markerPath := filepath.Join(home, ".config", "nself", "onboarding.json")
-	if _, err := os.Stat(markerPath); os.IsNotExist(err) {
-		// First start: write the marker before returning true.
-		if mkErr := os.MkdirAll(filepath.Dir(markerPath), 0o700); mkErr == nil {
-			if wErr := os.WriteFile(markerPath, []byte(`{"start_completed":true}`), 0o600); wErr != nil {
-				ui.Warn("could not write start marker: " + wErr.Error())
-			}
-		}
-		return true
-	}
-	return false
-}
-
-// classifyStartError maps a start error to a categorical string safe for telemetry.
-func classifyStartError(err error) string {
-	if err == nil {
-		return ""
-	}
-	msg := err.Error()
-	switch {
-	case containsAny(msg, "port", "already in use", "bind: address"):
-		return "port-collision"
-	case containsAny(msg, "docker", "Docker", "cannot connect to the Docker", "docker not found", "docker info"):
-		return "docker-not-running"
-	case containsAny(msg, "pull", "image", "manifest", "registry"):
-		return "image-pull-failed"
-	case containsAny(msg, "health", "timeout", "deadline exceeded", "context deadline"):
-		return "healthcheck-timeout"
-	default:
-		return "other"
-	}
 }
 
 func runStart(cmd *cobra.Command, _ []string) error {
@@ -308,11 +169,18 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	}
 
 	// ── AI auto-install (T-05-05) ──────────────────────────────────
-	// If AI_AUTO_INSTALL=true (default in .env.ai), run doctor --ai --yes
-	// --skip-pool to at least get Ollama running before the stack boots.
+	// If AI_AUTO_INSTALL=true (default in the AI config block), run doctor
+	// --ai --yes --skip-pool to at least get Ollama running before the stack
+	// boots.
+	//
+	// CLI-R18: the AI config block (and NSELF_MASTER_SECRET) used to live in
+	// a dedicated .env.ai file, and its mere existence gated this block.
+	// .env.ai is now folded into .env.secrets, so the gate is
+	// NSELF_MASTER_SECRET presence in the resolved environment — the same
+	// signal ("zero-config AI was set up for this project"), just read from
+	// the cascade instead of the filesystem.
 	if aiAutoInstall := os.Getenv("AI_AUTO_INSTALL"); aiAutoInstall == "" || strings.EqualFold(aiAutoInstall, "true") {
-		envAIPath := filepath.Join(projectDir, ".env.ai")
-		if _, err := os.Stat(envAIPath); err == nil {
+		if os.Getenv("NSELF_MASTER_SECRET") != "" {
 			if !ollamaHealthy(ctx) {
 				ui.Info("AI_AUTO_INSTALL: setting up local AI...")
 				_ = runDoctorAI(ctx, doctorAIFlags{
@@ -836,254 +704,4 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	}
 
 	return nil
-}
-
-// runHealthCheckLoop polls service health until the required percentage is met
-// or the timeout expires. It updates a spinner with live progress and prints
-// per-service status on completion.
-func runHealthCheckLoop(ctx context.Context, cfg *config.Config, workdir string, timeoutSec, requiredPct int, verbose bool) *health.HealthReport {
-	timeout := time.Duration(timeoutSec) * time.Second
-	healthCtx, healthCancel := context.WithTimeout(ctx, timeout)
-	defer healthCancel()
-
-	const pollInterval = 3 * time.Second
-	var lastReport *health.HealthReport
-
-	// Show initial spinner.
-	hcSp := ui.NewSpinner(fmt.Sprintf("Waiting for services... (timeout: %ds)", timeoutSec))
-	hcSp.Start()
-
-	for {
-		report, err := health.RunAllChecks(healthCtx, cfg, workdir)
-		if err != nil {
-			// Transient error: retry unless we are out of time.
-			select {
-			case <-healthCtx.Done():
-				hcSp.Fail(fmt.Sprintf("Health check timed out after %ds: %v", timeoutSec, err))
-				return lastReport
-			case <-time.After(pollInterval):
-				continue
-			}
-		}
-
-		lastReport = report
-		actualPct := 0
-		if report.Total > 0 {
-			actualPct = (report.Healthy * 100) / report.Total
-		}
-
-		// Success: threshold met.
-		if actualPct >= requiredPct {
-			hcSp.Success(fmt.Sprintf("Health checks passed: %d/%d healthy (%d%%)",
-				report.Healthy, report.Total, actualPct))
-			printServiceDetails(report, verbose)
-			return report
-		}
-
-		// All services healthy (edge case where total is 0 or rounding).
-		if report.Healthy == report.Total && report.Total > 0 {
-			hcSp.Success(fmt.Sprintf("All %d services healthy", report.Total))
-			printServiceDetails(report, verbose)
-			return report
-		}
-
-		// Not yet healthy: stop current spinner, print progress, start fresh spinner.
-		hcSp.Stop()
-		ui.Info(fmt.Sprintf("Waiting for services... %d/%d healthy (%d%%, need %d%%)",
-			report.Healthy, report.Total, actualPct, requiredPct))
-		hcSp = ui.NewSpinner(fmt.Sprintf("Retrying health checks... %d/%d healthy", report.Healthy, report.Total))
-		hcSp.Start()
-
-		// Wait before next poll, or bail if context is done.
-		select {
-		case <-healthCtx.Done():
-			hcSp.Fail(fmt.Sprintf("Health checks below threshold after %ds: %d/%d healthy (%d%%, required %d%%): %s",
-				timeoutSec, report.Healthy, report.Total, actualPct, requiredPct, errs.ErrHealthTimeout))
-			// Show which services are still unhealthy.
-			for _, r := range report.Results {
-				if r.Status != "healthy" {
-					ui.Warn(fmt.Sprintf("  %s %s: %s (%s)", "\u2717", r.Service, r.Status, r.Details))
-				}
-			}
-			return report
-		case <-time.After(pollInterval):
-			// Continue polling.
-		}
-	}
-}
-
-// printServiceDetails prints per-service health results. In normal mode it only
-// shows unhealthy services. In verbose mode it shows all services with response times.
-func printServiceDetails(report *health.HealthReport, verbose bool) {
-	if verbose {
-		ui.Section("Service Health Details")
-		for _, r := range report.Results {
-			if r.Status == "healthy" {
-				ui.Success(fmt.Sprintf("  %s %s: healthy (%s)", "\u2713", r.Service, r.Duration))
-			} else {
-				ui.Warn(fmt.Sprintf("  %s %s: %s (%s)", "\u2717", r.Service, r.Status, r.Details))
-			}
-		}
-	} else {
-		// Show only unhealthy services in non-verbose mode.
-		for _, r := range report.Results {
-			if r.Status != "healthy" {
-				ui.Warn(fmt.Sprintf("  %s %s: %s (%s)", "\u2717", r.Service, r.Status, r.Details))
-			}
-		}
-	}
-}
-
-// checkDockerAvailable verifies Docker is installed and running before starting
-// the stack. It distinguishes between Docker not being installed (binary absent
-// from PATH) and Docker being installed but the daemon not running.
-func checkDockerAvailable(ctx context.Context) error {
-	if _, lookErr := exec.LookPath("docker"); lookErr != nil {
-		return fmt.Errorf("docker binary not found: %w", errs.ErrDockerNotInstalled)
-	}
-	dockerCmd := exec.CommandContext(ctx, "docker", "info")
-	dockerCmd.Stdout = nil
-	dockerCmd.Stderr = nil
-	if err := dockerCmd.Run(); err != nil {
-		return fmt.Errorf("docker info failed — start Docker and try again: %w", errs.ErrDockerNotRunning)
-	}
-	return nil
-}
-
-// isTerminal returns true when os.Stdin is an interactive terminal.
-func isTerminal() bool {
-	fi, err := os.Stdin.Stat()
-	if err != nil {
-		return false
-	}
-	return (fi.Mode() & os.ModeCharDevice) != 0
-}
-
-// checkLicenseHeartbeat performs a soft license revalidation if the cached
-// validation is older than 7 days. It warns on revoked or expired licenses
-// but never blocks the startup sequence. Network errors are treated as
-// informational only.
-func checkLicenseHeartbeat(ctx context.Context, cfg *config.Config, verbose bool) {
-	key, err := license.GetKey()
-	if err != nil || key == "" {
-		return
-	}
-
-	cacheDir := plugin.LicenseCacheDir()
-	if !plugin.NeedsRevalidation(key, cacheDir) {
-		if verbose {
-			ui.Dimmed("  License cache is current (revalidation not needed)")
-		}
-		return
-	}
-
-	if verbose {
-		ui.Info("License cache is stale — revalidating...")
-	}
-
-	pingURL := cfg.PluginSystem.PingURL
-	if pingURL == "" {
-		pingURL = "https://ping.nself.org"
-	}
-
-	revalCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	valid, err := plugin.ValidateLicenseRemote(revalCtx, key, pingURL)
-	if err != nil {
-		// Network error: informational only, don't block startup.
-		ui.Info("License revalidation skipped (network unavailable)")
-		if verbose {
-			ui.Dimmed(fmt.Sprintf("  %v", err))
-		}
-		return
-	}
-
-	// Update the cache with the fresh result.
-	_ = plugin.CacheLicense(key, valid, cacheDir)
-
-	if valid {
-		if verbose {
-			ui.Success("License revalidated successfully")
-		}
-	} else {
-		// License revoked or expired: warn but don't block existing services.
-		ui.Warn("License validation failed — your license may be revoked or expired")
-		ui.Warn("Existing services will continue running. New plugin installs may be blocked.")
-		ui.Warn("Visit https://nself.org/pricing to check your subscription status.")
-	}
-}
-
-// ciReadyServices is the fixed set of backend services that must be healthy
-// before --skip-db-init mode considers the stack ready for CI/E2E use.
-// Postgres must be running so tests can connect directly; hasura and hasura-auth
-// (the "auth" compose service) are required for GraphQL and JWT flows.
-var ciReadyServices = []string{"postgres", "hasura", "auth"}
-
-// waitCIReady polls until all three CI backend services (postgres, hasura,
-// hasura-auth) report a healthy status, or until the timeout expires.
-// It returns nil when the readiness gate is satisfied, or a non-nil error
-// that causes nself start to exit non-zero (so CI jobs fail deterministically).
-func waitCIReady(ctx context.Context, cfg *config.Config, workdir string, timeoutSec int, verbose bool) error {
-	timeout := time.Duration(timeoutSec) * time.Second
-	ciCtx, ciCancel := context.WithTimeout(ctx, timeout)
-	defer ciCancel()
-
-	const pollInterval = 3 * time.Second
-
-	sp := ui.NewSpinner(fmt.Sprintf("CI mode: waiting for backend triad (postgres, hasura, auth) — timeout %ds", timeoutSec))
-	sp.Start()
-
-	for {
-		report, err := health.RunAllChecks(ciCtx, cfg, workdir)
-		if err == nil && report != nil {
-			// Check only the three CI-critical services.
-			healthyCount := 0
-			for _, r := range report.Results {
-				for _, want := range ciReadyServices {
-					if r.Service == want && (r.Status == "healthy" || r.Status == "running") {
-						healthyCount++
-					}
-				}
-			}
-			if healthyCount >= len(ciReadyServices) {
-				sp.Success(fmt.Sprintf("CI backend triad ready (postgres, hasura, auth) — %d/%d healthy", healthyCount, len(ciReadyServices)))
-				if verbose {
-					for _, r := range report.Results {
-						ui.Dimmed(fmt.Sprintf("  %s: %s", r.Service, r.Status))
-					}
-				}
-				return nil
-			}
-		}
-
-		// Not ready yet: wait or bail on context expiry.
-		select {
-		case <-ciCtx.Done():
-			sp.Fail(fmt.Sprintf("CI readiness gate timed out after %ds: backend triad not healthy", timeoutSec))
-			return fmt.Errorf("backend triad not healthy after %ds (postgres+hasura+auth required for CI): %w",
-				timeoutSec, errs.ErrHealthTimeout)
-		case <-time.After(pollInterval):
-			// Continue polling.
-		}
-	}
-}
-
-// showDormantBannersOnStart reads the lifecycle store and prints a warning for
-// every dormant plugin. It does NOT auto-remove (build-only) and does NOT save
-// the store — this is a read-only diagnostic pass to inform operators.
-func showDormantBannersOnStart(quiet bool) {
-	if quiet {
-		return
-	}
-	store, err := plugin.LoadLifecycleStore()
-	if err != nil {
-		return // non-fatal: lifecycle is advisory
-	}
-	now := time.Now()
-	for _, rec := range store.Records {
-		if rec.State == plugin.StateDormant {
-			ui.Warn(plugin.DormantBanner(rec, now))
-		}
-	}
 }

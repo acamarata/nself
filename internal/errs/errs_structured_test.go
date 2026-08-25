@@ -281,39 +281,39 @@ func TestExitCodeFor_UnknownError(t *testing.T) {
 }
 
 // ============================================================================
-// errorsIs() — exit_codes.go (internal helper)
+// errors.Is() — exit_codes.go (internal helper)
 // ============================================================================
 
-// TestErrorsIs_DirectMatch verifies errorsIs returns true when err == target.
+// TestErrorsIs_DirectMatch verifies errors.Is returns true when err == target.
 func TestErrorsIs_DirectMatch(t *testing.T) {
 	sentinel := errors.New("sentinel")
-	if !errorsIs(sentinel, sentinel) {
-		t.Error("errorsIs: same pointer should return true")
+	if !errors.Is(sentinel, sentinel) {
+		t.Error("errors.Is: same pointer should return true")
 	}
 }
 
-// TestErrorsIs_NoMatch verifies errorsIs returns false when errors differ.
+// TestErrorsIs_NoMatch verifies errors.Is returns false when errors differ.
 func TestErrorsIs_NoMatch(t *testing.T) {
 	a := errors.New("a")
 	b := errors.New("b")
-	if errorsIs(a, b) {
-		t.Error("errorsIs: distinct errors should return false")
+	if errors.Is(a, b) {
+		t.Error("errors.Is: distinct errors should return false")
 	}
 }
 
-// TestErrorsIs_NilErr verifies errorsIs returns false on nil error.
+// TestErrorsIs_NilErr verifies errors.Is returns false on nil error.
 func TestErrorsIs_NilErr(t *testing.T) {
-	if errorsIs(nil, errors.New("target")) {
-		t.Error("errorsIs(nil, ...) should return false")
+	if errors.Is(nil, errors.New("target")) {
+		t.Error("errors.Is(nil, ...) should return false")
 	}
 }
 
-// TestErrorsIs_Unwrapped verifies errorsIs chains through Unwrap.
+// TestErrorsIs_Unwrapped verifies errors.Is chains through Unwrap.
 func TestErrorsIs_Unwrapped(t *testing.T) {
 	inner := errors.New("inner")
 	outer := fmt.Errorf("outer: %w", inner)
-	if !errorsIs(outer, inner) {
-		t.Error("errorsIs should unwrap and find inner sentinel")
+	if !errors.Is(outer, inner) {
+		t.Error("errors.Is should unwrap and find inner sentinel")
 	}
 }
 
