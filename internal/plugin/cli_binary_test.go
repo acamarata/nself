@@ -83,9 +83,20 @@ func TestLinkCLIBinary_IgnoresServicePlugins(t *testing.T) {
 	}
 }
 
-// TestLinkCLIBinary_SourceOnlyIsNotAnError covers a plugin that declares a
-// command but ships no built binary yet: nothing to publish is not a failure.
-func TestLinkCLIBinary_SourceOnlyIsNotAnError(t *testing.T) {
+// TestLinkCLIBinary_SourceOnlyIsAnError covers a plugin that declares a command
+// but ships no built binary.
+//
+// This assertion is the reverse of what it was. It originally said a
+// source-only package "should not fail install", on the assumption that such a
+// package was a work in progress. Installing a real one showed what that
+// assumption costs: release-tarballs.yml publishes plugins by running
+// `tar -czf` over the source directory and never compiles, so EVERY extracted
+// Go command arrives as source. The install reported success and the command
+// stayed dead, with nothing anywhere saying why.
+//
+// Tolerating it here is what made that silent. A plugin whose entire purpose is
+// to provide a command, arriving without the command, is a failed install.
+func TestLinkCLIBinary_SourceOnlyIsAnError(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
@@ -96,8 +107,12 @@ func TestLinkCLIBinary_SourceOnlyIsNotAnError(t *testing.T) {
 	}
 	writeManifest(t, destDir, `{"name":"dogfood","pluginType":"cli"}`)
 
-	if err := linkCLIBinary(destDir, "dogfood", &PluginManifest{PluginType: "cli"}); err != nil {
-		t.Fatalf("a source-only plugin should not fail install: %v", err)
+	err := linkCLIBinary(destDir, "dogfood", &PluginManifest{PluginType: "cli"})
+	if err == nil {
+		t.Fatal("a CLI plugin with no binary installed silently; the command would be dead with no explanation")
+	}
+	if !strings.Contains(err.Error(), "source-only") {
+		t.Errorf("error does not name the cause, so the user cannot act on it: %v", err)
 	}
 }
 

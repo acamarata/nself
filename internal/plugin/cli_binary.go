@@ -71,9 +71,23 @@ func cliBinaryName(name string, m *PluginManifest) string {
 // linkCLIBinary publishes a freshly extracted CLI plugin's binary into the
 // proxy's lookup directory.
 //
-// A missing binary is not an error: most plugins are services, not commands,
-// and a source-only distribution has nothing to link yet. Only a real failure
-// to publish a binary that IS present is reported.
+// A plugin that declares no command is not a CLI plugin and there is nothing to
+// do — cliBinaryName returns "" for those, which is most plugins.
+//
+// A plugin that DOES declare a command but ships no binary is a hard error, and
+// this used to return nil instead. That combination is exactly what the release
+// pipeline currently produces: release-tarballs.yml runs `tar -czf` over the
+// plugin's source directory and never compiles anything, so a Go CLI plugin
+// arrives as source. The install then reported success and the command stayed
+// dead:
+//
+//	$ nself install infra          # "installed"
+//	$ nself infra --help
+//	unknown command "infra", and no plugin named "infra" is installed
+//
+// Failing here does not fix the pipeline, and is not meant to. It turns a
+// silent, confusing break into one that names the cause at the moment it
+// happens, rather than leaving the user to discover it later with no clue why.
 func linkCLIBinary(destDir, name string, m *PluginManifest) error {
 	binName := cliBinaryName(name, m)
 	if binName == "" {
@@ -82,7 +96,10 @@ func linkCLIBinary(destDir, name string, m *PluginManifest) error {
 
 	src := findExtractedBinary(destDir, binName)
 	if src == "" {
-		return nil
+		return fmt.Errorf(
+			"plugin %q provides the %q command but its package contains no %s binary — "+
+				"the published archive is source-only, so the command could not be installed",
+			name, name, binName)
 	}
 
 	binDir := pluginBinDir()
@@ -202,4 +219,22 @@ func IsCommandInstalled(cmdName string) bool {
 	candidate := PublishedBinaryPath("nself-" + cmdName)
 	info, err := os.Stat(candidate)
 	return err == nil && !info.IsDir()
+}
+
+// pluginOwnsTables reports whether a plugin declares any database tables.
+//
+// A plugin with none needs no schema, and every CLI-R11 extraction produces
+// exactly that shape: a Go binary that adds a command, with "tables": [] in its
+// manifest. Running the schema step for those meant `nself install <cmd>`
+// required Docker and a running Postgres to create an empty schema, so a
+// command-line tool could not be installed on a machine without a stack.
+//
+// A nil manifest is treated as owning tables: it means the manifest could not
+// be read, and skipping schema creation on a guess is the more damaging
+// mistake of the two.
+func pluginOwnsTables(m *PluginManifest) bool {
+	if m == nil {
+		return true
+	}
+	return len(m.Tables) > 0
 }

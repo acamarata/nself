@@ -147,7 +147,11 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	}
 
 	// Step 4: Download the plugin archive.
-	archivePath, err := downloadPlugin(ctx, name, manifest.Version, manifest.Repository)
+	// A plugin that provides a command needs a package built for this platform;
+	// one that does not is source and works anywhere. cliBinaryName returns ""
+	// for the latter, which is most plugins.
+	archivePath, err := downloadPluginPackage(ctx, name, manifest.Version, manifest.Repository,
+		cliBinaryName(name, manifest))
 	if err != nil {
 		return fmt.Errorf("downloading plugin %q: %w", name, err)
 	}
@@ -226,9 +230,25 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	}
 
 	// Step 7: Create database schema. On failure, rollback extraction.
-	if err := createPluginSchema(ctx, cfg, name); err != nil {
-		rollbackInstall(ctx, cfg, name, destDir)
-		return fmt.Errorf("creating schema for plugin %q: %w", name, err)
+	//
+	// Skipped for a plugin that owns no tables. Every CLI-R11 extraction
+	// produces exactly that: a plugin whose whole job is to add a command, with
+	// "tables": [] in its manifest. Creating a schema for it meant reaching for
+	// Postgres through Docker, so `nself install infra` failed outright on a
+	// machine with no stack running:
+	//
+	//	error installing "infra": creating schema for plugin "infra":
+	//	creating np_common.schema_versions: ... dial unix /var/run/docker.sock
+	//
+	// A command-line tool must be installable without a database. This is not a
+	// reordering of the frozen load sequence — the step stays exactly where it
+	// is and still runs for every plugin that has tables; it just does nothing
+	// when there is nothing to create.
+	if pluginOwnsTables(manifest) {
+		if err := createPluginSchema(ctx, cfg, name); err != nil {
+			rollbackInstall(ctx, cfg, name, destDir)
+			return fmt.Errorf("creating schema for plugin %q: %w", name, err)
+		}
 	}
 
 	// Step 7b (Q01): Generate per-plugin Ed25519 identity keypair and register

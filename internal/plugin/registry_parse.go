@@ -41,6 +41,17 @@ type pluginImplementation struct {
 	CLI            string `json:"cli"`
 	PackageManager string `json:"packageManager"`
 	Framework      string `json:"framework"`
+
+	// PluginType and BinaryName were missing here, and their absence made the
+	// whole install-to-proxy bridge a no-op for anything installed from the
+	// registry — which is every real install.
+	//
+	// Registry entries declare these inside the implementation block. Parsing
+	// dropped them, so PluginManifest.PluginType arrived empty, cliBinaryName
+	// returned "", and linkCLIBinary did nothing. A CLI plugin installed
+	// "successfully" and its command did not exist.
+	PluginType string `json:"pluginType"`
+	BinaryName string `json:"binaryName"`
 }
 
 // pluginEndpointEntry holds the object form of an API endpoint as returned
@@ -91,6 +102,14 @@ type pluginEntry struct {
 	// Implementation may appear as a nested object (Cloudflare Worker format)
 	// or as flat fields (older registry format).
 	Implementation *pluginImplementation `json:"implementation,omitempty"`
+
+	// Flat forms of the implementation fields, accepted so a registry entry can
+	// declare them either way. Real registry entries use the nested form; the
+	// cache writes the flat form, and both have to round-trip.
+	Language   string `json:"language,omitempty"`
+	Runtime    string `json:"runtime,omitempty"`
+	PluginType string `json:"pluginType,omitempty"`
+	BinaryName string `json:"binaryName,omitempty"`
 	// APIEndpoints is raw JSON because the registry format is not stable:
 	// the live registry returns objects; older registries return strings.
 	APIEndpoints json.RawMessage `json:"apiEndpoints,omitempty"`

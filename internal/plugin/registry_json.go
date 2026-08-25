@@ -103,11 +103,26 @@ func entryToManifest(e pluginEntry) PluginManifest {
 	}
 
 	// Resolve implementation fields from the nested block when flat fields are absent.
-	language := ""
-	runtime := ""
+	language := e.Language
+	runtime := e.Runtime
+	pluginType := e.PluginType
+	binaryName := e.BinaryName
 	if e.Implementation != nil {
-		language = e.Implementation.Language
-		runtime = e.Implementation.Runtime
+		if language == "" {
+			language = e.Implementation.Language
+		}
+		if runtime == "" {
+			runtime = e.Implementation.Runtime
+		}
+		// A flat field wins when present; otherwise take the nested one. Real
+		// registry entries put these under implementation, and dropping them
+		// here is what made every CLI plugin install into a dead command.
+		if pluginType == "" {
+			pluginType = e.Implementation.PluginType
+		}
+		if binaryName == "" {
+			binaryName = e.Implementation.BinaryName
+		}
 	}
 
 	return PluginManifest{
@@ -128,6 +143,8 @@ func entryToManifest(e pluginEntry) PluginManifest {
 		APIEndpoints:    parseAPIEndpoints(e.APIEndpoints),
 		Language:        language,
 		Runtime:         runtime,
+		PluginType:      pluginType,
+		BinaryName:      binaryName,
 		Compat:          e.Compat,
 		PublishStatus:   e.PublishStatus,
 		AuthorPublicKey: e.AuthorPublicKey,

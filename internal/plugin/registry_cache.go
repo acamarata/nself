@@ -119,6 +119,18 @@ func (r Registry) MarshalJSON() ([]byte, error) {
 			APIEndpoints:    rawEPs,
 			Compat:          p.Compat,
 			UpdatedAt:       p.UpdatedAt,
+
+			// Implementation fields. Their absence here is what made every
+			// CLI plugin install into a dead command: the first request
+			// parsed pluginType/binaryName correctly, this re-serialisation
+			// dropped them, and the very next read came from the cache with
+			// both empty — so linkCLIBinary saw a plugin that declared no
+			// command and did nothing. Language and Runtime were being lost
+			// the same way, which is the tell I should have followed sooner.
+			Language:   p.Language,
+			Runtime:    p.Runtime,
+			PluginType: p.PluginType,
+			BinaryName: p.BinaryName,
 		})
 	}
 	return json.Marshal(envelope{
