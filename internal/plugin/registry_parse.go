@@ -110,6 +110,32 @@ type pluginEntry struct {
 	Runtime    string `json:"runtime,omitempty"`
 	PluginType string `json:"pluginType,omitempty"`
 	BinaryName string `json:"binaryName,omitempty"`
+
+	// CLICommands lists every command a plugin provides. Dropping it meant a
+	// plugin declaring two commands had only one binary published, so the
+	// second command stayed dead after a successful install.
+	CLICommands []CLICommand `json:"cliCommands,omitempty"`
+
+	// The rest of the manifest. These were absent, so the cache round-trip
+	// silently reset them — see TestRegistryRoundTripLosesNoField for why that
+	// class of omission keeps producing production bugs.
+	Author               string              `json:"author,omitempty"`
+	Homepage             string              `json:"homepage,omitempty"`
+	IsCommercial         bool                `json:"isCommercial,omitempty"`
+	RequiredEntitlements []string            `json:"requiredEntitlements,omitempty"`
+	MinNselfVersion      string              `json:"minNselfVersion,omitempty"`
+	MaxNselfVersion      string              `json:"maxNselfVersion,omitempty"`
+	MinNodeVersion       string              `json:"minNodeVersion,omitempty"`
+	ArchSupport          []string            `json:"arch_support,omitempty"`
+	EntryPoint           string              `json:"entryPoint,omitempty"`
+	CLI                  string              `json:"cli,omitempty"`
+	HealthEndpoint       string              `json:"health_endpoint,omitempty"`
+	PackageManager       string              `json:"packageManager,omitempty"`
+	Framework            string              `json:"framework,omitempty"`
+	Views                []string            `json:"views,omitempty"`
+	MultiApp             MultiApp            `json:"multiApp,omitempty"`
+	Deprecation          *DeprecationBlock   `json:"deprecation,omitempty"`
+	GraphQL              *PluginGraphQLBlock `json:"graphql,omitempty"`
 	// APIEndpoints is raw JSON because the registry format is not stable:
 	// the live registry returns objects; older registries return strings.
 	APIEndpoints json.RawMessage `json:"apiEndpoints,omitempty"`
