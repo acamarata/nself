@@ -194,44 +194,6 @@
     ]
   },
   {
-    "name": "alerts",
-    "path": "nself alerts",
-    "short": "Manage Prometheus alert rules and silences",
-    "hidden": false,
-    "group_id": "observe",
-    "subcommands": [
-      {
-        "name": "list",
-        "path": "nself alerts list",
-        "short": "List all configured alert rules",
-        "hidden": false,
-        "flags": [
-          "--json",
-          "--severity"
-        ]
-      },
-      {
-        "name": "silence",
-        "path": "nself alerts silence",
-        "short": "Silence an alert for a specified duration",
-        "hidden": false,
-        "flags": [
-          "--duration",
-          "--reason"
-        ]
-      },
-      {
-        "name": "test",
-        "path": "nself alerts test",
-        "short": "Fire a synthetic test alert",
-        "hidden": false,
-        "flags": [
-          "--alertmanager-url"
-        ]
-      }
-    ]
-  },
-  {
     "name": "api",
     "path": "nself api",
     "short": "API versioning and deprecation tooling for operators",

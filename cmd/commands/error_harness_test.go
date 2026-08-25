@@ -53,11 +53,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"ai", []string{"ai", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"ai", []string{"ai", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── alerts ─────────────────────────────────────────────────────────────
-	{"alerts", []string{"alerts"}, "(a) no project dir"},
-	{"alerts", []string{"alerts", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"alerts", []string{"alerts", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── backup ─────────────────────────────────────────────────────────────
 	{"backup", []string{"backup"}, "(a) no project dir"},
 	{"backup", []string{"backup", "--no-such-flag-xyz"}, "(b) invalid flag"},

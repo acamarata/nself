@@ -90,7 +90,6 @@ var commandGroupAssignments = map[string]string{
 	"ops":     groupDeploy,
 
 	// Observability.
-	"alerts":        groupObserve,
 	"health":        groupObserve,
 	"watchdog":      groupObserve,
 	"self-heal":     groupObserve,

@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (70)
+## Commands (69)
 
 ### nself account
 
@@ -84,22 +84,6 @@ Subcommands:
 - `bridge` — Start a secure AI Studio bridge via Cloudflare Tunnel
 
 Full page: [[cmd-ai-studio]]
-
-### nself alerts
-
-Manage Prometheus alert rules and silences
-
-```
-nself alerts <subcommand> [flags]
-```
-
-Subcommands:
-
-- `list` — List all configured alert rules
-- `silence` — Silence an alert for a specified duration
-- `test` — Fire a synthetic test alert
-
-Full page: [[cmd-alerts]]
 
 ### nself api
 

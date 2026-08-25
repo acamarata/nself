@@ -16,7 +16,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself admin` | account | yes | no | undocumented: ADMIN_PORT | n/a (see below) |
 | `nself ai` | ai | yes | no | undocumented: AI_DEFAULT_MODEL, OLLAMA_BASE_URL, OLLAMA_HOST, PLUGIN_AI_INTERNAL_URL, PLUGIN_INTERNAL_SECRET | n/a (see below) |
 | `nself ai-studio` | ai | yes | no | n/a | n/a (see below) |
-| `nself alerts` | observe | yes | no | n/a | n/a (see below) |
 | `nself api` | extend | yes | no | n/a | n/a (see below) |
 | `nself backup` | data | yes | yes | n/a | n/a (see below) |
 | `nself billing` | account | yes | no | n/a | n/a (see below) |
@@ -83,4 +82,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself watchdog` | observe | yes | no | undocumented: NSELF_ENV | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 70 commands. Missing wiki page: 0. No MCP tool: 52. Env vars found but undocumented: 26.
+Total: 69 commands. Missing wiki page: 0. No MCP tool: 51. Env vars found but undocumented: 26.

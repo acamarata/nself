@@ -13,7 +13,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself admin` | Manage the nSelf Admin dashboard | — | connect, health, logs, projects, start, stop |
 | `nself ai` | Manage the nSelf AI plugin and local LLM stack | — | chat, local, pool |
 | `nself ai-studio` | Google AI Studio integration for local nSelf instances | — | bridge |
-| `nself alerts` | Manage Prometheus alert rules and silences | — | list, silence, test |
 | `nself api` | API versioning and deprecation tooling for operators | — | changelog, deprecation-check, version |
 | `nself backup` | Backup operations: create, list, restore, verify, prune, config, status, init-key | — | config, create, drill, init-key, list, prune, restore, restore-remote, resume, schedule, status, stream, verify |
 | `nself billing` | Billing operations: usage, invoice-preview, report, retry-event | — | invoice-preview, report, retry-event, usage |
@@ -98,7 +97,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 70**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 69**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -106,7 +105,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 70**
 | `nself admin` | Manage the nSelf Admin dashboard | account | connect, health, logs, projects, start, stop |
 | `nself ai` | Manage the nSelf AI plugin and local LLM stack | ai | chat, local, pool |
 | `nself ai-studio` | Google AI Studio integration for local nSelf instances | ai | bridge |
-| `nself alerts` | Manage Prometheus alert rules and silences | observe | list, silence, test |
 | `nself api` | API versioning and deprecation tooling for operators | extend | changelog, deprecation-check, version |
 | `nself backup` | Backup operations: create, list, restore, verify, prune, config, status, init-key | data | config, create, drill, init-key, list, pitr, prune, restore, restore-remote, resume, schedule, status, stream, verify |
 | `nself billing` | Billing operations: usage, invoice-preview, report, retry-event | account | invoice-preview, report, retry-event, usage |
