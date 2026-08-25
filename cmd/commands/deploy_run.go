@@ -94,7 +94,7 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 	// When --canary N is passed and the flag is ON, route to the bluegreen package.
 	// The feature flag check is intentionally lightweight: the env var
 	// NSELF_FEATURE_BLUE_GREEN_DEPLOY=true mirrors what the feature-flags plugin
-	// would return (nself flag list | grep blue_green_deploy). In production the
+	// would return (nself flags list | grep blue_green_deploy). In production the
 	// flag plugin is the authoritative source; the env var is the fallback for
 	// environments without the flags plugin running.
 	bgEnabled := os.Getenv("NSELF_FEATURE_BLUE_GREEN_DEPLOY") == "true"

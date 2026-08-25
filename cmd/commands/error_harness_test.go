@@ -350,12 +350,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"backup pitr", []string{"backup", "pitr", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"backup pitr", []string{"backup", "pitr", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── region ─────────────────────────────────────────────────────────────
-	// region root returns cmd.Help() (nil) — soft case.
-	{"region", []string{"region"}, "(a) shows help (no project required)"},
-	{"region", []string{"region", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"region", []string{"region", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── template ───────────────────────────────────────────────────────────
 	// template root returns cmd.Help() (nil) — soft case.
 	{"template", []string{"template"}, "(a) shows help (no project required)"},

@@ -84,7 +84,6 @@ var commandGroupAssignments = map[string]string{
 	"promote": groupDeploy,
 	"release": groupDeploy,
 	"ci":      groupDeploy,
-	"region":  groupDeploy,
 	"dr":      groupDeploy,
 	"ops":     groupDeploy,
 

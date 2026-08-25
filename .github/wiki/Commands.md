@@ -100,7 +100,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 62**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 61**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -143,7 +143,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 62**
 | `nself plugin` | Manage nSelf plugins | extend | audit-tables, compat-check, debug, dev, disable, enable, info, init, install, inventory, link, list, logs, marketplace, new, outdated, refresh, remove, search, start, status, stop, submit, test, unlink, update, updates |
 | `nself promote` | Promote one environment to another (e.g. staging to prod) | deploy | rollback |
 | `nself queue` | Manage async job queues (pg-boss) | data | cron, jobs, list, purge, retry |
-| `nself region` | Manage multi-region nSelf deployments | deploy | add, list, promote, status |
 | `nself release` | Orchestrate the full release cascade for a version | deploy | check, rollback, status |
 | `nself remove` | Remove an installed plugin or bundle | extend | — |
 | `nself reset` | Stop containers, remove all data volumes, and clean generated files | core | — |

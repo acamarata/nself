@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (62)
+## Commands (61)
 
 ### nself account
 
@@ -838,23 +838,6 @@ Subcommands:
 - `retry` — Retry a failed or dead job
 
 Full page: [[cmd-queue]]
-
-### nself region
-
-Manage multi-region nSelf deployments
-
-```
-nself region <subcommand> [flags]
-```
-
-Subcommands:
-
-- `add` — Add a replica region
-- `list` — List configured regions
-- `promote` — Promote a replica to primary (failover)
-- `status` — Show replication and routing status for all regions
-
-Full page: [[cmd-region]]
 
 ### nself release
 

@@ -29,9 +29,9 @@ var flagSetCmd = &cobra.Command{
 	Long: `Update a feature flag. At least one of --enabled or --rollout-pct is required.
 
 Examples:
-  nself flag set ai.safety.jailbreak_filter --enabled
-  nself flag set ai.safety.jailbreak_filter --rollout-pct 25
-  nself flag set ai.safety.jailbreak_filter --enabled --rollout-pct 50`,
+  nself flags set ai.safety.jailbreak_filter --enabled
+  nself flags set ai.safety.jailbreak_filter --rollout-pct 25
+  nself flags set ai.safety.jailbreak_filter --enabled --rollout-pct 50`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		enabledFlag := cmd.Flags().Lookup("enabled")
@@ -77,7 +77,7 @@ var flagEnableCmd = &cobra.Command{
 	Long: `Enable a feature flag (sets enabled=true).
 
 Example:
-  nself flag enable ai.safety.jailbreak_filter`,
+  nself flags enable ai.safety.jailbreak_filter`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		baseURL, _ := cmd.Flags().GetString("plugin-url")
@@ -97,7 +97,7 @@ var flagDisableCmd = &cobra.Command{
 	Long: `Disable a feature flag (sets enabled=false, broadcasts pubsub cache invalidation).
 
 Example:
-  nself flag disable ai.safety.jailbreak_filter`,
+  nself flags disable ai.safety.jailbreak_filter`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		baseURL, _ := cmd.Flags().GetString("plugin-url")
@@ -121,7 +121,7 @@ Kill is the emergency path — use disable for routine toggling.
 --reason is REQUIRED to prevent accidental kills.
 
 Example:
-  nself flag kill ai.safety.jailbreak_filter --reason "CVE-2026-1234 mitigation"`,
+  nself flags kill ai.safety.jailbreak_filter --reason "CVE-2026-1234 mitigation"`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		reason, _ := cmd.Flags().GetString("reason")
@@ -148,8 +148,8 @@ var flagPruneCmd = &cobra.Command{
 (default 90 days). Use --dry-run to preview without deleting.
 
 Examples:
-  nself flag prune --stale --dry-run
-  nself flag prune --stale`,
+  nself flags prune --stale --dry-run
+  nself flags prune --stale`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		stale, _ := cmd.Flags().GetBool("stale")
 		dryRun, _ := cmd.Flags().GetBool("dry-run")

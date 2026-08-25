@@ -51,7 +51,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself plugin` | extend | yes | yes | undocumented: GOPATH, NSELF_LICENSE_SKIP_VERIFY, NSELF_LOCAL_URL, NSELF_MARKETPLACE_URL, NSELF_PING_URL, NSELF_PLUGIN_CACHE, NSELF_PLUGIN_DIR, NSELF_PLUGIN_LICENSE_KEY, NSELF_PLUGIN_REGISTRY | n/a (see below) |
 | `nself promote` | deploy | yes | no | n/a | n/a (see below) |
 | `nself queue` | data | yes | no | n/a | n/a (see below) |
-| `nself region` | deploy | yes | no | n/a | n/a (see below) |
 | `nself release` | deploy | yes | no | undocumented: GITHUB_TOKEN, NSELF_VERSION | n/a (see below) |
 | `nself remove` | extend | yes | no | n/a | n/a (see below) |
 | `nself reset` | core | yes | no | n/a | n/a (see below) |
@@ -75,4 +74,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself version` | account | yes | no | undocumented: BENCH_RESULTS_FILE | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 62 commands. Missing wiki page: 0. No MCP tool: 44. Env vars found but undocumented: 21.
+Total: 61 commands. Missing wiki page: 0. No MCP tool: 43. Env vars found but undocumented: 21.

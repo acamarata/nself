@@ -14,9 +14,10 @@ package config
 //          list to on-disk paths with existence checked, for display and
 //          migration purposes.
 // Constraints: Pure — no env var reads, no warnings, no filesystem writes.
-//              legacyOrder and canonicalOrder below must stay byte-for-byte
-//              in sync with the historical and approved orders documented in
-//              loader.go and .claude/tasks/cli-review-tickets-2026-08-23.md
+//              The two orders inlined in EnvCascadeOrder must stay
+//              byte-for-byte in sync with the historical and approved orders
+//              documented in loader.go and
+//              .claude/tasks/cli-review-tickets-2026-08-23.md
 //              (DECISIONS — 2026-08-23, GATE B).
 // SPORT:   cli/internal/config — CLI-R18 env cascade canon.
 

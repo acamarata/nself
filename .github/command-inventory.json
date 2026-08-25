@@ -2106,47 +2106,6 @@
     ]
   },
   {
-    "name": "region",
-    "path": "nself region",
-    "short": "Manage multi-region nSelf deployments",
-    "hidden": false,
-    "group_id": "deploy",
-    "subcommands": [
-      {
-        "name": "add",
-        "path": "nself region add",
-        "short": "Add a replica region",
-        "hidden": false,
-        "flags": [
-          "--pg-url",
-          "--redis-url",
-          "--region"
-        ]
-      },
-      {
-        "name": "list",
-        "path": "nself region list",
-        "short": "List configured regions",
-        "hidden": false
-      },
-      {
-        "name": "promote",
-        "path": "nself region promote",
-        "short": "Promote a replica to primary (failover)",
-        "hidden": false,
-        "flags": [
-          "--region"
-        ]
-      },
-      {
-        "name": "status",
-        "path": "nself region status",
-        "short": "Show replication and routing status for all regions",
-        "hidden": false
-      }
-    ]
-  },
-  {
     "name": "release",
     "path": "nself release",
     "short": "Orchestrate the full release cascade for a version",

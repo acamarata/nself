@@ -1,7 +1,7 @@
 package commands
 
 // Purpose: Read-only feature-flag commands split out of flag.go (CLI-R12
-// Batch B mechanical file-size split). Holds `nself flag list/get/history`
+// Batch B mechanical file-size split). Holds `nself flags list/get/history`
 // — the three subcommands that only read state from the feature-flags
 // plugin.
 // Inputs: cobra command flags (--type, --json, --plugin-url) and the
@@ -28,9 +28,9 @@ var flagListCmd = &cobra.Command{
 	Long: `List all feature flags. Optionally filter by type.
 
 Examples:
-  nself flag list
-  nself flag list --type release
-  nself flag list --type kill_switch --json`,
+  nself flags list
+  nself flags list --type release
+  nself flags list --type kill_switch --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		flagType, _ := cmd.Flags().GetString("type")
 		jsonOut, _ := cmd.Flags().GetBool("json")
@@ -84,7 +84,7 @@ var flagGetCmd = &cobra.Command{
 	Long: `Get a feature flag by key and display its full configuration.
 
 Example:
-  nself flag get ai.safety.jailbreak_filter`,
+  nself flags get ai.safety.jailbreak_filter`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		jsonOut, _ := cmd.Flags().GetBool("json")
@@ -148,7 +148,7 @@ var flagHistoryCmd = &cobra.Command{
 before/after states for all state-changing operations.
 
 Example:
-  nself flag history ai.safety.jailbreak_filter`,
+  nself flags history ai.safety.jailbreak_filter`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		jsonOut, _ := cmd.Flags().GetBool("json")
