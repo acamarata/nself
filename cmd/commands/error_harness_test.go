@@ -264,11 +264,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"self-heal", []string{"self-heal", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"self-heal", []string{"self-heal", "--dry-run"}, "(c) dry-run no flags (shows help)"},
 
-	// ── webhooks ───────────────────────────────────────────────────────────
-	{"webhooks", []string{"webhooks"}, "(a) no project dir"},
-	{"webhooks", []string{"webhooks", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"webhooks", []string{"webhooks", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── account ────────────────────────────────────────────────────────────
 	{"account", []string{"account"}, "(a) no project dir"},
 	{"account", []string{"account", "--no-such-flag-xyz"}, "(b) invalid flag"},

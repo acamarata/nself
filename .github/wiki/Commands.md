@@ -100,7 +100,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 53**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 52**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -156,7 +156,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 53**
 | `nself urls` | Display all service URLs with route conflict detection | core | — |
 | `nself verify-sbom` | Verify the SBOM signature for a CLI release | advanced | — |
 | `nself version` | Show version and system information | account | — |
-| `nself webhooks` | Manage webhook processing and outbox | data | outbox |
 
 <!-- END GENERATED:command-table -->
 ---

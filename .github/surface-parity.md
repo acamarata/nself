@@ -64,6 +64,5 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself urls` | core | yes | yes | n/a | n/a (see below) |
 | `nself verify-sbom` | advanced | yes | no | n/a | n/a (see below) |
 | `nself version` | account | yes | no | undocumented: BENCH_RESULTS_FILE | n/a (see below) |
-| `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 53 commands. Missing wiki page: 0. No MCP tool: 36. Env vars found but undocumented: 19.
+Total: 52 commands. Missing wiki page: 0. No MCP tool: 35. Env vars found but undocumented: 18.

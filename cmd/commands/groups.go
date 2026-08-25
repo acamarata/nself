@@ -74,7 +74,6 @@ var commandGroupAssignments = map[string]string{
 	"backup":    groupData,
 	"migrate":   groupData,
 	"functions": groupData,
-	"webhooks":  groupData,
 
 	// Deploy & Remote.
 	"deploy":  groupDeploy,

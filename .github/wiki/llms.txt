@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (53)
+## Commands (52)
 
 ### nself account
 
@@ -1121,18 +1121,4 @@ Flags:
 - `--short` (default false) — Print version number only
 
 Full page: [[cmd-version]]
-
-### nself webhooks
-
-Manage webhook processing and outbox
-
-```
-nself webhooks <subcommand> [flags]
-```
-
-Subcommands:
-
-- `outbox` — Manage the webhook durable outbox queue
-
-Full page: [[cmd-webhooks]]
 

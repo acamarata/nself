@@ -283,7 +283,7 @@
 
 <!-- BEGIN GENERATED:command-list -->
 
-**All commands (53)**
+**All commands (52)**
 
 - _A:_ [[cmd-account]] · [[cmd-admin]]
 - _B:_ [[cmd-backup]] · [[cmd-build]] · [[cmd-bundle]]
@@ -303,6 +303,5 @@
 - _T:_ [[cmd-telemetry]] · [[cmd-template]] · [[cmd-trust]]
 - _U:_ [[cmd-update]] · [[cmd-urls]]
 - _V:_ [[cmd-verify-sbom]] · [[cmd-version]]
-- _W:_ [[cmd-webhooks]]
 
 <!-- END GENERATED:command-list -->

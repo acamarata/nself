@@ -2474,20 +2474,5 @@
       "--json",
       "--short"
     ]
-  },
-  {
-    "name": "webhooks",
-    "path": "nself webhooks",
-    "short": "Manage webhook processing and outbox",
-    "hidden": false,
-    "group_id": "data",
-    "subcommands": [
-      {
-        "name": "outbox",
-        "path": "nself webhooks outbox",
-        "short": "Manage the webhook durable outbox queue",
-        "hidden": false
-      }
-    ]
   }
 ]
