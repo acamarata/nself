@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (52)
+## Commands (49)
 
 ### nself account
 
@@ -357,27 +357,6 @@ Flags:
 
 Full page: [[cmd-exec]]
 
-### nself flags
-
-Manage application feature flags
-
-```
-nself flags <subcommand> [flags]
-```
-
-Subcommands:
-
-- `disable` — Disable a feature flag
-- `enable` — Enable a feature flag
-- `get` — Get a single feature flag
-- `history` — Show audit log for a feature flag
-- `kill` — Kill-switch a feature flag (emergency disable with required reason)
-- `list` — List all feature flags
-- `prune` — List (or delete) stale feature flags
-- `set` — Update a feature flag's enabled state and/or rollout percentage
-
-Full page: [[cmd-flags]]
-
 ### nself functions
 
 Manage serverless functions
@@ -594,22 +573,6 @@ Flags:
 
 Full page: [[cmd-logs]]
 
-### nself maintenance
-
-Maintenance utilities: disk cleanup, scheduler
-
-```
-nself maintenance <subcommand> [flags]
-```
-
-Subcommands:
-
-- `disk-cleanup` — Free disk space: Docker prune, log rotation, journal vacuum
-- `schedule` — Install or remove the daily disk-cleanup timer
-- `status` — Show daily cleanup scheduler status
-
-Full page: [[cmd-maintenance]]
-
 ### nself man
 
 Generate man pages for all nself commands
@@ -753,30 +716,6 @@ Flags:
 - `--json` (default false) — JSON output
 
 Full page: [[cmd-promote]]
-
-### nself release
-
-Orchestrate the full release cascade for a version
-
-```
-nself release <version> [flags]
-```
-
-Subcommands:
-
-- `check` — Run pre-release gates for a version
-- `rollback` — Roll back a release to prior version
-- `status` — Show running version vs latest across all release artifacts
-
-Flags:
-
-- `--dry-run` (default false) — Log all steps without executing them
-- `--json` (default false) — Output results as JSON
-- `--release-notes` (default "") — Path to release notes file (markdown)
-- `--skip-check` (default false) — Skip pre-release gate (release-check)
-- `--skip-plugins-pro` (default false) — Skip plugins-pro tag (use when not releasing plugins-pro)
-
-Full page: [[cmd-release]]
 
 ### nself remove
 

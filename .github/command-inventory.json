@@ -900,99 +900,6 @@
     ]
   },
   {
-    "name": "flags",
-    "path": "nself flags",
-    "short": "Manage application feature flags",
-    "hidden": false,
-    "group_id": "config",
-    "aliases": [
-      "flag"
-    ],
-    "subcommands": [
-      {
-        "name": "disable",
-        "path": "nself flags disable",
-        "short": "Disable a feature flag",
-        "hidden": false,
-        "flags": [
-          "--plugin-url"
-        ]
-      },
-      {
-        "name": "enable",
-        "path": "nself flags enable",
-        "short": "Enable a feature flag",
-        "hidden": false,
-        "flags": [
-          "--plugin-url"
-        ]
-      },
-      {
-        "name": "get",
-        "path": "nself flags get",
-        "short": "Get a single feature flag",
-        "hidden": false,
-        "flags": [
-          "--json",
-          "--plugin-url"
-        ]
-      },
-      {
-        "name": "history",
-        "path": "nself flags history",
-        "short": "Show audit log for a feature flag",
-        "hidden": false,
-        "flags": [
-          "--json",
-          "--plugin-url"
-        ]
-      },
-      {
-        "name": "kill",
-        "path": "nself flags kill",
-        "short": "Kill-switch a feature flag (emergency disable with required reason)",
-        "hidden": false,
-        "flags": [
-          "--plugin-url",
-          "--reason"
-        ]
-      },
-      {
-        "name": "list",
-        "path": "nself flags list",
-        "short": "List all feature flags",
-        "hidden": false,
-        "flags": [
-          "--json",
-          "--plugin-url",
-          "--type"
-        ]
-      },
-      {
-        "name": "prune",
-        "path": "nself flags prune",
-        "short": "List (or delete) stale feature flags",
-        "hidden": false,
-        "flags": [
-          "--dry-run",
-          "--plugin-url",
-          "--stale"
-        ]
-      },
-      {
-        "name": "set",
-        "path": "nself flags set",
-        "short": "Update a feature flag's enabled state and/or rollout percentage",
-        "hidden": false,
-        "flags": [
-          "--enabled",
-          "--plugin-url",
-          "--rollout-pct"
-        ]
-      }
-    ]
-  },
-  {
     "name": "functions",
     "path": "nself functions",
     "short": "Manage serverless functions",
@@ -1374,37 +1281,6 @@
       "--tail",
       "--top",
       "--until"
-    ]
-  },
-  {
-    "name": "maintenance",
-    "path": "nself maintenance",
-    "short": "Maintenance utilities: disk cleanup, scheduler",
-    "hidden": false,
-    "group_id": "observe",
-    "subcommands": [
-      {
-        "name": "disk-cleanup",
-        "path": "nself maintenance disk-cleanup",
-        "short": "Free disk space: Docker prune, log rotation, journal vacuum",
-        "hidden": false
-      },
-      {
-        "name": "schedule",
-        "path": "nself maintenance schedule",
-        "short": "Install or remove the daily disk-cleanup timer",
-        "hidden": false,
-        "flags": [
-          "--daily",
-          "--off"
-        ]
-      },
-      {
-        "name": "status",
-        "path": "nself maintenance status",
-        "short": "Show daily cleanup scheduler status",
-        "hidden": false
-      }
     ]
   },
   {
@@ -1871,54 +1747,6 @@
         "hidden": false,
         "flags": [
           "--tag"
-        ]
-      }
-    ]
-  },
-  {
-    "name": "release",
-    "path": "nself release",
-    "short": "Orchestrate the full release cascade for a version",
-    "hidden": false,
-    "group_id": "deploy",
-    "flags": [
-      "--dry-run",
-      "--json",
-      "--release-notes",
-      "--skip-check",
-      "--skip-plugins-pro"
-    ],
-    "subcommands": [
-      {
-        "name": "check",
-        "path": "nself release check",
-        "short": "Run pre-release gates for a version",
-        "hidden": false,
-        "flags": [
-          "--json",
-          "--skip-ci",
-          "--skip-security"
-        ]
-      },
-      {
-        "name": "rollback",
-        "path": "nself release rollback",
-        "short": "Roll back a release to prior version",
-        "hidden": false,
-        "flags": [
-          "--delete-tags",
-          "--dry-run",
-          "--json"
-        ]
-      },
-      {
-        "name": "status",
-        "path": "nself release status",
-        "short": "Show running version vs latest across all release artifacts",
-        "hidden": false,
-        "flags": [
-          "--json",
-          "--timeout"
         ]
       }
     ]

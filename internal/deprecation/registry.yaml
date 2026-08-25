@@ -443,6 +443,24 @@ items:
     replacement: "nself install api"
     docs_url: "https://nself.org/docs/plugins/api"
     phase: 1
+  - name: "nself release"
+    type: command
+    since: "v1.3.2"
+    replacement: "nself install release"
+    docs_url: "https://nself.org/docs/plugins/release"
+    phase: 1
+  - name: "nself flags"
+    type: command
+    since: "v1.3.2"
+    replacement: "nself install flags"
+    docs_url: "https://nself.org/docs/plugins/flags"
+    phase: 1
+  - name: "nself maintenance"
+    type: command
+    since: "v1.3.2"
+    replacement: "nself install maintenance"
+    docs_url: "https://nself.org/docs/plugins/maintenance"
+    phase: 1
   - name: "nself sentry"
     type: command
     since: "v1.3.0"
