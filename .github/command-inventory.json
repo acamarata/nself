@@ -3227,59 +3227,6 @@
     ]
   },
   {
-    "name": "watchdog",
-    "path": "nself watchdog",
-    "short": "Self-healing container watchdog with circuit breaker",
-    "hidden": false,
-    "group_id": "observe",
-    "subcommands": [
-      {
-        "name": "history",
-        "path": "nself watchdog history",
-        "short": "Show watchdog event history",
-        "hidden": false,
-        "flags": [
-          "--json",
-          "--since"
-        ]
-      },
-      {
-        "name": "reset",
-        "path": "nself watchdog reset",
-        "short": "Reset a specific service circuit breaker (including PERMANENT_OPEN)",
-        "hidden": false,
-        "flags": [
-          "--force"
-        ]
-      },
-      {
-        "name": "reset-breakers",
-        "path": "nself watchdog reset-breakers",
-        "short": "Reset all tripped circuit breakers to closed state",
-        "hidden": false
-      },
-      {
-        "name": "status",
-        "path": "nself watchdog status",
-        "short": "Show watchdog status and circuit breaker states",
-        "hidden": false,
-        "flags": [
-          "--json"
-        ]
-      },
-      {
-        "name": "test-alert",
-        "path": "nself watchdog test-alert",
-        "short": "Send a test alert through all configured channels (TG + email)",
-        "hidden": false,
-        "flags": [
-          "--service",
-          "--severity"
-        ]
-      }
-    ]
-  },
-  {
     "name": "webhooks",
     "path": "nself webhooks",
     "short": "Manage webhook processing and outbox",

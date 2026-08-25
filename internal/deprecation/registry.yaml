@@ -322,6 +322,20 @@ items:
     docs_url: "https://nself.org/docs/plugins/alerts"
     phase: 1
 
+  # CLI-R11 thin-core extraction. Same shape as the entries above: moved to
+  # a plugin entirely, not rewritten to a new core subcommand. Phase 1, not
+  # 3, for the same reason: relocated, not removed. internal/watchdog
+  # depended on internal/health.DockerClient, which lives in the same core
+  # file cli/cmd/commands/start.go (a golden-path command) also uses and
+  # therefore could not move — the plugin reimplements only that narrow
+  # docker-CLI adapter locally instead of forking internal/health.
+  - name: "nself watchdog"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install watchdog"
+    docs_url: "https://nself.org/docs/plugins/watchdog"
+    phase: 1
+
 # =============================================================================
 # Plugin API versioning — G2 (api_version), G4 (deprecated_endpoints + removal)
 # =============================================================================

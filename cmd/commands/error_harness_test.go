@@ -299,11 +299,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"version", []string{"version", "unknownsub_xyz"}, "(c) unknown sub"},
 	{"version", []string{"version", "--format", "INVALIDFORMAT_XYZ"}, "(a) bad format"},
 
-	// ── watchdog ───────────────────────────────────────────────────────────
-	{"watchdog", []string{"watchdog"}, "(a) no project dir"},
-	{"watchdog", []string{"watchdog", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"watchdog", []string{"watchdog", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── self-heal ──────────────────────────────────────────────────────────
 	{"self-heal", []string{"self-heal"}, "(a) no routine selected (shows help)"},
 	{"self-heal", []string{"self-heal", "--no-such-flag-xyz"}, "(b) invalid flag"},

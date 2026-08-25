@@ -283,7 +283,7 @@
 
 <!-- BEGIN GENERATED:command-list -->
 
-**All commands (69)**
+**All commands (68)**
 
 - _A:_ [[cmd-account]] · [[cmd-admin]] · [[cmd-ai]] · [[cmd-ai-studio]] · [[cmd-api]]
 - _B:_ [[cmd-backup]] · [[cmd-billing]] · [[cmd-build]] · [[cmd-bundle]]
@@ -304,6 +304,6 @@
 - _T:_ [[cmd-telemetry]] · [[cmd-template]] · [[cmd-tenant]] · [[cmd-trust]]
 - _U:_ [[cmd-update]] · [[cmd-urls]]
 - _V:_ [[cmd-verify-sbom]] · [[cmd-version]]
-- _W:_ [[cmd-watchdog]] · [[cmd-webhooks]]
+- _W:_ [[cmd-webhooks]]
 
 <!-- END GENERATED:command-list -->

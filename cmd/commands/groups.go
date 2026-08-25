@@ -91,7 +91,6 @@ var commandGroupAssignments = map[string]string{
 
 	// Observability.
 	"health":        groupObserve,
-	"watchdog":      groupObserve,
 	"self-heal":     groupObserve,
 	"sentry":        groupObserve,
 	"sentry-server": groupObserve,

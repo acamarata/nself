@@ -85,7 +85,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself urls` | Display all service URLs with route conflict detection | — | — |
 | `nself verify-sbom` | Verify the SBOM signature for a CLI release | — | — |
 | `nself version` | Show version and system information | — | — |
-| `nself watchdog` | Self-healing container watchdog with circuit breaker | — | history, reset, reset-breakers, status, test-alert |
 | `nself webhooks` | Manage webhook processing and outbox | — | outbox |
 
 ---
@@ -97,7 +96,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 69**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 68**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -168,7 +167,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 69**
 | `nself urls` | Display all service URLs with route conflict detection | core | — |
 | `nself verify-sbom` | Verify the SBOM signature for a CLI release | advanced | — |
 | `nself version` | Show version and system information | account | — |
-| `nself watchdog` | Self-healing container watchdog with circuit breaker | observe | history, reset, reset-breakers, status, test-alert |
 | `nself webhooks` | Manage webhook processing and outbox | data | outbox |
 
 <!-- END GENERATED:command-table -->

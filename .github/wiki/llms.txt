@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (69)
+## Commands (68)
 
 ### nself account
 
@@ -1385,24 +1385,6 @@ Flags:
 - `--short` (default false) — Print version number only
 
 Full page: [[cmd-version]]
-
-### nself watchdog
-
-Self-healing container watchdog with circuit breaker
-
-```
-nself watchdog <subcommand> [flags]
-```
-
-Subcommands:
-
-- `history` — Show watchdog event history
-- `reset` — Reset a specific service circuit breaker (including PERMANENT_OPEN)
-- `reset-breakers` — Reset all tripped circuit breakers to closed state
-- `status` — Show watchdog status and circuit breaker states
-- `test-alert` — Send a test alert through all configured channels (TG + email)
-
-Full page: [[cmd-watchdog]]
 
 ### nself webhooks
 
