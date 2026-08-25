@@ -69,8 +69,6 @@ To opt out, set `NSELF_DISABLE_TELEMETRY=1` in your environment or `.env.local`.
 `nself plugin list --detailed` prints an `Updated` column per plugin, sourced from the registry entry's (or local `plugin.json`'s) `updated_at` field when present. As of the current plugins.nself.org registry, no plugin carries a per-plugin `updated_at` — only a registry-wide snapshot timestamp, which `--detailed` prints as a `Registry snapshot: <timestamp>` header line instead of a per-row value. The column is plumbing ready for the day the registry starts sending a per-plugin value; it never fabricates one.
 
 `nself plugin outdated` compares every installed plugin's version against the registry and lists the ones behind, with `--json` for scripting. It exits `0` when everything is current and `1` when at least one plugin is outdated, so it composes in CI.
-<!-- END PROSE:description -->
-
 ## Permissions
 
 `nself plugin info <name>` lists the permissions a plugin declares, and every
@@ -114,6 +112,7 @@ Permissions:
 The gap between the two lines is the point. A declaration that looks narrow is
 enforced broadly, because under-stating a permission is the one direction a
 fail-closed check must never take.
+<!-- END PROSE:description -->
 
 ## Flags
 
