@@ -87,8 +87,17 @@ func ProxyCommandWithHint(cmdName string, args []string, installHint string) err
 			cmdName, cmdName, installHint)
 	}
 
-	// Prepare the command
+	// Prepare the command.
+	//
+	// The plugin inherits this process's environment, plus whichever project
+	// settings its manifest declares. Without the latter a command plugin sees
+	// nothing from the project's .env cascade — it runs on the user's machine,
+	// not in a container compose has populated — and would have to re-implement
+	// the cascade that CLI-R18 made canonical.
 	cmd := exec.Command(path, args...)
+	if extra := pluginEnvForCommand(cmdName); len(extra) > 0 {
+		cmd.Env = append(os.Environ(), extra...)
+	}
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -102,4 +111,21 @@ func ProxyCommandWithHint(cmdName string, args []string, installHint string) err
 	}
 
 	return nil
+}
+
+// pluginEnvForCommand resolves the declared project settings for an installed
+// plugin providing cmdName.
+//
+// Reads the plugin's own manifest from where it was installed. A missing or
+// unreadable manifest means nothing is declared, so nothing is passed —
+// degrading to the previous behaviour rather than failing the invocation.
+func pluginEnvForCommand(cmdName string) []string {
+	// Installed plugins sit alongside the bin directory the proxy reads, so
+	// deriving the path from pluginBinDir keeps the two from drifting apart.
+	installed := filepath.Join(filepath.Dir(pluginBinDir()), cmdName)
+	m := readPluginManifest(installed)
+	if m == nil {
+		return nil
+	}
+	return PluginEnv(".", m)
 }
