@@ -243,7 +243,7 @@ func TestVersionPattern_LargeNumbers(t *testing.T) {
 // TestValidatePermissions_ValidExact verifies that exact canonical permissions pass.
 func TestValidatePermissions_ValidExact(t *testing.T) {
 	m := baseManifest()
-	m.Permissions = []string{"network:internet", "db:read", "db:write", "system:exec"}
+	m.Permissions = canonicalPerms("network:internet", "db:read", "db:write", "system:exec")
 	if err := validateManifest(m); err != nil {
 		t.Errorf("expected valid exact permissions to pass, got: %v", err)
 	}
@@ -253,12 +253,12 @@ func TestValidatePermissions_ValidExact(t *testing.T) {
 // forms with valid params pass (e.g. network:plugin:ai, secrets:env:MY_KEY).
 func TestValidatePermissions_ValidParameterized(t *testing.T) {
 	m := baseManifest()
-	m.Permissions = []string{
+	m.Permissions = canonicalPerms(
 		"network:plugin:ai",
 		"secrets:env:OPENAI_API_KEY",
 		"fs:write:media-data",
 		"ai:provider:openai",
-	}
+	)
 	if err := validateManifest(m); err != nil {
 		t.Errorf("expected valid parameterized permissions to pass, got: %v", err)
 	}
@@ -268,7 +268,7 @@ func TestValidatePermissions_ValidParameterized(t *testing.T) {
 // string is rejected with a descriptive error (fail-closed semantics). S71-T01.
 func TestValidatePermissions_UnknownPermission(t *testing.T) {
 	m := baseManifest()
-	m.Permissions = []string{"network:internet", "made-up-perm"}
+	m.Permissions = canonicalPerms("network:internet", "made-up-perm")
 	err := validateManifest(m)
 	if err == nil {
 		t.Fatal("expected error for unknown permission 'made-up-perm', got nil")
@@ -285,7 +285,7 @@ func TestValidatePermissions_UnknownPermission(t *testing.T) {
 // reported in a single error (not just the first one). S71-T01.
 func TestValidatePermissions_MultipleUnknown(t *testing.T) {
 	m := baseManifest()
-	m.Permissions = []string{"fake-a", "fake-b"}
+	m.Permissions = canonicalPerms("fake-a", "fake-b")
 	err := validateManifest(m)
 	if err == nil {
 		t.Fatal("expected error for multiple unknown permissions, got nil")
@@ -299,7 +299,7 @@ func TestValidatePermissions_MultipleUnknown(t *testing.T) {
 // passes validation without error. S71-T01.
 func TestValidatePermissions_EmptyList(t *testing.T) {
 	m := baseManifest()
-	m.Permissions = []string{}
+	m.Permissions = canonicalPerms()
 	if err := validateManifest(m); err != nil {
 		t.Errorf("expected empty permissions list to pass, got: %v", err)
 	}
@@ -319,7 +319,7 @@ func TestValidatePermissions_NilList(t *testing.T) {
 // permission with no param segment (e.g. "network:plugin" alone) is rejected.
 func TestValidatePermissions_ParameterizedMissingParam(t *testing.T) {
 	m := baseManifest()
-	m.Permissions = []string{"network:plugin"} // no :<name> suffix
+	m.Permissions = canonicalPerms("network:plugin") // no :<name> suffix
 	err := validateManifest(m)
 	if err == nil {
 		t.Fatal("expected error for 'network:plugin' without param, got nil")
@@ -333,9 +333,18 @@ func TestValidatePermissions_ParameterizedMissingParam(t *testing.T) {
 // containing shell-dangerous characters is rejected. S71-T01 security gate.
 func TestValidatePermissions_ShellInjectionInParam(t *testing.T) {
 	m := baseManifest()
-	m.Permissions = []string{"secrets:env:MY_KEY; rm -rf /"}
+	m.Permissions = canonicalPerms("secrets:env:MY_KEY; rm -rf /")
 	err := validateManifest(m)
 	if err == nil {
 		t.Fatal("expected error for shell injection in permission param, got nil")
 	}
+}
+
+// canonicalPerms builds a PermissionSet holding canonical-vocabulary entries,
+// which is what these tests exercise. Permissions became a struct when it turned
+// out that 121 shipped manifests declare them in a second, descriptive
+// vocabulary that the allowlist does not cover; only the canonical half is
+// validated. See PermissionSet in manifest_shapes.go.
+func canonicalPerms(perms ...string) PermissionSet {
+	return PermissionSet{Canonical: perms}
 }

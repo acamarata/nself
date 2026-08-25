@@ -147,14 +147,14 @@ type PluginManifest struct {
 	Views  []string `json:"views,omitempty"`
 
 	// API
-	APIEndpoints []string `json:"apiEndpoints,omitempty"`
+	APIEndpoints APIEndpointList `json:"apiEndpoints,omitempty"`
 	// WebhookNames, not []string: real manifests use both an array of event
 	// names and an object keyed by event name. See webhooks.go.
 	Webhooks    WebhookNames `json:"webhooks,omitempty"`
 	CLICommands []CLICommand `json:"cliCommands,omitempty"`
 
 	// Environment
-	EnvVars []EnvVar `json:"envVars,omitempty"`
+	EnvVars EnvVarList `json:"envVars,omitempty"`
 
 	// Dependencies
 	Dependencies         []string           `json:"dependencies,omitempty"`
@@ -174,7 +174,7 @@ type PluginManifest struct {
 	MultiApp MultiApp `json:"multiApp,omitempty"`
 
 	// Permissions
-	Permissions []string `json:"permissions,omitempty"`
+	Permissions PermissionSet `json:"permissions,omitempty"`
 
 	// Compatibility
 	Compat *CompatBlock `json:"compat,omitempty"`

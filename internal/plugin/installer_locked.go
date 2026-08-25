@@ -282,11 +282,11 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	slog.Info("plugin.install.permissions",
 		"plugin", name,
 		"version", manifest.Version,
-		"permissions", manifest.Permissions,
+		"permissions", manifest.Permissions.Strings(),
 	)
 
 	// S71-T02: Warn via doctor when dangerous permissions are present.
-	logDangerousPermissions(name, manifest.Permissions)
+	logDangerousPermissions(name, manifest.Permissions.Strings())
 
 	fmt.Fprintf(os.Stderr, "\nℹ Run 'nself build' to include %s in your stack.\n", name)
 

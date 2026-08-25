@@ -111,10 +111,16 @@ func runPluginInfo(cmd *cobra.Command, args []string) error {
 	tbl.Render()
 
 	// S71-T03: Display declared permissions (one per line, with risk tier prefix).
-	if len(manifest.Permissions) > 0 {
+	if manifest.Permissions.Len() > 0 {
 		fmt.Println("\nPermissions:")
-		for _, perm := range manifest.Permissions {
+		for _, perm := range manifest.Permissions.Strings() {
 			fmt.Printf("  %s %s\n", permissionRiskPrefix(perm), perm)
+		}
+		if manifest.Permissions.UsesLegacyVocabulary() {
+			// Say so rather than let the risk prefixes imply a check happened.
+			// These tokens are not in the canonical allowlist, so nothing
+			// validated them and the prefix is a guess.
+			fmt.Println("  (declared in the descriptive form; not checked against the permission allowlist)")
 		}
 		fmt.Println("  (v1.0.9: informational only; v1.1.0 will require explicit confirmation)")
 	}
