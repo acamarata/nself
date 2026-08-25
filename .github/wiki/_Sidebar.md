@@ -283,11 +283,11 @@
 
 <!-- BEGIN GENERATED:command-list -->
 
-**All commands (67)**
+**All commands (66)**
 
 - _A:_ [[cmd-account]] · [[cmd-admin]] · [[cmd-ai]] · [[cmd-alerts]] · [[cmd-api]]
 - _B:_ [[cmd-backup]] · [[cmd-billing]] · [[cmd-build]] · [[cmd-bundle]]
-- _C:_ [[cmd-ci]] · [[cmd-claw]] · [[cmd-clean]] · [[cmd-completion]] · [[cmd-config]]
+- _C:_ [[cmd-ci]] · [[cmd-clean]] · [[cmd-completion]] · [[cmd-config]]
 - _D:_ [[cmd-db]] · [[cmd-deploy]] · [[cmd-dev]] · [[cmd-doctor]] · [[cmd-dr]]
 - _E:_ [[cmd-env]] · [[cmd-exec]]
 - _F:_ [[cmd-flags]] · [[cmd-functions]]

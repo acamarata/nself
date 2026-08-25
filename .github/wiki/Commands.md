@@ -5,7 +5,7 @@
 Every top-level `nself` command, generated from the cobra registration
 tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 
-**Total top-level commands: 75**
+**Total top-level commands: 74**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -19,7 +19,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself build` | Compose your infrastructure from .env | — | — |
 | `nself bundle` | Manage and inspect nSelf plugin bundles | — | info, install, list, remove |
 | `nself ci` | Run the nself-ci gate suite and post a GitHub commit status | — | eval, forgejo, serve |
-| `nself claw` | Manage nClaw AI assistant | — | chat, config, export, keys, mcp, memories, migrate, pair, prompt, proxy, session, status, topics, unlock |
 | `nself clean` | Remove generated artifacts (docker-compose.yml, nginx configs, build cache) | — | — |
 | `nself completion` | Generate shell completion scripts | — | — |
 | `nself config` | Manage project configuration | — | export, get, import, list, set, show, validate |
@@ -94,7 +93,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 67**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 66**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -108,7 +107,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 67**
 | `nself build` | Compose your infrastructure from .env | core | — |
 | `nself bundle` | Manage and inspect nSelf plugin bundles | extend | info, install, list, remove |
 | `nself ci` | Run the nself-ci gate suite and post a GitHub commit status | deploy | eval, forgejo, serve |
-| `nself claw` | Manage nClaw AI assistant | ai | chat, config, export, keys, mcp, memories, migrate, pair, prompt, proxy, session, status, topics, unlock |
 | `nself clean` | Remove generated artifacts (docker-compose.yml, nginx configs, build cache) | core | — |
 | `nself completion` | Generate shell completion scripts | account | — |
 | `nself config` | Manage project configuration | config | export, features, get, import, list, set, show, validate |

@@ -22,7 +22,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself build` | core | yes | yes | undocumented: NSELF_PROFILE | n/a (see below) |
 | `nself bundle` | extend | yes | no | n/a | n/a (see below) |
 | `nself ci` | deploy | yes | no | undocumented: NSELF_FORGEJO_ADMIN_PASSWORD, NSELF_FORGEJO_ADMIN_USER | n/a (see below) |
-| `nself claw` | ai | yes | no | undocumented: CLAW_PROXY_ALLOWED_ORIGINS, NSELF_AICC_URL, NSELF_CLAW_API_KEY, NSELF_CLAW_SERVER, NSELF_EXTERNAL_URL, PLUGIN_CLAW_INTERNAL_URL | n/a (see below) |
 | `nself clean` | core | yes | no | n/a | n/a (see below) |
 | `nself completion` | account | yes | no | n/a | n/a (see below) |
 | `nself config` | config | yes | yes | n/a | n/a (see below) |
@@ -80,4 +79,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself watchdog` | observe | yes | no | undocumented: NSELF_ENV | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 67 commands. Missing wiki page: 0. No MCP tool: 49. Env vars found but undocumented: 24.
+Total: 66 commands. Missing wiki page: 0. No MCP tool: 48. Env vars found but undocumented: 23.

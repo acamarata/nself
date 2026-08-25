@@ -109,8 +109,7 @@ var commandGroupAssignments = map[string]string{
 	"api":     groupExtend,
 
 	// AI.
-	"ai":   groupAI,
-	"claw": groupAI,
+	"ai": groupAI,
 
 	// Account & Meta.
 	"account":     groupAccount,

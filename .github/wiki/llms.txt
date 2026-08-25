@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (67)
+## Commands (66)
 
 ### nself account
 
@@ -219,33 +219,6 @@ Flags:
 - `--verbose` (default false) — Print each gate command before running
 
 Full page: [[cmd-ci]]
-
-### nself claw
-
-Manage nClaw AI assistant
-
-```
-nself claw <subcommand> [flags]
-```
-
-Subcommands:
-
-- `chat` — Start an interactive chat session with nClaw
-- `config` — Show or modify nClaw CLI configuration
-- `export` — Export all nClaw data
-- `keys` — Manage API keys
-- `mcp` — Start an MCP server for nClaw
-- `memories` — List or search memories
-- `migrate` — Apply pending claw schema migrations
-- `pair` — Generate a pairing code for nClaw clients
-- `prompt` — Send a single prompt to nClaw and print the response
-- `proxy` — Start a local OpenAI-compatible proxy
-- `session` — Manage Claude Code PTY sessions
-- `status` — Show nClaw server status and health
-- `topics` — List or search topics
-- `unlock` — Temporarily unlock the web UI for first-time account setup
-
-Full page: [[cmd-claw]]
 
 ### nself clean
 

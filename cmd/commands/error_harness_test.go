@@ -78,11 +78,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"bundle", []string{"bundle", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"bundle", []string{"bundle", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── claw ───────────────────────────────────────────────────────────────
-	{"claw", []string{"claw"}, "(a) no project dir"},
-	{"claw", []string{"claw", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"claw", []string{"claw", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── clean ──────────────────────────────────────────────────────────────
 	{"clean", []string{"clean"}, "(a) no project dir"},
 	{"clean", []string{"clean", "--no-such-flag-xyz"}, "(b) invalid flag"},
