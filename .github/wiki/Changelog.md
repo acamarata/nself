@@ -3,6 +3,38 @@
 All notable changes to the ɳSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
+## [1.3.1] — 2026-08-25
+
+Fixes found by installing the 1.3.0 plugins with the 1.3.0 binary. Upgrade if
+you install plugins.
+
+### Fixed
+
+- **Plugin signatures were not being verified (SECURITY)** — the registry cache
+  dropped `authorPublicKey`, `signature` and `status` when it wrote itself to
+  disk. The cache is read on every run after the first, so from the second
+  install onward the verifier received three empty strings. That is the "no
+  signature supplied" path, which refuses only when the publish status is
+  `stable` — and the status had been dropped too, so it returned success. A
+  signed, stable plugin installed without its signature being checked, on every
+  cache-warm run, with nothing printed.
+- **A plugin providing two commands installed only one of them** — `cliCommands`
+  never reached the manifest, so the installer fell back to the single
+  `binaryName`. `nself install tenant` published `nself-tenant` and not
+  `nself-billing`, after reporting success. The archive had contained both.
+- **Twenty further manifest fields were dropped the same way**, among them
+  `author`, `homepage`, `entryPoint`, `arch_support`, `deprecation` and
+  `graphql`. A test now fills every field, round-trips it through the cache and
+  the registry parser, and fails naming anything that comes back empty — this is
+  the third time this class of omission has reached production, and it is the
+  first time a test can see it.
+- **`nself install sentry` installed the wrong thing** — `sentry` is an alias of
+  the paid ɳSentry bundle, and bundles resolve first, so the command tried the
+  bundle and failed on a missing licence while the free plugin stayed
+  unreachable. The plugin is now `sentry-cli`, matching `claw-cli` and `ai-cli`,
+  which exist for the same reason. `nself sentry` and `nself sentry-server` are
+  unchanged and still work once installed.
+
 ## [1.3.0] — 2026-08-25
 
 A thin core: 92 commands to 52, with 30 command families moved into plugins that
