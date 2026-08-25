@@ -1,6 +1,8 @@
 package plugin
 
 import (
+	"bytes"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -203,5 +205,37 @@ func TestProxyCommandWithHint_SuppressesAContradictoryHint(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "nself install frobnicate") {
 		t.Errorf("dropped the only install hint the user would get: %q", err)
+	}
+}
+
+// TestProxyCommandDoesNotLogToSlog pins the fix for a leak found by running the
+// binary rather than reading the code.
+//
+// The CLI never calls slog.SetDefault, so slog's default handler writes to
+// stderr. A slog.Warn on the not-found path therefore printed a raw timestamped
+// line directly above the real error, telling the user the same thing twice in
+// two registers:
+//
+//	2026/08/25 10:16:19 WARN plugin binary not found command=gateway ...
+//	Plugin error: unknown command "gateway" ...
+//
+// The returned error is the user-facing channel here. Nothing on this path may
+// write to the default logger.
+func TestProxyCommandDoesNotLogToSlog(t *testing.T) {
+	var logged bytes.Buffer
+	restore := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() { slog.SetDefault(restore) })
+
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home) // os.UserHomeDir reads this on Windows
+
+	err := ProxyCommand("definitely-not-a-plugin", nil)
+	if err == nil {
+		t.Fatal("expected an error for a command with no plugin binary")
+	}
+	if got := logged.String(); got != "" {
+		t.Errorf("proxy wrote to the default logger, which reaches the user's terminal:\n%s", got)
 	}
 }

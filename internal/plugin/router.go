@@ -2,7 +2,6 @@ package plugin
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -68,12 +67,19 @@ func ProxyCommandWithHint(cmdName string, args []string, installHint string) err
 	path := candidate
 	if _, err := os.Stat(path); err != nil {
 		// CLI-R19: an unknown command is the moment a user most needs to be told
-		// how to get it. The message is the actionable one — `nself install X` —
-		// and it goes to the returned error, not only to a slog warning that a
-		// normal terminal never shows.
-		slog.Warn("plugin binary not found",
-			"command", cmdName, "plugin", pluginBinary,
-			"install_hint", installHint)
+		// how to get it, so the actionable message — `nself install X` — goes in
+		// the returned error.
+		//
+		// It deliberately does NOT also go to slog. The CLI never calls
+		// slog.SetDefault, so slog.Warn here reached the user as a raw
+		// timestamped line above the real error:
+		//
+		//   2026/08/25 10:16:19 WARN plugin binary not found command=gateway ...
+		//   Plugin error: unknown command "gateway" ...
+		//
+		// which is both duplicated and the wrong register for a terminal. An
+		// earlier comment claimed a normal terminal never shows it; running the
+		// binary showed otherwise.
 		if installHint == "" {
 			return fmt.Errorf("unknown command %q, and no plugin named %q is installed", cmdName, cmdName)
 		}
