@@ -27,7 +27,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself doctor` | core | yes | yes | undocumented: NSELF_PING_API_URL, OLLAMA_BASE_URL, OLLAMA_HOST, PLUGIN_AI_INTERNAL_URL, PLUGIN_INTERNAL_SECRET | n/a (see below) |
 | `nself env` | config | yes | yes | documented | n/a (see below) |
 | `nself exec` | core | yes | no | n/a | n/a (see below) |
-| `nself flags` | config | yes | no | n/a | n/a (see below) |
 | `nself functions` | data | yes | no | n/a | n/a (see below) |
 | `nself generate` | config | yes | no | undocumented: NSELF_HASURA_PROD_ADMIN_SECRET, NSELF_HASURA_PROD_URL, NSELF_HASURA_STAGING_ADMIN_SECRET, NSELF_HASURA_STAGING_URL | n/a (see below) |
 | `nself health` | observe | yes | no | n/a | n/a (see below) |
@@ -38,7 +37,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself login` | account | yes | no | n/a | n/a (see below) |
 | `nself logout` | account | yes | no | n/a | n/a (see below) |
 | `nself logs` | core | yes | yes | n/a | n/a (see below) |
-| `nself maintenance` | observe | yes | no | n/a | n/a (see below) |
 | `nself man` | account | yes | no | n/a | n/a (see below) |
 | `nself mcp` | extend | yes | no | undocumented: HASURA_GRAPHQL_URL, INTEGRATION, NSELF_HASURA_ADMIN_SECRET, NSELF_HASURA_GRAPHQL_URL, NSENTRY_STATUS_URL, POSTGRES_URL | n/a (see below) |
 | `nself migrate` | data | yes | yes | undocumented: NSELF_AI_ENDPOINT, NSELF_MIGRATION_AUTO_APPLY, NSELF_PROFILE, NSELF_SUPABASE_SKIP | n/a (see below) |
@@ -46,7 +44,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself ops` | deploy | yes | no | n/a | n/a (see below) |
 | `nself plugin` | extend | yes | yes | undocumented: GOPATH, NSELF_LICENSE_SKIP_VERIFY, NSELF_LOCAL_URL, NSELF_MARKETPLACE_URL, NSELF_PING_URL, NSELF_PLUGIN_CACHE, NSELF_PLUGIN_DIR, NSELF_PLUGIN_LICENSE_KEY, NSELF_PLUGIN_REGISTRY | n/a (see below) |
 | `nself promote` | deploy | yes | no | n/a | n/a (see below) |
-| `nself release` | deploy | yes | no | undocumented: GITHUB_TOKEN, NSELF_VERSION | n/a (see below) |
 | `nself remove` | extend | yes | no | n/a | n/a (see below) |
 | `nself reset` | core | yes | no | n/a | n/a (see below) |
 | `nself restart` | core | yes | yes | n/a | n/a (see below) |
@@ -65,4 +62,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself verify-sbom` | advanced | yes | no | n/a | n/a (see below) |
 | `nself version` | account | yes | no | undocumented: BENCH_RESULTS_FILE | n/a (see below) |
 
-Total: 52 commands. Missing wiki page: 0. No MCP tool: 35. Env vars found but undocumented: 18.
+Total: 49 commands. Missing wiki page: 0. No MCP tool: 32. Env vars found but undocumented: 17.

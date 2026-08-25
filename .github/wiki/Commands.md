@@ -100,7 +100,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 52**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 49**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -119,7 +119,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 52**
 | `nself doctor` | Run comprehensive system diagnostics | core | — |
 | `nself env` | Multi-environment management: switch, list, diff, copy | config | copy, diff, explain, list, show, target, use |
 | `nself exec` | Execute a command inside a service container | core | — |
-| `nself flags` | Manage application feature flags | config | disable, enable, get, history, kill, list, prune, set |
 | `nself functions` | Manage serverless functions | data | delete, deploy, invoke, list, logs |
 | `nself generate` | Generate type-safe client SDK types from the live Hasura schema | config | — |
 | `nself health` | Health check management with continuous monitoring | observe | check, config, endpoint, history, service, watch |
@@ -130,7 +129,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 52**
 | `nself login` | Log in to your nSelf account | account | — |
 | `nself logout` | Log out of your nSelf account | account | — |
 | `nself logs` | View and filter service logs | core | — |
-| `nself maintenance` | Maintenance utilities: disk cleanup, scheduler | observe | disk-cleanup, schedule, status |
 | `nself man` | Generate man pages for all nself commands | account | — |
 | `nself mcp` | Start the nSelf MCP server | extend | — |
 | `nself migrate` | Detect and migrate legacy artifacts to the current nSelf version | data | detect, firebase, from-bash, from-v099, generate, rollback, run, supabase, watch |
@@ -138,7 +136,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 52**
 | `nself ops` | Ops-profile deployment and management | deploy | deploy |
 | `nself plugin` | Manage nSelf plugins | extend | audit-tables, compat-check, debug, dev, disable, enable, info, init, install, inventory, link, list, logs, marketplace, new, outdated, refresh, remove, search, start, status, stop, submit, test, unlink, update, updates |
 | `nself promote` | Promote one environment to another (e.g. staging to prod) | deploy | rollback |
-| `nself release` | Orchestrate the full release cascade for a version | deploy | check, rollback, status |
 | `nself remove` | Remove an installed plugin or bundle | extend | — |
 | `nself reset` | Stop containers, remove all data volumes, and clean generated files | core | — |
 | `nself restart` | Smart restart with config change detection | core | — |

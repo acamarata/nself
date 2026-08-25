@@ -274,7 +274,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"trust dns", []string{"trust", "dns", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"trust dns", []string{"trust", "dns", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── flag ───────────────────────────────────────────────────────────────
 	// CLI-R09 renamed `flag` to `flags`; `flag` stays as a cobra alias, so both
 	// spellings are exercised here.
 	// CLI-R19 install/remove sugar.
@@ -282,11 +281,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"install", []string{"install", "waf", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"remove", []string{"remove"}, "(a) missing required arg"},
 	{"remove", []string{"remove", "waf", "--no-such-flag-xyz"}, "(b) invalid flag"},
-
-	{"flags", []string{"flags"}, "(a) no project dir"},
-	{"flags", []string{"flags", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"flags", []string{"flag"}, "(c) legacy alias still routes"},
-	{"flag", []string{"flag", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── oauth ──────────────────────────────────────────────────────────────
 	{"oauth", []string{"oauth"}, "(a) no project dir"},
@@ -298,11 +292,7 @@ var errorHarnessCases = []errorHarnessCase{
 	{"generate", []string{"generate", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"generate", []string{"generate", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── maintenance ────────────────────────────────────────────────────────
 	// maintenance root returns cmd.Help() (nil) — soft case.
-	{"maintenance", []string{"maintenance"}, "(a) shows help (no project required)"},
-	{"maintenance", []string{"maintenance", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"maintenance", []string{"maintenance", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── mcp ────────────────────────────────────────────────────────────────
 	{"mcp", []string{"mcp"}, "(a) no project dir"},
@@ -327,11 +317,7 @@ var errorHarnessCases = []errorHarnessCase{
 	{"help-topics", []string{"help-topics", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"help-topics", []string{"help-topics", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── release ────────────────────────────────────────────────────────────
 	// release requires a project dir and performs external operations; no-project-dir is an error.
-	{"release", []string{"release"}, "(a) no project dir"},
-	{"release", []string{"release", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"release", []string{"release", "1.0.0", "extra-arg"}, "(c) wrong arity"}, // ExactArgs(1) rejects before RunE; avoids slow subprocess cascade
 
 	// ── release-check ──────────────────────────────────────────────────────
 	{"release check", []string{"release", "check"}, "(a) no project dir"},

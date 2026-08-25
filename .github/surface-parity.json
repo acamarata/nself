@@ -137,15 +137,6 @@
       "openapi": "n/a (see below)"
     },
     {
-      "name": "flags",
-      "path": "nself flags",
-      "group_id": "config",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
       "name": "functions",
       "path": "nself functions",
       "group_id": "data",
@@ -236,15 +227,6 @@
       "openapi": "n/a (see below)"
     },
     {
-      "name": "maintenance",
-      "path": "nself maintenance",
-      "group_id": "observe",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
       "name": "man",
       "path": "nself man",
       "group_id": "account",
@@ -305,15 +287,6 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
-      "name": "release",
-      "path": "nself release",
-      "group_id": "deploy",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "undocumented: GITHUB_TOKEN, NSELF_VERSION",
       "openapi": "n/a (see below)"
     },
     {

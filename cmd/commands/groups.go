@@ -67,7 +67,6 @@ var commandGroupAssignments = map[string]string{
 	"trust":    groupConfig,
 	"generate": groupConfig,
 	"template": groupConfig,
-	"flags":    groupConfig,
 
 	// Data.
 	"db":        groupData,
@@ -78,14 +77,12 @@ var commandGroupAssignments = map[string]string{
 	// Deploy & Remote.
 	"deploy":  groupDeploy,
 	"promote": groupDeploy,
-	"release": groupDeploy,
 	"ci":      groupDeploy,
 	"ops":     groupDeploy,
 
 	// Observability.
-	"health":      groupObserve,
-	"self-heal":   groupObserve,
-	"maintenance": groupObserve,
+	"health":    groupObserve,
+	"self-heal": groupObserve,
 
 	// Plugins & Extensions.
 	"plugin":  groupExtend,

@@ -69,6 +69,49 @@ To opt out, set `NSELF_DISABLE_TELEMETRY=1` in your environment or `.env.local`.
 `nself plugin list --detailed` prints an `Updated` column per plugin, sourced from the registry entry's (or local `plugin.json`'s) `updated_at` field when present. As of the current plugins.nself.org registry, no plugin carries a per-plugin `updated_at` — only a registry-wide snapshot timestamp, which `--detailed` prints as a `Registry snapshot: <timestamp>` header line instead of a per-row value. The column is plumbing ready for the day the registry starts sending a per-plugin value; it never fabricates one.
 
 `nself plugin outdated` compares every installed plugin's version against the registry and lists the ones behind, with `--json` for scripting. It exits `0` when everything is current and `1` when at least one plugin is outdated, so it composes in CI.
+## Permissions
+
+`nself plugin info <name>` lists the permissions a plugin declares, and every
+one of them is checked against a fixed allowlist before the plugin installs. An
+unrecognised permission blocks the install; the check is fail-closed on purpose.
+
+Manifests declare permissions in one of two forms. The canonical form is a flat
+list of the allowlist's own vocabulary:
+
+```json
+"permissions": ["db:read", "network:internet", "fs:write:uploads"]
+```
+
+Most published plugins use a more specific descriptive form instead, naming the
+hosts, paths and operations rather than the categories:
+
+```json
+"permissions": {
+  "database": ["create", "read"],
+  "network": ["api.stripe.com"],
+  "filesystem": ["logs"]
+}
+```
+
+Both are enforced. The descriptive form is reduced to the canonical vocabulary
+before validation, and **the reduction always widens**: a plugin naming one host
+is enforced as general internet access, and any database verb that is not
+plainly a read is enforced as a write. So `nself plugin info` prints what a
+declaration is *enforced as*, not only what it says:
+
+```
+Permissions:
+  database:create
+  network:api.stripe.com
+
+  Enforced as:
+    db:write
+    network:internet
+```
+
+The gap between the two lines is the point. A declaration that looks narrow is
+enforced broadly, because under-stating a permission is the one direction a
+fail-closed check must never take.
 <!-- END PROSE:description -->
 
 ## Flags

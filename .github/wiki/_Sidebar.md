@@ -283,22 +283,22 @@
 
 <!-- BEGIN GENERATED:command-list -->
 
-**All commands (52)**
+**All commands (49)**
 
 - _A:_ [[cmd-account]] · [[cmd-admin]]
 - _B:_ [[cmd-backup]] · [[cmd-build]] · [[cmd-bundle]]
 - _C:_ [[cmd-ci]] · [[cmd-clean]] · [[cmd-completion]] · [[cmd-config]]
 - _D:_ [[cmd-db]] · [[cmd-deploy]] · [[cmd-dev]] · [[cmd-doctor]]
 - _E:_ [[cmd-env]] · [[cmd-exec]]
-- _F:_ [[cmd-flags]] · [[cmd-functions]]
+- _F:_ [[cmd-functions]]
 - _G:_ [[cmd-generate]]
 - _H:_ [[cmd-health]] · [[cmd-help-topics]]
 - _I:_ [[cmd-init]] · [[cmd-install]]
 - _L:_ [[cmd-license]] · [[cmd-login]] · [[cmd-logout]] · [[cmd-logs]]
-- _M:_ [[cmd-maintenance]] · [[cmd-man]] · [[cmd-mcp]] · [[cmd-migrate]]
+- _M:_ [[cmd-man]] · [[cmd-mcp]] · [[cmd-migrate]]
 - _O:_ [[cmd-oauth]] · [[cmd-ops]]
 - _P:_ [[cmd-plugin]] · [[cmd-promote]]
-- _R:_ [[cmd-release]] · [[cmd-remove]] · [[cmd-reset]] · [[cmd-restart]]
+- _R:_ [[cmd-remove]] · [[cmd-reset]] · [[cmd-restart]]
 - _S:_ [[cmd-secrets]] · [[cmd-security]] · [[cmd-self-heal]] · [[cmd-service]] · [[cmd-start]] · [[cmd-status]] · [[cmd-stop]]
 - _T:_ [[cmd-telemetry]] · [[cmd-template]] · [[cmd-trust]]
 - _U:_ [[cmd-update]] · [[cmd-urls]]
