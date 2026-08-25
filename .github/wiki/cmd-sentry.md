@@ -1,142 +1,26 @@
 # nself sentry
 
-<!-- BEGIN PROSE:summary -->
-> Operate ɳSentry monitoring from the CLI: monitors, incidents, status pages, and alert channels against the hosted SaaS or a self-hosted bundle.
-<!-- END PROSE:summary -->
+**This command moved to a plugin.**
 
-## Synopsis
+`nself sentry` is no longer part of the CLI core. ɳSentry is a separate product
+surface, not part of the self-hosted backend lifecycle the core covers.
 
-```
-nself sentry <subcommand> [flags]
-```
-
-## Description
-
-<!-- BEGIN PROSE:description -->
-`nself sentry` is the CLI surface for ɳSentry. The `status` subcommand reads a public
-status page. Every other subcommand talks to the ɳSentry REST API, either the hosted
-SaaS at `https://api.sentry.nself.org` (default) or a self-hosted/local sentry bundle.
-
-| Subcommand | Purpose |
-|------------|---------|
-| `login` | Validate and store an API key at `~/.nself/sentry.json` (mode 0600) |
-| `logout` | Remove the stored API key |
-| `whoami` | Show account, tier, and quota usage |
-| `monitors list\|add\|rm\|pause\|resume` | Manage uptime monitors |
-| `incidents list\|ack\|resolve` | Incident lifecycle |
-| `status-pages list\|create` | Manage public status pages |
-| `alerts channels\|test` | List alert channels, send test notifications |
-| `status` | Fetch a status page JSON and report component health |
-
-### Authentication
-
-API keys start with `nsk_` and are created in the ɳSentry dashboard, or seeded locally
-by the sentry dev preset. Resolution order for both the key and the API URL:
-
-1. `--api-key` / `--api-url` flags
-2. `NSELF_SENTRY_API_KEY` / `NSELF_SENTRY_API_URL` environment variables
-3. `~/.nself/sentry.json` (written by `nself sentry login`)
-4. Default API URL `https://api.sentry.nself.org`
-
-A 401 response always suggests `nself sentry login`. Quota errors (402/429) include the
-server message and an upgrade hint.
-
-### The nsentry alias
-
-A symlink named `nsentry` behaves as this command group:
+## Install
 
 ```bash
-ln -s $(which nself) /usr/local/bin/nsentry
-nsentry monitors list    # same as: nself sentry monitors list
+nself install sentry
 ```
 
-### JSON output
+One plugin provides both `nself sentry` and `nself sentry-server`. Once
+installed, each works exactly as before — the CLI proxies each command to its
+own binary.
 
-Every cloud subcommand accepts `--json` for script and AI-agent consumption. The same
-operations are also exposed as MCP tools by [[cmd-mcp]] (`sentry_monitors_list`,
-`sentry_monitors_add`, `sentry_incidents_list`, `sentry_incidents_ack`, `sentry_status`).
+## Related
 
-Common to all cloud subcommands:
-`monitors add` flags:
-## Tier Quotas
+`nself mcp` keeps its ɳSentry MCP tools whether or not this plugin is
+installed, because `mcp` is a core command and plugins cannot contribute MCP
+tools yet.
 
-| | Free | Sentry Bundle | ɳSelf+ |
-|---|---|---|---|
-| Monitors | 10 at 5-min | 50 at 1-min | 100 at 30s |
-| Status pages | 1 | 3 | 10 |
-| API/CLI/MCP | read-only | full | full |
-<!-- END PROSE:description -->
+---
 
-## Flags
-
-<!-- BEGIN GENERATED:flags -->
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--help`, `-h` | — | Show help |
-<!-- END GENERATED:flags -->
-
-## Subcommands
-
-<!-- BEGIN GENERATED:subcommands -->
-| Name | Description |
-|------|-------------|
-| `alerts` | Manage ɳSentry alert channels |
-| `incidents` | Manage ɳSentry incidents |
-| `login` | Authenticate the CLI with ɳSentry (SaaS or self-hosted) |
-| `logout` | Remove the stored ɳSentry API key |
-| `monitors` | Manage ɳSentry uptime monitors |
-| `status` | Fetch and display the ɳSentry status page |
-| `status-pages` | Manage ɳSentry status pages |
-| `whoami` | Show the authenticated ɳSentry account, tier, and quota usage |
-<!-- END GENERATED:subcommands -->
-
-## Examples
-
-<!-- BEGIN PROSE:examples -->
-```bash
-# Log in to the hosted SaaS
-nself sentry login --api-key nsk_abc123...
-```
-
-```bash
-# Add a monitor and list monitors
-nself sentry monitors add --name api --url https://api.example.com --interval 60s
-nself sentry monitors list
-```
-
-```bash
-# Triage incidents
-nself sentry incidents list --status open
-nself sentry incidents ack inc_123
-nself sentry incidents resolve inc_123
-```
-
-```bash
-# Status pages and alert channels
-nself sentry status-pages create --name "Public Status" --slug public
-nself sentry alerts channels
-nself sentry alerts test ch_email_1
-```
-
-```bash
-# Account, tier, and quota usage as JSON
-nself sentry whoami --json
-```
-
-```bash
-# Fully local, zero cloud: sentry dev preset seeds a tenant + dev API key
-nself init --preset sentry && nself build && nself start
-nself sentry login --api-url http://localhost:3848 --api-key nsk_dev_local_0000000000000000
-nself sentry monitors add --url https://example.com
-```
-<!-- END PROSE:examples -->
-
-## See Also
-
-<!-- BEGIN PROSE:see-also -->
-- [[cmd-mcp]] — MCP server with the `sentry_*` tools for AI agents
-- [[cmd-init]] — `--preset sentry` for the local-first dev stack
-- [[cmd-doctor]] — nSelf diagnostics
-<!-- END PROSE:see-also -->
-
-← [[Commands]] | [[Home]] →
+← [[Commands]] · [[Plugin-Overview]] · [[Home]]

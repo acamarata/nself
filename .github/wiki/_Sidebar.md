@@ -283,7 +283,7 @@
 
 <!-- BEGIN GENERATED:command-list -->
 
-**All commands (60)**
+**All commands (58)**
 
 - _A:_ [[cmd-account]] · [[cmd-admin]] · [[cmd-api]]
 - _B:_ [[cmd-backup]] · [[cmd-billing]] · [[cmd-build]] · [[cmd-bundle]]
@@ -300,7 +300,7 @@
 - _P:_ [[cmd-plugin]] · [[cmd-promote]]
 - _Q:_ [[cmd-queue]]
 - _R:_ [[cmd-release]] · [[cmd-remove]] · [[cmd-reset]] · [[cmd-restart]]
-- _S:_ [[cmd-secrets]] · [[cmd-security]] · [[cmd-self-heal]] · [[cmd-sentry]] · [[cmd-sentry-server]] · [[cmd-service]] · [[cmd-start]] · [[cmd-status]] · [[cmd-stop]]
+- _S:_ [[cmd-secrets]] · [[cmd-security]] · [[cmd-self-heal]] · [[cmd-service]] · [[cmd-start]] · [[cmd-status]] · [[cmd-stop]]
 - _T:_ [[cmd-telemetry]] · [[cmd-template]] · [[cmd-tenant]] · [[cmd-trust]]
 - _U:_ [[cmd-update]] · [[cmd-urls]]
 - _V:_ [[cmd-verify-sbom]] · [[cmd-version]]

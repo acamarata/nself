@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (60)
+## Commands (58)
 
 ### nself account
 
@@ -960,41 +960,6 @@ Flags:
 - `--to-file` (default "") — Write the new JWT key to this file path (mode 0600) instead of stdout
 
 Full page: [[cmd-self-heal]]
-
-### nself sentry
-
-ɳSentry ops: status, alerts, and observability
-
-```
-nself sentry <subcommand> [flags]
-```
-
-Subcommands:
-
-- `alerts` — Manage ɳSentry alert channels
-- `incidents` — Manage ɳSentry incidents
-- `login` — Authenticate the CLI with ɳSentry (SaaS or self-hosted)
-- `logout` — Remove the stored ɳSentry API key
-- `monitors` — Manage ɳSentry uptime monitors
-- `status` — Fetch and display the ɳSentry status page
-- `status-pages` — Manage ɳSentry status pages
-- `whoami` — Show the authenticated ɳSentry account, tier, and quota usage
-
-Full page: [[cmd-sentry]]
-
-### nself sentry-server
-
-Provision and manage ɳSentry ops servers
-
-```
-nself sentry-server <subcommand> [flags]
-```
-
-Subcommands:
-
-- `provision` — Provision an ops/sentry server for a project
-
-Full page: [[cmd-sentry-server]]
 
 ### nself service
 

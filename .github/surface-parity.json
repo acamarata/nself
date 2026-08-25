@@ -407,24 +407,6 @@
       "openapi": "n/a (see below)"
     },
     {
-      "name": "sentry",
-      "path": "nself sentry",
-      "group_id": "observe",
-      "wiki_page": true,
-      "mcp_tool": true,
-      "env_vars": "undocumented: HCLOUD_TOKEN, HETZNER_NSELF_TOKEN, NSELF_DEPLOY_HOST_OPS, NSENTRY_PRIVATE_TOKEN, OPS_DEPLOY_HOST, STATUS_PAGE_PRIVATE_TOKEN",
-      "openapi": "n/a (see below)"
-    },
-    {
-      "name": "sentry-server",
-      "path": "nself sentry-server",
-      "group_id": "observe",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
       "name": "service",
       "path": "nself service",
       "group_id": "config",

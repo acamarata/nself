@@ -3,7 +3,9 @@ package commands
 import (
 	"bytes"
 	"errors"
+	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/nself-org/cli/internal/errs"
@@ -142,5 +144,49 @@ func TestReportProxyFailure(t *testing.T) {
 				t.Errorf("exit code = %d, want %d", coder.ExitCode(), tt.wantCode)
 			}
 		})
+	}
+}
+
+// The two tests below came from sentry_cloud_test.go, which moved to the sentry
+// plugin with the rest of the command family under CLI-R11. They stayed because
+// what they cover did not move: the `nsentry` argv shim and the `sentry` init
+// preset are both core, and `nself sentry` still resolves — through the plugin
+// proxy now rather than a registered command.
+func TestNormalizeInvokedBinary_NSentryAlias(t *testing.T) {
+	orig := os.Args
+	defer func() { os.Args = orig }()
+
+	os.Args = []string{"/usr/local/bin/nsentry", "monitors", "list"}
+	normalizeInvokedBinary()
+	want := []string{"/usr/local/bin/nsentry", "sentry", "monitors", "list"}
+	if strings.Join(os.Args, " ") != strings.Join(want, " ") {
+		t.Errorf("nsentry shim: got %v, want %v", os.Args, want)
+	}
+
+	// Idempotent: running again must not double-insert.
+	normalizeInvokedBinary()
+	if strings.Join(os.Args, " ") != strings.Join(want, " ") {
+		t.Errorf("nsentry shim not idempotent: got %v", os.Args)
+	}
+
+	// Plain nself invocation untouched.
+	os.Args = []string{"/usr/local/bin/nself", "status"}
+	normalizeInvokedBinary()
+	if strings.Join(os.Args, " ") != "/usr/local/bin/nself status" {
+		t.Errorf("nself args mutated: %v", os.Args)
+	}
+}
+
+func TestSentryPresetRegistered(t *testing.T) {
+	p, ok := initPresets["sentry"]
+	if !ok {
+		t.Fatal("sentry preset missing from initPresets")
+	}
+	if len(p.SuggestedPlugins) != 13 {
+		t.Errorf("sentry preset should list the 13 bundle plugins, got %d", len(p.SuggestedPlugins))
+	}
+	joined := strings.Join(p.Notes, "\n")
+	if !strings.Contains(joined, "nsk_dev_local") || !strings.Contains(joined, "3848") {
+		t.Errorf("sentry preset notes must document the dev API key and local API port:\n%s", joined)
 	}
 }

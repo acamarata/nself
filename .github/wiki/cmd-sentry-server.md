@@ -1,55 +1,26 @@
 # nself sentry-server
 
-<!-- BEGIN PROSE:summary -->
-> Provision and manage ɳSentry ops servers.
-<!-- END PROSE:summary -->
+**This command moved to a plugin.**
 
-## Synopsis
+`nself sentry-server` is no longer part of the CLI core. ɳSentry is a separate product
+surface, not part of the self-hosted backend lifecycle the core covers.
 
-```
-nself sentry-server <subcommand> [flags]
-```
+## Install
 
-## Description
-
-<!-- BEGIN PROSE:description -->
-Provision and manage ɳSentry observability/ops servers.
-
-The sentry-server command orchestrates the full lifecycle of an ops server:
-Terraform provisioning, secrets push, and ops-profile deployment.
-<!-- END PROSE:description -->
-
-## Flags
-
-<!-- BEGIN GENERATED:flags -->
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--help`, `-h` | — | Show help |
-<!-- END GENERATED:flags -->
-
-## Subcommands
-
-<!-- BEGIN GENERATED:subcommands -->
-| Name | Description |
-|------|-------------|
-| `provision` | Provision an ops/sentry server for a project |
-<!-- END GENERATED:subcommands -->
-
-## Examples
-
-<!-- BEGIN PROSE:examples -->
 ```bash
-nself sentry-server provision myproject
-  nself sentry-server provision myproject --dry-run
-  nself sentry-server provision myproject --host nself@1.2.3.4 --key-path ~/.ssh/ops_key
+nself install sentry
 ```
-<!-- END PROSE:examples -->
 
-## See Also
+One plugin provides both `nself sentry` and `nself sentry-server`. Once
+installed, each works exactly as before — the CLI proxies each command to its
+own binary.
 
-<!-- BEGIN PROSE:see-also -->
-- [[Commands]] — full command index
-- [[Core-Services]] — what a stack is made of
-<!-- END PROSE:see-also -->
+## Related
 
-← [[Commands]] | [[Home]] →
+`nself mcp` keeps its ɳSentry MCP tools whether or not this plugin is
+installed, because `mcp` is a core command and plugins cannot contribute MCP
+tools yet.
+
+---
+
+← [[Commands]] · [[Plugin-Overview]] · [[Home]]

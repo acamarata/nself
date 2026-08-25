@@ -86,11 +86,9 @@ var commandGroupAssignments = map[string]string{
 	"ops":     groupDeploy,
 
 	// Observability.
-	"health":        groupObserve,
-	"self-heal":     groupObserve,
-	"sentry":        groupObserve,
-	"sentry-server": groupObserve,
-	"maintenance":   groupObserve,
+	"health":      groupObserve,
+	"self-heal":   groupObserve,
+	"maintenance": groupObserve,
 
 	// Plugins & Extensions.
 	"plugin":  groupExtend,

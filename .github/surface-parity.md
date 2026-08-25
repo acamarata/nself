@@ -57,8 +57,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself secrets` | config | yes | no | undocumented: EDITOR | n/a (see below) |
 | `nself security` | advanced | yes | no | n/a | n/a (see below) |
 | `nself self-heal` | observe | yes | no | n/a | n/a (see below) |
-| `nself sentry` | observe | yes | yes | undocumented: HCLOUD_TOKEN, HETZNER_NSELF_TOKEN, NSELF_DEPLOY_HOST_OPS, NSENTRY_PRIVATE_TOKEN, OPS_DEPLOY_HOST, STATUS_PAGE_PRIVATE_TOKEN | n/a (see below) |
-| `nself sentry-server` | observe | yes | no | n/a | n/a (see below) |
 | `nself service` | config | yes | yes | n/a | n/a (see below) |
 | `nself start` | core | yes | yes | undocumented: AI_AUTO_INSTALL, NSELF_PROFILE, NSELF_SKIP_DB_INIT | n/a (see below) |
 | `nself status` | core | yes | yes | n/a | n/a (see below) |
@@ -73,4 +71,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself version` | account | yes | no | undocumented: BENCH_RESULTS_FILE | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 60 commands. Missing wiki page: 0. No MCP tool: 42. Env vars found but undocumented: 20.
+Total: 58 commands. Missing wiki page: 0. No MCP tool: 41. Env vars found but undocumented: 19.

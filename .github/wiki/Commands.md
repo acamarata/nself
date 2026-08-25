@@ -100,7 +100,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 60**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 58**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -149,8 +149,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 60**
 | `nself secrets` | Manage encrypted project secrets (age encryption) | config | audit, decrypt-on-deploy, edit, get, init, lint, list, list-schedules, rekey, retire, rotate, rotation-log, schedule, set, verify |
 | `nself security` | Server security: audit, setup, and status | advanced | audit, setup, status |
 | `nself self-heal` | Run targeted self-healing routines for nSelf components | observe | — |
-| `nself sentry` | ɳSentry ops: status, alerts, and observability | observe | alerts, incidents, login, logout, monitors, status, status-pages, whoami |
-| `nself sentry-server` | Provision and manage ɳSentry ops servers | observe | provision |
 | `nself service` | Manage optional services | config | add, configure, disable, enable, list, ps, restart, scale, start, stop, update, upgrade |
 | `nself start` | Boot your nSelf stack | core | — |
 | `nself status` | Show health status of all services | core | — |

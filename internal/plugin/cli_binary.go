@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 // Linking a CLI-type plugin's binary into the directory the command proxy reads.
@@ -47,8 +48,40 @@ func PublishedBinaryPath(binName string) string {
 	return dst
 }
 
-// cliBinaryName returns the binary name a CLI-type plugin installs, or "" when
-// the plugin does not provide a command.
+// cliBinaryNames returns every binary a CLI-type plugin installs.
+//
+// Most plugins provide one command and return a single name. A plugin may
+// declare several in cliCommands, which is how `sentry` ships both
+// `nself sentry` and `nself sentry-server`: the proxy resolves nself-<command>
+// for each, so each needs its own published binary. Splitting them into two
+// plugins would mean two copies of the same client code, and folding
+// sentry-server in as a subcommand would change a command users already type.
+func cliBinaryNames(name string, m *PluginManifest) []string {
+	if m == nil {
+		return nil
+	}
+	if m.PluginType != "" && m.PluginType != "cli" {
+		return nil
+	}
+	if len(m.CLICommands) > 0 {
+		out := make([]string, 0, len(m.CLICommands))
+		for _, c := range m.CLICommands {
+			if c.Name != "" {
+				out = append(out, "nself-"+c.Name)
+			}
+		}
+		if len(out) > 0 {
+			return out
+		}
+	}
+	if single := cliBinaryName(name, m); single != "" {
+		return []string{single}
+	}
+	return nil
+}
+
+// cliBinaryName returns the binary name a single-command CLI plugin installs,
+// or "" when the plugin does not provide a command.
 //
 // A manifest may state binaryName explicitly; otherwise the convention is
 // nself-<plugin name>, which is what ProxyCommand looks for.
@@ -89,17 +122,9 @@ func cliBinaryName(name string, m *PluginManifest) string {
 // silent, confusing break into one that names the cause at the moment it
 // happens, rather than leaving the user to discover it later with no clue why.
 func linkCLIBinary(destDir, name string, m *PluginManifest) error {
-	binName := cliBinaryName(name, m)
-	if binName == "" {
+	binNames := cliBinaryNames(name, m)
+	if len(binNames) == 0 {
 		return nil
-	}
-
-	src := findExtractedBinary(destDir, binName)
-	if src == "" {
-		return fmt.Errorf(
-			"plugin %q provides the %q command but its package contains no %s binary — "+
-				"the published archive is source-only, so the command could not be installed",
-			name, name, binName)
 	}
 
 	binDir := pluginBinDir()
@@ -107,16 +132,26 @@ func linkCLIBinary(destDir, name string, m *PluginManifest) error {
 		return fmt.Errorf("creating plugin bin dir: %w", err)
 	}
 
-	dst := PublishedBinaryPath(binName)
+	for _, binName := range binNames {
+		src := findExtractedBinary(destDir, binName)
+		if src == "" {
+			return fmt.Errorf(
+				"plugin %q provides the %q command but its package contains no %s binary — "+
+					"the published archive is source-only, so the command could not be installed",
+				name, strings.TrimPrefix(binName, "nself-"), binName)
+		}
 
-	// Replace any previous version rather than failing on an existing file: an
-	// upgrade must leave the proxy pointing at the new binary.
-	if err := os.Remove(dst); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("replacing plugin binary %s: %w", dst, err)
-	}
+		dst := PublishedBinaryPath(binName)
 
-	if err := copyExecutable(src, dst); err != nil {
-		return fmt.Errorf("publishing plugin binary %s: %w", binName, err)
+		// Replace any previous version rather than failing on an existing file:
+		// an upgrade must leave the proxy pointing at the new binary.
+		if err := os.Remove(dst); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("replacing plugin binary %s: %w", dst, err)
+		}
+
+		if err := copyExecutable(src, dst); err != nil {
+			return fmt.Errorf("publishing plugin binary %s: %w", binName, err)
+		}
 	}
 	return nil
 }
@@ -124,14 +159,16 @@ func linkCLIBinary(destDir, name string, m *PluginManifest) error {
 // unlinkCLIBinary removes a plugin's published binary. A missing file is not an
 // error — the plugin may never have shipped one.
 func unlinkCLIBinary(name string, m *PluginManifest) error {
-	binName := cliBinaryName(name, m)
-	if binName == "" {
-		binName = "nself-" + name // best effort on an unreadable manifest
+	binNames := cliBinaryNames(name, m)
+	if len(binNames) == 0 {
+		binNames = []string{"nself-" + name} // best effort on an unreadable manifest
 	}
 
-	dst := PublishedBinaryPath(binName)
-	if err := os.Remove(dst); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("removing plugin binary %s: %w", dst, err)
+	for _, binName := range binNames {
+		dst := PublishedBinaryPath(binName)
+		if err := os.Remove(dst); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("removing plugin binary %s: %w", dst, err)
+		}
 	}
 	return nil
 }
