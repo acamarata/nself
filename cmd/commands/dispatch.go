@@ -16,7 +16,10 @@ package commands
 // resolve it as a plugin.
 
 import (
+	"strings"
+
 	"fmt"
+	"github.com/spf13/pflag"
 	"os"
 
 	"github.com/nself-org/cli/internal/errs"
@@ -54,6 +57,32 @@ func invokedCommandPath(cmd *cobra.Command) string {
 // no longer registered, so RootCmd.Execute never reaches PersistentPreRunE for
 // it. Without this the entry exists only as documentation and the user is told
 // nothing about where the command went.
+// relocatedCommand looks up a command that moved out of core, returning the
+// install hint the registry names and whether an entry exists.
+//
+// The hint has to come from the registry rather than be assembled from the
+// command name, because a plugin is not always named after its command:
+// `claw` lives in a plugin called `claw-cli`, since a paid `claw` service
+// plugin already owns that name. Deriving it produced two contradictory
+// instructions one line apart.
+//
+// Kept separate from printing the warning so that suppressing the warning does
+// not also lose the accurate hint — `--no-deprecation-warnings` silences
+// deprecation notices, but the proxy's "no such plugin" error is not one.
+func relocatedCommand(cmdName string) (installHint string, ok bool) {
+	if deprecationRegistry == nil {
+		return "", false
+	}
+	item, found := deprecationRegistry.Lookup("nself " + cmdName)
+	if !found {
+		return "", false
+	}
+	return item.Replacement, true
+}
+
+// warnRelocatedCommand prints the "this moved to a plugin" notice, and reports
+// whether it printed. The caller needs to know: when the notice is silenced,
+// the install hint it carries has to reappear in the proxy's error instead.
 func warnRelocatedCommand(cmdName string) bool {
 	if deprecationRegistry == nil {
 		return false
@@ -116,24 +145,44 @@ func Execute() error {
 				// ...but ONLY when the plugin is absent: once the user has run
 				// `nself install soak`, `nself soak` IS the supported spelling,
 				// and telling them to install what they just installed is noise.
-				// When the registry names the plugin to install, it is
-				// authoritative — the plugin is not always named after the
-				// command (`claw` lives in `claw-cli`). Suppress the proxy's
-				// generic hint in that case so the user is not given two
-				// different install commands one line apart.
-				warned := false
-				if !plugin.IsCommandInstalled(cmdName) {
-					warned = warnRelocatedCommand(cmdName)
-				}
+				// Three facts decide what the user is told, and they are
+				// independent: whether the command moved, whether the plugin is
+				// already installed, and whether deprecation notices are
+				// silenced.
+				registryHint, relocated := relocatedCommand(cmdName)
+				installed := plugin.IsCommandInstalled(cmdName)
+
 				installHint := "nself install " + cmdName
-				if warned {
+				switch {
+				case installed:
+					// The old spelling IS the supported spelling now. Nothing to
+					// warn about, and nothing to suggest installing.
 					installHint = ""
+				case relocated:
+					// The registry knows the real plugin name, which is not
+					// always the command name (`claw` lives in `claw-cli`).
+					if warnRelocatedCommand(cmdName) {
+						// The warning just said it; the proxy stays quiet
+						// rather than repeating it in different words.
+						installHint = ""
+					} else {
+						// Warnings are silenced, so the proxy's error is the
+						// only place the user can learn the right name.
+						installHint = registryHint
+					}
 				}
 
-				// Proxy to plugin
+				// Proxy to plugin.
+				//
+				// The CLI's own persistent flags are dropped first. Before this
+				// command moved to a plugin, cobra consumed them at the root and
+				// the subcommand never saw them; passing them through now makes
+				// `nself <cmd> --no-deprecation-warnings ...` die with
+				// "unknown flag" in a plugin that has no reason to know about
+				// them. Stripping reproduces the pre-extraction behaviour.
 				pluginArgs := []string{}
 				if len(os.Args) > 2 {
-					pluginArgs = os.Args[2:]
+					pluginArgs = stripRootPersistentFlags(os.Args[2:])
 				}
 				if err := plugin.ProxyCommandWithHint(cmdName, pluginArgs, installHint); err != nil {
 					// The message is printed here to preserve the exact
@@ -159,4 +208,54 @@ func Execute() error {
 		}
 	}
 	return nil
+}
+
+// stripRootPersistentFlags removes the CLI's own persistent flags from an
+// argument list bound for a plugin binary.
+//
+// Derived from RootCmd rather than hardcoded, so a flag added to the CLI later
+// does not silently start breaking every extracted command.
+//
+// A plugin that happens to define a flag of the same name loses it. That is the
+// correct trade: the flag belonged to nself before the command moved, and a
+// script that passed it was always talking to nself, not to the subcommand.
+func stripRootPersistentFlags(args []string) []string {
+	type flagInfo struct{ takesValue bool }
+	known := map[string]flagInfo{}
+	RootCmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
+		// A bool flag never consumes the following argument; anything else does
+		// when written as "--flag value" rather than "--flag=value".
+		known["--"+f.Name] = flagInfo{takesValue: f.Value.Type() != "bool"}
+		if f.Shorthand != "" {
+			known["-"+f.Shorthand] = flagInfo{takesValue: f.Value.Type() != "bool"}
+		}
+	})
+
+	out := make([]string, 0, len(args))
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+
+		// Everything after "--" is positional by convention; pass it verbatim.
+		if a == "--" {
+			out = append(out, args[i:]...)
+			break
+		}
+
+		name := a
+		hasInlineValue := false
+		if eq := strings.IndexByte(a, '='); eq > 0 {
+			name = a[:eq]
+			hasInlineValue = true
+		}
+
+		info, isRootFlag := known[name]
+		if !isRootFlag {
+			out = append(out, a)
+			continue
+		}
+		if info.takesValue && !hasInlineValue {
+			i++ // drop the separate value token too
+		}
+	}
+	return out
 }
