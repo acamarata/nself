@@ -5,14 +5,13 @@
 Every top-level `nself` command, generated from the cobra registration
 tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 
-**Total top-level commands: 92**
+**Total top-level commands: 75**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
 | `nself account` | Manage your nSelf account, sessions, licenses, team, and devices | — | devices, licenses, login, logout, status, team, transfer |
 | `nself admin` | Manage the nSelf Admin dashboard | — | connect, health, logs, projects, start, stop |
 | `nself ai` | Manage the nSelf AI plugin and local LLM stack | — | chat, local, pool |
-| `nself ai-studio` | Google AI Studio integration for local nSelf instances | — | bridge |
 | `nself alerts` | Manage Prometheus alert rules and silences | — | list, silence, test |
 | `nself api` | API versioning and deprecation tooling for operators | — | changelog, deprecation-check, version |
 | `nself backup` | Backup operations: create, list, restore, verify, prune, config, status, init-key | — | config, create, drill, init-key, list, prune, restore, restore-remote, resume, schedule, status, stream, verify |
@@ -35,8 +34,6 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself feature` | Manage CLI-built-in feature flags | — | disable, enable, list, status |
 | `nself flag` | Manage feature flags | — | disable, enable, get, history, kill, list, prune, set |
 | `nself functions` | Manage serverless functions | — | delete, deploy, invoke, list, logs |
-| `nself gateway` | Manage the nSelf AI gateway (nself-ai-gateway, port 3761) | — | keys, quota, routes, status |
-| `nself gauth` | Manage Google OAuth tokens for nSelf AI services | — | refresh, revoke, status |
 | `nself generate` | Generate type-safe client SDK types from the live Hasura schema | — | — |
 | `nself health` | Health check management with continuous monitoring | — | check, config, endpoint, history, service, watch |
 | `nself help-topics` | Browse help topics (quickstart, plugins, license, envs, doctor, errors) | — | — |
@@ -51,10 +48,8 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself mcp` | Start the nSelf MCP server | — | — |
 | `nself migrate` | Detect and migrate legacy artifacts to the current nSelf version | — | detect, firebase, from-bash, generate, rollback, run, supabase, watch |
 | `nself migrate-from-v099` | Migrate v0.9.9 home-level state (license key, channel, ssh keys) to v1.x layout | — | — |
-| `nself model` | Manage local AI models via Ollama | — | benchmark, list, pull, remove, update |
 | `nself monitor` | Monitoring stack management | — | upgrade-dashboards |
 | `nself oauth` | Manage OAuth provider tokens | — | refresh |
-| `nself ollama` | Manage local Ollama LLM stack | — | models, status |
 | `nself ops` | Ops-profile deployment and management | — | deploy |
 | `nself pitr` | Point-in-time recovery: enable, disable, status, base-backup, restore | — | base-backup, disable, enable, restore, status |
 | `nself plugin` | Manage nSelf plugins | — | audit-tables, compat-check, debug, dev, disable, enable, info, init, install, inventory, link, list, logs, marketplace, new, refresh, remove, search, start, status, stop, submit, test, unlink, update, updates |
@@ -99,14 +94,13 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 71**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 67**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
 | `nself account` | Manage your nSelf account, sessions, licenses, team, and devices | account | devices, licenses, login, logout, status, team, transfer |
 | `nself admin` | Manage the nSelf Admin dashboard | account | connect, health, logs, projects, start, stop |
 | `nself ai` | Manage the nSelf AI plugin and local LLM stack | ai | chat, local, pool |
-| `nself ai-studio` | Google AI Studio integration for local nSelf instances | ai | bridge |
 | `nself alerts` | Manage Prometheus alert rules and silences | observe | list, silence, test |
 | `nself api` | API versioning and deprecation tooling for operators | extend | changelog, deprecation-check, version |
 | `nself backup` | Backup operations: create, list, restore, verify, prune, config, status, init-key | data | config, create, drill, init-key, list, pitr, prune, restore, restore-remote, resume, schedule, status, stream, verify |
@@ -127,8 +121,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 71**
 | `nself exec` | Execute a command inside a service container | core | — |
 | `nself flags` | Manage application feature flags | config | disable, enable, get, history, kill, list, prune, set |
 | `nself functions` | Manage serverless functions | data | delete, deploy, invoke, list, logs |
-| `nself gateway` | Manage the nSelf AI gateway (nself-ai-gateway, port 3761) | ai | keys, quota, routes, status |
-| `nself gauth` | Manage Google OAuth tokens for nSelf AI services | ai | refresh, revoke, status |
 | `nself generate` | Generate type-safe client SDK types from the live Hasura schema | config | — |
 | `nself health` | Health check management with continuous monitoring | observe | check, config, endpoint, history, service, watch |
 | `nself help-topics` | Browse help topics (quickstart, plugins, license, envs, doctor, errors) | account | — |
@@ -143,7 +135,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 71**
 | `nself man` | Generate man pages for all nself commands | account | — |
 | `nself mcp` | Start the nSelf MCP server | extend | — |
 | `nself migrate` | Detect and migrate legacy artifacts to the current nSelf version | data | detect, firebase, from-bash, from-v099, generate, rollback, run, supabase, watch |
-| `nself model` | Manage local AI models via Ollama | ai | benchmark, list, ollama, pull, remove, update |
 | `nself monitor` | Monitoring stack management | observe | upgrade-dashboards |
 | `nself oauth` | Manage OAuth provider tokens | account | refresh |
 | `nself ops` | Ops-profile deployment and management | deploy | deploy |

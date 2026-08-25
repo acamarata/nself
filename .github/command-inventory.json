@@ -171,29 +171,6 @@
     ]
   },
   {
-    "name": "ai-studio",
-    "path": "nself ai-studio",
-    "short": "Google AI Studio integration for local nSelf instances",
-    "hidden": false,
-    "group_id": "ai",
-    "subcommands": [
-      {
-        "name": "bridge",
-        "path": "nself ai-studio bridge",
-        "short": "Start a secure AI Studio bridge via Cloudflare Tunnel",
-        "hidden": false,
-        "flags": [
-          "--dry-run",
-          "--idle-timeout",
-          "--ip-allowlist",
-          "--no-context",
-          "--port",
-          "--region"
-        ]
-      }
-    ]
-  },
-  {
     "name": "alerts",
     "path": "nself alerts",
     "short": "Manage Prometheus alert rules and silences",
@@ -1423,81 +1400,6 @@
     ]
   },
   {
-    "name": "gateway",
-    "path": "nself gateway",
-    "short": "Manage the nSelf AI gateway (nself-ai-gateway, port 3761)",
-    "hidden": false,
-    "group_id": "ai",
-    "subcommands": [
-      {
-        "name": "keys",
-        "path": "nself gateway keys",
-        "short": "Manage AI provider keys",
-        "hidden": false
-      },
-      {
-        "name": "quota",
-        "path": "nself gateway quota",
-        "short": "Show AI request quota usage",
-        "hidden": false,
-        "flags": [
-          "--model",
-          "--provider"
-        ]
-      },
-      {
-        "name": "routes",
-        "path": "nself gateway routes",
-        "short": "List gateway routing rules",
-        "hidden": false
-      },
-      {
-        "name": "status",
-        "path": "nself gateway status",
-        "short": "Health-check all three AI services",
-        "hidden": false
-      }
-    ]
-  },
-  {
-    "name": "gauth",
-    "path": "nself gauth",
-    "short": "Manage Google OAuth tokens for nSelf AI services",
-    "hidden": false,
-    "group_id": "ai",
-    "subcommands": [
-      {
-        "name": "refresh",
-        "path": "nself gauth refresh",
-        "short": "Force-refresh a Google OAuth access token for an account",
-        "hidden": false,
-        "flags": [
-          "--account",
-          "--force"
-        ]
-      },
-      {
-        "name": "revoke",
-        "path": "nself gauth revoke",
-        "short": "Revoke and remove a stored Google OAuth refresh token",
-        "hidden": false,
-        "flags": [
-          "--account"
-        ]
-      },
-      {
-        "name": "status",
-        "path": "nself gauth status",
-        "short": "Show token expiry for all provisioned gauth accounts",
-        "hidden": false,
-        "flags": [
-          "--account",
-          "--json"
-        ]
-      }
-    ]
-  },
-  {
     "name": "generate",
     "path": "nself generate",
     "short": "Generate type-safe client SDK types from the live Hasura schema",
@@ -2020,63 +1922,6 @@
           "--migrations-dir",
           "--paths"
         ]
-      }
-    ]
-  },
-  {
-    "name": "model",
-    "path": "nself model",
-    "short": "Manage local AI models via Ollama",
-    "hidden": false,
-    "group_id": "ai",
-    "subcommands": [
-      {
-        "name": "benchmark",
-        "path": "nself model benchmark",
-        "short": "Run a standard prompt and report tokens/s + p99 latency",
-        "hidden": false,
-        "flags": [
-          "--json",
-          "--prompt",
-          "--runs"
-        ]
-      },
-      {
-        "name": "list",
-        "path": "nself model list",
-        "short": "List all pulled Ollama models",
-        "hidden": false,
-        "flags": [
-          "--json"
-        ]
-      },
-      {
-        "name": "ollama",
-        "path": "nself model ollama",
-        "short": "Manage local Ollama LLM stack",
-        "hidden": false
-      },
-      {
-        "name": "pull",
-        "path": "nself model pull",
-        "short": "Pull (download) a model from the Ollama registry",
-        "hidden": false
-      },
-      {
-        "name": "remove",
-        "path": "nself model remove",
-        "short": "Remove a pulled model from Ollama to free disk space",
-        "hidden": false,
-        "aliases": [
-          "rm",
-          "delete"
-        ]
-      },
-      {
-        "name": "update",
-        "path": "nself model update",
-        "short": "Re-pull a model to fetch the latest version of its tag",
-        "hidden": false
       }
     ]
   },

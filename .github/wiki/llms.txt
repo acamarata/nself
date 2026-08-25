@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (71)
+## Commands (67)
 
 ### nself account
 
@@ -70,20 +70,6 @@ Subcommands:
 - `pool` — Manage the Gemini API key pool (auto-provisioned + manual)
 
 Full page: [[cmd-ai]]
-
-### nself ai-studio
-
-Google AI Studio integration for local nSelf instances
-
-```
-nself ai-studio <subcommand> [flags]
-```
-
-Subcommands:
-
-- `bridge` — Start a secure AI Studio bridge via Cloudflare Tunnel
-
-Full page: [[cmd-ai-studio]]
 
 ### nself alerts
 
@@ -520,39 +506,6 @@ Subcommands:
 
 Full page: [[cmd-functions]]
 
-### nself gateway
-
-Manage the nSelf AI gateway (nself-ai-gateway, port 3761)
-
-```
-nself gateway <subcommand> [flags]
-```
-
-Subcommands:
-
-- `keys` — Manage AI provider keys
-- `quota` — Show AI request quota usage
-- `routes` — List gateway routing rules
-- `status` — Health-check all three AI services
-
-Full page: [[cmd-gateway]]
-
-### nself gauth
-
-Manage Google OAuth tokens for nSelf AI services
-
-```
-nself gauth <subcommand> [flags]
-```
-
-Subcommands:
-
-- `refresh` — Force-refresh a Google OAuth access token for an account
-- `revoke` — Revoke and remove a stored Google OAuth refresh token
-- `status` — Show token expiry for all provisioned gauth accounts
-
-Full page: [[cmd-gauth]]
-
 ### nself generate
 
 Generate type-safe client SDK types from the live Hasura schema
@@ -837,25 +790,6 @@ Flags:
 - `--from-bash` (default false) — Migrate from a v0.9.9 Bash-era project (alias for: nself migrate from-bash)
 
 Full page: [[cmd-migrate]]
-
-### nself model
-
-Manage local AI models via Ollama
-
-```
-nself model <subcommand> [flags]
-```
-
-Subcommands:
-
-- `benchmark` — Run a standard prompt and report tokens/s + p99 latency
-- `list` — List all pulled Ollama models
-- `ollama` — Manage local Ollama LLM stack
-- `pull` — Pull (download) a model from the Ollama registry
-- `remove` — Remove a pulled model from Ollama to free disk space
-- `update` — Re-pull a model to fetch the latest version of its tag
-
-Full page: [[cmd-model]]
 
 ### nself monitor
 

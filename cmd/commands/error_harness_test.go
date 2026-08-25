@@ -113,11 +113,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"deploy", []string{"deploy", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"deploy", []string{"deploy", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── gateway ────────────────────────────────────────────────────────────
-	{"gateway", []string{"gateway"}, "(a) no subcommand — shows help"},
-	{"gateway", []string{"gateway", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"gateway", []string{"gateway", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── dev ────────────────────────────────────────────────────────────────
 	{"dev", []string{"dev"}, "(a) no project dir"},
 	{"dev", []string{"dev", "--no-such-flag-xyz"}, "(b) invalid flag"},
@@ -202,11 +197,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"migrate from-v099", []string{"migrate", "from-v099"}, "(a) no project dir"},
 	{"migrate from-v099", []string{"migrate", "from-v099", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"migrate from-v099", []string{"migrate", "from-v099", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── model ──────────────────────────────────────────────────────────────
-	{"model", []string{"model"}, "(a) shows help (no project required)"},
-	{"model", []string{"model", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"model", []string{"model", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── monitor ────────────────────────────────────────────────────────────
 	{"monitor", []string{"monitor"}, "(a) no project dir"},
@@ -358,22 +348,10 @@ var errorHarnessCases = []errorHarnessCase{
 	{"oauth", []string{"oauth", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"oauth", []string{"oauth", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── ai-studio ──────────────────────────────────────────────────────────
-	// ai-studio root returns cmd.Help() (nil) — same pattern as model.
-	{"ai-studio", []string{"ai-studio"}, "(a) shows help (no project required)"},
-	{"ai-studio", []string{"ai-studio", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"ai-studio", []string{"ai-studio", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── generate ───────────────────────────────────────────────────────────
 	{"generate", []string{"generate"}, "(a) no project dir"},
 	{"generate", []string{"generate", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"generate", []string{"generate", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── gauth ──────────────────────────────────────────────────────────────
-	// gauth root returns cmd.Help() (nil) — soft case (no project required).
-	{"gauth", []string{"gauth"}, "(a) shows help (no project required)"},
-	{"gauth", []string{"gauth", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"gauth", []string{"gauth", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── infra ──────────────────────────────────────────────────────────────
 	// infra root returns cmd.Help() (nil) — soft case.
@@ -391,12 +369,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"mcp", []string{"mcp"}, "(a) no project dir"},
 	{"mcp", []string{"mcp", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"mcp", []string{"mcp", "unknownsub_xyz"}, "(c) unknown sub"},
-
-	// ── ollama ─────────────────────────────────────────────────────────────
-	// ollama root returns cmd.Help() (nil) — soft case.
-	{"model ollama", []string{"model", "ollama"}, "(a) shows help (no project required)"},
-	{"model ollama", []string{"model", "ollama", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"model ollama", []string{"model", "ollama", "unknownsub_xyz"}, "(c) unknown sub"},
 
 	// ── pitr ───────────────────────────────────────────────────────────────
 	// pitr root returns cmd.Help() (nil) — soft case.

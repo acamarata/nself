@@ -15,7 +15,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself account` | account | yes | no | undocumented: NSELF_NO_BROWSER | n/a (see below) |
 | `nself admin` | account | yes | no | undocumented: ADMIN_PORT | n/a (see below) |
 | `nself ai` | ai | yes | no | undocumented: AI_DEFAULT_MODEL, OLLAMA_BASE_URL, OLLAMA_HOST, PLUGIN_AI_INTERNAL_URL, PLUGIN_INTERNAL_SECRET | n/a (see below) |
-| `nself ai-studio` | ai | yes | no | n/a | n/a (see below) |
 | `nself alerts` | observe | yes | no | n/a | n/a (see below) |
 | `nself api` | extend | yes | no | n/a | n/a (see below) |
 | `nself backup` | data | yes | yes | n/a | n/a (see below) |
@@ -36,8 +35,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself exec` | core | yes | no | n/a | n/a (see below) |
 | `nself flags` | config | yes | no | n/a | n/a (see below) |
 | `nself functions` | data | yes | no | n/a | n/a (see below) |
-| `nself gateway` | ai | yes | no | n/a | n/a (see below) |
-| `nself gauth` | ai | yes | no | undocumented: GAUTH_PORT, GAUTH_URL | n/a (see below) |
 | `nself generate` | config | yes | no | undocumented: NSELF_HASURA_PROD_ADMIN_SECRET, NSELF_HASURA_PROD_URL, NSELF_HASURA_STAGING_ADMIN_SECRET, NSELF_HASURA_STAGING_URL | n/a (see below) |
 | `nself health` | observe | yes | no | n/a | n/a (see below) |
 | `nself help-topics` | account | yes | no | n/a | n/a (see below) |
@@ -52,7 +49,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself man` | account | yes | no | n/a | n/a (see below) |
 | `nself mcp` | extend | yes | no | undocumented: HASURA_GRAPHQL_URL, INTEGRATION, NSELF_HASURA_ADMIN_SECRET, NSELF_HASURA_GRAPHQL_URL, NSENTRY_STATUS_URL, POSTGRES_URL | n/a (see below) |
 | `nself migrate` | data | yes | yes | undocumented: NSELF_AI_ENDPOINT, NSELF_MIGRATION_AUTO_APPLY, NSELF_PROFILE, NSELF_SUPABASE_SKIP | n/a (see below) |
-| `nself model` | ai | yes | no | undocumented: NSELF_OLLAMA_DEFAULT_MODEL, NSELF_OLLAMA_HOST, NSELF_OLLAMA_TIMEOUT_SECONDS, PLUGIN_AI_OLLAMA_URL | n/a (see below) |
 | `nself monitor` | observe | yes | no | n/a | n/a (see below) |
 | `nself oauth` | account | yes | no | n/a | n/a (see below) |
 | `nself ops` | deploy | yes | no | n/a | n/a (see below) |
@@ -84,4 +80,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself watchdog` | observe | yes | no | undocumented: NSELF_ENV | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 71 commands. Missing wiki page: 0. No MCP tool: 53. Env vars found but undocumented: 26.
+Total: 67 commands. Missing wiki page: 0. No MCP tool: 49. Env vars found but undocumented: 24.

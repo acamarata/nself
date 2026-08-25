@@ -29,15 +29,6 @@
       "openapi": "n/a (see below)"
     },
     {
-      "name": "ai-studio",
-      "path": "nself ai-studio",
-      "group_id": "ai",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
       "name": "alerts",
       "path": "nself alerts",
       "group_id": "observe",
@@ -218,24 +209,6 @@
       "openapi": "n/a (see below)"
     },
     {
-      "name": "gateway",
-      "path": "nself gateway",
-      "group_id": "ai",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
-      "name": "gauth",
-      "path": "nself gauth",
-      "group_id": "ai",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "undocumented: GAUTH_PORT, GAUTH_URL",
-      "openapi": "n/a (see below)"
-    },
-    {
       "name": "generate",
       "path": "nself generate",
       "group_id": "config",
@@ -359,15 +332,6 @@
       "wiki_page": true,
       "mcp_tool": true,
       "env_vars": "undocumented: NSELF_AI_ENDPOINT, NSELF_MIGRATION_AUTO_APPLY, NSELF_PROFILE, NSELF_SUPABASE_SKIP",
-      "openapi": "n/a (see below)"
-    },
-    {
-      "name": "model",
-      "path": "nself model",
-      "group_id": "ai",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "undocumented: NSELF_OLLAMA_DEFAULT_MODEL, NSELF_OLLAMA_HOST, NSELF_OLLAMA_TIMEOUT_SECONDS, PLUGIN_AI_OLLAMA_URL",
       "openapi": "n/a (see below)"
     },
     {
