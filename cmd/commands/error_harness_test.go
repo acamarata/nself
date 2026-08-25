@@ -333,12 +333,6 @@ var errorHarnessCases = []errorHarnessCase{
 	{"generate", []string{"generate", "--no-such-flag-xyz"}, "(b) invalid flag"},
 	{"generate", []string{"generate", "unknownsub_xyz"}, "(c) unknown sub"},
 
-	// ── infra ──────────────────────────────────────────────────────────────
-	// infra root returns cmd.Help() (nil) — soft case.
-	{"infra", []string{"infra"}, "(a) shows help (no project required)"},
-	{"infra", []string{"infra", "--no-such-flag-xyz"}, "(b) invalid flag"},
-	{"infra", []string{"infra", "unknownsub_xyz"}, "(c) unknown sub"},
-
 	// ── maintenance ────────────────────────────────────────────────────────
 	// maintenance root returns cmd.Help() (nil) — soft case.
 	{"maintenance", []string{"maintenance"}, "(a) shows help (no project required)"},

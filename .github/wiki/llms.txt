@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (63)
+## Commands (62)
 
 ### nself account
 
@@ -520,22 +520,6 @@ nself help-topics [topic] [flags]
 ```
 
 Full page: [[cmd-help-topics]]
-
-### nself infra
-
-Provision nSelf infrastructure via Terraform
-
-```
-nself infra <subcommand> [flags]
-```
-
-Subcommands:
-
-- `apply` — Provision nSelf infrastructure via Terraform
-- `destroy` — Destroy nSelf infrastructure
-- `plan` — Show the Terraform plan for the given provider
-
-Full page: [[cmd-infra]]
 
 ### nself init
 

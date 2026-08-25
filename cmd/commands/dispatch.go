@@ -16,6 +16,8 @@ package commands
 // resolve it as a plugin.
 
 import (
+	"errors"
+	"io"
 	"strings"
 
 	"fmt"
@@ -185,11 +187,7 @@ func Execute() error {
 					pluginArgs = stripRootPersistentFlags(os.Args[2:])
 				}
 				if err := plugin.ProxyCommandWithHint(cmdName, pluginArgs, installHint); err != nil {
-					// The message is printed here to preserve the exact
-					// "Plugin error: ..." wording; main() must not print it
-					// again, hence the silent exit error.
-					fmt.Fprintf(os.Stderr, "Plugin error: %v\n", err)
-					return errs.Exit(1)
+					return reportProxyFailure(os.Stderr, err)
 				}
 				return nil
 			}
@@ -258,4 +256,34 @@ func stripRootPersistentFlags(args []string) []string {
 		}
 	}
 	return out
+}
+
+// reportProxyFailure turns a plugin proxy error into an exit status, printing
+// only when the user has not already been told.
+//
+// A plugin that ran and failed wrote its own error to the inherited stderr.
+// Printing "Plugin error: plugin exited with code 1" underneath it repeats,
+// less usefully, what is already on screen:
+//
+//	Error: use --force to bypass the PLANNED gate
+//	Plugin error: plugin exited with code 1
+//
+// ExitCodeError has advertised Silent() since it was written; this is the call
+// site that ignored it. A silent error mirrors the plugin's status and says
+// nothing. Anything else is the proxy's own failure — the plugin is missing, or
+// could not be executed — where the user has seen no output at all and needs
+// the message.
+func reportProxyFailure(w io.Writer, err error) error {
+	var silent errs.Silencer
+	if errors.As(err, &silent) && silent.Silent() {
+		code := 1
+		var coder errs.ExitCoder
+		if errors.As(err, &coder) {
+			code = coder.ExitCode()
+		}
+		return errs.Exit(code)
+	}
+
+	fmt.Fprintf(w, "Plugin error: %v\n", err)
+	return errs.Exit(1)
 }

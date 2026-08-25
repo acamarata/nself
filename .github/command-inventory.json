@@ -1310,53 +1310,6 @@
     "group_id": "account"
   },
   {
-    "name": "infra",
-    "path": "nself infra",
-    "short": "Provision nSelf infrastructure via Terraform",
-    "hidden": false,
-    "group_id": "deploy",
-    "subcommands": [
-      {
-        "name": "apply",
-        "path": "nself infra apply",
-        "short": "Provision nSelf infrastructure via Terraform",
-        "hidden": false,
-        "flags": [
-          "--auto-approve",
-          "--deploy-pubkey",
-          "--domain",
-          "--force",
-          "--location",
-          "--provider",
-          "--server-type",
-          "--state-bucket"
-        ]
-      },
-      {
-        "name": "destroy",
-        "path": "nself infra destroy",
-        "short": "Destroy nSelf infrastructure",
-        "hidden": false,
-        "flags": [
-          "--auto-approve",
-          "--domain",
-          "--provider"
-        ]
-      },
-      {
-        "name": "plan",
-        "path": "nself infra plan",
-        "short": "Show the Terraform plan for the given provider",
-        "hidden": false,
-        "flags": [
-          "--domain",
-          "--provider",
-          "--state-bucket"
-        ]
-      }
-    ]
-  },
-  {
     "name": "init",
     "path": "nself init",
     "short": "Initialize a new nSelf project",

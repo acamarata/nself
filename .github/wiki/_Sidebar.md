@@ -283,7 +283,7 @@
 
 <!-- BEGIN GENERATED:command-list -->
 
-**All commands (63)**
+**All commands (62)**
 
 - _A:_ [[cmd-account]] · [[cmd-admin]] · [[cmd-ai]] · [[cmd-api]]
 - _B:_ [[cmd-backup]] · [[cmd-billing]] · [[cmd-build]] · [[cmd-bundle]]
@@ -293,7 +293,7 @@
 - _F:_ [[cmd-flags]] · [[cmd-functions]]
 - _G:_ [[cmd-generate]]
 - _H:_ [[cmd-health]] · [[cmd-help-topics]]
-- _I:_ [[cmd-infra]] · [[cmd-init]] · [[cmd-install]]
+- _I:_ [[cmd-init]] · [[cmd-install]]
 - _L:_ [[cmd-license]] · [[cmd-login]] · [[cmd-logout]] · [[cmd-logs]]
 - _M:_ [[cmd-maintenance]] · [[cmd-man]] · [[cmd-mcp]] · [[cmd-migrate]]
 - _O:_ [[cmd-oauth]] · [[cmd-ops]]

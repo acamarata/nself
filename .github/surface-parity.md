@@ -36,7 +36,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself generate` | config | yes | no | undocumented: NSELF_HASURA_PROD_ADMIN_SECRET, NSELF_HASURA_PROD_URL, NSELF_HASURA_STAGING_ADMIN_SECRET, NSELF_HASURA_STAGING_URL | n/a (see below) |
 | `nself health` | observe | yes | no | n/a | n/a (see below) |
 | `nself help-topics` | account | yes | no | n/a | n/a (see below) |
-| `nself infra` | deploy | yes | no | undocumented: HCLOUD_TOKEN, HETZNER_NSELF_TOKEN | n/a (see below) |
 | `nself init` | core | yes | no | undocumented: NSELF_LICENSE_KEY | n/a (see below) |
 | `nself install` | extend | yes | yes | n/a | n/a (see below) |
 | `nself license` | extend | yes | no | undocumented: NSELF_LICENSE_SKIP_VERIFY, NSELF_PING_API_URL | n/a (see below) |
@@ -76,4 +75,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself version` | account | yes | no | undocumented: BENCH_RESULTS_FILE | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 63 commands. Missing wiki page: 0. No MCP tool: 45. Env vars found but undocumented: 22.
+Total: 62 commands. Missing wiki page: 0. No MCP tool: 44. Env vars found but undocumented: 21.

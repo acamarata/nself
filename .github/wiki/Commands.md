@@ -100,7 +100,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 63**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 62**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -128,7 +128,6 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 63**
 | `nself generate` | Generate type-safe client SDK types from the live Hasura schema | config | — |
 | `nself health` | Health check management with continuous monitoring | observe | check, config, endpoint, history, service, watch |
 | `nself help-topics` | Browse help topics (quickstart, plugins, license, envs, doctor, errors) | account | — |
-| `nself infra` | Provision nSelf infrastructure via Terraform | deploy | apply, destroy, plan |
 | `nself init` | Initialize a new nSelf project | core | — |
 | `nself install` | Install a plugin or bundle | extend | — |
 | `nself license` | Manage license keys for nSelf product bundles | extend | add, clear, export, health, import, list, migrate, refresh, remove, restore, revalidate, revoke, set, show, simulate-offline, status, tail, upgrade, validate |

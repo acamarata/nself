@@ -1,9 +1,13 @@
 package commands
 
 import (
+	"bytes"
+	"errors"
 	"reflect"
 	"testing"
 
+	"github.com/nself-org/cli/internal/errs"
+	"github.com/nself-org/cli/internal/plugin"
 	"github.com/spf13/pflag"
 )
 
@@ -86,4 +90,57 @@ func TestStripRootPersistentFlagsCoversEveryRootFlag(t *testing.T) {
 			t.Errorf("persistent flag --%s (%s) survived stripping: %q", f.Name, f.Value.Type(), got)
 		}
 	})
+}
+
+// TestReportProxyFailure pins which plugin failures the CLI speaks about.
+//
+// A plugin that ran and exited non-zero already printed its own error to the
+// inherited stderr. The CLI adding "Plugin error: plugin exited with code 1"
+// underneath was pure noise on every extracted command, and contradicted
+// ExitCodeError.Silent(), which had promised the opposite since it was written.
+func TestReportProxyFailure(t *testing.T) {
+	tests := []struct {
+		name      string
+		err       error
+		wantPrint string
+		wantCode  int
+	}{
+		{
+			name:      "plugin ran and failed: say nothing, mirror the code",
+			err:       &plugin.ExitCodeError{Code: 1},
+			wantPrint: "",
+			wantCode:  1,
+		},
+		{
+			name:      "a plugin's own exit code is preserved, not flattened to 1",
+			err:       &plugin.ExitCodeError{Code: 42},
+			wantPrint: "",
+			wantCode:  42,
+		},
+		{
+			name:      "proxy could not run anything: the user has seen nothing yet",
+			err:       errors.New("unknown command \"frobnicate\""),
+			wantPrint: "Plugin error: unknown command \"frobnicate\"\n",
+			wantCode:  1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			got := reportProxyFailure(&buf, tt.err)
+
+			if buf.String() != tt.wantPrint {
+				t.Errorf("printed %q, want %q", buf.String(), tt.wantPrint)
+			}
+
+			var coder errs.ExitCoder
+			if !errors.As(got, &coder) {
+				t.Fatalf("returned %v, which carries no exit code", got)
+			}
+			if coder.ExitCode() != tt.wantCode {
+				t.Errorf("exit code = %d, want %d", coder.ExitCode(), tt.wantCode)
+			}
+		})
+	}
 }
