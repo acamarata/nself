@@ -117,10 +117,14 @@ func runPluginInfo(cmd *cobra.Command, args []string) error {
 			fmt.Printf("  %s %s\n", permissionRiskPrefix(perm), perm)
 		}
 		if manifest.Permissions.UsesLegacyVocabulary() {
-			// Say so rather than let the risk prefixes imply a check happened.
-			// These tokens are not in the canonical allowlist, so nothing
-			// validated them and the prefix is a guess.
-			fmt.Println("  (declared in the descriptive form; not checked against the permission allowlist)")
+			// The descriptive form IS checked now — reduced to the canonical
+			// vocabulary and run through the same allowlist. Showing what it
+			// reduced to matters, because the reduction widens: a declaration
+			// naming one host is enforced as general internet access.
+			fmt.Println("\n  Enforced as:")
+			for _, perm := range manifest.Permissions.Effective() {
+				fmt.Printf("    %s\n", perm)
+			}
 		}
 		fmt.Println("  (v1.0.9: informational only; v1.1.0 will require explicit confirmation)")
 	}

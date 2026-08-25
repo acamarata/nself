@@ -48,13 +48,17 @@ var canonicalPermissions = map[string]bool{
 // ai:provider) the format must be <category>:<qualifier>:<param> where <param>
 // is a non-empty, safe identifier.
 func validatePermissions(m *PluginManifest) error {
-	// Only the canonical vocabulary is validated. The descriptive object form
-	// that 121 shipped manifests use ("database": ["create"], ...) is a
-	// different vocabulary whose tokens are not in this allowlist; rejecting it
-	// here would block every one of those plugins, and mapping it would be
-	// inventing security policy. See PermissionSet in manifest_shapes.go.
+	// Both forms are validated now. The descriptive object form that 121 shipped
+	// manifests use is not a competing vocabulary — it is a more specific one,
+	// naming hosts, paths and CRUD verbs where the canonical form names
+	// categories. DeriveCanonicalPermissions reduces it, widening at every step
+	// so nothing is under-declared, and the result goes through the same
+	// fail-closed allowlist as everything else.
+	//
+	// Before this, those 121 plugins were simply exempt from a check that
+	// exists to be mandatory.
 	var unknown []string
-	for _, perm := range m.Permissions.Canonical {
+	for _, perm := range m.Permissions.Effective() {
 		if !isKnownPermission(perm) {
 			unknown = append(unknown, perm)
 		}
