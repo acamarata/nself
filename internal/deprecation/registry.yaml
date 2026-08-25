@@ -41,14 +41,14 @@ items:
   # They keep working; the warning points at the canonical spelling.
   - name: "nself up"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself start"
     docs_url: "https://nself.org/docs/cli/start"
     phase: 1
 
   - name: "nself down"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself stop"
     docs_url: "https://nself.org/docs/cli/stop"
     phase: 1
@@ -58,77 +58,77 @@ items:
   # positional arguments behave identically.
   - name: "nself release-check"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself release check"
     docs_url: "https://nself.org/docs/cli/release"
     phase: 1
 
   - name: "nself release-rollback"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself release rollback"
     docs_url: "https://nself.org/docs/cli/release"
     phase: 1
 
   - name: "nself release-status"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself release status"
     docs_url: "https://nself.org/docs/cli/release"
     phase: 1
 
   - name: "nself migrate-from-v099"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself migrate from-v099"
     docs_url: "https://nself.org/docs/migrate/from-v0.9"
     phase: 1
 
   - name: "nself dns-setup"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself trust dns"
     docs_url: "https://nself.org/docs/cli/trust"
     phase: 1
 
   - name: "nself ollama"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself model ollama"
     docs_url: "https://nself.org/docs/cli/model"
     phase: 1
 
   - name: "nself feature"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself config features"
     docs_url: "https://nself.org/docs/cli/config"
     phase: 1
 
   - name: "nself pitr"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself backup pitr"
     docs_url: "https://nself.org/docs/cli/backup"
     phase: 1
 
   - name: "nself ssl"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself trust ssl"
     docs_url: "https://nself.org/docs/cli/trust"
     phase: 1
 
   - name: "nself upgrade"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself update upgrade"
     docs_url: "https://nself.org/docs/cli/update"
     phase: 1
 
   - name: "nself flag"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself flags"
     docs_url: "https://nself.org/docs/cli/flags"
     phase: 1
@@ -139,7 +139,7 @@ items:
   # named here is the flag that matches what `uninstall` actually did.
   - name: "nself uninstall"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself reset --keep-data (or --purge for the full wipe)"
     docs_url: "https://nself.org/docs/cli/reset"
     phase: 1
@@ -160,7 +160,7 @@ items:
   # never contradict even though only one of them is reachable today.
   - name: "nself dogfood"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install dogfood"
     docs_url: "https://nself.org/docs/plugins/dogfood"
     # Phase 1, not 3. Phase 3 means "removed", and the deprecation-cycle
@@ -179,7 +179,7 @@ items:
   # TestRelocatedCommandEntriesAreWiredToTheProxy.
   - name: "nself k8s"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install k8s"
     docs_url: "https://nself.org/docs/plugins/k8s"
 
@@ -191,7 +191,7 @@ items:
   # runs. See TestRelocatedCommandEntriesAreWiredToTheProxy.
   - name: "nself soak"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install soak"
     docs_url: "https://nself.org/docs/plugins/soak"
     phase: 1
@@ -203,7 +203,7 @@ items:
   # sibling command.
   - name: "nself audit"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install audit"
     docs_url: "https://nself.org/docs/plugins/audit"
     phase: 1
@@ -215,7 +215,7 @@ items:
   # internal/license is unreachable across the module boundary.
   - name: "nself pentest-kit"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install pentest-kit"
     docs_url: "https://nself.org/docs/plugins/pentest-kit"
     phase: 1
@@ -227,7 +227,7 @@ items:
   # package's doc comment for the exact scope of the simplification.
   - name: "nself costs"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install costs"
     docs_url: "https://nself.org/docs/plugins/costs"
     phase: 1
@@ -239,7 +239,7 @@ items:
   # internal/database package.
   - name: "nself gdpr"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install gdpr"
     docs_url: "https://nself.org/docs/plugins/gdpr"
 
@@ -250,7 +250,7 @@ items:
   # the same reason: the command is relocated, not removed.
   - name: "nself encryption"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install encryption"
     docs_url: "https://nself.org/docs/plugins/encryption"
     phase: 1
@@ -261,7 +261,7 @@ items:
   # removed.
   - name: "nself waf"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install waf"
     docs_url: "https://nself.org/docs/plugins/waf"
     phase: 1
@@ -271,7 +271,7 @@ items:
   # 3, for the same reason: relocated, not removed.
   - name: "nself federation"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install federation"
     docs_url: "https://nself.org/docs/plugins/federation"
     phase: 1
@@ -281,7 +281,7 @@ items:
   # 3, for the same reason: relocated, not removed.
   - name: "nself mail"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install mail"
     docs_url: "https://nself.org/docs/plugins/mail"
     phase: 1
@@ -291,7 +291,7 @@ items:
   # 3, for the same reason: relocated, not removed.
   - name: "nself dlq"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install dlq"
     docs_url: "https://nself.org/docs/plugins/dlq"
     phase: 1
@@ -303,7 +303,7 @@ items:
   # command file), so this is a pure copy with nothing left behind in core.
   - name: "nself monitor"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install monitor"
     docs_url: "https://nself.org/docs/plugins/monitor"
     phase: 1
@@ -317,7 +317,7 @@ items:
   # defines its own minimal type instead of importing the extracted package.
   - name: "nself alerts"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install alerts"
     docs_url: "https://nself.org/docs/plugins/alerts"
     phase: 1
@@ -331,7 +331,7 @@ items:
   # docker-CLI adapter locally instead of forking internal/health.
   - name: "nself watchdog"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install watchdog"
     docs_url: "https://nself.org/docs/plugins/watchdog"
 
@@ -355,21 +355,21 @@ items:
   # so it travels with the model plugin, not a plugin of its own.
   - name: "nself ai-studio"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install ai-studio"
     docs_url: "https://nself.org/docs/plugins/ai-studio"
     phase: 1
 
   - name: "nself gateway"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install gateway"
     docs_url: "https://nself.org/docs/plugins/gateway"
     phase: 1
 
   - name: "nself gauth"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install gauth"
     docs_url: "https://nself.org/docs/plugins/gauth"
     phase: 1
@@ -380,7 +380,7 @@ items:
   # since `model` is what left core, not `ollama`.
   - name: "nself model"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install model"
     docs_url: "https://nself.org/docs/plugins/model"
     phase: 1
@@ -409,73 +409,73 @@ items:
   # CLI-R11 extraction batches are concurrently editing — left as a follow-up.
   - name: "nself webhooks"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install webhooks"
     docs_url: "https://nself.org/docs/plugins/webhooks"
     phase: 1
   - name: "nself tenant"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install tenant"
     docs_url: "https://nself.org/docs/plugins/tenant"
     phase: 1
   - name: "nself billing"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install tenant"
     docs_url: "https://nself.org/docs/plugins/tenant"
     phase: 1
   - name: "nself queue"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install queue"
     docs_url: "https://nself.org/docs/plugins/queue"
     phase: 1
   - name: "nself dr"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install dr"
     docs_url: "https://nself.org/docs/plugins/dr"
     phase: 1
   - name: "nself api"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install api"
     docs_url: "https://nself.org/docs/plugins/api"
     phase: 1
   - name: "nself sentry"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install sentry"
     docs_url: "https://nself.org/docs/plugins/sentry"
     phase: 1
   - name: "nself sentry-server"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install sentry"
     docs_url: "https://nself.org/docs/plugins/sentry"
     phase: 1
   - name: "nself ai"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install ai-cli"
     docs_url: "https://nself.org/docs/plugins/ai-cli"
     phase: 1
   - name: "nself region"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install region"
     docs_url: "https://nself.org/docs/plugins/region"
     phase: 1
   - name: "nself infra"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install infra"
     docs_url: "https://nself.org/docs/plugins/infra"
     phase: 1
   - name: "nself claw"
     type: command
-    since: "v1.2.8"
+    since: "v1.3.0"
     replacement: "nself install claw-cli"
     docs_url: "https://nself.org/docs/plugins/claw-cli"
     phase: 1
