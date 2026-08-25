@@ -29,15 +29,6 @@
       "openapi": "n/a (see below)"
     },
     {
-      "name": "ai-studio",
-      "path": "nself ai-studio",
-      "group_id": "ai",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
       "name": "api",
       "path": "nself api",
       "group_id": "extend",
@@ -89,15 +80,6 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "undocumented: NSELF_FORGEJO_ADMIN_PASSWORD, NSELF_FORGEJO_ADMIN_USER",
-      "openapi": "n/a (see below)"
-    },
-    {
-      "name": "claw",
-      "path": "nself claw",
-      "group_id": "ai",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "undocumented: CLAW_PROXY_ALLOWED_ORIGINS, NSELF_AICC_URL, NSELF_CLAW_API_KEY, NSELF_CLAW_SERVER, NSELF_EXTERNAL_URL, PLUGIN_CLAW_INTERNAL_URL",
       "openapi": "n/a (see below)"
     },
     {
@@ -206,24 +188,6 @@
       "wiki_page": true,
       "mcp_tool": false,
       "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
-      "name": "gateway",
-      "path": "nself gateway",
-      "group_id": "ai",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "n/a",
-      "openapi": "n/a (see below)"
-    },
-    {
-      "name": "gauth",
-      "path": "nself gauth",
-      "group_id": "ai",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "undocumented: GAUTH_PORT, GAUTH_URL",
       "openapi": "n/a (see below)"
     },
     {
@@ -350,15 +314,6 @@
       "wiki_page": true,
       "mcp_tool": true,
       "env_vars": "undocumented: NSELF_AI_ENDPOINT, NSELF_MIGRATION_AUTO_APPLY, NSELF_PROFILE, NSELF_SUPABASE_SKIP",
-      "openapi": "n/a (see below)"
-    },
-    {
-      "name": "model",
-      "path": "nself model",
-      "group_id": "ai",
-      "wiki_page": true,
-      "mcp_tool": false,
-      "env_vars": "undocumented: NSELF_OLLAMA_DEFAULT_MODEL, NSELF_OLLAMA_HOST, NSELF_OLLAMA_TIMEOUT_SECONDS, PLUGIN_AI_OLLAMA_URL",
       "openapi": "n/a (see below)"
     },
     {

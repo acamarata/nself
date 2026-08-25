@@ -334,6 +334,84 @@ items:
     since: "v1.2.8"
     replacement: "nself install watchdog"
     docs_url: "https://nself.org/docs/plugins/watchdog"
+
+  # CLI-R11 thin-core extraction (AI family). Same shape as the entries
+  # above: moved to a plugin entirely, not rewritten to a new core
+  # subcommand. Phase 1, not 3, for the same reason: relocated, not removed.
+  # `ai`, `ai-studio`, `gateway`, `gauth`, and `model` were evaluated
+  # together as one candidate "AI family" plugin, but internal/plugin's
+  # ProxyCommand resolves exactly one binary per top-level command word
+  # (nself-<cmdName>, keyed on os.Args[1]) and PluginManifest carries exactly
+  # one binaryName — there is no mechanism for one plugin.json to publish
+  # multiple command binaries. Each top-level word that left core therefore
+  # got its own plugin. `ai` itself stayed in core: `ai local install` and
+  # `ai local models` depend on internal/installer, which `doctor` (golden
+  # path, never extracted) also depends on for `installer.Install` and
+  # `installer.MemAvailableMB` — extracting `ai` would force duplicating
+  # that whole package into a plugin module unreachable from core, which is
+  # a worse outcome than leaving the family in core. `ollama` never had its
+  # own entry here: CLI-R09 already folded it under `model` as a
+  # subcommand (see the "nself ollama" entry above, and legacy_spellings.go),
+  # so it travels with the model plugin, not a plugin of its own.
+  - name: "nself ai-studio"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install ai-studio"
+    docs_url: "https://nself.org/docs/plugins/ai-studio"
+    phase: 1
+
+  - name: "nself gateway"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install gateway"
+    docs_url: "https://nself.org/docs/plugins/gateway"
+    phase: 1
+
+  - name: "nself gauth"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install gauth"
+    docs_url: "https://nself.org/docs/plugins/gauth"
+    phase: 1
+
+  # `model` also carries the `ollama` subcommand along with it (see note
+  # above) — a bare `nself ollama ...` rewrites to `nself model ollama ...`
+  # (legacy_spellings.go), which then hits this same relocated-command path
+  # since `model` is what left core, not `ollama`.
+  - name: "nself model"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install model"
+    docs_url: "https://nself.org/docs/plugins/model"
+    phase: 1
+
+  # CLI-R11 thin-core extraction. `claw` is the largest single extraction
+  # (~3300 lines across 17 files). The plugin's registry NAME is "claw-cli",
+  # not "claw" — plugins-pro/registry.json already registers a paid backend
+  # service plugin named "claw" (plugins-pro/paid/claw, the ɳClaw bundle
+  # backend that this CLI surface talks to over HTTP), and the merged
+  # registry plugins.nself.org/registry.json resolves `nself install <name>`
+  # by an exact, flat name match (internal/plugin/paths.go's findPlugin) —
+  # two entries named "claw" would collide. binaryName is still "nself-claw"
+  # (plugin.json overrides the name-derived default) since ProxyCommand
+  # resolves nself-<cmdName>, keyed on the command word the user types
+  # ("claw"), not the plugin's registry name.
+  #
+  # Known inconsistency this creates: internal/plugin.ProxyCommand's own
+  # "unknown command" fallback (router.go, used by every plugin uniformly)
+  # hardcodes its install hint as `nself install <cmdName>` — it will say
+  # "nself install claw" for an uninstalled claw plugin, which is wrong; only
+  # THIS registry entry's replacement text (surfaced by warnRelocatedCommand,
+  # which runs first) says the correct "nself install claw-cli". Fixing
+  # ProxyCommand's fallback to consult the deprecation registry would help
+  # every future name != registry-name extraction, not just this one, but is
+  # a shared-file change out of this ticket's scope and touches code other
+  # CLI-R11 extraction batches are concurrently editing — left as a follow-up.
+  - name: "nself claw"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install claw-cli"
+    docs_url: "https://nself.org/docs/plugins/claw-cli"
     phase: 1
 
 # =============================================================================

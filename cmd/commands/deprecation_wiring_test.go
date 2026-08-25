@@ -297,6 +297,16 @@ func findRepoRootForTest(t *testing.T) string {
 // must carry a deprecation entry so the user is told where it went. A typo in
 // either table would otherwise produce a command that silently does nothing or
 // a rename nobody is told about.
+//
+// One shape is not a live cobra command: CLI-R11 can extract the *target* of
+// a rewrite out of core (e.g. "ollama" rewrites to ["model", "ollama"], and
+// "model" itself later left core for the model plugin). RootCmd.Find then
+// correctly reports the first segment as unresolvable — root.go's Execute()
+// proxies it to the plugin binary at runtime instead of dispatching to a
+// cobra command, and warnRelocatedCommand (not tested here) covers that
+// path's own warning. This test still requires that unresolvable case to
+// name a top-level segment with its own deprecation entry, so a genuine typo
+// in the canonical path (rather than an intentional extraction) still fails.
 func TestEveryLegacySpellingResolves(t *testing.T) {
 	reg, err := deprecation.LoadEmbeddedRegistry()
 	if err != nil {
@@ -309,13 +319,21 @@ func TestEveryLegacySpellingResolves(t *testing.T) {
 			continue
 		}
 
+		want := "nself " + strings.Join(entry.canonical, " ")
+
 		target, _, findErr := RootCmd.Find(entry.canonical)
 		if findErr != nil {
-			t.Errorf("%q maps to %v, which cobra cannot resolve: %v", name, entry.canonical, findErr)
-			continue
-		}
-		want := "nself " + strings.Join(entry.canonical, " ")
-		if target.CommandPath() != want {
+			// The first segment may itself be a relocated command (proxied
+			// to a plugin at runtime rather than resolved by cobra). That is
+			// only valid if it carries its own deprecation entry — otherwise
+			// this is an ordinary broken mapping.
+			head := "nself " + entry.canonical[0]
+			if _, headOK := reg.Lookup(head); !headOK {
+				t.Errorf("%q maps to %v, which cobra cannot resolve (%v), and %q has no deprecation entry explaining why",
+					name, entry.canonical, findErr, head)
+				continue
+			}
+		} else if target.CommandPath() != want {
 			t.Errorf("%q maps to %v but cobra resolved it to %q", name, entry.canonical, target.CommandPath())
 		}
 

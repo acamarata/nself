@@ -43,6 +43,19 @@ func pluginBinDir() string {
 // For security, the binary is looked up ONLY in the plugin bin directory,
 // never via the full system PATH. This prevents PATH hijacking attacks.
 func ProxyCommand(cmdName string, args []string) error {
+	return ProxyCommandWithHint(cmdName, args, "nself install "+cmdName)
+}
+
+// ProxyCommandWithHint is ProxyCommand with control over the install hint in
+// the not-found error.
+//
+// The generic hint assumes the plugin is named after the command, which is not
+// always true: `claw` lives in a plugin called `claw-cli`, because a paid
+// `claw` service plugin already owns that name. When the deprecation registry
+// has already told the user the right thing to install, passing an empty hint
+// here stops the proxy contradicting it — the user was being shown
+// "use 'nself install claw-cli'" and "nself install claw" one line apart.
+func ProxyCommandWithHint(cmdName string, args []string, installHint string) error {
 	pluginBinary := fmt.Sprintf("nself-%s", cmdName)
 
 	// S-002: Only look in the plugin bin directory, never the full PATH.
@@ -60,9 +73,12 @@ func ProxyCommand(cmdName string, args []string) error {
 		// normal terminal never shows.
 		slog.Warn("plugin binary not found",
 			"command", cmdName, "plugin", pluginBinary,
-			"install_hint", "nself install "+cmdName)
-		return fmt.Errorf("unknown command %q, and no plugin named %q is installed.\n\nIf this is an nSelf plugin, install it with:\n  nself install %s",
-			cmdName, cmdName, cmdName)
+			"install_hint", installHint)
+		if installHint == "" {
+			return fmt.Errorf("unknown command %q, and no plugin named %q is installed", cmdName, cmdName)
+		}
+		return fmt.Errorf("unknown command %q, and no plugin named %q is installed.\n\nIf this is an nSelf plugin, install it with:\n  %s",
+			cmdName, cmdName, installHint)
 	}
 
 	// Prepare the command

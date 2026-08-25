@@ -15,14 +15,12 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself account` | account | yes | no | undocumented: NSELF_NO_BROWSER | n/a (see below) |
 | `nself admin` | account | yes | no | undocumented: ADMIN_PORT | n/a (see below) |
 | `nself ai` | ai | yes | no | undocumented: AI_DEFAULT_MODEL, OLLAMA_BASE_URL, OLLAMA_HOST, PLUGIN_AI_INTERNAL_URL, PLUGIN_INTERNAL_SECRET | n/a (see below) |
-| `nself ai-studio` | ai | yes | no | n/a | n/a (see below) |
 | `nself api` | extend | yes | no | n/a | n/a (see below) |
 | `nself backup` | data | yes | yes | n/a | n/a (see below) |
 | `nself billing` | account | yes | no | n/a | n/a (see below) |
 | `nself build` | core | yes | yes | undocumented: NSELF_PROFILE | n/a (see below) |
 | `nself bundle` | extend | yes | no | n/a | n/a (see below) |
 | `nself ci` | deploy | yes | no | undocumented: NSELF_FORGEJO_ADMIN_PASSWORD, NSELF_FORGEJO_ADMIN_USER | n/a (see below) |
-| `nself claw` | ai | yes | no | undocumented: CLAW_PROXY_ALLOWED_ORIGINS, NSELF_AICC_URL, NSELF_CLAW_API_KEY, NSELF_CLAW_SERVER, NSELF_EXTERNAL_URL, PLUGIN_CLAW_INTERNAL_URL | n/a (see below) |
 | `nself clean` | core | yes | no | n/a | n/a (see below) |
 | `nself completion` | account | yes | no | n/a | n/a (see below) |
 | `nself config` | config | yes | yes | n/a | n/a (see below) |
@@ -35,8 +33,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself exec` | core | yes | no | n/a | n/a (see below) |
 | `nself flags` | config | yes | no | n/a | n/a (see below) |
 | `nself functions` | data | yes | no | n/a | n/a (see below) |
-| `nself gateway` | ai | yes | no | n/a | n/a (see below) |
-| `nself gauth` | ai | yes | no | undocumented: GAUTH_PORT, GAUTH_URL | n/a (see below) |
 | `nself generate` | config | yes | no | undocumented: NSELF_HASURA_PROD_ADMIN_SECRET, NSELF_HASURA_PROD_URL, NSELF_HASURA_STAGING_ADMIN_SECRET, NSELF_HASURA_STAGING_URL | n/a (see below) |
 | `nself health` | observe | yes | no | n/a | n/a (see below) |
 | `nself help-topics` | account | yes | no | n/a | n/a (see below) |
@@ -51,7 +47,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself man` | account | yes | no | n/a | n/a (see below) |
 | `nself mcp` | extend | yes | no | undocumented: HASURA_GRAPHQL_URL, INTEGRATION, NSELF_HASURA_ADMIN_SECRET, NSELF_HASURA_GRAPHQL_URL, NSENTRY_STATUS_URL, POSTGRES_URL | n/a (see below) |
 | `nself migrate` | data | yes | yes | undocumented: NSELF_AI_ENDPOINT, NSELF_MIGRATION_AUTO_APPLY, NSELF_PROFILE, NSELF_SUPABASE_SKIP | n/a (see below) |
-| `nself model` | ai | yes | no | undocumented: NSELF_OLLAMA_DEFAULT_MODEL, NSELF_OLLAMA_HOST, NSELF_OLLAMA_TIMEOUT_SECONDS, PLUGIN_AI_OLLAMA_URL | n/a (see below) |
 | `nself oauth` | account | yes | no | n/a | n/a (see below) |
 | `nself ops` | deploy | yes | no | n/a | n/a (see below) |
 | `nself plugin` | extend | yes | yes | undocumented: GOPATH, NSELF_LICENSE_SKIP_VERIFY, NSELF_LOCAL_URL, NSELF_MARKETPLACE_URL, NSELF_PING_URL, NSELF_PLUGIN_CACHE, NSELF_PLUGIN_DIR, NSELF_PLUGIN_LICENSE_KEY, NSELF_PLUGIN_REGISTRY | n/a (see below) |
@@ -81,4 +76,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself version` | account | yes | no | undocumented: BENCH_RESULTS_FILE | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 68 commands. Missing wiki page: 0. No MCP tool: 50. Env vars found but undocumented: 25.
+Total: 63 commands. Missing wiki page: 0. No MCP tool: 45. Env vars found but undocumented: 22.

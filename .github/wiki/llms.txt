@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (68)
+## Commands (63)
 
 ### nself account
 
@@ -70,20 +70,6 @@ Subcommands:
 - `pool` — Manage the Gemini API key pool (auto-provisioned + manual)
 
 Full page: [[cmd-ai]]
-
-### nself ai-studio
-
-Google AI Studio integration for local nSelf instances
-
-```
-nself ai-studio <subcommand> [flags]
-```
-
-Subcommands:
-
-- `bridge` — Start a secure AI Studio bridge via Cloudflare Tunnel
-
-Full page: [[cmd-ai-studio]]
 
 ### nself api
 
@@ -217,33 +203,6 @@ Flags:
 - `--verbose` (default false) — Print each gate command before running
 
 Full page: [[cmd-ci]]
-
-### nself claw
-
-Manage nClaw AI assistant
-
-```
-nself claw <subcommand> [flags]
-```
-
-Subcommands:
-
-- `chat` — Start an interactive chat session with nClaw
-- `config` — Show or modify nClaw CLI configuration
-- `export` — Export all nClaw data
-- `keys` — Manage API keys
-- `mcp` — Start an MCP server for nClaw
-- `memories` — List or search memories
-- `migrate` — Apply pending claw schema migrations
-- `pair` — Generate a pairing code for nClaw clients
-- `prompt` — Send a single prompt to nClaw and print the response
-- `proxy` — Start a local OpenAI-compatible proxy
-- `session` — Manage Claude Code PTY sessions
-- `status` — Show nClaw server status and health
-- `topics` — List or search topics
-- `unlock` — Temporarily unlock the web UI for first-time account setup
-
-Full page: [[cmd-claw]]
 
 ### nself clean
 
@@ -503,39 +462,6 @@ Subcommands:
 - `logs` — Stream logs for a function
 
 Full page: [[cmd-functions]]
-
-### nself gateway
-
-Manage the nSelf AI gateway (nself-ai-gateway, port 3761)
-
-```
-nself gateway <subcommand> [flags]
-```
-
-Subcommands:
-
-- `keys` — Manage AI provider keys
-- `quota` — Show AI request quota usage
-- `routes` — List gateway routing rules
-- `status` — Health-check all three AI services
-
-Full page: [[cmd-gateway]]
-
-### nself gauth
-
-Manage Google OAuth tokens for nSelf AI services
-
-```
-nself gauth <subcommand> [flags]
-```
-
-Subcommands:
-
-- `refresh` — Force-refresh a Google OAuth access token for an account
-- `revoke` — Revoke and remove a stored Google OAuth refresh token
-- `status` — Show token expiry for all provisioned gauth accounts
-
-Full page: [[cmd-gauth]]
 
 ### nself generate
 
@@ -821,25 +747,6 @@ Flags:
 - `--from-bash` (default false) — Migrate from a v0.9.9 Bash-era project (alias for: nself migrate from-bash)
 
 Full page: [[cmd-migrate]]
-
-### nself model
-
-Manage local AI models via Ollama
-
-```
-nself model <subcommand> [flags]
-```
-
-Subcommands:
-
-- `benchmark` — Run a standard prompt and report tokens/s + p99 latency
-- `list` — List all pulled Ollama models
-- `ollama` — Manage local Ollama LLM stack
-- `pull` — Pull (download) a model from the Ollama registry
-- `remove` — Remove a pulled model from Ollama to free disk space
-- `update` — Re-pull a model to fetch the latest version of its tag
-
-Full page: [[cmd-model]]
 
 ### nself oauth
 

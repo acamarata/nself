@@ -283,19 +283,19 @@
 
 <!-- BEGIN GENERATED:command-list -->
 
-**All commands (68)**
+**All commands (63)**
 
-- _A:_ [[cmd-account]] · [[cmd-admin]] · [[cmd-ai]] · [[cmd-ai-studio]] · [[cmd-api]]
+- _A:_ [[cmd-account]] · [[cmd-admin]] · [[cmd-ai]] · [[cmd-api]]
 - _B:_ [[cmd-backup]] · [[cmd-billing]] · [[cmd-build]] · [[cmd-bundle]]
-- _C:_ [[cmd-ci]] · [[cmd-claw]] · [[cmd-clean]] · [[cmd-completion]] · [[cmd-config]]
+- _C:_ [[cmd-ci]] · [[cmd-clean]] · [[cmd-completion]] · [[cmd-config]]
 - _D:_ [[cmd-db]] · [[cmd-deploy]] · [[cmd-dev]] · [[cmd-doctor]] · [[cmd-dr]]
 - _E:_ [[cmd-env]] · [[cmd-exec]]
 - _F:_ [[cmd-flags]] · [[cmd-functions]]
-- _G:_ [[cmd-gateway]] · [[cmd-gauth]] · [[cmd-generate]]
+- _G:_ [[cmd-generate]]
 - _H:_ [[cmd-health]] · [[cmd-help-topics]]
 - _I:_ [[cmd-infra]] · [[cmd-init]] · [[cmd-install]]
 - _L:_ [[cmd-license]] · [[cmd-login]] · [[cmd-logout]] · [[cmd-logs]]
-- _M:_ [[cmd-maintenance]] · [[cmd-man]] · [[cmd-mcp]] · [[cmd-migrate]] · [[cmd-model]]
+- _M:_ [[cmd-maintenance]] · [[cmd-man]] · [[cmd-mcp]] · [[cmd-migrate]]
 - _O:_ [[cmd-oauth]] · [[cmd-ops]]
 - _P:_ [[cmd-plugin]] · [[cmd-promote]]
 - _Q:_ [[cmd-queue]]

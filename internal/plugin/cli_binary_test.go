@@ -174,3 +174,34 @@ func TestIsCommandInstalled_TracksThePublishedBinary(t *testing.T) {
 		t.Error("a directory was treated as an installed command binary")
 	}
 }
+
+// TestProxyCommandWithHint_SuppressesAContradictoryHint guards a real UX bug.
+//
+// A plugin is not always named after the command it provides: `claw` lives in a
+// plugin called `claw-cli`, because a paid `claw` service plugin already owns
+// that name. The deprecation registry said "use 'nself install claw-cli'" and
+// the proxy's generic hint said "nself install claw" one line below it — two
+// different instructions, one of which does not work.
+func TestProxyCommandWithHint_SuppressesAContradictoryHint(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
+	// Empty hint: the caller has already printed an accurate one.
+	err := ProxyCommandWithHint("claw", nil, "")
+	if err == nil {
+		t.Fatal("expected an error for an uninstalled command")
+	}
+	if strings.Contains(err.Error(), "install it with") {
+		t.Errorf("emitted a second install instruction after the registry gave one: %q", err)
+	}
+
+	// No registry entry: the generic hint is the only guidance, so keep it.
+	err = ProxyCommandWithHint("frobnicate", nil, "nself install frobnicate")
+	if err == nil {
+		t.Fatal("expected an error for an uninstalled command")
+	}
+	if !strings.Contains(err.Error(), "nself install frobnicate") {
+		t.Errorf("dropped the only install hint the user would get: %q", err)
+	}
+}
