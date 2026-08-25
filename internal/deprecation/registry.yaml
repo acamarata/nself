@@ -407,6 +407,12 @@ items:
   # every future name != registry-name extraction, not just this one, but is
   # a shared-file change out of this ticket's scope and touches code other
   # CLI-R11 extraction batches are concurrently editing — left as a follow-up.
+  - name: "nself ai"
+    type: command
+    since: "v1.2.8"
+    replacement: "nself install ai-cli"
+    docs_url: "https://nself.org/docs/plugins/ai-cli"
+    phase: 1
   - name: "nself region"
     type: command
     since: "v1.2.8"

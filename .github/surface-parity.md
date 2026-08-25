@@ -14,7 +14,6 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 |---|---|---|---|---|---|
 | `nself account` | account | yes | no | undocumented: NSELF_NO_BROWSER | n/a (see below) |
 | `nself admin` | account | yes | no | undocumented: ADMIN_PORT | n/a (see below) |
-| `nself ai` | ai | yes | no | undocumented: AI_DEFAULT_MODEL, OLLAMA_BASE_URL, OLLAMA_HOST, PLUGIN_AI_INTERNAL_URL, PLUGIN_INTERNAL_SECRET | n/a (see below) |
 | `nself api` | extend | yes | no | n/a | n/a (see below) |
 | `nself backup` | data | yes | yes | n/a | n/a (see below) |
 | `nself billing` | account | yes | no | n/a | n/a (see below) |
@@ -27,7 +26,7 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself db` | data | yes | yes | n/a | n/a (see below) |
 | `nself deploy` | deploy | yes | yes | undocumented: NSELF_DEPLOY_ENV, NSELF_DEPLOY_HOST_, NSELF_FEATURE_BLUE_GREEN_DEPLOY, VERCEL_TOKEN | n/a (see below) |
 | `nself dev` | core | yes | no | n/a | n/a (see below) |
-| `nself doctor` | core | yes | yes | undocumented: NSELF_PING_API_URL | n/a (see below) |
+| `nself doctor` | core | yes | yes | undocumented: NSELF_PING_API_URL, OLLAMA_BASE_URL, OLLAMA_HOST, PLUGIN_AI_INTERNAL_URL, PLUGIN_INTERNAL_SECRET | n/a (see below) |
 | `nself dr` | deploy | yes | no | n/a | n/a (see below) |
 | `nself env` | config | yes | yes | documented | n/a (see below) |
 | `nself exec` | core | yes | no | n/a | n/a (see below) |
@@ -74,4 +73,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself version` | account | yes | no | undocumented: BENCH_RESULTS_FILE | n/a (see below) |
 | `nself webhooks` | data | yes | no | undocumented: NSELF_WEBHOOK_OUTBOX_DIR | n/a (see below) |
 
-Total: 61 commands. Missing wiki page: 0. No MCP tool: 43. Env vars found but undocumented: 21.
+Total: 60 commands. Missing wiki page: 0. No MCP tool: 42. Env vars found but undocumented: 20.

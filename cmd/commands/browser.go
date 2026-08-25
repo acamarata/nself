@@ -61,3 +61,28 @@ func openBrowserCmd(ctx context.Context, url string) *exec.Cmd {
 		return exec.CommandContext(ctx, "xdg-open", url)
 	}
 }
+
+// openBrowser opens url in the user's default browser, if opening one is
+// appropriate at all.
+//
+// This replaces a second, unguarded implementation that lived in
+// ai_pool_helpers.go until the `ai` command moved to a plugin under CLI-R11.
+// `nself login` called that one, which meant login spawned a real browser under
+// `go test` — precisely the case shouldOpenBrowser exists to prevent, and which
+// the comment above records as a 10-minute macos-14 CI timeout. Routing it
+// through the guard fixes that; the caller already prints the URL, so there is
+// nothing to fall back to.
+//
+// Fire-and-forget on purpose: the caller is waiting on an OAuth callback, not
+// on the browser, and a browser that fails to start must not take the login
+// with it.
+func openBrowser(url string) {
+	if !shouldOpenBrowser() {
+		return
+	}
+	cmd := openBrowserCmd(context.Background(), url)
+	if cmd == nil {
+		return
+	}
+	_ = cmd.Start()
+}

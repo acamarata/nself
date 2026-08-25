@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (61)
+## Commands (60)
 
 ### nself account
 
@@ -54,22 +54,6 @@ Subcommands:
 - `stop` — Stop the Admin container
 
 Full page: [[cmd-admin]]
-
-### nself ai
-
-Manage the nSelf AI plugin and local LLM stack
-
-```
-nself ai <subcommand> [flags]
-```
-
-Subcommands:
-
-- `chat` — Send a quick chat message to the local AI
-- `local` — Manage local Ollama runtime and models
-- `pool` — Manage the Gemini API key pool (auto-provisioned + manual)
-
-Full page: [[cmd-ai]]
 
 ### nself api
 

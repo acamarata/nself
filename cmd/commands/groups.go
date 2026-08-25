@@ -25,7 +25,6 @@ const (
 	groupDeploy   = "deploy"
 	groupObserve  = "observe"
 	groupExtend   = "extend"
-	groupAI       = "ai"
 	groupAccount  = "account"
 	groupAdvanced = "advanced"
 )
@@ -38,7 +37,6 @@ var commandGroups = []*cobra.Group{
 	{ID: groupDeploy, Title: "Deploy & Remote:"},
 	{ID: groupObserve, Title: "Observability:"},
 	{ID: groupExtend, Title: "Plugins & Extensions:"},
-	{ID: groupAI, Title: "AI:"},
 	{ID: groupAccount, Title: "Account & Meta:"},
 	{ID: groupAdvanced, Title: "Advanced & Enterprise:"},
 }
@@ -102,9 +100,6 @@ var commandGroupAssignments = map[string]string{
 	"license": groupExtend,
 	"mcp":     groupExtend,
 	"api":     groupExtend,
-
-	// AI.
-	"ai": groupAI,
 
 	// Account & Meta.
 	"account":     groupAccount,

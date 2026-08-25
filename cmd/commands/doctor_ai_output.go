@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/nself-org/cli/internal/installer"
+	"github.com/nself-org/cli/internal/plugin"
 	"github.com/nself-org/cli/internal/ui"
 )
 
@@ -81,8 +82,18 @@ func printWizardBanner(results []wizardStepResult, elapsed time.Duration) {
 	fmt.Println()
 	fmt.Println("  Next steps:")
 	fmt.Printf("    %s nself start           %s Boot the stack\n", ui.C(ui.Bold, ui.IconArrow), ui.C(ui.Dim, ""))
-	fmt.Printf("    %s nself ai local health  %s Check Ollama status\n", ui.C(ui.Bold, ui.IconArrow), ui.C(ui.Dim, ""))
-	fmt.Printf("    %s nself ai pool status   %s Check Gemini pool\n", ui.C(ui.Bold, ui.IconArrow), ui.C(ui.Dim, ""))
+
+	// `nself ai` moved to the ai-cli plugin under CLI-R11. Suggesting it to
+	// someone who has not installed it sends them into an install hint from a
+	// screen that is meant to be a list of things they can do right now, so the
+	// suggestion appears only when the command is actually there.
+	if plugin.IsCommandInstalled("ai") {
+		fmt.Printf("    %s nself ai local health  %s Check Ollama status\n", ui.C(ui.Bold, ui.IconArrow), ui.C(ui.Dim, ""))
+		fmt.Printf("    %s nself ai pool status   %s Check Gemini pool\n", ui.C(ui.Bold, ui.IconArrow), ui.C(ui.Dim, ""))
+	} else {
+		fmt.Printf("    %s nself install ai-cli   %s AI commands (Ollama, Gemini pool)\n", ui.C(ui.Bold, ui.IconArrow), ui.C(ui.Dim, ""))
+	}
+
 	fmt.Printf("    %s localhost:3021          %s Admin UI\n", ui.C(ui.Bold, ui.IconArrow), ui.C(ui.Dim, ""))
 	fmt.Println()
 }

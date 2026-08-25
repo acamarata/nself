@@ -140,37 +140,6 @@
     ]
   },
   {
-    "name": "ai",
-    "path": "nself ai",
-    "short": "Manage the nSelf AI plugin and local LLM stack",
-    "hidden": false,
-    "group_id": "ai",
-    "subcommands": [
-      {
-        "name": "chat",
-        "path": "nself ai chat",
-        "short": "Send a quick chat message to the local AI",
-        "hidden": false,
-        "flags": [
-          "--json",
-          "--model"
-        ]
-      },
-      {
-        "name": "local",
-        "path": "nself ai local",
-        "short": "Manage local Ollama runtime and models",
-        "hidden": false
-      },
-      {
-        "name": "pool",
-        "path": "nself ai pool",
-        "short": "Manage the Gemini API key pool (auto-provisioned + manual)",
-        "hidden": false
-      }
-    ]
-  },
-  {
     "name": "api",
     "path": "nself api",
     "short": "API versioning and deprecation tooling for operators",
