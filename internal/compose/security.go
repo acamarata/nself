@@ -64,8 +64,23 @@ func MinioSecurity() ServiceSecurity {
 // expose it to every user on the machine.
 func NginxSecurity() ServiceSecurity {
 	return ServiceSecurity{
-		CapDrop:     []string{"ALL"},
-		CapAdd:      []string{"NET_BIND_SERVICE", "DAC_READ_SEARCH"},
+		CapDrop: []string{"ALL"},
+		// The exact set a root-master nginx needs at startup, and nothing more.
+		// CapDrop: ALL means root here has no privileges except these.
+		//
+		//   NET_BIND_SERVICE  bind 80 and 443
+		//   DAC_READ_SEARCH   read the bind-mounted TLS material, which carries
+		//                     host ownership and a 0600 private key
+		//   CHOWN             hand the worker scratch dirs to uid 101 after
+		//                     creating them (chown("/var/cache/nginx/client_temp", 101))
+		//   SETUID / SETGID   fork the workers as the nginx user, which is what
+		//                     `user nginx;` in the generated config asks for
+		//
+		// Each was found by nginx refusing to start without it, one per run.
+		// DAC_OVERRIDE is deliberately NOT here: DAC_READ_SEARCH covers reading
+		// and traversing, which is all the TLS material needs, while
+		// DAC_OVERRIDE would also grant write bypass across the filesystem.
+		CapAdd:      []string{"NET_BIND_SERVICE", "DAC_READ_SEARCH", "CHOWN", "SETUID", "SETGID"},
 		SecurityOpt: []string{"no-new-privileges:true"},
 		ReadOnly:    true,
 		// nginx tmpfs handled separately in service builder (uid/gid specific)
