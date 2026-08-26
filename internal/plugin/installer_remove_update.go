@@ -101,11 +101,26 @@ func Remove(ctx context.Context, cfg *config.Config, name string, pluginDir stri
 		}
 	}
 
-	// Drop schema unless the caller wants to keep data.
-	if !keepData {
+	// The manifest has to be read before the directory goes, because it names
+	// the command binaries to unpublish and says whether there is a schema.
+	manifest := readPluginManifest(destDir)
+
+	// Drop schema unless the caller wants to keep data — and only when the
+	// plugin owns tables. Dropping reaches for Postgres through Docker, so
+	// without this a command-line plugin could be installed on a machine with
+	// no stack running and then never removed from it.
+	if !keepData && pluginOwnsTables(manifest) {
 		if err := dropPluginSchema(ctx, cfg, name); err != nil {
 			return fmt.Errorf("dropping schema for plugin %q: %w", name, err)
 		}
+	}
+
+	// Unpublish the command binary. unlinkCLIBinary has existed since the
+	// install side was written and was never called from anywhere, so removing
+	// a plugin left its command working: `nself remove foo` then `nself foo`
+	// still ran the removed plugin.
+	if err := unlinkCLIBinary(name, manifest); err != nil {
+		return fmt.Errorf("unpublishing plugin %q command: %w", name, err)
 	}
 
 	// Remove plugin directory.
