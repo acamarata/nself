@@ -121,7 +121,7 @@ func WriteCache(entry *CacheEntry) error {
 		return err
 	}
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	if err := ensureDir(dir); err != nil {
 		return fmt.Errorf("creating cache directory: %w", err)
 	}
 	data, err := json.MarshalIndent(entry, "", "  ")

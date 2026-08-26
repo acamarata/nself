@@ -69,7 +69,7 @@ func SetKey(key string) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	if err := ensureDir(dir); err != nil {
 		return fmt.Errorf("creating license directory: %w", err)
 	}
 
@@ -207,7 +207,7 @@ func MigrateLicenseFromV1(home string) error {
 	}
 
 	// Ensure v2 directory exists.
-	if err := os.MkdirAll(v2Dir, 0700); err != nil {
+	if err := ensureDir(v2Dir); err != nil {
 		return fmt.Errorf("creating v2 license directory: %w", err)
 	}
 

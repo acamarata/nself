@@ -58,7 +58,7 @@ func SetOwnerKey(key string) error {
 		return err
 	}
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	if err := ensureDir(dir); err != nil {
 		return fmt.Errorf("creating owner license directory: %w", err)
 	}
 	if err := os.WriteFile(path, []byte(key), 0600); err != nil {
