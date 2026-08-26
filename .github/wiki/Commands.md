@@ -100,10 +100,11 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 49**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 50**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
+| `nself access` | Manage SSH key access on an already-deployed server | advanced | grant, list, revoke |
 | `nself account` | Manage your nSelf account, sessions, licenses, team, and devices | account | devices, licenses, login, logout, status, team, transfer |
 | `nself admin` | Manage the nSelf Admin dashboard | account | connect, health, logs, projects, start, stop |
 | `nself backup` | Backup operations: create, list, restore, verify, prune, config, status, init-key | data | config, create, drill, init-key, list, pitr, prune, restore, restore-remote, resume, schedule, status, stream, verify |
