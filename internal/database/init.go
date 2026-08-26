@@ -7,51 +7,13 @@ import (
 	"log/slog"
 	"os/exec"
 	"strings"
-	"time"
 
 	"github.com/nself-org/cli/internal/config"
-	"github.com/nself-org/cli/internal/errs"
 )
 
-// waitForPostgres polls pg_isready inside the postgres container until it
-// succeeds or the timeout (60s) is reached. Returns errs.ErrDatabaseNotRunning
-// if postgres does not become ready in time.
-func waitForPostgres(ctx context.Context, cfg *config.Config) error {
-	container := containerName(cfg)
-	user := cfg.Postgres.User
-	if user == "" {
-		user = "postgres"
-	}
-
-	const (
-		maxWait  = 60 * time.Second
-		interval = 1 * time.Second
-	)
-
-	deadline := time.Now().Add(maxWait)
-
-	for time.Now().Before(deadline) {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		checkCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		cmd := exec.CommandContext(checkCtx, "docker", "exec", container, "pg_isready", "-U", user)
-		err := cmd.Run()
-		cancel()
-
-		if err == nil {
-			slog.Info("postgres is ready", "container", container)
-			return nil
-		}
-
-		time.Sleep(interval)
-	}
-
-	return fmt.Errorf("PostgreSQL failed to start within 60s. Run 'nself logs postgres' for details: %w", errs.ErrDatabaseNotRunning)
-}
+// waitForPostgres and its readiness-streak machinery live in readiness.go —
+// see postgresReadinessStreak for why a stable streak is required instead of
+// a first-success check.
 
 // runSQLOnDB executes a SQL statement inside the postgres container via psql,
 // targeting a specific database. This is needed for init operations that must
@@ -71,17 +33,23 @@ func runSQLOnDB(ctx context.Context, cfg *config.Config, database string, sql st
 		user = "postgres"
 	}
 
-	cmd := exec.CommandContext(ctx, "docker", "exec", container,
-		"psql", "-U", user, "-d", database, "-c", sql,
-	)
+	// Wrapped in retryTransientPG: during nself start's init phase this can
+	// still land in the postgres image's temporary-server shutdown window
+	// even after waitForPostgres reports ready (a slow enough shutdown
+	// catches the NEXT statement, not just the wait). Genuine failures
+	// (auth, bad DSN, etc.) are not transient and return immediately.
+	return retryTransientPG(ctx, func() error {
+		var stderr bytes.Buffer
+		cmd := exec.CommandContext(ctx, "docker", "exec", container,
+			"psql", "-U", user, "-d", database, "-c", sql,
+		)
+		cmd.Stderr = &stderr
 
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("psql exec failed: %s: %w", strings.TrimSpace(stderr.String()), err)
-	}
-	return nil
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("psql exec failed: %s: %w", strings.TrimSpace(stderr.String()), err)
+		}
+		return nil
+	})
 }
 
 // createDatabase creates the target database if it does not already exist.
@@ -110,16 +78,29 @@ func createDatabase(ctx context.Context, cfg *config.Config) error {
 	// and breaks. Inline the validated identifier instead. Safe because db has
 	// already passed SanitizeIdentifier above.
 	checkSQL := fmt.Sprintf("SELECT 1 FROM pg_database WHERE datname = '%s'", db)
-	cmd := exec.CommandContext(ctx, "docker", "exec", container,
-		"psql", "-U", user, "-d", "postgres", "-tAc", checkSQL,
-	)
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	// See run 32948887818: this exact query is what landed in the postgres
+	// image's temporary-server shutdown window on a clean first run, right
+	// after waitForPostgres reported ready. Wrapped in retryTransientPG so
+	// that race no longer surfaces as a hard failure; non-transient errors
+	// (auth, bad role, etc.) still return immediately with their real message.
+	var stdout bytes.Buffer
+	err := retryTransientPG(ctx, func() error {
+		stdout.Reset()
+		var stderr bytes.Buffer
+		cmd := exec.CommandContext(ctx, "docker", "exec", container,
+			"psql", "-U", user, "-d", "postgres", "-tAc", checkSQL,
+		)
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
 
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("check database existence: %s: %w", strings.TrimSpace(stderr.String()), err)
+		if runErr := cmd.Run(); runErr != nil {
+			return fmt.Errorf("%s: %w", strings.TrimSpace(stderr.String()), runErr)
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("check database existence: %w", err)
 	}
 
 	if strings.TrimSpace(stdout.String()) == "1" {
@@ -205,7 +186,8 @@ func createExtensions(ctx context.Context, cfg *config.Config) error {
 // nself startup sequence.
 //
 // Steps:
-//  1. Wait for pg_isready (max 60s, check every 1s)
+//  1. Wait for a stable streak of successful readiness probes (max 60s, see
+//     postgresReadinessStreak)
 //  2. CREATE DATABASE IF NOT EXISTS
 //  3. CREATE SCHEMA IF NOT EXISTS auth, storage, public
 //  4. GRANT ALL ON SCHEMA auth, storage, public TO user
