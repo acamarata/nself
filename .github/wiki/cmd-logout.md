@@ -13,7 +13,7 @@ nself logout [flags]
 ## Description
 
 <!-- BEGIN PROSE:description -->
-`nself logout` clears the stored session token from the local credential store (`~/.config/nself/credentials.json`). After logging out, commands that require cloud authentication will prompt you to log in again.
+`nself logout` clears the stored session token from the local credential store (`~/.nself/auth.json`). After logging out, commands that require cloud authentication will prompt you to log in again.
 
 Plugin license keys are NOT removed by `nself logout`. To clear license keys, use `nself license clear`.
 <!-- END PROSE:description -->
