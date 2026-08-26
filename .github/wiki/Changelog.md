@@ -3,6 +3,46 @@
 All notable changes to the ɳSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
+## [1.3.2] — 2026-08-25
+
+### Fixed
+
+- **`brew install nself` was broken** — the 1.3.0 and 1.3.1 formula bumps changed
+  the version and the tarball URLs but not the sha256 hashes, which still
+  belonged to 1.2.7. Both now match the release. The audit step meant to catch
+  this could not run: it was gated on a `release` event the tap never emits, and
+  its parser collapsed the dual-arch formula's two hashes into one 128-character
+  string that failed its own format check. It now runs on every push and checks
+  each arch.
+- **A "generate local SSL certificates" call reported success while doing
+  nothing** — nSelf Admin ran `nself ssl bootstrap` and fell back to mkcert on
+  failure, but `bootstrap` has never been a subcommand of `nself ssl`, and cobra
+  answers an unknown subcommand by printing help and exiting 0. The attempt
+  never failed, so the fallback never ran. Fixed in the Admin UI.
+
+### Changed
+
+- **Permissions declared in the descriptive form are now enforced.** 121
+  published plugins declare permissions as `{"database": ["create"],
+  "network": ["api.stripe.com"]}` rather than the flat canonical list, and that
+  form was recorded but never validated — leaving those plugins outside a check
+  that exists to be fail-closed. It is now reduced to the canonical vocabulary
+  and validated like everything else. Every mapping widens: a named host is
+  enforced as general internet access, and any database verb that is not plainly
+  a read is enforced as a write. `nself plugin info` prints what a declaration is
+  *enforced as*, since the two differ.
+- **49 commands, down from 52.** `release`, `flags` and `maintenance` moved to
+  plugins. `release` is the clearest of the whole effort: 1,523 lines
+  orchestrating the nSelf project's own release cascade, shipped inside the
+  binary self-hosters install. `flags` is a client for the feature-flags plugin
+  and does nothing without it. `maintenance` is disk cleanup and a scheduler.
+- **The remaining six of the nine previously-undecided commands stay in the
+  core**, with reasons recorded: `dev` is the golden path, `remove` is
+  `install`'s counterpart, `oauth` serves the Auth service nSelf ships,
+  `security` and `verify-sbom` are covered by the Security-Always-Free doctrine,
+  and `ops` drives the build and compose engines — 12,186 lines of closure that a
+  plugin would have to duplicate.
+
 ## [1.3.1] — 2026-08-25
 
 Fixes found by installing the 1.3.0 plugins with the 1.3.0 binary. Upgrade if
