@@ -33,3 +33,31 @@ func ConfirmDestruction(projectName string, r io.Reader, w io.Writer) error {
 
 	return nil
 }
+
+// ConfirmHostWidePrune prompts the user to type "yes" before a command runs a
+// host-wide `docker system prune`. Unlike ConfirmDestruction there is no
+// project name to type against: the operation is not scoped to a project at
+// all, it affects every Docker resource on the machine, so the prompt states
+// that plainly instead. Returns nil only when the typed response is exactly
+// "yes" (case-insensitive). Returns ErrDestructionCanceled on any other input,
+// including EOF.
+func ConfirmHostWidePrune(r io.Reader, w io.Writer) error {
+	fmt.Fprintln(w, "⚠  This will run a host-wide 'docker system prune'.")
+	fmt.Fprintln(w, "   It removes stopped containers, unused networks, unused images, and")
+	fmt.Fprintln(w, "   build cache for EVERY Docker project on this machine, not just the")
+	fmt.Fprintln(w, "   current one. Named volumes are not affected.")
+	fmt.Fprintf(w, "   Type \"yes\" to continue: ")
+
+	scanner := bufio.NewScanner(r)
+	if !scanner.Scan() {
+		// EOF or read error — treat as canceled
+		return ErrDestructionCanceled
+	}
+
+	input := strings.ToLower(strings.TrimSpace(scanner.Text()))
+	if input != "yes" {
+		return ErrDestructionCanceled
+	}
+
+	return nil
+}

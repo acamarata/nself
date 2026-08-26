@@ -13,11 +13,13 @@ nself clean [flags]
 ## Description
 
 <!-- BEGIN PROSE:description -->
-`nself clean` removes Docker resources (stopped containers, unused images, dangling volumes, orphaned networks) scoped to the current ɳSelf project. By default it uses Docker label filters to only remove resources belonging to the current project, other Docker projects on your machine are not affected.
+By default, `nself clean` removes generated artifacts scoped to the current ɳSelf project: `docker-compose.yml`, generated `nginx/sites/` config files, the `.nself/cache/` build cache, and Docker's build cache. Other Docker projects on your machine are not affected.
 
-`nself clean` does **not** delete your `.env` files, data directories, or any user data. It only removes generated Docker artifacts. To remove generated configuration files (nginx configs, `docker-compose.yml`), use `nself reset` instead.
+`nself clean` does **not** delete your `.env` files, data directories, or any user data. Docker volumes and container data are preserved. To also remove Docker volumes and other project state, use `nself reset` instead.
 
-`nself clean` takes no flags today, it always scopes to the current project. A system-wide `docker system prune` is not something this command runs, use the `docker` CLI directly for that.
+With `--all`, clean additionally runs a host-wide `docker system prune --all`, removing unused containers, unused networks, unused images, and build cache for every Docker project on the machine, not just this one. Named volumes are never touched by `--all`; there is no flag on `nself clean` that deletes volumes.
+
+Because `--all` affects Docker resources outside the current project, it prompts for confirmation before running: type `yes` to proceed, anything else (including piping in empty input) cancels. Pass `--yes` alongside `--all` to skip the prompt for scripted or CI use.
 <!-- END PROSE:description -->
 
 ## Flags
@@ -25,6 +27,8 @@ nself clean [flags]
 <!-- BEGIN GENERATED:flags -->
 | Flag | Default | Description |
 |------|---------|-------------|
+| `--all` | `false` | Also run a host-wide 'docker system prune' affecting every Docker project on this machine (destructive; requires confirmation) |
+| `--yes` | `false` | Skip the --all confirmation prompt (for CI/CD) |
 | `--help`, `-h` | — | Show help |
 <!-- END GENERATED:flags -->
 
@@ -32,19 +36,31 @@ nself clean [flags]
 
 <!-- BEGIN PROSE:examples -->
 ```bash
-# Project-scoped cleanup (safe, recommended)
+# Project-scoped cleanup (default, recommended)
 nself clean
+
+# Also prune Docker resources across the whole machine (prompts for confirmation)
+nself clean --all
+
+# Same, skipping the confirmation prompt (CI/CD)
+nself clean --all --yes
 ```
 
 **What is preserved:**
 - `.env` and all `.env.*` variant files
 - `data/` and `volumes/` directories
-- Your application source code
+- Docker volumes and container data, on the default path and with `--all`
 
-**What is removed:**
-- Stopped ɳSelf project containers
-- Unused images tagged to this project
-- Dangling volumes belonging to this project
+**What is removed by default:**
+- `docker-compose.yml` and generated `nginx/sites/` config files
+- The `.nself/cache/` build cache
+- Docker build cache
+
+**What `--all` additionally removes, host-wide:**
+- Stopped containers from every Docker project on the machine
+- Unused networks
+- Unused images (not just images tagged to this project)
+- Build cache from every project
 <!-- END PROSE:examples -->
 
 ## See Also
