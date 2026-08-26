@@ -21,6 +21,7 @@ func init() {
 	doctorCmd.Flags().Bool("verbose", false, "Detailed diagnostics")
 	doctorCmd.Flags().Bool("full", false, "Run all checks including network and memory (slower)")
 	doctorCmd.Flags().Bool("deep", false, "Alias for --full (run all checks)")
+	doctorCmd.Flags().Bool("quick", false, "Fast check: infrastructure, disk, ports, config, plugins, license, container health only (the default check set; explicit opt-in overrides --full/--deep)")
 	doctorCmd.Flags().Bool("fix", false, "Auto-fix safe issues")
 	doctorCmd.Flags().Bool("json", false, "JSON output")
 	doctorCmd.Flags().String("section", "", "Run only a specific section (system, core, backups, license, plugins, monitoring, security)")

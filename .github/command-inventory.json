@@ -824,6 +824,7 @@
       "--install-check",
       "--json",
       "--only",
+      "--quick",
       "--section",
       "--skip",
       "--skip-ollama",

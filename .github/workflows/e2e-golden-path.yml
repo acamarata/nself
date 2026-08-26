@@ -144,18 +144,56 @@ jobs:
           retention-days: 90
 
       - name: Summarise result
+        # CLI-R05 follow-up: this step wrote its header to GITHUB_STEP_SUMMARY
+        # but piped the actual pass/fail table to the python3 subshell's own
+        # stdout (the job log) instead of the summary file, so the step
+        # summary was effectively just a lone "### Golden Path Result" line —
+        # a scheduled run could fail for five weeks and the one place meant to
+        # surface it stayed blank. STEP_LABELS below mirrors the 13-step names
+        # from scripts/golden-path.sh's STEP_BASELINE comments so a failure is
+        # named, not just numbered.
         if: always()
         run: |
-          if [ -f /tmp/golden-path-report.json ]; then
-            echo "### Golden Path Result" >> "${GITHUB_STEP_SUMMARY}"
-            python3 - <<PYEOF
+          {
+            echo "### Golden Path Result"
+            if [ -f /tmp/golden-path-report.json ]; then
+              python3 - <<'PYEOF'
           import json
+
+          STEP_LABELS = {
+              "1": "brew/curl install", "2": "create test project dir",
+              "3": "nself init", "4": "nself build", "5": "nself start",
+              "6": "wait healthy", "7": "doctor --quick",
+              "8": "plugin install ai", "9": "plugin install claw",
+              "10": "license set", "11": "admin start", "12": "curl health",
+              "13": "claw readiness",
+          }
+
           with open("/tmp/golden-path-report.json") as f:
               r = json.load(f)
-          icon = "✅" if r.get("overall") == "pass" else "❌"
-          print(f"| Overall | {icon} {r.get('overall','?').upper()} |")
-          print(f"| Pass    | {r.get('pass',0)} |")
-          print(f"| Fail    | {r.get('fail',0)} |")
-          print(f"| Warn    | {r.get('warn',0)} |")
+          overall = r.get("overall", "?")
+          icon = "✅" if overall == "pass" else "❌"
+          print(f"| Overall | {icon} {overall.upper()} |")
+          print(f"| Pass    | {r.get('pass', 0)} |")
+          print(f"| Fail    | {r.get('fail', 0)} |")
+          print(f"| Warn    | {r.get('warn', 0)} |")
+
+          failing = {
+              idx: s for idx, s in r.get("steps", {}).items()
+              if s.get("status") == "fail"
+          }
+          if failing:
+              print()
+              print("**Failing step(s):**")
+              for idx, s in sorted(failing.items(), key=lambda kv: int(kv[0])):
+                  label = STEP_LABELS.get(idx, "unknown step")
+                  note = s.get("note", "")
+                  print(f"- Step {idx} ({label}): {note}" if note else f"- Step {idx} ({label})")
+          elif overall != "pass":
+              print()
+              print("_Overall failed but no individual step reported fail — check the job log._")
           PYEOF
-          fi
+            else
+              echo "❌ FAIL — no /tmp/golden-path-report.json was produced (the smoke script exited before writing a report; see the \"Run golden-path smoke\" step log)"
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"
