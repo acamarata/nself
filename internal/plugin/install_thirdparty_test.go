@@ -138,7 +138,7 @@ func TestInstallFromURL_CorrectChecksumPassesVerification(t *testing.T) {
 	cfg := &config.Config{}
 
 	err := InstallFromURL(context.Background(), cfg, srv.URL+"/plugin.tar.gz", pluginDir, correctChecksum)
-	assertFailsAtSchemaNotEarlier(t, err)
+	assertGotPastVerification(t, err)
 }
 
 // TestInstallFromURL_NoChecksumWarnsAndProceeds verifies that omitting
@@ -157,7 +157,7 @@ func TestInstallFromURL_NoChecksumWarnsAndProceeds(t *testing.T) {
 	cfg := &config.Config{}
 
 	err := InstallFromURL(context.Background(), cfg, srv.URL+"/plugin.tar.gz", pluginDir, "")
-	assertFailsAtSchemaNotEarlier(t, err)
+	assertGotPastVerification(t, err)
 }
 
 // TestInstallFromURL_InvalidManifest verifies a plugin.json missing required
@@ -192,21 +192,29 @@ func TestInstallFromURL_InvalidManifest(t *testing.T) {
 // success can't be observed here without Docker — but a failure at THAT
 // specific step proves checksum verification, extraction, and manifest
 // validation all passed.
-func assertFailsAtSchemaNotEarlier(t *testing.T, err error) {
+func assertGotPastVerification(t *testing.T, err error) {
 	t.Helper()
+
+	// This used to assert the install FAILED at schema creation, using "no
+	// Docker in the test environment" as the signal that everything before it
+	// had passed. That stopped being true when schema creation started being
+	// skipped for a plugin that owns no tables — which the fixture is — so the
+	// install now succeeds and the old assertion failed on its own proxy.
+	//
+	// What these tests actually care about is that verification passed and
+	// nothing earlier in the pipeline objected. Success means exactly that.
 	if err == nil {
-		t.Fatal("expected an error from the schema-creation step (no Docker in test env), got nil")
+		return
 	}
-	if strings.Contains(err.Error(), "checksum") {
-		t.Errorf("did not expect a checksum error, got: %v", err)
-	}
-	if strings.Contains(err.Error(), "missing required fields") {
-		t.Errorf("did not expect a manifest validation error, got: %v", err)
-	}
-	if strings.Contains(err.Error(), "extracting") {
-		t.Errorf("did not expect an extraction error, got: %v", err)
-	}
-	if !strings.Contains(err.Error(), "schema") {
-		t.Errorf("expected the failure to occur at schema creation, got: %v", err)
+
+	for _, stage := range []struct{ token, what string }{
+		{"checksum", "checksum verification"},
+		{"missing required fields", "manifest validation"},
+		{"extracting", "extraction"},
+		{"unknown permission", "permission validation"},
+	} {
+		if strings.Contains(err.Error(), stage.token) {
+			t.Errorf("install failed at %s, which should have passed: %v", stage.what, err)
+		}
 	}
 }

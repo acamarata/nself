@@ -175,9 +175,26 @@ func InstallFromURL(ctx context.Context, cfg *config.Config, sourceURL string, p
 		return fmt.Errorf("installing third-party plugin %q: %w", manifest.Name, err)
 	}
 
-	if err := createPluginSchema(ctx, cfg, manifest.Name); err != nil {
+	// Publish the command binary, same as the registry install path. Without
+	// this a third-party CLI plugin installs cleanly and its command does not
+	// exist — the exact failure the registry path was fixed for, sitting
+	// unfixed in the parallel path because nobody had installed a third-party
+	// plugin end to end.
+	if err := linkCLIBinary(destDir, manifest.Name, manifest); err != nil {
 		rollbackInstall(ctx, cfg, manifest.Name, destDir)
-		return fmt.Errorf("creating schema for third-party plugin %q: %w", manifest.Name, err)
+		return fmt.Errorf("publishing third-party plugin %q command: %w", manifest.Name, err)
+	}
+
+	// Skipped for a plugin that owns no tables, same as the registry install
+	// path. Creating an empty schema reaches for Postgres through Docker, so a
+	// command-line plugin could not be installed on a machine with no stack
+	// running. The registry path was fixed for this; this one was missed, and
+	// only turned up by installing a third-party plugin end to end.
+	if pluginOwnsTables(manifest) {
+		if err := createPluginSchema(ctx, cfg, manifest.Name); err != nil {
+			rollbackInstall(ctx, cfg, manifest.Name, destDir)
+			return fmt.Errorf("creating schema for third-party plugin %q: %w", manifest.Name, err)
+		}
 	}
 
 	fmt.Fprintf(os.Stderr, "Plugin %q (v%s) installed from third-party source %s.\n", manifest.Name, manifest.Version, u.Host)
