@@ -81,6 +81,19 @@ jobs:
           done
           docker info
 
+      # Length only, never the value: this tells us whether the secret reached
+      # the job at all, which "accepts 1 arg(s), received 0" three steps later
+      # does not.
+      - name: Check the license secret reached the job
+        env:
+          NSELF_PLUGIN_LICENSE_KEY_OWNER: ${{ secrets.NSELF_PLUGIN_LICENSE_KEY_OWNER }}
+        run: |
+          if [ -z "${NSELF_PLUGIN_LICENSE_KEY_OWNER}" ]; then
+            echo "NSELF_PLUGIN_LICENSE_KEY_OWNER is EMPTY in this job"
+          else
+            echo "NSELF_PLUGIN_LICENSE_KEY_OWNER present (${#NSELF_PLUGIN_LICENSE_KEY_OWNER} chars)"
+          fi
+
       - name: Run golden-path smoke
         env:
           NSELF_PLUGIN_LICENSE_KEY_OWNER: ${{ secrets.NSELF_PLUGIN_LICENSE_KEY_OWNER }}

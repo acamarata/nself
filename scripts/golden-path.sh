@@ -411,6 +411,22 @@ run_step 7 "nself doctor --quick" \
 [ "${STEP_STATUS[7]}" = "fail" ] && { write_report; exit 1; }
 
 # ── Step 8: license set ──────────────────────────────────────────────────────
+# Fail here with something readable rather than letting an empty variable become
+# a missing argument. Unset, the command below expands to `nself license set`
+# and cobra reports "accepts 1 arg(s), received 0", which says nothing about the
+# secret being absent.
+if [ -z "${NSELF_PLUGIN_LICENSE_KEY_OWNER:-}" ]; then
+  err "NSELF_PLUGIN_LICENSE_KEY_OWNER is empty."
+  err "Steps 8 to 10 need it: the ai and claw plugins are license-gated."
+  err "In CI it comes from the repository secret of the same name, wired into"
+  err "the \"Run golden-path smoke\" step in .github/workflows/e2e-golden-path.yml."
+  STEP_STATUS[8]="fail"
+  STEP_NOTE[8]="NSELF_PLUGIN_LICENSE_KEY_OWNER unset"
+  FAIL=$((FAIL + 1))
+  write_report
+  exit 1
+fi
+
 # Must come BEFORE the plugin installs below. ai and claw are license-gated, so
 # installing them first failed every run with
 #   error installing "ai": plugin "ai" requires a license key
