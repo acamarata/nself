@@ -127,7 +127,7 @@ func AddKey(key string) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	if err := ensureDir(dir); err != nil {
 		return fmt.Errorf("creating license directory: %w", err)
 	}
 
@@ -236,12 +236,17 @@ func SetKeyReplaceAll(key string) (int, error) {
 	existing := collectStoredKeys(dir)
 	count := len(existing)
 
-	if err := clearAllKeyFiles(dir); err != nil {
-		return 0, err
+	// ensureDir first: clearAllKeyFiles removes paths UNDER dir, so if an older
+	// layout left a regular file at dir itself, every remove returns ENOTDIR
+	// before the directory is ever repaired. Doing the work before making its
+	// precondition true is what produced "remove .../license/key: not a
+	// directory" on upgraded machines.
+	if err := ensureDir(dir); err != nil {
+		return 0, fmt.Errorf("creating license directory: %w", err)
 	}
 
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		return 0, fmt.Errorf("creating license directory: %w", err)
+	if err := clearAllKeyFiles(dir); err != nil {
+		return 0, err
 	}
 
 	path := dir + "/" + keyFile
@@ -274,21 +279,4 @@ func collectStoredKeys(dir string) []string {
 	}
 
 	return keys
-}
-
-// clearAllKeyFiles removes all key files from the license directory.
-func clearAllKeyFiles(dir string) error {
-	// Primary.
-	path := dir + "/" + keyFile
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	// Numbered.
-	for i := 2; i <= 10; i++ {
-		path := fmt.Sprintf("%s/%s.%d", dir, keyFile, i)
-		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-			return err
-		}
-	}
-	return nil
 }
