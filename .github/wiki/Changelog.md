@@ -3,6 +3,38 @@
 All notable changes to the ɳSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
+## [1.3.3] — 2026-08-26
+
+Plugin lifecycle fixes, all found by installing and removing plugins end to end
+rather than by reading code.
+
+### Fixed
+
+- **`nself remove` left the command working.** The function that unpublishes a
+  plugin's command binary had existed since the install side was written and was
+  never called from anywhere, so `nself remove foo` followed by `nself foo`
+  still ran the removed plugin.
+- **Removing a command-line plugin required Docker and Postgres.** The schema
+  drop ran unconditionally, so a plugin that installs fine on a machine with no
+  stack could never be removed from it.
+- **An installed plugin's manifest was never being read.** Release tarballs
+  carry a leading directory and extraction keeps it, so the manifest sits
+  nested; the lookup only checked the root and returned nothing for every plugin
+  installed from a release. Each caller then silently used its fallback — which
+  is why removal demanded a database it did not need. This is the cause under
+  the two fixes above.
+- **A third-party CLI plugin installed and its command did not exist**, and
+  **installing a third-party plugin with no tables required Docker.** Two fixes
+  previously made to the registry install path had never been made to the
+  third-party one.
+
+### Changed
+
+- The install, third-party install and remove paths are now covered by a parity
+  test that asserts none of them forgets a step its siblings perform. Every bug
+  in this release is one path having drifted from another, which is not
+  something a per-path test can see.
+
 ## [1.3.2] — 2026-08-25
 
 ### Fixed
