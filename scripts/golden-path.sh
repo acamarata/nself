@@ -446,6 +446,33 @@ if [ -z "${NSELF_LICENSE_KEY_TRIMMED}" ]; then
   exit 1
 fi
 
+# Validate the SHAPE before spending a step on it. The secret being present is
+# not the same as it being a license key: on 2026-08-26 the repo secret was set
+# (87 chars) but carried no recognised prefix, so step 8 died with
+#   Error: setting license key: unknown key prefix: invalid license key format
+# which names neither the secret nor what a valid key looks like. Whoever reads
+# a failed nightly should not have to go find the prefix list in Go source.
+#
+# The prefixes are the accepted tiers in internal/license/manager.go
+# (validPrefixes). Only the prefix is checked here, never the value, and the
+# value is never printed.
+case "${NSELF_LICENSE_KEY_TRIMMED}" in
+  nself_owner_*|nself_ent_*|nself_max_*|nself_pro_*) ;;
+  *)
+    err "NSELF_PLUGIN_LICENSE_KEY_OWNER is set but is not a license key."
+    err "It carries no recognised prefix. Valid prefixes are nself_owner_,"
+    err "nself_ent_, nself_max_ and nself_pro_ (internal/license/manager.go)."
+    err "Length seen: ${#NSELF_LICENSE_KEY_TRIMMED} characters. The value is not printed."
+    err "Fix the repository secret:"
+    err "  gh secret set NSELF_PLUGIN_LICENSE_KEY_OWNER --repo nself-org/cli"
+    STEP_STATUS[8]="fail"
+    STEP_NOTE[8]="license key has no recognised prefix"
+    FAIL=$((FAIL + 1))
+    write_report
+    exit 1
+    ;;
+esac
+
 # Passed as a positional argument, not interpolated into the command string.
 # Interpolating means the value is re-parsed by the shell, so a newline splits
 # it into a second command and a leading '#' would comment the rest away. It is
