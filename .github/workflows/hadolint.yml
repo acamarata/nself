@@ -6,12 +6,14 @@ on:
       - "**/Dockerfile"
       - "**/Dockerfile.*"
       - "**/.hadolint.yaml"
+      - '.github/workflows/hadolint.yml'
     branches: [main]
   pull_request:
     paths:
       - "**/Dockerfile"
       - "**/Dockerfile.*"
       - "**/.hadolint.yaml"
+      - '.github/workflows/hadolint.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
