@@ -12,11 +12,8 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself account` | Manage your nSelf account, sessions, licenses, team, and devices | — | devices, licenses, login, logout, status, team, transfer |
 | `nself admin` | Manage the nSelf Admin dashboard | — | connect, health, logs, projects, start, stop |
 | `nself ai` | Manage the nSelf AI plugin and local LLM stack | — | chat, local, pool |
-<<<<<<< HEAD
 | `nself ai-studio` | Google AI Studio integration for local nSelf instances | — | bridge |
-=======
 | `nself alerts` | Manage Prometheus alert rules and silences | — | list, silence, test |
->>>>>>> worktree-agent-a68c0a637e3f75d46
 | `nself api` | API versioning and deprecation tooling for operators | — | changelog, deprecation-check, version |
 | `nself backup` | Backup operations: create, list, restore, verify, prune, config, status, init-key | — | config, create, drill, init-key, list, prune, restore, restore-remote, resume, schedule, status, stream, verify |
 | `nself billing` | Billing operations: usage, invoice-preview, report, retry-event | — | invoice-preview, report, retry-event, usage |
@@ -51,11 +48,8 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 | `nself mcp` | Start the nSelf MCP server | — | — |
 | `nself migrate` | Detect and migrate legacy artifacts to the current nSelf version | — | detect, firebase, from-bash, generate, rollback, run, supabase, watch |
 | `nself migrate-from-v099` | Migrate v0.9.9 home-level state (license key, channel, ssh keys) to v1.x layout | — | — |
-<<<<<<< HEAD
 | `nself model` | Manage local AI models via Ollama | — | benchmark, list, pull, remove, update |
-=======
 | `nself monitor` | Monitoring stack management | — | upgrade-dashboards |
->>>>>>> worktree-agent-a68c0a637e3f75d46
 | `nself oauth` | Manage OAuth provider tokens | — | refresh |
 | `nself ops` | Ops-profile deployment and management | — | deploy |
 | `nself pitr` | Point-in-time recovery: enable, disable, status, base-backup, restore | — | base-backup, disable, enable, restore, status |
