@@ -189,8 +189,8 @@ jobs:
               "1": "brew/curl install", "2": "create test project dir",
               "3": "nself init", "4": "nself build", "5": "nself start",
               "6": "wait healthy", "7": "doctor --quick",
-              "8": "plugin install ai", "9": "plugin install claw",
-              "10": "license set", "11": "admin start", "12": "curl health",
+              "8": "license set", "9": "plugin install ai",
+              "10": "plugin install claw", "11": "admin start", "12": "curl health",
               "13": "claw readiness",
           }
 

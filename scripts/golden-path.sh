@@ -74,9 +74,9 @@ declare -A STEP_BASELINE=(
   [5]=20    # nself start
   [6]=60    # wait healthy
   [7]=15    # doctor --quick
-  [8]=30    # plugin install ai
-  [9]=30    # plugin install claw
-  [10]=5    # license set
+  [8]=5     # license set (must precede the licensed plugin installs below)
+  [9]=30    # plugin install ai
+  [10]=30   # plugin install claw
   [11]=10   # admin start
   [12]=5    # curl health
   [13]=10   # claw readiness
@@ -410,19 +410,23 @@ run_step 7 "nself doctor --quick" \
   bash -c "cd ${PROJECT_DIR} && nself doctor --quick; rc=\$?; [ \$rc -eq 2 ] && exit 0; exit \$rc"
 [ "${STEP_STATUS[7]}" = "fail" ] && { write_report; exit 1; }
 
-# ── Step 8: plugin install ai ────────────────────────────────────────────────
-run_step 8 "nself plugin install ai" \
-  bash -c "cd ${PROJECT_DIR} && nself plugin install ai"
+# ── Step 8: license set ──────────────────────────────────────────────────────
+# Must come BEFORE the plugin installs below. ai and claw are license-gated, so
+# installing them first failed every run with
+#   error installing "ai": plugin "ai" requires a license key
+# The license step existed, it just ran after the two steps that needed it.
+run_step 8 "nself license set <owner-key>" \
+  bash -c "cd ${PROJECT_DIR} && nself license set ${NSELF_PLUGIN_LICENSE_KEY_OWNER}"
 [ "${STEP_STATUS[8]}" = "fail" ] && { write_report; exit 1; }
 
-# ── Step 9: plugin install claw ──────────────────────────────────────────────
-run_step 9 "nself plugin install claw" \
-  bash -c "cd ${PROJECT_DIR} && nself plugin install claw"
+# ── Step 9: plugin install ai ────────────────────────────────────────────────
+run_step 9 "nself plugin install ai" \
+  bash -c "cd ${PROJECT_DIR} && nself plugin install ai"
 [ "${STEP_STATUS[9]}" = "fail" ] && { write_report; exit 1; }
 
-# ── Step 10: license set ─────────────────────────────────────────────────────
-run_step 10 "nself license set <owner-key>" \
-  bash -c "cd ${PROJECT_DIR} && nself license set ${NSELF_PLUGIN_LICENSE_KEY_OWNER}"
+# ── Step 10: plugin install claw ─────────────────────────────────────────────
+run_step 10 "nself plugin install claw" \
+  bash -c "cd ${PROJECT_DIR} && nself plugin install claw"
 [ "${STEP_STATUS[10]}" = "fail" ] && { write_report; exit 1; }
 
 # ── Step 11: nself admin start ───────────────────────────────────────────────
