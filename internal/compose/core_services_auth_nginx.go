@@ -170,9 +170,22 @@ func (g *Generator) buildNginxService(dc *DockerCompose) ServiceConfig {
 			"./nginx/includes:/etc/nginx/includes:ro",
 			"./ssl:/etc/nginx/ssl:ro",
 		},
+		// mode=0777 because two different uids write here. The master starts as
+		// root (the generated nginx.conf declares `user nginx;`, which requires
+		// it) and creates /var/cache/nginx/client_temp and the pid file at
+		// startup; the workers it forks run as uid 101 and write to the same
+		// paths afterwards. CapDrop: ALL removes root's write bypass, so a tmpfs
+		// owned by 101 alone left the master unable to mkdir and nginx exited:
+		//   [emerg] mkdir() "/var/cache/nginx/client_temp" failed (13: Permission denied)
+		//
+		// The uid/gid stay 101 so the workers own what they create. These are
+		// per-container tmpfs mounts holding scratch state, not a boundary
+		// between principals, so the permissive mode costs nothing. Widening
+		// the capability set to DAC_OVERRIDE instead would grant write bypass
+		// across the whole filesystem to fix two scratch directories.
 		Tmpfs: []string{
-			"/var/cache/nginx:uid=101,gid=101",
-			"/var/run:uid=101,gid=101",
+			"/var/cache/nginx:uid=101,gid=101,mode=0777",
+			"/var/run:uid=101,gid=101,mode=0777",
 		},
 		Healthcheck: &Healthcheck{
 			Test:        []string{"CMD-SHELL", "wget --no-check-certificate --no-verbose --tries=1 -O /dev/null https://127.0.0.1/health 2>/dev/null || exit 1"},
