@@ -117,6 +117,18 @@ jobs:
           path: /tmp/golden-path-report.json
           retention-days: 90
 
+      # The per-step diagnostics (nself version, docker ps, doctor --quick) are
+      # the only record of WHY a step failed, and the runner is discarded when
+      # the job ends. Without this they were written and thrown away.
+      - name: Upload golden-path diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: golden-path-diagnostics-${{ github.run_id }}
+          path: /tmp/golden-path-diag-step*.txt
+          if-no-files-found: ignore
+          retention-days: 90
+
       - name: Archive result to .github/golden-path-results/
         if: always()
         run: |

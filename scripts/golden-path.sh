@@ -112,6 +112,15 @@ capture_diagnostics() {
     ls -la "${WORK_DIR:-/tmp}" 2>&1 || true
   } > "${diag_file}" 2>&1
   warn "Diagnostics captured at ${diag_file}"
+
+  # Print them too. The file alone is useless in CI: the runner is torn down
+  # after the job, so unless the diagnostics reach the job log or an artifact,
+  # a failure here says only "not healthy" and nothing about WHY. The health
+  # wait polls `nself doctor --quick >/dev/null 2>&1`, discarding exactly the
+  # output that would identify the failing check.
+  echo "--- begin diagnostics (step ${step}) ---"
+  cat "${diag_file}" 2>/dev/null || true
+  echo "--- end diagnostics (step ${step}) ---"
 }
 
 run_step() {
