@@ -104,10 +104,27 @@ capture_diagnostics() {
     echo "=== golden-path diagnostic: step ${step} ==="
     echo "--- nself version ---"
     nself version 2>&1 || true
-    echo "--- docker ps ---"
-    docker ps 2>&1 || true
-    echo "--- nself doctor --quick ---"
-    nself doctor --quick 2>&1 || true
+    echo "--- docker ps -a (includes restarting/exited) ---"
+    docker ps -a 2>&1 || true
+    # doctor is project-scoped: run it where the project actually is. Run from
+    # the wrong directory it reports "no .env or .env.dev found" and a missing
+    # JWT secret, which describes the empty cwd rather than the stack under
+    # test. The health wait itself runs inside PROJECT_DIR (see its caller), so
+    # diagnostics that do not were reporting on a different thing entirely.
+    echo "--- nself doctor --quick (in ${PROJECT_DIR:-<unset>}) ---"
+    if [ -n "${PROJECT_DIR:-}" ] && [ -d "${PROJECT_DIR}" ]; then
+      (cd "${PROJECT_DIR}" && nself doctor --quick 2>&1) || true
+    else
+      echo "PROJECT_DIR not set yet; skipping project-scoped doctor run"
+    fi
+    # Logs for anything not running. A container in Restarting is the usual
+    # reason doctor fails (checkContainerHealth fails any state != running),
+    # and its exit reason is only in its own logs.
+    echo "--- logs for containers not in a running state ---"
+    for c in $(docker ps -a --format '{{.Names}} {{.State}}' 2>/dev/null | awk '$2 != "running" {print $1}'); do
+      echo "=== ${c} (last 40 lines) ==="
+      docker logs --tail 40 "${c}" 2>&1 || true
+    done
     echo "--- work dir ---"
     ls -la "${WORK_DIR:-/tmp}" 2>&1 || true
   } > "${diag_file}" 2>&1
