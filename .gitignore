@@ -13,6 +13,13 @@ nself-darwin-*
 nself-linux-*
 nself-windows-*
 
+# Compiled helpers from tools/ land at the repo root when built with a bare
+# `go build ./tools/<name>`. They are large (flagaudit is ~38 MB) and the root
+# allowlist in .github/workflows/clean-root.yml does not permit them, so an
+# accidental `git add .` would both fail CI and push a binary to a public repo.
+/flagaudit
+/flagaudit.exe
+
 # Go build
 *.test
 *.out
