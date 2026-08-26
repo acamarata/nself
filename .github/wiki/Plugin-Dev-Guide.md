@@ -88,8 +88,9 @@ All env vars your plugin needs must be declared in the manifest. ɳSelf:
 ## Testing Locally
 
 ```bash
-# Install from a local directory
-nself plugin install --local ./my-plugin/
+# Link a local directory as a shadow override — nself build prefers it
+# over the registry version until you `nself plugin unlink`
+nself plugin link ./my-plugin/
 
 # Rebuild and start
 nself build && nself restart

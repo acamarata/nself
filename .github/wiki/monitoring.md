@@ -67,5 +67,5 @@ nself logs prometheus --tail 50
 
 **Grafana can't connect to Loki:**
 ```bash
-nself doctor --check monitoring
+nself doctor --section monitoring
 ```

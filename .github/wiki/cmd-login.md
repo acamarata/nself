@@ -39,11 +39,11 @@ Self-hosted users with no cloud account can skip this step, the CLI operates wit
 # Interactive login (browser-based OAuth)
 nself login
 
-# Non-interactive login with PAT (for CI)
-nself login --token nself_pat_xxxxxxxxxxxx
+# Print the login URL instead of opening a browser (e.g. over SSH)
+nself login --no-browser
 
-# Email + password login (non-interactive)
-nself login --email you@example.com --password yourpassword
+# Log in again even though a session already exists
+nself login --force
 ```
 <!-- END PROSE:examples -->
 

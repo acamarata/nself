@@ -77,16 +77,16 @@ CS_1=api:express-ts:3000:api
 
 This creates an Express TypeScript service that runs on internal port 3000 and is routed by Nginx at `api.yourdomain.com`.
 
-The `route` field controls the Nginx subdomain that maps to the service. The `template` field selects the scaffold used when `nself generate` creates the service directory.
+The `route` field controls the Nginx subdomain that maps to the service. The `template` field selects the scaffold used when `nself service add --template <name>` creates the service directory.
 
-Available templates include:
+Available templates:
 
-- `express-ts`, Express with TypeScript
-- `bullmq-ts`, BullMQ worker with TypeScript
-- `fastify-ts`, Fastify with TypeScript
-- `go-http`, Go HTTP service
-- `python-fastapi`, Python with FastAPI
-- additional templates listed in `nself generate --list`
+- `go` (default), Go HTTP service
+- `node`, Node.js service
+- `python`, Python service
+- `static`, static file server
+- `rust`, Rust service
+- `other`, minimal scaffold for anything else
 
 Custom services receive the same Compose health-check wiring and Nginx routing as built-in services. They can declare their own `depends_on` relationships via env vars if they require Postgres or Redis to be healthy before starting.
 

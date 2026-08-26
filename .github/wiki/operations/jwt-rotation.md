@@ -63,15 +63,15 @@ low-traffic window.
 nself build
 
 # 3. Restart in dependency order: auth first, then Hasura, then plugins
-nself restart --service auth
-nself restart --service hasura
-nself restart --service plugins
+nself restart auth
+nself restart hasura
+nself restart plugins
 
 # 4. Verify all services are healthy
 nself doctor --deep --only security
 ```
 
-If `nself restart --service` is not available in your version, use:
+To restart everything at once instead of one service at a time:
 
 ```bash
 nself restart

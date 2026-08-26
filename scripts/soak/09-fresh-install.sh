@@ -57,7 +57,9 @@ curl -fsSL https://install.nself.org | bash
 export PATH="/root/.nself/bin:$PATH"
 mkdir -p /opt/demo && cd /opt/demo
 nself init --demo
-nself start --wait-healthy
+# start already runs health checks by default (skip with --skip-health-checks,
+# tune the wait with --timeout) — there is no separate --wait-healthy flag.
+nself start
 nself status --json | grep -q '"healthy":true'
 echo "REMOTE_OK"
 REMOTE

@@ -169,7 +169,7 @@ Before going live, verify the following Hasura settings:
 - [ ] `HASURA_GRAPHQL_CORS_DOMAIN` lists only exact origins, no wildcards
 - [ ] Neither secret appears in any committed file (`.env.dev`, `.env.prod`, etc.)
 
-Run `nself config validate -e prod` to catch common mistakes before deploying.
+Run `nself config validate --env prod` to catch common mistakes before deploying.
 
 ---
 
