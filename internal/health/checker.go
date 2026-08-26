@@ -46,10 +46,17 @@ type HealthReport struct {
 	Total     int            `json:"total"`
 }
 
-// containerName returns the Docker container name for a given service.
+// ContainerName returns the Docker container name for a given service.
 // nSelf compose uses the pattern {ProjectName}_{service} with hyphens replaced
 // by underscores in the service portion.
-func containerName(projectName, service string) string {
+//
+// Exported so other packages that need to shell out to a specific nSelf
+// container (e.g. internal/doctor's --deep and hardening checks) compute the
+// name the same way instead of hardcoding it — see CLI PRI lessons.md,
+// "container name derivation" (the dogfood Postgres/nginx checks were
+// hardcoded to nself_postgres/nself_nginx and could never pass on a project
+// with a custom PROJECT_NAME).
+func ContainerName(projectName, service string) string {
 	svc := strings.ReplaceAll(service, "-", "_")
 	return fmt.Sprintf("%s_%s", projectName, svc)
 }
@@ -154,7 +161,7 @@ func resolveServiceHealth(ctx context.Context, projectName, service string, comp
 
 	// Secondary lookup: explicit container_name used by nSelf compose generator.
 	// Pattern: {project}_{service} with hyphens → underscores.
-	cname := containerName(projectName, service)
+	cname := ContainerName(projectName, service)
 	if status, ok := composeHealth[cname]; ok {
 		return &HealthResult{
 			Service: service,

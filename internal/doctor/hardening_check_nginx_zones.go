@@ -16,6 +16,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/nself-org/cli/internal/health"
 )
 
 // checkHardeningNginxRateZones verifies nginx has limit_req_zone + limit_req
@@ -73,7 +75,8 @@ func checkHardeningNginxRateZones(ctx context.Context, projectDir string) CheckR
 
 	// Fallback: inspect nginx container config if local files not found.
 	if !hasAuthZone || !hasAPIZone {
-		cmd := exec.CommandContext(ctx, "docker", "exec", "nself_nginx",
+		nginxContainer := health.ContainerName(resolveProjectName(projectDir), "nginx")
+		cmd := exec.CommandContext(ctx, "docker", "exec", nginxContainer,
 			"grep", "-r", "limit_req", "/etc/nginx/")
 		out, err := cmd.Output()
 		if err == nil {

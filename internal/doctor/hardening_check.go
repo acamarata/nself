@@ -26,7 +26,7 @@ const hardeningSection = "security"
 // projectDir is the nSelf working directory (same value passed to DeepChecks).
 func HardeningChecks(ctx context.Context, projectDir string) []CheckResult {
 	return []CheckResult{
-		checkHardeningRLS(ctx),
+		checkHardeningRLS(ctx, projectDir),
 		checkHardeningRateLimit(projectDir),
 		checkHardeningMFAThrottle(projectDir),
 		checkHardeningSSRFImport(projectDir),
