@@ -18,6 +18,9 @@ nself health [subcommand] <subcommand> [flags]
 Each service is checked using its native health method: `pg_isready` for PostgreSQL, HTTP `/healthz` for Hasura and Auth, `PING` for Redis, and `/health` for Nginx. Response times are shown alongside the health status.
 
 The `watch` subcommand provides continuous monitoring, it re-runs all checks every `--interval` seconds until you press Ctrl+C. Use `--quiet` to suppress output when all services are healthy and only print on failure, suitable for monitoring scripts.
+
+
+A service that declares no Docker healthcheck reports as `running` rather than `healthy`, and counts as healthy. Only some services define a healthcheck, so treating `running` as a failure would mark most of a working stack unhealthy. `--quiet` stays quiet for those services, and `--json` counts them in the healthy total.
 <!-- END PROSE:description -->
 
 ## Flags
