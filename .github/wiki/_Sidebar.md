@@ -21,11 +21,7 @@
 - _Networking:_ [[cmd-ssl]] · [[cmd-trust]] · [[cmd-dns-setup]]
 - _Security:_ [[cmd-access]] · [[cmd-security]] · [[cmd-secrets]]
 - _Tenancy:_ [[cmd-tenant]] · [[cmd-billing]]
-<<<<<<< HEAD
-- _Plugins:_ [[cmd-plugin]] · [[cmd-license]] · [[cmd-dogfood]] (extracted, CLI-R11) · [[cmd-k8s]] (extracted, CLI-R11)
-=======
-- _Plugins:_ [[cmd-plugin]] · [[cmd-license]] · [[cmd-dogfood]] (extracted, CLI-R11) · [[cmd-encryption]] (extracted, CLI-R11) · [[cmd-waf]] (extracted, CLI-R11) · [[cmd-federation]] (extracted, CLI-R11) · [[cmd-mail]] (extracted, CLI-R11) · [[cmd-dlq]] (extracted, CLI-R11)
->>>>>>> worktree-agent-af24993dee207e6e9
+- _Plugins:_ [[cmd-plugin]] · [[cmd-license]] · [[cmd-dogfood]] (extracted, CLI-R11) · [[cmd-k8s]] (extracted, CLI-R11) · [[cmd-encryption]] (extracted, CLI-R11) · [[cmd-waf]] (extracted, CLI-R11) · [[cmd-federation]] (extracted, CLI-R11) · [[cmd-mail]] (extracted, CLI-R11) · [[cmd-dlq]] (extracted, CLI-R11)
 - _AI:_ [[cmd-ai]] · [[cmd-claw]] · [[cmd-model]]
 - _Templates:_ [[cmd-template]]
 - _Utilities:_ [[cmd-exec]] · [[cmd-clean]] · [[cmd-reset]] · [[cmd-update]] · [[cmd-upgrade]] · [[cmd-version]] · [[cmd-admin]] · [[cmd-migrate]] · [[cmd-migrate-firebase]] · [[cmd-migrate-supabase]] · [[cmd-completion]]
