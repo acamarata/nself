@@ -11,6 +11,12 @@ on:
         required: false
         default: 'false'
         type: boolean
+      source:
+        description: 'Which nself to exercise: the published release, or a build of this ref'
+        required: false
+        default: 'release'
+        type: choice
+        options: [release, local]
 
 concurrency:
   group: e2e-golden-path
@@ -40,6 +46,13 @@ jobs:
       # must not pull multi-GB AI models in CI (that's what destabilized step 5).
       AI_AUTO_INSTALL: 'false'
       GOLDEN_PATH_DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
+      # Which binary step 1 installs. The scheduled run stays on 'release' on
+      # purpose: its job is to prove the PUBLISHED install path works, which is
+      # what users actually hit. But that also means a fix to `nself start`
+      # cannot be validated here until after it ships, which is backwards for a
+      # pre-release gate. Dispatching with source=local builds this ref instead,
+      # so a fix can be proven BEFORE it is released.
+      GOLDEN_PATH_SOURCE: ${{ github.event.inputs.source || 'release' }}
 
     steps:
       - name: Checkout

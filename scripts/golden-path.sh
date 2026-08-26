@@ -289,10 +289,21 @@ if [ -z "${NSELF_PLUGIN_LICENSE_KEY_OWNER:-}" ]; then
 fi
 
 # ── Step 1: Install nSelf CLI ─────────────────────────────────────────────────
+# GOLDEN_PATH_SOURCE=local builds the CLI from the checked-out ref and installs
+# that, instead of fetching the last published release.
+#
+# The scheduled run leaves this at "release" deliberately: its job is to prove
+# the install path real users take still works. But that also means a fix to any
+# command exercised below cannot be validated here until AFTER the release that
+# contains it, which is backwards for a pre-release gate. Dispatching with
+# source=local proves a fix first.
+if [ "${GOLDEN_PATH_SOURCE:-release}" = "local" ]; then
+  run_step 1 "build this ref and install it" \
+    bash -c 'set -e; cd "${GITHUB_WORKSPACE:-$PWD}"; make build; sudo install -m 0755 ./nself /usr/local/bin/nself; nself --version'
 # On macOS, prefer Homebrew. On Linux, use the curl installer even if brew is
 # present — the Homebrew formula only ships macOS (darwin) binaries and will
 # error with "formula requires at least a URL" on Linux runners.
-if command -v brew >/dev/null 2>&1 && [ "$(uname)" = "Darwin" ]; then
+elif command -v brew >/dev/null 2>&1 && [ "$(uname)" = "Darwin" ]; then
   run_step 1 "brew install nself-org/nself/nself" \
     bash -c 'brew install nself-org/nself/nself 2>&1 || brew upgrade nself-org/nself/nself 2>&1'
 else
