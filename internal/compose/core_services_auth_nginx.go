@@ -133,9 +133,26 @@ func (g *Generator) buildNginxService(dc *DockerCompose) ServiceConfig {
 		Image:         ResolveImage("nginx", "nginx:alpine"),
 		ContainerName: fmt.Sprintf("%s_nginx", cfg.ProjectName),
 		Restart:       "unless-stopped",
-		User:          "101:101",
-		Networks:      []string{cfg.DockerNetwork},
-		DependsOn:     dependsOn,
+		// No User override on purpose. The nginx.conf this same tool generates
+		// declares `user nginx;` on line 4, which requires the MASTER process to
+		// start as root: it reads the TLS material and binds 80/443, then drops
+		// the workers to the nginx user itself.
+		//
+		// Forcing User: "101:101" here contradicted that config, and nginx said
+		// so on every boot ("the \"user\" directive makes sense only if the master
+		// process runs with super-user privileges, ignored"). It also broke TLS
+		// outright: ./ssl is bind-mounted, so the certificates keep their host
+		// ownership and mode, and uid 101 is neither their owner nor in their
+		// group. nginx died with
+		//   [emerg] cannot load certificate ".../fullchain.pem": Permission denied
+		// and crash-looped, on any host whose invoking uid is not 101 -- which on
+		// Linux is every host. Docker Desktop on macOS masks it by remapping
+		// ownership, so it only showed up on Linux and in CI.
+		//
+		// Workers still run unprivileged; the tmpfs uid/gid below stay 101 to
+		// match them.
+		Networks:  []string{cfg.DockerNetwork},
+		DependsOn: dependsOn,
 		Environment: map[string]string{
 			"BASE_DOMAIN":  cfg.BaseDomain,
 			"PROJECT_NAME": cfg.ProjectName,
