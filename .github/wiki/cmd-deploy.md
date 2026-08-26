@@ -274,7 +274,7 @@ migration state, and Hasura metadata from that snapshot.
 # After a failed or unwanted production promotion:
 nself deploy rollback prod
 # Finds last pre-promote-prod-* backup tag
-# Runs: nself backup restore --tag pre-promote-prod-<ts>
+# Runs: nself backup restore pre-promote-prod-<ts>
 # Prints: Rollback for prod completed — prior promote state restored
 ```
 

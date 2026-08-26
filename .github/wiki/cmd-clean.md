@@ -17,7 +17,7 @@ nself clean [flags]
 
 `nself clean` does **not** delete your `.env` files, data directories, or any user data. It only removes generated Docker artifacts. To remove generated configuration files (nginx configs, `docker-compose.yml`), use `nself reset` instead.
 
-Use `--all` for a system-wide Docker cleanup (`docker system prune`). This requires confirmation and affects all Docker resources on the host, not just the ɳSelf project.
+`nself clean` takes no flags today, it always scopes to the current project. A system-wide `docker system prune` is not something this command runs, use the `docker` CLI directly for that.
 <!-- END PROSE:description -->
 
 ## Flags
@@ -34,9 +34,6 @@ Use `--all` for a system-wide Docker cleanup (`docker system prune`). This requi
 ```bash
 # Project-scoped cleanup (safe, recommended)
 nself clean
-
-# System-wide Docker cleanup (affects all projects)
-nself clean --all
 ```
 
 **What is preserved:**
@@ -47,7 +44,7 @@ nself clean --all
 **What is removed:**
 - Stopped ɳSelf project containers
 - Unused images tagged to this project
-- Dangling volumes (with `--all`: all Docker system resources)
+- Dangling volumes belonging to this project
 <!-- END PROSE:examples -->
 
 ## See Also

@@ -90,7 +90,7 @@ These errors occur when the CLI interacts with the PostgreSQL container.
 | Code | Summary | Why | Fix |
 |------|---------|-----|-----|
 | E200 | Database not running | PostgreSQL container is not running or not accepting connections. | Run `nself start` to start all services, or `nself doctor` to diagnose. |
-| E201 | Migration failed | A database migration could not be applied. | Check the migration SQL for errors. Run `nself db migrate --status` to see pending migrations. |
+| E201 | Migration failed | A database migration could not be applied. | Check the migration SQL for errors. Run `nself db migrate status` to see pending migrations. |
 | E202 | Backup failed | Database backup operation failed. | Ensure sufficient disk space and that the database is running. |
 
 ---

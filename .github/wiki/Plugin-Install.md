@@ -59,8 +59,8 @@ nself plugin remove {name} --keep-data
 # Update a single plugin
 nself plugin update {name}
 
-# Update all installed plugins
-nself plugin update --all
+# Update all installed plugins (name omitted)
+nself plugin update
 ```
 
 ## List Installed Plugins

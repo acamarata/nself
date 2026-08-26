@@ -272,7 +272,7 @@ PYEOF
 cleanup() {
   if [ "${SKIP_CLEANUP}" != "1" ] && [ -n "${WORK_DIR}" ] && [ -d "${WORK_DIR}" ]; then
     log "Cleaning up work dir: ${WORK_DIR}"
-    nself stop --force 2>/dev/null || true
+    nself stop --volumes 2>/dev/null || true
     nself admin stop 2>/dev/null || true
     rm -rf "${WORK_DIR}"
   fi

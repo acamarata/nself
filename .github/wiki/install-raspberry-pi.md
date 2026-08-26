@@ -81,7 +81,7 @@ nself start
 |---------|-----|
 | `exec format error` | Wrong binary architecture , use arm64 for 64-bit OS, armv7 for 32-bit OS |
 | Docker pull fails | Ensure Docker has arm64/armv7 multi-arch support; run `docker buildx ls` |
-| Stack OOM killed | Reduce memory: `nself init --no-monitoring` and use minimal services |
+| Stack OOM killed | Reduce memory: `nself init --profile tiny` (Postgres + nginx only) and add only the services your project needs |
 | Slow startup | Normal on first run , images need pulling. Subsequent starts are fast. |
 
 ## Community Verified
