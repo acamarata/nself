@@ -76,7 +76,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Cache Go modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cache/go-build
@@ -141,7 +141,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Cache Go modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cache/go-build
