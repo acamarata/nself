@@ -2,6 +2,15 @@
   "generated_by": "tools/parity",
   "rows": [
     {
+      "name": "access",
+      "path": "nself access",
+      "group_id": "advanced",
+      "wiki_page": true,
+      "mcp_tool": false,
+      "env_vars": "documented",
+      "openapi": "n/a (see below)"
+    },
+    {
       "name": "account",
       "path": "nself account",
       "group_id": "account",

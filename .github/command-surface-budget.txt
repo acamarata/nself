@@ -3,4 +3,11 @@
 # of .claude/tasks/cli-review-tickets-2026-08-23.md).
 # internal/repoqa/command_surface_test.go fails if the real count rises above
 # this, and separately if this number is left higher than reality.
-49
+#
+# 2026-08-26: +1 for `access` (issue #238). Deliberate exception, not
+# creep: hcloud only injects SSH keys at server-creation time and `nself
+# security` covers firewall/fail2ban/sshd only, so granting or revoking a
+# teammate's SSH key on an already-deployed host had no CLI path at all.
+# `nself access grant/revoke/list` is the command surface named directly
+# in #238's proposed shape.
+50

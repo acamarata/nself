@@ -12,6 +12,7 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 
 | Command | Group | Wiki Page | MCP Tool | Env Vars | OpenAPI Route |
 |---|---|---|---|---|---|
+| `nself access` | advanced | yes | no | documented | n/a (see below) |
 | `nself account` | account | yes | no | undocumented: NSELF_NO_BROWSER | n/a (see below) |
 | `nself admin` | account | yes | no | undocumented: ADMIN_PORT | n/a (see below) |
 | `nself backup` | data | yes | yes | n/a | n/a (see below) |
@@ -62,4 +63,4 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself verify-sbom` | advanced | yes | no | n/a | n/a (see below) |
 | `nself version` | account | yes | no | undocumented: BENCH_RESULTS_FILE | n/a (see below) |
 
-Total: 49 commands. Missing wiki page: 0. No MCP tool: 32. Env vars found but undocumented: 17.
+Total: 50 commands. Missing wiki page: 0. No MCP tool: 33. Env vars found but undocumented: 17.
