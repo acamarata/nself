@@ -1,13 +1,16 @@
 package commands
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/confirm"
 
 	"github.com/spf13/cobra"
 )
@@ -29,12 +32,34 @@ Preserved:
   - User-managed files
 
 No confirmation required — this operation is non-destructive (data is preserved).
-Run 'nself build' after clean to regenerate all artifacts.`,
+Run 'nself build' after clean to regenerate all artifacts.
+
+With --all, clean additionally runs a host-wide 'docker system prune',
+removing unused containers, networks, images, and build cache for EVERY
+Docker project on the machine, not just this one. Named volumes are never
+touched. --all requires typing "yes" at an interactive prompt; pass --yes
+to skip the prompt for scripted or CI use.`,
 	RunE: runClean,
 }
 
 func init() {
+	cleanCmd.Flags().Bool("all", false, "Also run a host-wide 'docker system prune' affecting every Docker project on this machine (destructive; requires confirmation)")
+	cleanCmd.Flags().Bool("yes", false, "Skip the --all confirmation prompt (for CI/CD)")
 	RootCmd.AddCommand(cleanCmd)
+}
+
+// dockerSystemPrune runs a host-wide `docker system prune`, removing unused
+// containers, networks, images, and build cache for every Docker project on
+// the machine. It deliberately never passes --volumes: named volumes hold
+// other projects' database and storage data, and deleting them requires its
+// own explicit opt-in and confirmation, which this command does not yet
+// offer. It is a package variable so tests can swap in a spy and assert
+// whether it was invoked without needing a Docker daemon.
+var dockerSystemPrune = func(ctx context.Context, out, errOut io.Writer) error {
+	pruneCmd := exec.CommandContext(ctx, "docker", "system", "prune", "--all", "--force")
+	pruneCmd.Stdout = out
+	pruneCmd.Stderr = errOut
+	return pruneCmd.Run()
 }
 
 func runClean(cmd *cobra.Command, args []string) error {
@@ -115,6 +140,27 @@ func runClean(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(out, "  - %s\n", r)
 		}
 		fmt.Fprintln(out, "\nRun 'nself build' to regenerate.")
+	}
+
+	// 5. --all: host-wide docker system prune, gated behind confirmation.
+	all, _ := cmd.Flags().GetBool("all")
+	if !all {
+		return nil
+	}
+
+	skipConfirm, _ := cmd.Flags().GetBool("yes")
+	if !skipConfirm {
+		if confirmErr := confirm.ConfirmHostWidePrune(cmd.InOrStdin(), out); confirmErr != nil {
+			fmt.Fprintln(out, "\nHost-wide prune canceled.")
+			return nil
+		}
+	}
+
+	fmt.Fprintln(out, "\nPruning all unused Docker resources on this host...")
+	if pruneAllErr := dockerSystemPrune(cmd.Context(), out, cmd.ErrOrStderr()); pruneAllErr != nil {
+		fmt.Fprintf(cmd.ErrOrStderr(), "Warning: docker system prune failed (Docker may not be running): %v\n", pruneAllErr)
+	} else {
+		fmt.Fprintln(out, "Host-wide prune complete.")
 	}
 
 	return nil

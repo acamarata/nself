@@ -163,6 +163,11 @@ Remove generated artifacts (docker-compose.yml, nginx configs, build cache)
 nself clean [flags]
 ```
 
+Flags:
+
+- `--all` (default false) — Also run a host-wide 'docker system prune' affecting every Docker project on this machine (destructive; requires confirmation)
+- `--yes` (default false) — Skip the --all confirmation prompt (for CI/CD)
+
 Full page: [[cmd-clean]]
 
 ### nself completion

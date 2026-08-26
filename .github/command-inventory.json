@@ -442,7 +442,11 @@
     "path": "nself clean",
     "short": "Remove generated artifacts (docker-compose.yml, nginx configs, build cache)",
     "hidden": false,
-    "group_id": "core"
+    "group_id": "core",
+    "flags": [
+      "--all",
+      "--yes"
+    ]
   },
   {
     "name": "completion",
