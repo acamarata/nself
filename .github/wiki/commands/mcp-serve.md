@@ -27,13 +27,7 @@ Run `nself mcp` from inside an nSelf project directory — it fails fast if one 
 
 | Variable | Default | Description |
 |---|---|---|
-| `NSELF_MCP_PORT` | `3825` | HTTP/SSE port |
-| `NSELF_MCP_HOST` | `127.0.0.1` | HTTP/SSE bind host |
-| `NSELF_MCP_AUTH_TOKEN` | (empty) | Optional bearer token for SSE requests |
-| `NSELF_MCP_MDNS_ENABLED` | `true` | Broadcast via mDNS |
-| `NSELF_MCP_ALLOW_MUTATIONS` | `false` | Enable `nself_migration_apply` tool |
-| `NSELF_MCP_ALLOW_SECRETS` | `false` | Allow `nself_env_get` to return secret keys |
-| `NSELF_FEATURE_MCP` | `false` | Feature flag , set to `true` to enable auto-start with `nself start` |
+| `NSELF_MCP_TOKEN` | (empty) | Optional bearer token required on `sse`/`http` requests. Unset means no auth check; stdio mode is unaffected. |
 
 ## Claude Code integration
 
@@ -44,55 +38,29 @@ Add to `.claude/settings.json` in your project root:
   "mcpServers": {
     "nself": {
       "command": "nself",
-      "args": ["mcp", "serve"]
+      "args": ["mcp"]
     }
   }
 }
 ```
 
-Claude Code will start the server automatically and expose all 9 tools in its tool context. You can then ask Claude Code questions like:
+Claude Code will start the server automatically and expose its full tool, resource, and prompt set in its tool context (see [[cmd-mcp]] for the generated list). You can then ask Claude Code questions like:
 
 - "What tables does this ɳSelf project have?"
-- "Show me the schema for np_ai_usage"
+- "What's the health status of this project?"
 - "Which plugins are installed?"
 - "Tail the hasura logs"
 - "What permissions does the 'user' role have?"
 
 ## Available MCP tools
 
-| Tool | Description |
-|---|---|
-| `nself_schema_list` | List all PostgreSQL tables in the project |
-| `nself_schema_describe` | Describe columns, types, and constraints for a table |
-| `nself_migration_list` | List migration history from `nself_migrations` |
-| `nself_migration_apply` | Apply a SQL migration (requires `NSELF_MCP_ALLOW_MUTATIONS=true`) |
-| `nself_permission_list` | List Hasura permissions for a Hasura role |
-| `nself_log_tail` | Tail recent logs from a Docker service container |
-| `nself_plugin_list` | List installed ɳSelf plugins |
-| `nself_plugin_describe` | Full details for a specific plugin |
-| `nself_env_get` | Read an env var (secret keys redacted unless `NSELF_MCP_ALLOW_SECRETS=true`) |
+The tool, resource, and prompt list is generated from source (`make mcp-docs`) rather than hand-maintained here, so it can't drift the way an earlier hand-listed table did. See [[cmd-mcp]] for the current, authoritative list.
 
 ## Security
 
 - HTTP/SSE transport binds to `127.0.0.1` by default. Never expose to `0.0.0.0` in production.
-- Secret env vars (`*SECRET*`, `*KEY*`, `*TOKEN*`, `*PASSWORD*`) are redacted by default.
-- `nself_migration_apply` requires explicit opt-in. Treat it as a privileged operation.
-- mDNS operates on the local network segment only.
-
-## Status check
-
-```bash
-nself mcp status
-```
-
-Reports the configured port, whether it is in use (server likely running), mDNS status, and mutation/secret flags.
-
-## Doctor integration
-
-`nself doctor` reports MCP server status:
-
-- `MCP-01`, MCP server process running (info)
-- `MCP-02`, Port 3825 not in conflict (warning)
+- Config values whose key contains `SECRET`, `PASSWORD`, `KEY`, or `TOKEN` are always redacted in tool output; there is no opt-out.
+- The migration-apply tool requires an explicit `confirm: true` argument on every call, and a DDL allowlist blocks destructive statements even then. Treat it as a privileged operation.
 
 ## Examples
 
@@ -110,6 +78,8 @@ None — `nself mcp` is a core CLI command, no plugin or license required.
 
 ## See also
 
-- [Plugin documentation](https://nself.org/plugins/mcp)
+- [[cmd-mcp]]: generated tool/resource/prompt reference for this command
 - [MCP specification](https://modelcontextprotocol.io/specification/2025-03-26)
-- [nself doctor](./cmd-doctor.md)
+- [[cmd-doctor]]
+
+Note: `nself.org/plugins/mcp` documents an unrelated paid plugin (`plugins-pro/paid/mcp`, ɳClaw/ClawDE bundles, its own port and tool set), not this core `nself mcp` command.
