@@ -14,9 +14,9 @@ func DeepChecks(ctx context.Context, projectDir string, verbose bool) []CheckRes
 
 	results = append(results, HostChecks(ctx, verbose)...)
 	results = append(results, DockerDeepChecks(ctx, verbose)...)
-	results = append(results, PostgresChecks(ctx, verbose)...)
+	results = append(results, PostgresChecks(ctx, projectDir, verbose)...)
 	results = append(results, HasuraChecks(ctx, verbose)...)
-	results = append(results, NginxChecks(ctx, verbose)...)
+	results = append(results, NginxChecks(ctx, projectDir, verbose)...)
 	results = append(results, SSLChecks(ctx, verbose)...)
 	results = append(results, PingChecks(ctx, verbose)...)
 	results = append(results, PluginHealthChecks(ctx, projectDir, verbose)...)

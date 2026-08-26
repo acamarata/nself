@@ -8,21 +8,25 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/nself-org/cli/internal/health"
 )
 
 // Purpose: nginx/TLS/reachability --deep checks — config test, certificate
 // expiry, Let's Encrypt renewal cron, and the ping.nself.org health probe.
-// Inputs: a context and verbose flag.
+// Inputs: a context, the project directory (used to resolve the nginx
+// container name via PROJECT_NAME), and verbose flag.
 // Outputs: []CheckResult per category.
 // Constraints: split out of deep.go (CLI-R12) as a pure move; no behavior
-// changed.
+// changed. Container name resolution added later — see project_name.go.
 
 // NginxChecks verifies config test and SSL cert expiry.
-func NginxChecks(ctx context.Context, verbose bool) []CheckResult {
+func NginxChecks(ctx context.Context, projectDir string, verbose bool) []CheckResult {
 	var results []CheckResult
+	nginxContainer := health.ContainerName(resolveProjectName(projectDir), "nginx")
 
 	// nginx -t
-	cmd := exec.CommandContext(ctx, "docker", "exec", "nself_nginx", "nginx", "-t")
+	cmd := exec.CommandContext(ctx, "docker", "exec", nginxContainer, "nginx", "-t")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		results = append(results, CheckResult{Section: "nginx", Name: "Nginx config test", Status: "fail",
@@ -32,14 +36,14 @@ func NginxChecks(ctx context.Context, verbose bool) []CheckResult {
 	}
 
 	// SSL cert expiry >30d on all server_names
-	cmd = exec.CommandContext(ctx, "docker", "exec", "nself_nginx", "find", "/etc/letsencrypt/live", "-name", "fullchain.pem")
+	cmd = exec.CommandContext(ctx, "docker", "exec", nginxContainer, "find", "/etc/letsencrypt/live", "-name", "fullchain.pem")
 	out, err = cmd.Output()
 	if err == nil {
 		for _, certPath := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 			if certPath == "" {
 				continue
 			}
-			checkCmd := exec.CommandContext(ctx, "docker", "exec", "nself_nginx", "openssl", "x509",
+			checkCmd := exec.CommandContext(ctx, "docker", "exec", nginxContainer, "openssl", "x509",
 				"-enddate", "-noout", "-in", certPath)
 			certOut, err := checkCmd.Output()
 			if err != nil {

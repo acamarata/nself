@@ -23,20 +23,20 @@ import (
 // hyphens in the service name to underscores, matching the nSelf compose naming
 // convention ("project_service").
 func TestContainerName_HyphenToUnderscore(t *testing.T) {
-	got := containerName("myproject", "minio-init")
+	got := ContainerName("myproject", "minio-init")
 	want := "myproject_minio_init"
 	if got != want {
-		t.Errorf("containerName(%q, %q) = %q, want %q", "myproject", "minio-init", got, want)
+		t.Errorf("ContainerName(%q, %q) = %q, want %q", "myproject", "minio-init", got, want)
 	}
 }
 
 // TestContainerName_PlainService verifies that a service name without hyphens
 // produces the expected "project_service" format.
 func TestContainerName_PlainService(t *testing.T) {
-	got := containerName("nclaw", "postgres")
+	got := ContainerName("nclaw", "postgres")
 	want := "nclaw_postgres"
 	if got != want {
-		t.Errorf("containerName(%q, %q) = %q, want %q", "nclaw", "postgres", got, want)
+		t.Errorf("ContainerName(%q, %q) = %q, want %q", "nclaw", "postgres", got, want)
 	}
 }
 

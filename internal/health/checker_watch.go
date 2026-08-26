@@ -151,7 +151,7 @@ func WatchHealth(ctx context.Context, cfg *config.Config, workdir string, interv
 // checkContainer queries the health of a single service by its compose service
 // name, resolving the full container name from the project prefix.
 func checkContainer(ctx context.Context, projectName, service string) (*HealthResult, error) {
-	name := containerName(projectName, service)
+	name := ContainerName(projectName, service)
 	start := time.Now()
 	status, err := docker.GetHealthStatus(ctx, name)
 	elapsed := time.Since(start)

@@ -8,22 +8,26 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/nself-org/cli/internal/health"
 )
 
 // Purpose: Postgres and Hasura --deep checks — pg_isready, longest running
 // query, dead tuple ratio, last vacuum, plus Hasura's /healthz and metadata
 // consistency.
-// Inputs: a context and verbose flag.
+// Inputs: a context, the project directory (used to resolve the Postgres
+// container name via PROJECT_NAME), and verbose flag.
 // Outputs: []CheckResult per category.
 // Constraints: split out of deep.go (CLI-R12) as a pure move; no behavior
-// changed.
+// changed. Container name resolution added later — see project_name.go.
 
 // PostgresChecks verifies pg_isready, replication lag, longest query, dead tuples, vacuum.
-func PostgresChecks(ctx context.Context, verbose bool) []CheckResult {
+func PostgresChecks(ctx context.Context, projectDir string, verbose bool) []CheckResult {
 	var results []CheckResult
+	pgContainer := health.ContainerName(resolveProjectName(projectDir), "postgres")
 
 	// pg_isready
-	cmd := exec.CommandContext(ctx, "docker", "exec", "nself_postgres", "pg_isready", "-U", "postgres")
+	cmd := exec.CommandContext(ctx, "docker", "exec", pgContainer, "pg_isready", "-U", "postgres")
 	if err := cmd.Run(); err != nil {
 		results = append(results, CheckResult{Section: "postgres", Name: "pg_isready", Status: "fail", Message: "not ready"})
 		return results
@@ -31,7 +35,7 @@ func PostgresChecks(ctx context.Context, verbose bool) []CheckResult {
 	results = append(results, CheckResult{Section: "postgres", Name: "pg_isready", Status: "pass", Message: "accepting connections"})
 
 	// Longest running query <60s
-	cmd = exec.CommandContext(ctx, "docker", "exec", "nself_postgres", "psql", "-U", "postgres", "-t", "-c",
+	cmd = exec.CommandContext(ctx, "docker", "exec", pgContainer, "psql", "-U", "postgres", "-t", "-c",
 		"SELECT COALESCE(EXTRACT(EPOCH FROM MAX(now() - query_start))::int, 0) FROM pg_stat_activity WHERE state='active' AND pid != pg_backend_pid();")
 	out, err := cmd.Output()
 	if err == nil {
@@ -46,7 +50,7 @@ func PostgresChecks(ctx context.Context, verbose bool) []CheckResult {
 	}
 
 	// Dead tuple % <10%
-	cmd = exec.CommandContext(ctx, "docker", "exec", "nself_postgres", "psql", "-U", "postgres", "-t", "-c",
+	cmd = exec.CommandContext(ctx, "docker", "exec", pgContainer, "psql", "-U", "postgres", "-t", "-c",
 		"SELECT COALESCE(MAX(n_dead_tup::float / NULLIF(n_live_tup + n_dead_tup, 0) * 100)::int, 0) FROM pg_stat_user_tables;")
 	out, err = cmd.Output()
 	if err == nil {
@@ -54,7 +58,7 @@ func PostgresChecks(ctx context.Context, verbose bool) []CheckResult {
 		if pct > 10 {
 			results = append(results, CheckResult{Section: "postgres", Name: "Dead tuples", Status: "warn",
 				Message: fmt.Sprintf("%d%% dead tuples (>10%%)", pct),
-				FixCmd:  "docker exec nself_postgres psql -U postgres -c 'VACUUM ANALYZE;'"})
+				FixCmd:  fmt.Sprintf("docker exec %s psql -U postgres -c 'VACUUM ANALYZE;'", pgContainer)})
 		} else {
 			results = append(results, CheckResult{Section: "postgres", Name: "Dead tuples", Status: "pass",
 				Message: fmt.Sprintf("%d%% dead tuples", pct)})
@@ -62,7 +66,7 @@ func PostgresChecks(ctx context.Context, verbose bool) []CheckResult {
 	}
 
 	// Last vacuum <24h
-	cmd = exec.CommandContext(ctx, "docker", "exec", "nself_postgres", "psql", "-U", "postgres", "-t", "-c",
+	cmd = exec.CommandContext(ctx, "docker", "exec", pgContainer, "psql", "-U", "postgres", "-t", "-c",
 		"SELECT COALESCE(EXTRACT(EPOCH FROM MIN(now() - last_autovacuum))::int, 0) FROM pg_stat_user_tables WHERE last_autovacuum IS NOT NULL;")
 	out, err = cmd.Output()
 	if err == nil {
