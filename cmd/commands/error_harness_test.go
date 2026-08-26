@@ -43,6 +43,11 @@ type errorHarnessCase struct {
 // "invalid-flag" uses a clearly unknown flag name that cobra will reject.
 // "unknown-sub" uses a subcommand name that does not exist.
 var errorHarnessCases = []errorHarnessCase{
+	// ── access ─────────────────────────────────────────────────────────────
+	{"access", []string{"access"}, "(a) no project dir"},
+	{"access", []string{"access", "--no-such-flag-xyz"}, "(b) invalid flag"},
+	{"access", []string{"access", "unknownsub_xyz"}, "(c) unknown sub"},
+
 	// ── admin ──────────────────────────────────────────────────────────────
 	{"admin", []string{"admin"}, "(a) no project dir"},
 	{"admin", []string{"admin", "--no-such-flag-xyz"}, "(b) invalid flag"},

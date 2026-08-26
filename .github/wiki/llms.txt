@@ -14,7 +14,23 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (49)
+## Commands (50)
+
+### nself access
+
+Manage SSH key access on an already-deployed server
+
+```
+nself access <subcommand> [flags]
+```
+
+Subcommands:
+
+- `grant` — Grant a person SSH key access to a host
+- `list` — List who has SSH key access to a host
+- `revoke` — Revoke a person's SSH key access to a host
+
+Full page: [[cmd-access]]
 
 ### nself account
 

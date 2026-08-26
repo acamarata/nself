@@ -1,0 +1,139 @@
+# nself access
+
+<!-- BEGIN PROSE:summary -->
+> Manage SSH key access on an already-deployed server.
+<!-- END PROSE:summary -->
+
+## Synopsis
+
+```
+nself access <subcommand> [flags]
+```
+
+## Description
+
+<!-- BEGIN PROSE:description -->
+Grant, revoke, and list SSH key access on a running nself host, without a raw
+`ssh` session and hand-edited `authorized_keys`.
+
+`nself security` hardens a host (firewall, fail2ban, sshd config) but has no
+concept of individual keys or people. `hcloud ssh-key create` only injects a
+key when a server is created, so it does nothing for a host that is already
+running. `nself access` fills that gap: it manages `authorized_keys` entries
+directly, over SSH, on a host that is already live.
+
+## Usage
+
+```
+nself access <subcommand> [flags]
+```
+
+### nself access grant
+Add a person's public key to a host's `authorized_keys`, or update it if they
+already have one. Re-granting the identical key is a no-op. Granting a
+different key, or different `--sudo`/`--docker`/`--expires` metadata, for the
+same `--user` replaces that person's single managed line rather than adding a
+second one.
+
+Before writing anything, the current `authorized_keys` is backed up to a
+timestamped sibling file, and the key's SHA256 fingerprint is echoed back so
+you can verify it against what the person sent you.
+
+```bash
+nself access grant --host root@203.0.113.5 --user alice --key @alice.pub
+```
+
+Flags: `--host` (required, `[user@]host`), `--identity` (local private key
+used to connect, defaults to `~/.ssh/id_ed25519`), `--user` (required, a
+label for whose key this is), `--key` (required, public key material or
+`@path/to/file`), `--sudo` and `--docker` (record the intended privilege
+level as metadata only, this command does not itself change OS group
+membership), `--expires` (optional `YYYY-MM-DD`), `--dry-run` (print the
+resulting diff, change nothing).
+
+### nself access revoke
+Remove a person's public key from a host's `authorized_keys`.
+
+Refuses to remove the last remaining key on the host, since that would lock
+out all SSH access, unless `--force` is given. This is the one command in
+`nself access` that can end a session mid-flight if pointed at the wrong
+host, so `--dry-run` is worth running first against anything that matters.
+
+```bash
+nself access revoke --host root@203.0.113.5 --user alice
+```
+
+Flags: `--host` (required), `--identity`, `--user` (required), `--force`
+(allow removing the last remaining key), `--dry-run`.
+
+### nself access list
+Show every person `nself access` has granted a key to on a host, their
+fingerprint, recorded `--sudo`/`--docker`/`--expires` metadata, and whether
+that expiry has passed. Also reports how many keys in the file were not
+granted by this command (the original key the host shipped with, for
+example) so those are visibly accounted for rather than silently ignored.
+
+```bash
+nself access list --host root@203.0.113.5
+```
+
+Flags: `--host` (required), `--identity`, `--json` (machine-readable output).
+<!-- END PROSE:description -->
+
+## Flags
+
+<!-- BEGIN GENERATED:flags -->
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--help`, `-h` | — | Show help |
+<!-- END GENERATED:flags -->
+
+## Subcommands
+
+<!-- BEGIN GENERATED:subcommands -->
+| Name | Description |
+|------|-------------|
+| `grant` | Grant a person SSH key access to a host |
+| `list` | List who has SSH key access to a host |
+| `revoke` | Revoke a person's SSH key access to a host |
+<!-- END GENERATED:subcommands -->
+
+## Examples
+
+<!-- BEGIN PROSE:examples -->
+```bash
+# Grant alice access using a key file
+nself access grant --host root@203.0.113.5 --user alice --key @alice.pub
+```
+
+```bash
+# Grant bob access with an inline key and sudo metadata
+nself access grant --host root@203.0.113.5 --user bob --key "ssh-ed25519 AAAA... bob@laptop" --sudo
+```
+
+```bash
+# Grant carol access with an expiry date
+nself access grant --host root@203.0.113.5 --user carol --key @carol.pub --expires 2026-12-31
+```
+
+```bash
+# Preview a grant without changing anything
+nself access grant --host root@203.0.113.5 --user dave --key @dave.pub --dry-run
+```
+
+```bash
+# See who currently has access, then revoke someone who left
+nself access list --host root@203.0.113.5
+nself access revoke --host root@203.0.113.5 --user alice
+```
+<!-- END PROSE:examples -->
+
+## See Also
+
+<!-- BEGIN PROSE:see-also -->
+- [[cmd-security]], firewall, fail2ban, and sshd hardening for the same host
+- [[cmd-deploy]], the SSH transport `nself access` mirrors for connecting to staging and production
+- [[Commands]], full command index
+<!-- END PROSE:see-also -->
+
+← [[Commands]] | [[Home]] →

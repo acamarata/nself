@@ -19,7 +19,7 @@
 - _Data:_ [[cmd-db]] · [[cmd-backup]] · [[cmd-dr]] · [[cmd-queue]] · [[cmd-webhooks]]
 - _Config:_ [[cmd-config]] · [[cmd-service]] · [[cmd-env]] · [[cmd-promote]]
 - _Networking:_ [[cmd-ssl]] · [[cmd-trust]] · [[cmd-dns-setup]]
-- _Security:_ [[cmd-security]] · [[cmd-secrets]]
+- _Security:_ [[cmd-access]] · [[cmd-security]] · [[cmd-secrets]]
 - _Tenancy:_ [[cmd-tenant]] · [[cmd-billing]]
 <<<<<<< HEAD
 - _Plugins:_ [[cmd-plugin]] · [[cmd-license]] · [[cmd-dogfood]] (extracted, CLI-R11) · [[cmd-k8s]] (extracted, CLI-R11)
@@ -283,9 +283,9 @@
 
 <!-- BEGIN GENERATED:command-list -->
 
-**All commands (49)**
+**All commands (50)**
 
-- _A:_ [[cmd-account]] · [[cmd-admin]]
+- _A:_ [[cmd-access]] · [[cmd-account]] · [[cmd-admin]]
 - _B:_ [[cmd-backup]] · [[cmd-build]] · [[cmd-bundle]]
 - _C:_ [[cmd-ci]] · [[cmd-clean]] · [[cmd-completion]] · [[cmd-config]]
 - _D:_ [[cmd-db]] · [[cmd-deploy]] · [[cmd-dev]] · [[cmd-doctor]]

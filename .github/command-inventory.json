@@ -1,5 +1,54 @@
 [
   {
+    "name": "access",
+    "path": "nself access",
+    "short": "Manage SSH key access on an already-deployed server",
+    "hidden": false,
+    "group_id": "advanced",
+    "subcommands": [
+      {
+        "name": "grant",
+        "path": "nself access grant",
+        "short": "Grant a person SSH key access to a host",
+        "hidden": false,
+        "flags": [
+          "--docker",
+          "--dry-run",
+          "--expires",
+          "--host",
+          "--identity",
+          "--key",
+          "--sudo",
+          "--user"
+        ]
+      },
+      {
+        "name": "list",
+        "path": "nself access list",
+        "short": "List who has SSH key access to a host",
+        "hidden": false,
+        "flags": [
+          "--host",
+          "--identity",
+          "--json"
+        ]
+      },
+      {
+        "name": "revoke",
+        "path": "nself access revoke",
+        "short": "Revoke a person's SSH key access to a host",
+        "hidden": false,
+        "flags": [
+          "--dry-run",
+          "--force",
+          "--host",
+          "--identity",
+          "--user"
+        ]
+      }
+    ]
+  },
+  {
     "name": "account",
     "path": "nself account",
     "short": "Manage your nSelf account, sessions, licenses, team, and devices",

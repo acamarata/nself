@@ -106,6 +106,7 @@ var commandGroupAssignments = map[string]string{
 	"telemetry":   groupAccount,
 
 	// Advanced & Enterprise.
+	"access":      groupAdvanced,
 	"security":    groupAdvanced,
 	"verify-sbom": groupAdvanced,
 }
