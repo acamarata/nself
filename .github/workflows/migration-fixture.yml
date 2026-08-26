@@ -9,6 +9,7 @@ on:
       - 'cmd/commands/start.go'
       - 'cmd/commands/build.go'
       - 'cmd/commands/doctor.go'
+      - '.github/workflows/migration-fixture.yml'
   pull_request:
     paths:
       - 'internal/migration/**'
@@ -16,6 +17,7 @@ on:
       - 'cmd/commands/start.go'
       - 'cmd/commands/build.go'
       - 'cmd/commands/doctor.go'
+      - '.github/workflows/migration-fixture.yml'
   schedule:
     # Nightly at 02:00 UTC — catches environment drift
     - cron: '0 2 * * *'

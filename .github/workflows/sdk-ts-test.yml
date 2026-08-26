@@ -4,9 +4,11 @@ on:
   push:
     paths:
       - 'sdk/ts/**'
+      - '.github/workflows/sdk-ts-test.yml'
   pull_request:
     paths:
       - 'sdk/ts/**'
+      - '.github/workflows/sdk-ts-test.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

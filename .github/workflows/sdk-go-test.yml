@@ -6,9 +6,11 @@ on:
       - main
     paths:
       - 'sdk/go/**'
+      - '.github/workflows/sdk-go-test.yml'
   pull_request:
     paths:
       - 'sdk/go/**'
+      - '.github/workflows/sdk-go-test.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
