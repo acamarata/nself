@@ -50,11 +50,6 @@ type outdatedPluginRow struct {
 func runPluginOutdated(cmd *cobra.Command, args []string) error {
 	jsonOut, _ := cmd.Flags().GetBool("json")
 
-	registryURL := os.Getenv("NSELF_PLUGIN_REGISTRY")
-	if err := plugin.ValidateNetworkAccess(cmd.Context(), registryURL); err != nil {
-		return err
-	}
-
 	pluginDir := resolvePluginDir()
 
 	installed, err := plugin.List(pluginDir, true)
@@ -67,6 +62,21 @@ func runPluginOutdated(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Println("No plugins installed.")
 		return nil
+	}
+
+	// The registry reachability probe belongs AFTER the nothing-installed
+	// check, not before it. With no plugins installed there is nothing to
+	// compare against, so reaching for the network is work we then throw away
+	// -- and when plugins.nself.org is slow it turned a question answerable
+	// entirely from local state into a 5s timeout and a non-zero exit.
+	//
+	// It also made TestPluginOutdated_NoneInstalled contact the real registry:
+	// unlike its siblings it sets no NSELF_PLUGIN_REGISTRY, so it inherited a
+	// live network dependency and failed CI with "context deadline exceeded"
+	// whenever the host was unreachable.
+	registryURL := os.Getenv("NSELF_PLUGIN_REGISTRY")
+	if err := plugin.ValidateNetworkAccess(cmd.Context(), registryURL); err != nil {
+		return err
 	}
 
 	registry, err := plugin.List(pluginDir, false)
