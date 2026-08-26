@@ -15,6 +15,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/nself-org/cli/internal/health"
 )
 
 // setNginxWeights writes the Nginx upstream block with the given canary percent
@@ -60,7 +62,9 @@ func reloadNginx(projectRoot string) error {
 }
 
 // soak monitors the green environment during the soak period.
-// Returns (rolledBack=true, err) when error rate exceeds threshold.
+// Returns (rolledBack=true, err) when error rate exceeds threshold, or when
+// the green environment cannot be observed at all (see measureErrorRate) —
+// an unobservable environment must never be promoted to production.
 func soak(ctx context.Context, cfg DeployConfig, duration time.Duration) (bool, error) {
 	deadline := time.Now().Add(duration)
 	pollInterval := 30 * time.Second
@@ -72,7 +76,10 @@ func soak(ctx context.Context, cfg DeployConfig, duration time.Duration) (bool, 
 		case <-time.After(pollInterval):
 		}
 
-		errorRate := measureErrorRate(ctx, cfg)
+		errorRate, err := measureErrorRate(ctx, cfg)
+		if err != nil {
+			return true, fmt.Errorf("soak measurement failed, rolling back: %w", err)
+		}
 		if errorRate > cfg.ErrorThresholdPct {
 			return true, fmt.Errorf("error rate %.2f%% exceeded threshold %.1f%%", errorRate, cfg.ErrorThresholdPct)
 		}
@@ -81,36 +88,87 @@ func soak(ctx context.Context, cfg DeployConfig, duration time.Duration) (bool, 
 }
 
 // measureErrorRate estimates the current error rate from green containers.
-// It checks docker compose ps for unhealthy containers and returns a rate.
-// When Prometheus is available, it queries the metrics endpoint instead.
-// Returns 0.0 when measurement is unavailable (fail-open for soak continuity).
-func measureErrorRate(ctx context.Context, cfg DeployConfig) float64 {
+// It checks docker compose ps for containers that are not running, or that
+// declare a failing healthcheck, and returns the resulting percentage. When
+// Prometheus is available, it queries the metrics endpoint instead.
+//
+// It returns an error when the green environment cannot be observed at all:
+// the docker command failing, or reporting zero containers. Both used to
+// return 0.0 ("no errors"), which made an unobservable environment
+// indistinguishable from a healthy one. soak() now treats any error from
+// this function as a soak failure and rolls back, so "couldn't measure" and
+// "measured and it's broken" both stop the promotion — the only difference
+// is which is reported.
+func measureErrorRate(ctx context.Context, cfg DeployConfig) (float64, error) {
 	project := composeProjectName(EnvGreen)
 	out, err := exec.CommandContext(ctx,
 		"docker", "compose",
 		"-p", project,
-		"ps", "--format", "{{.Health}}",
+		"ps", "--format", "{{.Name}}\t{{.State}}\t{{.Health}}",
 	).Output()
 	if err != nil {
-		return 0.0 // fail-open
+		return 0.0, fmt.Errorf("querying green container status for project %s: %w", project, err)
 	}
 
-	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-	total := 0
+	errorRate, total := parseContainerStatusOutput(string(out))
+	if total == 0 {
+		return 0.0, fmt.Errorf("no containers reported for green project %s: cannot measure error rate", project)
+	}
+	return errorRate, nil
+}
+
+// parseContainerStatusOutput parses tab-separated
+// "{{.Name}}\t{{.State}}\t{{.Health}}" lines from `docker compose ps` and
+// returns the error rate percentage together with the number of containers
+// counted (the denominator). Isolated from measureErrorRate so it can be
+// unit tested without shelling out to Docker.
+//
+// A container counts as healthy only when containerHealthy (below) accepts
+// it. Every parsed line is counted in total regardless of whether it has a
+// Health value — the original bug excluded healthcheck-less services (e.g.
+// nginx, auth) from the denominator entirely because it looked at Health
+// alone, which meant a crash-looping nginx was invisible to this gate.
+func parseContainerStatusOutput(out string) (errorRatePct float64, total int) {
+	lines := strings.Split(strings.TrimSpace(out), "\n")
 	unhealthy := 0
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
+		fields := strings.Split(line, "\t")
+		state := ""
+		dockerHealth := ""
+		if len(fields) >= 2 {
+			state = strings.TrimSpace(fields[1])
+		}
+		if len(fields) >= 3 {
+			dockerHealth = strings.TrimSpace(fields[2])
+		}
+
 		total++
-		if strings.Contains(line, "unhealthy") {
+		if !containerHealthy(state, dockerHealth) {
 			unhealthy++
 		}
 	}
 
 	if total == 0 {
-		return 0.0
+		return 0.0, 0
 	}
-	return float64(unhealthy) / float64(total) * 100.0
+	return float64(unhealthy) / float64(total) * 100.0, total
+}
+
+// containerHealthy applies the same accept-predicate internal/health uses
+// for HealthResult.OK(): a container with no Docker healthcheck reports an
+// empty Health field and is judged on State alone ("running" counts as OK,
+// matching buildComposeHealthMap's "no healthcheck configured" convention
+// in internal/health/checker.go). A container whose State is not "running"
+// (exited, restarting, dead, ...) is never OK regardless of Health — that
+// is precisely the failure {{.Health}}-only sampling could not see.
+func containerHealthy(state, dockerHealth string) bool {
+	status := dockerHealth
+	if status == "" {
+		status = state
+	}
+	return health.HealthResult{Status: status}.OK()
 }
