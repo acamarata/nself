@@ -36,7 +36,7 @@ jobs:
           cache: false  # temp workspace — no go.sum to cache
 
       - name: Install go-licenses
-        run: go install github.com/google/go-licenses@latest
+        run: go install github.com/google/go-licenses@v1.6.0
 
       - name: Build synthetic AGPL test workspace
         id: scaffold
