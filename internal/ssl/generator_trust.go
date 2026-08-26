@@ -146,7 +146,7 @@ func CheckCertExpiry(certPath string) (int, error) {
 // destDir is created if it does not exist. Both files are written with 0640
 // permissions so nginx can read them without world-readable exposure.
 func copyMkcertCerts(srcFullchain, srcPrivkey, destDir string) error {
-	if err := os.MkdirAll(destDir, 0750); err != nil {
+	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return fmt.Errorf("creating certificate directory %s: %w", destDir, err)
 	}
 

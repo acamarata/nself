@@ -65,3 +65,25 @@ func contains(haystack, needle string) bool {
 		return false
 	})()
 }
+
+// TestNginxCanReadBindMountedTLS pins the capability nginx needs to start.
+//
+// CapDrop: ALL removes root's ability to ignore file permissions, and the TLS
+// material is bind-mounted with host ownership (privkey.pem is 0600 from
+// mkcert). Without DAC_READ_SEARCH the master cannot open the certificates and
+// nginx crash-loops with "[emerg] cannot load certificate ... Permission
+// denied", which is what timed out the golden path's health wait.
+func TestNginxCanReadBindMountedTLS(t *testing.T) {
+	sec := NginxSecurity()
+	found := false
+	for _, c := range sec.CapAdd {
+		if c == "DAC_READ_SEARCH" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("NginxSecurity().CapAdd = %v, missing DAC_READ_SEARCH; with "+
+			"CapDrop ALL the master cannot read the bind-mounted 0600 private "+
+			"key and nginx will crash-loop", sec.CapAdd)
+	}
+}

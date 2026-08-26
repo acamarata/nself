@@ -77,7 +77,11 @@ func (g *Generator) GenerateWithResult(outputDir string) (*GenerateResult, error
 	}
 
 	certDir := filepath.Join(outputDir, "certificates", certDirName)
-	if err := os.MkdirAll(certDir, 0750); err != nil {
+	// 0755, not 0750: this directory is bind-mounted into the nginx container,
+	// which cannot traverse it otherwise. It holds a public certificate chain,
+	// so the traversal bit is not protecting anything. privkey.pem inside keeps
+	// the restrictive mode mkcert/openssl give it.
+	if err := os.MkdirAll(certDir, 0755); err != nil {
 		return nil, fmt.Errorf("creating certificate directory %s: %w", certDir, err)
 	}
 

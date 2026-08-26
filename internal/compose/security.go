@@ -48,10 +48,24 @@ func MinioSecurity() ServiceSecurity {
 
 // NginxSecurity returns the security config for the Nginx service.
 // Nginx needs NET_BIND_SERVICE for ports 80/443 when running non-root.
+//
+// DAC_READ_SEARCH is required because CapDrop: ALL takes away root's usual
+// ability to ignore file permissions, and the TLS material is bind-mounted
+// from the host with host ownership. privkey.pem is written 0600 by
+// mkcert/openssl and owned by whoever ran `nself build`, so without this the
+// master cannot open it and nginx exits with
+//
+//	[emerg] cannot load certificate ".../fullchain.pem": Permission denied
+//
+// then crash-loops. The alternative was relaxing the private key to be
+// world-readable on the host, which is a worse trade: this grants read and
+// traverse bypass to one container that must read TLS material at startup,
+// whereas DAC_OVERRIDE would also grant write bypass, and a 0644 key would
+// expose it to every user on the machine.
 func NginxSecurity() ServiceSecurity {
 	return ServiceSecurity{
 		CapDrop:     []string{"ALL"},
-		CapAdd:      []string{"NET_BIND_SERVICE"},
+		CapAdd:      []string{"NET_BIND_SERVICE", "DAC_READ_SEARCH"},
 		SecurityOpt: []string{"no-new-privileges:true"},
 		ReadOnly:    true,
 		// nginx tmpfs handled separately in service builder (uid/gid specific)
