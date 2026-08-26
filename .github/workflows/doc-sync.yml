@@ -34,6 +34,14 @@ jobs:
       - name: Wiki links resolve
         run: bash scripts/ci/wiki-link-audit.sh
 
+      # Catches a documented/scripted `nself <path> --flag` whose flag was
+      # never registered on the command it names (the --quick regression
+      # that PR #258 fixed went undetected for over a month; see the script
+      # header for the full story). Commands the core binary doesn't
+      # register at all (plugin-provided) are reported, never failed on.
+      - name: Documented/scripted flags resolve against the binary
+        run: bash scripts/ci/flag-drift-audit.sh
+
       - name: Command inventory is current
         run: |
           CGO_ENABLED=0 go run -mod=vendor ./tools/cmdinventory -format json -depth 2 > /tmp/inventory.json

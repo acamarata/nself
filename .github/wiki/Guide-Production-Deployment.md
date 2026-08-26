@@ -59,17 +59,17 @@ nself version
 ## Initialise and Build
 
 ```bash
-# Create project with production environment
-nself init myproject --env prod
+# Create project with all environment files, including .env.prod
+nself init myproject --full
 
 # Review and edit .env.prod
 # Set: BASE_DOMAIN, HASURA_GRAPHQL_ADMIN_SECRET, JWT secrets, Postgres password
 
-# Generate docker-compose and nginx config
-nself build
+# Generate docker-compose and nginx config for the production environment
+ENV=prod nself build
 
 # Start all services
-nself start
+ENV=prod nself start
 ```
 
 ## Verify Deployment

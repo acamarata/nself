@@ -75,7 +75,7 @@ After reviewing the generated files:
 
 ```bash
 # Apply the schema SQL to your nSelf Postgres instance
-nself db migrate --file ./nself-migration/migration.sql
+nself db migrate apply --file ./nself-migration/migration.sql
 
 # Import Hasura metadata (via Hasura console or CLI)
 hasura metadata apply --directory ./nself-migration/hasura-metadata.yaml

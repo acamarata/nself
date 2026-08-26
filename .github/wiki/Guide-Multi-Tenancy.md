@@ -16,15 +16,15 @@ Each `nself init` call creates a named project. Projects share the host OS but a
 ```bash
 # Project 1
 cd /srv/project1
-nself init project1 --env prod
+nself init --full
 # Edit .env.prod: set BASE_DOMAIN=project1.example.com
-nself build && nself start
+ENV=prod nself build && ENV=prod nself start
 
 # Project 2
 cd /srv/project2
-nself init project2 --env prod
+nself init --full
 # Edit .env.prod: set BASE_DOMAIN=project2.example.com
-nself build && nself start
+ENV=prod nself build && ENV=prod nself start
 ```
 
 ## Port Allocation

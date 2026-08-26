@@ -77,7 +77,7 @@ After the command completes, apply the generated files to your nSelf project:
 
 ```bash
 # Apply the schema migration
-nself db migrate --file ./migration/supabase-migration.sql
+nself db migrate apply --file ./migration/supabase-migration.sql
 
 # Apply Hasura metadata (via Hasura console or CLI)
 hasura metadata apply --directory ./migration/hasura-metadata.yaml

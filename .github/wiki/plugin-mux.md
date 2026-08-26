@@ -209,6 +209,6 @@ Multi-app isolation (`source_account_id TEXT NOT NULL DEFAULT 'primary'` with a 
 
 ## See Also
 
-- ɳClaw bundle overview: `nself plugin list --bundle nclaw`
+- ɳClaw bundle overview: `nself plugin marketplace list --bundle nclaw`
 - Security-Always-Free doctrine (SSRF guard ships free)
 - `ai`, `notify`, and `google` plugin docs for the action backends

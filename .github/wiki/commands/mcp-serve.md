@@ -1,32 +1,27 @@
-# nself mcp serve
+# nself mcp
 
 Start a Model Context Protocol (MCP) server for the local ɳSelf instance. Enables Claude Code and other MCP-compliant IDEs to introspect your ɳSelf project with zero configuration.
 
 ## Synopsis
 
 ```
-nself mcp serve [--port <port>] [--host <host>] [--log-level <level>]
-nself mcp status
+nself mcp [--transport <stdio|sse|http>] [--port <port>]
 ```
+
+There is no separate `serve` or `status` subcommand — `nself mcp` itself starts the server.
 
 ## Description
 
-`nself mcp serve` starts the MCP server in **stdio mode** by default, the native transport that Claude Code expects. When `--port` is supplied (or `NSELF_MCP_PORT` is set), it also starts an HTTP/SSE transport for web IDEs and API access.
+`nself mcp` starts the MCP server in **stdio mode** by default, the native transport that Claude Code expects. Pass `--transport sse` or `--transport http` to expose it over a local HTTP port instead; set `NSELF_MCP_TOKEN` to require a bearer token on those transports.
 
-On startup the server:
-
-1. Validates `DATABASE_URL` and `HASURA_GRAPHQL_ADMIN_SECRET` are present.
-2. Registers all 9 MCP tools against the tool registry.
-3. Prints `MCP server ready on stdio` to stderr.
-4. Optionally broadcasts `_nself-mcp._tcp.local.` via mDNS for auto-discovery.
+Run `nself mcp` from inside an nSelf project directory — it fails fast if one isn't found.
 
 ## Options
 
 | Flag | Default | Description |
 |---|---|---|
-| `--port` | `0` (stdio only) | HTTP/SSE port. Set to `3825` for web IDE support. |
-| `--host` | `127.0.0.1` | HTTP/SSE bind host. |
-| `--log-level` | `info` | Log level: `debug`, `info`, `warn`, `error`. Logs go to stderr. |
+| `--transport`, `-t` | `stdio` | Transport: `stdio`, `sse`, or `http`. |
+| `--port`, `-p` | `3825` | Port for the `sse`/`http` transports. |
 
 ## Environment variables
 
@@ -103,34 +98,15 @@ Reports the configured port, whether it is in use (server likely running), mDNS 
 
 ```bash
 # Stdio only (Claude Code uses this)
-nself mcp serve
+nself mcp
 
 # With HTTP/SSE on the default port
-nself mcp serve --port 3825
-
-# Debug logging
-nself mcp serve --log-level debug
-
-# Check if running
-nself mcp status
-
-# Curl the tool list (requires HTTP/SSE mode)
-curl http://localhost:3825/mcp/tools/list
-
-# Curl a tool call
-curl -X POST http://localhost:3825/mcp/tools/call \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"nself_schema_list","arguments":{}}'
+nself mcp --transport http --port 3825
 ```
 
 ## Plugin requirement
 
-Requires the `mcp` plugin (`plugins-pro/paid/mcp`). Install:
-
-```bash
-nself license set nself_pro_...
-nself plugin install mcp
-```
+None — `nself mcp` is a core CLI command, no plugin or license required.
 
 ## See also
 

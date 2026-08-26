@@ -47,10 +47,10 @@ The CLI validates the signature locally and skips remote checks. Offline keys ca
 
 **Signature invalid after CLI upgrade.** Run `nself license refresh`. Major version bumps may rotate signing keys.
 
-**Manual signature verification.** Inspect the cache contents and verify against the embedded public key:
+**Manual signature verification.** There is no separate verify subcommand, every command validates the cached signature locally before it runs (see above). To inspect the cache contents without triggering a network call, print it directly:
 
 ```bash
-nself license verify --offline ~/.nself/license/cache.json
+nself license show --json
 ```
 
 **Stuck in fail-closed.** Connect to the internet and run `nself license refresh`. If the network is restricted, request an offline license key.

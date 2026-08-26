@@ -55,17 +55,17 @@ A practical example: `.env.dev` sets `HASURA_GRAPHQL_ENABLE_CONSOLE=true`. Your 
 
 ## Switching Environments
 
-Pass the `-e` flag (or `--env`) to any command that spins up services:
+Set the `ENV` variable to any command that spins up services — `start` has no `--env`/`-e` flag of its own, environment selection happens through the loading cascade above:
 
 ```bash
-# Local development (default — same as omitting -e)
-nself start -e dev
+# Local development (default — same as omitting ENV)
+nself start
 
 # Staging environment
-nself start -e staging
+ENV=staging nself start
 
 # Production environment
-nself start -e prod
+ENV=prod nself start
 ```
 
 The `ENV` variable also accepts common aliases so you do not need to remember the canonical names:
@@ -118,14 +118,14 @@ This command loads the full cascade for your current environment and checks ever
 To validate a specific environment without starting any services:
 
 ```bash
-nself config validate -e prod
+nself config validate --env prod
 ```
 
 You can also print the resolved configuration (all variables after the cascade) to inspect what values the CLI will actually use:
 
 ```bash
 nself config show
-nself config show -e prod
+nself config show --env prod
 ```
 
 ---

@@ -20,7 +20,7 @@ The tiny profile starts Postgres and nginx only. Hasura and Auth are opt-in.
 ## Getting started
 
 ```bash
-nself init --profile=tiny --accept-defaults
+nself init --profile=tiny --non-interactive
 nself build
 nself start
 ```

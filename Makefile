@@ -12,7 +12,7 @@ LDFLAGS := -s -w \
 	-X $(MODULE)/internal/license.licensePubKeyHex=$(NSELF_LICENSE_PUBKEY_HEX)
 BUILDFLAGS := -trimpath
 
-.PHONY: build clean test vet install cross dist verify-prod sport-f21 sport-f02 cmd-inventory core-services wiki-commands wiki-check parity sbom man fmt fmt-check
+.PHONY: build clean test vet install cross dist verify-prod sport-f21 sport-f02 cmd-inventory core-services wiki-commands wiki-check flag-drift-audit parity sbom man fmt fmt-check
 
 verify-prod:
 	@bash scripts/prod-verify/p87-verification.sh
@@ -46,6 +46,13 @@ wiki-commands:
 wiki-check:
 	@CGO_ENABLED=0 go run -mod=vendor ./tools/wikigen -check
 	@bash scripts/ci/wiki-link-audit.sh
+
+## flag-drift-audit — checks every `nself <path> --flag` invocation in
+## .github/wiki/ and scripts/ against the live cobra tree, so a documented or
+## scripted flag that was never registered on the command it names fails the
+## build instead of shipping silently (see scripts/ci/flag-drift-audit.sh).
+flag-drift-audit:
+	@bash scripts/ci/flag-drift-audit.sh
 
 ## mcp-docs — CLI-R15. Print the current MCP tool/resource/prompt list,
 ## generated from cmd/commands/mcp*.go — paste into cmd-mcp.md's PROSE blocks

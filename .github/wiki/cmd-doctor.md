@@ -98,7 +98,8 @@ The check reads `NSELF_AI_LOADED`, `PLUGIN_AI_INTERNAL_URL`, `NSELF_MODERATION_L
 
 **Detection fixture:**
 ```bash
-nself doctor --deep --config-file test/fixtures/ai-public-no-mod.env
+set -a && source test/fixtures/ai-public-no-mod.env && set +a
+nself doctor --deep
 # Emits: "moderation not wired on public-bound deployment with ai loaded"
 ```
 
@@ -158,8 +159,9 @@ HASURA-FILTER-MISSING table=np_claw_cost_events role=user
 
 **Fix:**
 ```bash
-# Fix missing FORCE RLS on a table
-nself migrate apply --rls-force np_chat_messages
+# Fix missing FORCE RLS on a table — enables RLS and applies FORCE ROW LEVEL
+# SECURITY plus the four standard Hasura-compatible policies
+nself db rls apply-table public np_chat_messages
 
 # Re-run the check after fixing
 nself doctor --deep --only security

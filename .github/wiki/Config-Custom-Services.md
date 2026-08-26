@@ -123,28 +123,22 @@ CS_2_ENV=QUEUE_SIZE=100,WORKER_TIMEOUT=30,LOG_FORMAT=json
 
 ## Language Templates
 
-ɳSelf ships with 40+ language and framework templates that scaffold a production-ready service with a Dockerfile, health endpoint, and example database connection.
+`nself service add <name> --template <lang>` scaffolds a production-ready service with a Dockerfile, health endpoint, and example database connection.
 
 ```bash
-nself service templates          # list all available templates
-nself service templates --filter go   # filter by name
+nself service add my-api --template go
 ```
 
-**Available templates include:**
+**Available templates:**
 
-| Category | Templates |
+| Template | Description |
 |----------|-----------|
-| **Go** | `go`, `go-fiber`, `go-gin`, `go-chi` |
-| **Node.js** | `node`, `express`, `fastify`, `hono` |
-| **Python** | `python`, `fastapi`, `flask`, `django` |
-| **Rust** | `rust`, `axum`, `actix` |
-| **Ruby** | `ruby`, `rails`, `sinatra` |
-| **PHP** | `php`, `laravel`, `slim` |
-| **Java / JVM** | `java`, `spring`, `kotlin-ktor` |
-| **.NET** | `dotnet`, `aspnet` |
-| **Bun** | `bun`, `bun-hono` |
-| **Deno** | `deno`, `deno-fresh` |
-| **Other** | `elixir`, `phoenix`, `clojure`, `scala`, and more |
+| `go` (default) | Go HTTP service |
+| `node` | Node.js service |
+| `python` | Python service |
+| `static` | Static file server |
+| `rust` | Rust service |
+| `other` | Minimal scaffold for anything else |
 
 Each template includes a `/health` endpoint that returns `200 OK`, which ɳSelf uses for container health checks and `nself status`.
 
@@ -184,10 +178,10 @@ The ping_api service receives `DATABASE_URL` and `HASURA_GRAPHQL_ADMIN_SECRET` a
 **1. Create a service using a template:**
 
 ```bash
-nself service create my-api --template go --port 8002
+nself service add my-api --template go
 ```
 
-This scaffolds a Go service in `./services/my-api/` with a Dockerfile and `/health` endpoint.
+This scaffolds a Go service in `./services/my-api/` with a Dockerfile and `/health` endpoint, and assigns it the next available `CS_N` slot and port automatically.
 
 **2. Register it in `.env`:**
 
