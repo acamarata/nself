@@ -19,6 +19,24 @@ type HealthResult struct {
 	Details  string        `json:"details"`
 }
 
+// OK is the single accept-predicate for whether a HealthResult counts as
+// healthy. A container with no Docker healthcheck configured reports
+// "running" rather than "healthy" (see resolveServiceHealth's comment on
+// buildComposeHealthMap) and is intentionally accepted here.
+//
+// Both aggregate and per-service verdicts MUST call this method — the
+// aggregate count in RunAllChecks, every per-service printer in
+// cmd/commands/start_health.go, and the CI readiness gate in waitCIReady.
+// Do not reintroduce an inline `Status == "healthy"` (or `!=`) comparison
+// anywhere a HealthResult is judged: that is exactly how issue #268
+// happened. A report printed "4/4 healthy (100%)" on one line and
+// "✗ nginx: running" on the next because the printers compared against only
+// "healthy" while the aggregate also accepted "running" — four copies of
+// the same decision that quietly drifted apart.
+func (r HealthResult) OK() bool {
+	return r.Status == "healthy" || r.Status == "running"
+}
+
 // HealthReport aggregates the results of checking all services.
 type HealthReport struct {
 	Timestamp time.Time      `json:"timestamp"`
@@ -59,7 +77,7 @@ func RunAllChecks(ctx context.Context, cfg *config.Config, workdir string) (*Hea
 
 	for _, svc := range services {
 		result := resolveServiceHealth(ctx, cfg.ProjectName, svc, composeHealth)
-		if result.Status == "healthy" || result.Status == "running" {
+		if result.OK() {
 			report.Healthy++
 		} else {
 			report.Unhealthy++

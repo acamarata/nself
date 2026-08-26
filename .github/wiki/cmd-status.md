@@ -18,6 +18,9 @@ nself status [SERVICE] [flags]
 You can pass a single service name to show detailed status for that service only. Use `--verbose` to include resource usage (CPU, memory) and uptime. Use `--json` to get machine-readable output suitable for monitoring scripts or dashboards.
 
 Exit codes are meaningful: `0` means all services are healthy, `1` means an error occurred running the checks, and `2` means one or more services are unhealthy.
+
+
+A service that declares no Docker healthcheck reports as `running` rather than `healthy`, and is counted in the healthy total rather than as unhealthy.
 <!-- END PROSE:description -->
 
 ## Flags

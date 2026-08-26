@@ -47,7 +47,7 @@ var healthServiceCmd = &cobra.Command{
 		var result *health.HealthResult
 		for attempt := 0; attempt < healthRetries; attempt++ {
 			result, lastErr = health.CheckService(ctx, args[0])
-			if lastErr == nil && result.Status == "healthy" {
+			if lastErr == nil && result.OK() {
 				break
 			}
 		}
@@ -58,7 +58,7 @@ var healthServiceCmd = &cobra.Command{
 		if healthJSON {
 			return printJSON(result)
 		}
-		if healthQuiet && result.Status == "healthy" {
+		if healthQuiet && result.OK() {
 			return nil
 		}
 		printServiceResult(result)
@@ -78,7 +78,7 @@ var healthEndpointCmd = &cobra.Command{
 		var result *health.HealthResult
 		for attempt := 0; attempt < healthRetries; attempt++ {
 			result, lastErr = health.CheckEndpoint(ctx, args[0])
-			if lastErr == nil && result.Status == "healthy" {
+			if lastErr == nil && result.OK() {
 				break
 			}
 		}
@@ -89,7 +89,7 @@ var healthEndpointCmd = &cobra.Command{
 		if healthJSON {
 			return printJSON(result)
 		}
-		if healthQuiet && result.Status == "healthy" {
+		if healthQuiet && result.OK() {
 			return nil
 		}
 		printServiceResult(result)
