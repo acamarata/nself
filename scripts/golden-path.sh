@@ -431,8 +431,27 @@ fi
 # installing them first failed every run with
 #   error installing "ai": plugin "ai" requires a license key
 # The license step existed, it just ran after the two steps that needed it.
+# Trim surrounding whitespace and newlines. A secret stored with a trailing or
+# leading newline survives the `-z` check above but disappears under word
+# splitting when interpolated into a command string, which is how this failed:
+# the value was present (87 chars, confirmed in CI) and cobra still reported
+# "accepts 1 arg(s), received 0".
+NSELF_LICENSE_KEY_TRIMMED="$(printf '%s' "${NSELF_PLUGIN_LICENSE_KEY_OWNER}" | tr -d '[:space:]')"
+if [ -z "${NSELF_LICENSE_KEY_TRIMMED}" ]; then
+  err "NSELF_PLUGIN_LICENSE_KEY_OWNER contains only whitespace."
+  STEP_STATUS[8]="fail"
+  STEP_NOTE[8]="license key is whitespace only"
+  FAIL=$((FAIL + 1))
+  write_report
+  exit 1
+fi
+
+# Passed as a positional argument, not interpolated into the command string.
+# Interpolating means the value is re-parsed by the shell, so a newline splits
+# it into a second command and a leading '#' would comment the rest away. It is
+# also the safer shape for a secret in general.
 run_step 8 "nself license set <owner-key>" \
-  bash -c "cd ${PROJECT_DIR} && nself license set ${NSELF_PLUGIN_LICENSE_KEY_OWNER}"
+  bash -c 'cd "$1" && nself license set "$2"' _ "${PROJECT_DIR}" "${NSELF_LICENSE_KEY_TRIMMED}"
 [ "${STEP_STATUS[8]}" = "fail" ] && { write_report; exit 1; }
 
 # ── Step 9: plugin install ai ────────────────────────────────────────────────
