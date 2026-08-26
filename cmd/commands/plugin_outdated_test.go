@@ -95,6 +95,36 @@ func TestPluginOutdated_NoneInstalled(t *testing.T) {
 	}
 }
 
+// TestPluginOutdated_NoneInstalledNeedsNoNetwork pins the reason
+// TestPluginOutdated_NoneInstalled kept failing in CI.
+//
+// runPluginOutdated used to probe the registry for reachability BEFORE checking
+// whether anything was installed. With nothing installed there is nothing to
+// compare a registry against, so the probe was wasted work that could only ever
+// turn a locally-answerable question into a failure. In CI it did exactly that:
+//
+//	cannot reach plugin registry https://plugins.nself.org/registry.json:
+//	Head "...": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+//
+// This points the registry at an address that cannot answer, so if the probe
+// ever moves back above the short-circuit this test fails immediately instead
+// of intermittently, and on a developer's machine rather than in CI.
+func TestPluginOutdated_NoneInstalledNeedsNoNetwork(t *testing.T) {
+	t.Setenv("NSELF_PLUGIN_DIR", t.TempDir())
+	setPluginTestHome(t, t.TempDir())
+
+	// Reserved as invalid-for-any-use by RFC 6890; nothing can answer here.
+	t.Setenv("NSELF_PLUGIN_REGISTRY", "http://192.0.2.0:1/registry.json")
+
+	run, stdout := newOutdatedTestCmd(t, false)
+	if err := run(); err != nil {
+		t.Fatalf("nothing installed must be answerable without the network, got: %v", err)
+	}
+	if !strings.Contains(stdout(), "No plugins installed") {
+		t.Errorf("expected 'No plugins installed', got: %q", stdout())
+	}
+}
+
 // TestPluginOutdated_AllCurrent verifies exit 0 and "up to date" messaging
 // when every installed plugin matches the registry's version.
 func TestPluginOutdated_AllCurrent(t *testing.T) {
