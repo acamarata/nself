@@ -104,7 +104,7 @@ func measureErrorRate(ctx context.Context, cfg DeployConfig) (float64, error) {
 	out, err := exec.CommandContext(ctx,
 		"docker", "compose",
 		"-p", project,
-		"ps", "--format", "{{.Name}}\t{{.State}}\t{{.Health}}",
+		"ps", "--format", containerStatusFormat,
 	).Output()
 	if err != nil {
 		return 0.0, fmt.Errorf("querying green container status for project %s: %w", project, err)
@@ -117,20 +117,29 @@ func measureErrorRate(ctx context.Context, cfg DeployConfig) (float64, error) {
 	return errorRate, nil
 }
 
-// parseContainerStatusOutput parses tab-separated
-// "{{.Name}}\t{{.State}}\t{{.Health}}" lines from `docker compose ps` and
-// returns the error rate percentage together with the number of containers
-// counted (the denominator). Isolated from measureErrorRate so it can be
-// unit tested without shelling out to Docker.
-//
-// A container counts as healthy only when containerHealthy (below) accepts
-// it. Every parsed line is counted in total regardless of whether it has a
-// Health value — the original bug excluded healthcheck-less services (e.g.
-// nginx, auth) from the denominator entirely because it looked at Health
-// alone, which meant a crash-looping nginx was invisible to this gate.
-func parseContainerStatusOutput(out string) (errorRatePct float64, total int) {
+// containerStatus is one parsed row of docker compose ps output: the
+// State (running, exited, restarting, ...) and the optional Health value
+// (healthy, unhealthy, starting, or empty when no healthcheck is declared).
+type containerStatus struct {
+	state  string
+	health string
+}
+
+// containerStatusFormat is the shared docker compose ps --format used by
+// both measureErrorRate (soak gate) and waitForHealth (readiness wait), so
+// the two call sites read identical fields and can share one parser and
+// one accept-predicate (containerHealthy) instead of drifting apart the
+// way #270 (fail-open on Health alone) and its readiness-side counterpart
+// (fail-closed on the same missing Health) did.
+const containerStatusFormat = "{{.Name}}\t{{.State}}\t{{.Health}}"
+
+// parseContainerStatusLines parses tab-separated
+// "{{.Name}}\t{{.State}}\t{{.Health}}" lines from `docker compose ps` into
+// one containerStatus per non-blank line. Isolated from its callers so it
+// can be unit tested without shelling out to Docker.
+func parseContainerStatusLines(out string) []containerStatus {
 	lines := strings.Split(strings.TrimSpace(out), "\n")
-	unhealthy := 0
+	statuses := make([]containerStatus, 0, len(lines))
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
@@ -145,17 +154,54 @@ func parseContainerStatusOutput(out string) (errorRatePct float64, total int) {
 		if len(fields) >= 3 {
 			dockerHealth = strings.TrimSpace(fields[2])
 		}
-
-		total++
-		if !containerHealthy(state, dockerHealth) {
-			unhealthy++
-		}
+		statuses = append(statuses, containerStatus{state: state, health: dockerHealth})
 	}
+	return statuses
+}
 
+// parseContainerStatusOutput returns the error rate percentage together
+// with the number of containers counted (the denominator).
+//
+// A container counts as healthy only when containerHealthy (below) accepts
+// it. Every parsed line is counted in total regardless of whether it has a
+// Health value — the original bug excluded healthcheck-less services (e.g.
+// nginx, auth) from the denominator entirely because it looked at Health
+// alone, which meant a crash-looping nginx was invisible to this gate.
+func parseContainerStatusOutput(out string) (errorRatePct float64, total int) {
+	statuses := parseContainerStatusLines(out)
+	total = len(statuses)
 	if total == 0 {
 		return 0.0, 0
 	}
+
+	unhealthy := 0
+	for _, cs := range statuses {
+		if !containerHealthy(cs.state, cs.health) {
+			unhealthy++
+		}
+	}
 	return float64(unhealthy) / float64(total) * 100.0, total
+}
+
+// allContainersReady reports whether every container in out is ready
+// (containerHealthy accepts it) together with the number of containers
+// observed. Used by waitForHealth. total == 0 is never ready: no
+// containers reported means the environment could not be observed, which
+// must never be indistinguishable from "everything is healthy" (same
+// principle as the total == 0 case in parseContainerStatusOutput).
+func allContainersReady(out string) (ready bool, total int) {
+	statuses := parseContainerStatusLines(out)
+	total = len(statuses)
+	if total == 0 {
+		return false, 0
+	}
+
+	for _, cs := range statuses {
+		if !containerHealthy(cs.state, cs.health) {
+			return false, total
+		}
+	}
+	return true, total
 }
 
 // containerHealthy applies the same accept-predicate internal/health uses
@@ -164,7 +210,10 @@ func parseContainerStatusOutput(out string) (errorRatePct float64, total int) {
 // matching buildComposeHealthMap's "no healthcheck configured" convention
 // in internal/health/checker.go). A container whose State is not "running"
 // (exited, restarting, dead, ...) is never OK regardless of Health — that
-// is precisely the failure {{.Health}}-only sampling could not see.
+// is precisely the failure {{.Health}}-only sampling could not see. A
+// "starting" Health value (healthcheck running but not yet passed) is also
+// never OK, since it is neither "healthy" nor "running". waitForHealth
+// relies on this to keep waiting rather than declaring readiness prematurely.
 func containerHealthy(state, dockerHealth string) bool {
 	status := dockerHealth
 	if status == "" {

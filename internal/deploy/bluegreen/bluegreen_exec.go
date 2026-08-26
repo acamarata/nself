@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 )
 
@@ -97,6 +96,18 @@ func stopBlue(ctx context.Context, cfg DeployConfig) error {
 }
 
 // waitForHealth polls the health endpoint on the given env until healthy or timeout.
+//
+// Readiness uses the same containerHealthy predicate and the same
+// {{.Name}}\t{{.State}}\t{{.Health}} sampling as the soak gate's
+// measureErrorRate (bluegreen_traffic.go). This used to be a separate,
+// stricter check that required every docker compose ps line to literally
+// contain the substring "healthy". A container with no Docker healthcheck
+// (nginx, auth, any CS_N custom service) always reports empty Health, so it
+// never contained "healthy" and this wait could never succeed for a
+// perfectly good environment: the opposite failure from #270's fail-open
+// soak gate, on the same underlying question of what counts as healthy.
+// A "starting" Health value is still not ready, so the wait correctly keeps
+// polling instead of declaring readiness prematurely.
 func waitForHealth(ctx context.Context, cfg DeployConfig, env string, timeout time.Duration) error {
 	portOffset := cfg.BluePortOffset
 	if env == EnvGreen {
@@ -117,21 +128,10 @@ func waitForHealth(ctx context.Context, cfg DeployConfig, env string, timeout ti
 		out, err := exec.CommandContext(ctx,
 			"docker", "compose",
 			"-p", project,
-			"ps", "--format", "{{.Name}}\t{{.Health}}",
+			"ps", "--format", containerStatusFormat,
 		).Output()
 		if err == nil {
-			lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-			allHealthy := len(lines) > 0
-			for _, line := range lines {
-				if line == "" {
-					continue
-				}
-				if strings.Contains(line, "unhealthy") || !strings.Contains(line, "healthy") {
-					allHealthy = false
-					break
-				}
-			}
-			if allHealthy && len(lines) > 0 {
+			if ready, total := allContainersReady(string(out)); ready && total > 0 {
 				return nil
 			}
 		}

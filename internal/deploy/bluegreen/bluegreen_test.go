@@ -449,3 +449,99 @@ func TestParseContainerStatusOutput_issue270Scenario(t *testing.T) {
 		t.Errorf("rate = %.2f, want 50.00 (2 of 4 containers down)", rate)
 	}
 }
+
+// ── allContainersReady (waitForHealth, issue #270 counterpart) ─────────────
+//
+// waitForHealth used to require every docker compose ps line to literally
+// contain the substring "healthy", so a container with no Docker
+// healthcheck (empty Health: nginx, auth, any CS_N custom service) could
+// never satisfy readiness: the opposite failure mode from the soak gate's
+// fail-open bug, on the same underlying question of what counts as healthy.
+
+func TestAllContainersReady_table(t *testing.T) {
+	cases := []struct {
+		name      string
+		out       string
+		wantReady bool
+		wantTotal int
+	}{
+		{
+			name:      "running with no healthcheck is ready",
+			out:       "green_nginx	running	",
+			wantReady: true,
+			wantTotal: 1,
+		},
+		{
+			name:      "running with healthy healthcheck is ready",
+			out:       "green_postgres	running	healthy",
+			wantReady: true,
+			wantTotal: 1,
+		},
+		{
+			name:      "starting is not ready",
+			out:       "green_hasura	running	starting",
+			wantReady: false,
+			wantTotal: 1,
+		},
+		{
+			name:      "unhealthy is not ready",
+			out:       "green_hasura	running	unhealthy",
+			wantReady: false,
+			wantTotal: 1,
+		},
+		{
+			name:      "restarting is not ready",
+			out:       "green_nginx	restarting	",
+			wantReady: false,
+			wantTotal: 1,
+		},
+		{
+			name:      "exited is not ready",
+			out:       "green_auth	exited	",
+			wantReady: false,
+			wantTotal: 1,
+		},
+		{
+			name:      "no containers reported is not ready",
+			out:       "",
+			wantReady: false,
+			wantTotal: 0,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ready, total := allContainersReady(tc.out)
+			if total != tc.wantTotal {
+				t.Errorf("total = %d, want %d", total, tc.wantTotal)
+			}
+			if ready != tc.wantReady {
+				t.Errorf("ready = %v, want %v", ready, tc.wantReady)
+			}
+		})
+	}
+}
+
+// TestAllContainersReady_issue270Scenario mirrors
+// TestParseContainerStatusOutput_issue270Scenario but for the readiness
+// side: nginx and auth declare no healthcheck and ARE actually running
+// fine (unlike the soak scenario, where they were down) alongside a
+// healthy postgres and hasura. Before this fix, nginx/auth's empty Health
+// field meant their docker compose ps line never contained "healthy", so
+// this reported not-ready forever even though every container was fine.
+func TestAllContainersReady_issue270Scenario(t *testing.T) {
+	out := strings.Join([]string{
+		"nself-green_nginx\trunning\t",
+		"nself-green_auth\trunning\t",
+		"nself-green_postgres\trunning\thealthy",
+		"nself-green_hasura\trunning\thealthy",
+	}, "\n")
+
+	ready, total := allContainersReady(out)
+	if total != 4 {
+		t.Fatalf("total = %d, want 4", total)
+	}
+	if !ready {
+		t.Fatalf("ready = false, want true: nginx/auth running with no healthcheck must count as ready")
+	}
+}
