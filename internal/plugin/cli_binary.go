@@ -1,7 +1,6 @@
 package plugin
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -228,50 +227,4 @@ func copyExecutable(src, dst string) error {
 		return err
 	}
 	return os.Chmod(dst, 0o755)
-}
-
-// readPluginManifest loads plugin.json from an installed plugin directory.
-// Returns nil when it cannot be read; callers treat that as "assume the
-// nself-<name> convention" rather than as a failure, because a plugin with a
-// corrupt manifest must still be removable.
-func readPluginManifest(destDir string) *PluginManifest {
-	data, err := os.ReadFile(filepath.Join(destDir, "plugin.json"))
-	if err != nil {
-		return nil
-	}
-	var m PluginManifest
-	if err := json.Unmarshal(data, &m); err != nil {
-		return nil
-	}
-	return &m
-}
-
-// IsCommandInstalled reports whether a plugin providing the named command is
-// present, i.e. whether ProxyCommand would find a binary for it.
-//
-// Used by the CLI to decide whether a relocated command still needs its
-// "moved to a plugin" notice. Once the plugin is installed the old spelling is
-// the supported spelling, and repeating the install hint is noise.
-func IsCommandInstalled(cmdName string) bool {
-	candidate := PublishedBinaryPath("nself-" + cmdName)
-	info, err := os.Stat(candidate)
-	return err == nil && !info.IsDir()
-}
-
-// pluginOwnsTables reports whether a plugin declares any database tables.
-//
-// A plugin with none needs no schema, and every CLI-R11 extraction produces
-// exactly that shape: a Go binary that adds a command, with "tables": [] in its
-// manifest. Running the schema step for those meant `nself install <cmd>`
-// required Docker and a running Postgres to create an empty schema, so a
-// command-line tool could not be installed on a machine without a stack.
-//
-// A nil manifest is treated as owning tables: it means the manifest could not
-// be read, and skipping schema creation on a guess is the more damaging
-// mistake of the two.
-func pluginOwnsTables(m *PluginManifest) bool {
-	if m == nil {
-		return true
-	}
-	return len(m.Tables) > 0
 }

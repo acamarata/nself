@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-// TestBothInstallPathsShareTheirSteps guards a class of bug rather than an
+// TestInstallAndRemovePathsShareTheirSteps guards a class of bug rather than an
 // instance.
 //
 // There are two install paths — installLocked for registry plugins and
@@ -28,15 +28,26 @@ import (
 // source-level check: the two functions do genuinely different things and
 // cannot be collapsed into one, so the only thing worth pinning is that neither
 // forgets a step the other performs.
-func TestBothInstallPathsShareTheirSteps(t *testing.T) {
+func TestInstallAndRemovePathsShareTheirSteps(t *testing.T) {
 	required := []string{
 		"linkCLIBinary",    // publish the command, or the plugin installs dead
 		"pluginOwnsTables", // do not demand a database from a plugin with no tables
 	}
 
-	for _, tc := range []struct{ file, fn string }{
-		{"installer_locked.go", "installLocked"},
-		{"install_thirdparty.go", "InstallFromURL"},
+	// Remove is the third path, and it had drifted the same way: it never
+	// unpublished the command binary and demanded a database from a plugin with
+	// no tables. What each path must do differs, so the requirements are
+	// per-path rather than one shared list.
+	for _, tc := range []struct {
+		file, fn string
+		steps    []string
+	}{
+		{"installer_locked.go", "installLocked", required},
+		{"install_thirdparty.go", "InstallFromURL", required},
+		{"installer_remove_update.go", "Remove", []string{
+			"unlinkCLIBinary",  // or the command survives its own removal
+			"pluginOwnsTables", // or removal needs a database the plugin never used
+		}},
 	} {
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, tc.file, nil, 0)
@@ -60,7 +71,7 @@ func TestBothInstallPathsShareTheirSteps(t *testing.T) {
 		if body == "" {
 			t.Fatalf("%s: function %s not found — rename it here too", tc.file, tc.fn)
 		}
-		for _, want := range required {
+		for _, want := range tc.steps {
 			if !contains(body, want) {
 				t.Errorf("%s does not call %s. Both install paths must perform this step; "+
 					"the last time one of them did not, plugins installed successfully and "+

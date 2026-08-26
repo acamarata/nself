@@ -254,3 +254,49 @@ func TestProxyCommandDoesNotLogToSlog(t *testing.T) {
 		t.Errorf("proxy wrote to the default logger, which reaches the user's terminal:\n%s", got)
 	}
 }
+
+// TestReadPluginManifestFindsNestedManifests covers the reason a whole set of
+// fallbacks were being taken silently.
+//
+// Release tarballs carry a leading directory — `<name>/...` for the platform
+// archive, `free/<name>/...` for the source one — and extraction keeps it. So
+// an installed plugin's manifest is nested, and readPluginManifest only looked
+// at the root. It returned nil for every plugin installed from a release, and
+// each caller quietly used its nil fallback: unlinkCLIBinary guessed the binary
+// name, and pluginOwnsTables assumed tables existed, which made `nself remove`
+// demand a database from a plugin that had none.
+func TestReadPluginManifestFindsNestedManifests(t *testing.T) {
+	const body = `{"name":"demo","pluginType":"cli","binaryName":"nself-demo","tables":[]}`
+
+	for _, layout := range []struct {
+		name string
+		rel  string
+	}{
+		{"at the root", "plugin.json"},
+		{"platform archive: <name>/", filepath.Join("demo", "plugin.json")},
+		{"source archive: free/<name>/", filepath.Join("free", "demo", "plugin.json")},
+	} {
+		t.Run(layout.name, func(t *testing.T) {
+			dir := t.TempDir()
+			full := filepath.Join(dir, layout.rel)
+			if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+				t.Fatalf("mkdir: %v", err)
+			}
+			if err := os.WriteFile(full, []byte(body), 0o644); err != nil {
+				t.Fatalf("write: %v", err)
+			}
+
+			m := readPluginManifest(dir)
+			if m == nil {
+				t.Fatal("manifest not found — callers would silently take their nil fallback")
+			}
+			if m.BinaryName != "nself-demo" {
+				t.Errorf("BinaryName = %q, want nself-demo", m.BinaryName)
+			}
+			if pluginOwnsTables(m) {
+				t.Error("a plugin declaring \"tables\": [] was reported as owning tables, " +
+					"which is what made `nself remove` demand a database")
+			}
+		})
+	}
+}
