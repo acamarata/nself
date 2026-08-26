@@ -354,3 +354,194 @@ func TestComposeProjectName(t *testing.T) {
 		t.Errorf("got %q, want %q", got, "nself-green")
 	}
 }
+
+// ── parseContainerStatusOutput (issue #270) ─────────────────────────────────
+//
+// The soak gate used to derive the entire error rate from {{.Health}}
+// alone, which is only populated for containers that declare a Docker
+// healthcheck (postgres, hasura). Every other service hit `continue` before
+// `total++`, so it was dropped from the denominator instead of being judged.
+// These tests assert both the error rate AND total (the denominator),
+// because the bug was a denominator bug: a crash-looping nginx with no
+// healthcheck reported 0.00% because it was never counted at all.
+
+func TestParseContainerStatusOutput_table(t *testing.T) {
+	cases := []struct {
+		name      string
+		out       string
+		wantRate  float64
+		wantTotal int
+	}{
+		{
+			name:      "running with no healthcheck counts healthy",
+			out:       "green_nginx\trunning\t",
+			wantRate:  0.0,
+			wantTotal: 1,
+		},
+		{
+			name:      "running with healthy healthcheck",
+			out:       "green_postgres\trunning\thealthy",
+			wantRate:  0.0,
+			wantTotal: 1,
+		},
+		{
+			name:      "running with unhealthy healthcheck",
+			out:       "green_hasura\trunning\tunhealthy",
+			wantRate:  100.0,
+			wantTotal: 1,
+		},
+		{
+			name:      "restarting with no healthcheck counts unhealthy",
+			out:       "green_nginx\trestarting\t",
+			wantRate:  100.0,
+			wantTotal: 1,
+		},
+		{
+			name:      "exited with no healthcheck counts unhealthy",
+			out:       "green_auth\texited\t",
+			wantRate:  100.0,
+			wantTotal: 1,
+		},
+		{
+			name:      "no containers reported",
+			out:       "",
+			wantRate:  0.0,
+			wantTotal: 0,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rate, total := parseContainerStatusOutput(tc.out)
+			if total != tc.wantTotal {
+				t.Errorf("total = %d, want %d", total, tc.wantTotal)
+			}
+			if rate != tc.wantRate {
+				t.Errorf("rate = %.2f, want %.2f", rate, tc.wantRate)
+			}
+		})
+	}
+}
+
+// TestParseContainerStatusOutput_issue270Scenario reproduces the #270
+// failure scenario directly: nginx and auth declare no healthcheck (empty
+// Health) and are down, while postgres and hasura declare a healthcheck and
+// report healthy. Before the fix, nginx/auth had no Health value so they
+// were dropped from the denominator before anything was counted, leaving
+// only the two genuinely-healthy services and reporting a clean 0.00% no
+// matter how broken the rest of the environment was.
+func TestParseContainerStatusOutput_issue270Scenario(t *testing.T) {
+	out := strings.Join([]string{
+		"nself-green_nginx\trestarting\t",
+		"nself-green_auth\texited\t",
+		"nself-green_postgres\trunning\thealthy",
+		"nself-green_hasura\trunning\thealthy",
+	}, "\n")
+
+	rate, total := parseContainerStatusOutput(out)
+	if total != 4 {
+		t.Fatalf("total = %d, want 4 (nginx/auth must not be dropped from the denominator)", total)
+	}
+	if rate == 0.0 {
+		t.Fatalf("rate = 0.00%%, want > 0%% — a crash-looping nginx and a dead auth service must not report a clean soak")
+	}
+	if rate != 50.0 {
+		t.Errorf("rate = %.2f, want 50.00 (2 of 4 containers down)", rate)
+	}
+}
+
+// ── allContainersReady (waitForHealth, issue #270 counterpart) ─────────────
+//
+// waitForHealth used to require every docker compose ps line to literally
+// contain the substring "healthy", so a container with no Docker
+// healthcheck (empty Health: nginx, auth, any CS_N custom service) could
+// never satisfy readiness: the opposite failure mode from the soak gate's
+// fail-open bug, on the same underlying question of what counts as healthy.
+
+func TestAllContainersReady_table(t *testing.T) {
+	cases := []struct {
+		name      string
+		out       string
+		wantReady bool
+		wantTotal int
+	}{
+		{
+			name:      "running with no healthcheck is ready",
+			out:       "green_nginx	running	",
+			wantReady: true,
+			wantTotal: 1,
+		},
+		{
+			name:      "running with healthy healthcheck is ready",
+			out:       "green_postgres	running	healthy",
+			wantReady: true,
+			wantTotal: 1,
+		},
+		{
+			name:      "starting is not ready",
+			out:       "green_hasura	running	starting",
+			wantReady: false,
+			wantTotal: 1,
+		},
+		{
+			name:      "unhealthy is not ready",
+			out:       "green_hasura	running	unhealthy",
+			wantReady: false,
+			wantTotal: 1,
+		},
+		{
+			name:      "restarting is not ready",
+			out:       "green_nginx	restarting	",
+			wantReady: false,
+			wantTotal: 1,
+		},
+		{
+			name:      "exited is not ready",
+			out:       "green_auth	exited	",
+			wantReady: false,
+			wantTotal: 1,
+		},
+		{
+			name:      "no containers reported is not ready",
+			out:       "",
+			wantReady: false,
+			wantTotal: 0,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ready, total := allContainersReady(tc.out)
+			if total != tc.wantTotal {
+				t.Errorf("total = %d, want %d", total, tc.wantTotal)
+			}
+			if ready != tc.wantReady {
+				t.Errorf("ready = %v, want %v", ready, tc.wantReady)
+			}
+		})
+	}
+}
+
+// TestAllContainersReady_issue270Scenario mirrors
+// TestParseContainerStatusOutput_issue270Scenario but for the readiness
+// side: nginx and auth declare no healthcheck and ARE actually running
+// fine (unlike the soak scenario, where they were down) alongside a
+// healthy postgres and hasura. Before this fix, nginx/auth's empty Health
+// field meant their docker compose ps line never contained "healthy", so
+// this reported not-ready forever even though every container was fine.
+func TestAllContainersReady_issue270Scenario(t *testing.T) {
+	out := strings.Join([]string{
+		"nself-green_nginx\trunning\t",
+		"nself-green_auth\trunning\t",
+		"nself-green_postgres\trunning\thealthy",
+		"nself-green_hasura\trunning\thealthy",
+	}, "\n")
+
+	ready, total := allContainersReady(out)
+	if total != 4 {
+		t.Fatalf("total = %d, want 4", total)
+	}
+	if !ready {
+		t.Fatalf("ready = false, want true: nginx/auth running with no healthcheck must count as ready")
+	}
+}
