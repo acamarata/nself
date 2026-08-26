@@ -154,7 +154,12 @@ func copyMkcertCerts(srcFullchain, srcPrivkey, destDir string) error {
 	if err != nil {
 		return fmt.Errorf("reading %s: %w", srcFullchain, err)
 	}
-	if err := os.WriteFile(filepath.Join(destDir, "fullchain.pem"), chainData, 0640); err != nil {
+	// 0644: fullchain.pem is the public certificate chain, not a secret. It is
+	// served to every client that connects, so restricting reads buys nothing
+	// and breaks any consumer running under a different uid (nginx in its
+	// container being the one that matters here). privkey.pem below stays
+	// restricted, which is the file that actually needs it.
+	if err := os.WriteFile(filepath.Join(destDir, "fullchain.pem"), chainData, 0644); err != nil {
 		return fmt.Errorf("writing fullchain.pem to %s: %w", destDir, err)
 	}
 
