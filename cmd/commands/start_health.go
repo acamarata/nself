@@ -92,7 +92,7 @@ func runHealthCheckLoop(ctx context.Context, cfg *config.Config, workdir string,
 				timeoutSec, report.Healthy, report.Total, actualPct, requiredPct, errs.ErrHealthTimeout))
 			// Show which services are still unhealthy.
 			for _, r := range report.Results {
-				if r.Status != "healthy" {
+				if !r.OK() {
 					ui.Warn(fmt.Sprintf("  %s %s: %s (%s)", "\u2717", r.Service, r.Status, r.Details))
 				}
 			}
@@ -109,7 +109,7 @@ func printServiceDetails(report *health.HealthReport, verbose bool) {
 	if verbose {
 		ui.Section("Service Health Details")
 		for _, r := range report.Results {
-			if r.Status == "healthy" {
+			if r.OK() {
 				ui.Success(fmt.Sprintf("  %s %s: healthy (%s)", "\u2713", r.Service, r.Duration))
 			} else {
 				ui.Warn(fmt.Sprintf("  %s %s: %s (%s)", "\u2717", r.Service, r.Status, r.Details))
@@ -118,7 +118,7 @@ func printServiceDetails(report *health.HealthReport, verbose bool) {
 	} else {
 		// Show only unhealthy services in non-verbose mode.
 		for _, r := range report.Results {
-			if r.Status != "healthy" {
+			if !r.OK() {
 				ui.Warn(fmt.Sprintf("  %s %s: %s (%s)", "\u2717", r.Service, r.Status, r.Details))
 			}
 		}

@@ -153,3 +153,79 @@ func TestContainerHealthStatusFromComposeMap_NoHealthcheck(t *testing.T) {
 		t.Errorf("expected empty health to be normalised to %q, got %q", "running", health)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Issue #268 — one Status field, two opposite predicates
+//
+// The aggregate in RunAllChecks accepted "healthy" OR "running", but the
+// three per-service printers in cmd/commands/start_health.go only accepted
+// "healthy" — so a report could print "4/4 healthy (100%)" and
+// "✗ nginx: running" on consecutive lines. Fixed by extracting a single
+// HealthResult.OK() predicate that both the aggregate and every printer call.
+// ---------------------------------------------------------------------------
+
+// TestHealthResult_OK verifies the single accept-predicate used everywhere a
+// HealthResult is judged healthy or not. This preserves the exact semantics
+// the aggregate in RunAllChecks used before extraction (checker.go:62):
+// "healthy" and "running" are accepted, everything else is rejected.
+func TestHealthResult_OK(t *testing.T) {
+	cases := []struct {
+		status string
+		want   bool
+	}{
+		{"healthy", true},
+		{"running", true},
+		{"unhealthy", false},
+		{"starting", false},
+		{"", false},
+		{"not_found", false}, // unknown/other value
+	}
+
+	for _, c := range cases {
+		r := HealthResult{Service: "svc", Status: c.status}
+		if got := r.OK(); got != c.want {
+			t.Errorf("HealthResult{Status: %q}.OK() = %v, want %v", c.status, got, c.want)
+		}
+	}
+}
+
+// TestHealthReport_AllServicesHealthy_RunningCountsHealthy is the aggregate
+// half of the issue #268 regression: a service with no Docker healthcheck
+// (Status == "running") must be counted in report.Healthy, not
+// report.Unhealthy, matching the "4/4 healthy (100%)" summary line. The other
+// half — that the per-service printer must agree — is asserted in
+// cmd/commands/start_health_test.go, which cannot import this unexported
+// aggregation loop, so it re-derives the same count via HealthResult.OK() and
+// checks the two never diverge.
+func TestHealthReport_AllServicesHealthy_RunningCountsHealthy(t *testing.T) {
+	services := []string{"postgres", "hasura", "auth", "nginx"}
+	composeMap := map[string]string{
+		"postgres": "healthy",
+		"hasura":   "healthy",
+		"auth":     "healthy",
+		"nginx":    "running", // no Docker healthcheck declared, per issue #268
+	}
+
+	report := &HealthReport{
+		Total:   len(services),
+		Results: make([]HealthResult, 0, len(services)),
+	}
+
+	for _, svc := range services {
+		result := resolveServiceHealth(nil, "testproj", svc, composeMap)
+		if result.OK() {
+			report.Healthy++
+		} else {
+			report.Unhealthy++
+		}
+		report.Results = append(report.Results, *result)
+	}
+
+	if report.Healthy != report.Total {
+		t.Errorf("issue #268 regression: expected %d/%d healthy (nginx running should count), got %d/%d",
+			report.Total, report.Total, report.Healthy, report.Total)
+	}
+	if report.Unhealthy != 0 {
+		t.Errorf("issue #268 regression: expected 0 unhealthy, got %d", report.Unhealthy)
+	}
+}
