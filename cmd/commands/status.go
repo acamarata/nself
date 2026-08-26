@@ -143,7 +143,7 @@ func runSingleServiceStatus(ctx context.Context, service string, jsonOut, verbos
 			Results:   []health.HealthResult{*result},
 			Total:     1,
 		}
-		if result.Status == "healthy" {
+		if result.OK() {
 			report.Healthy = 1
 		} else {
 			report.Unhealthy = 1

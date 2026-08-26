@@ -175,6 +175,9 @@ func PluginHealthChecks(ctx context.Context, projectDir string, verbose bool) []
 			continue
 		}
 		hStatus := strings.TrimSpace(string(hcOut))
+		// Deliberately NOT health.HealthResult.OK(). hStatus here is the RAW
+		// docker health field, where "" means "no healthcheck configured", not
+		// the resolved status OK() operates on. Same words, different vocabulary.
 		if hStatus == "healthy" || hStatus == "" {
 			results = append(results, CheckResult{
 				Section: "plugins",
