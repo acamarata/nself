@@ -311,6 +311,7 @@ Flags:
 - `--install-check` (default false) — Run 6-stage onboarding funnel check (used by Homebrew post-install hook)
 - `--json` (default false) — JSON output
 - `--only` (default "") — Run only a specific subsystem check (host, docker, postgres, hasura, nginx, ssl, ping, plugins, license, monitoring, backups, security)
+- `--quick` (default false) — Fast check: infrastructure, disk, ports, config, plugins, license, container health only (the default check set; explicit opt-in overrides --full/--deep)
 - `--section` (default "") — Run only a specific section (system, core, backups, license, plugins, monitoring, security)
 - `--skip` (default []) — Skip specific check sections
 - `--skip-ollama` (default false) — Skip local Ollama installation step

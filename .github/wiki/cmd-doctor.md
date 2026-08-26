@@ -301,6 +301,7 @@ Status values: `pass`, `warn`, `fail`, `critical`.
 | `--install-check` | `false` | Run 6-stage onboarding funnel check (used by Homebrew post-install hook) |
 | `--json` | `false` | JSON output |
 | `--only` | `""` | Run only a specific subsystem check (host, docker, postgres, hasura, nginx, ssl, ping, plugins, license, monitoring, backups, security) |
+| `--quick` | `false` | Fast check: infrastructure, disk, ports, config, plugins, license, container health only (the default check set; explicit opt-in overrides --full/--deep) |
 | `--section` | `""` | Run only a specific section (system, core, backups, license, plugins, monitoring, security) |
 | `--skip-ollama` | `false` | Skip local Ollama installation step |
 | `--skip-pool` | `false` | Skip Gemini pool setup step |

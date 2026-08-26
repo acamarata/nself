@@ -75,6 +75,19 @@ Exit codes:
 		if deep {
 			full = true
 		}
+		// --quick was documented (help_topics.go: "Fast 10-second check") and
+		// relied on by scripts/golden-path.sh's health-wait loop, but the flag
+		// was never registered on this command — every invocation failed at
+		// cobra's flag parser with "unknown flag: --quick" before RunE ever
+		// ran, so the E2E golden-path smoke could never pass regardless of
+		// actual service health. The base check set below (no --full/--deep)
+		// already matches the documented "quick" behavior; --quick just makes
+		// that intent explicit and wins over an accidental --full/--deep.
+		quick, _ := cmd.Flags().GetBool("quick")
+		if quick {
+			full = false
+			deep = false
+		}
 		fix, _ := cmd.Flags().GetBool("fix")
 		jsonOut, _ := cmd.Flags().GetBool("json")
 		formatFlag, _ := cmd.Flags().GetString("format")

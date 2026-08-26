@@ -94,6 +94,30 @@ func TestDoctorCmd_FlagOnly(t *testing.T) {
 	}
 }
 
+// TestDoctorCmd_QuickFlagRegistered is a regression guard: `nself doctor
+// --quick` was documented as a "Fast 10-second check" (help_topics.go) and
+// relied on by scripts/golden-path.sh's health-wait loop (E2E golden-path
+// smoke, steps 6-7), but --quick was never registered as a flag on the real
+// doctorCmd — only the disconnected stub above (newDoctorCmd, which hand-lists
+// its own flags rather than reading the real registration) accepted it.
+// Every real invocation failed at cobra's flag parser with "unknown flag:
+// --quick" before RunE ever ran, so the smoke's wait loop could never
+// succeed regardless of actual service health — it was failing on flag
+// parsing, not container state. This checks the actual flag set doctorCmd
+// registers (not a copy), so a future removal of --quick fails a fast unit
+// test instead of a weekly scheduled CI run.
+func TestDoctorCmd_QuickFlagRegistered(t *testing.T) {
+	f := doctorCmd.Flags().Lookup("quick")
+	if f == nil {
+		t.Fatal("doctor command has no --quick flag: `nself doctor --quick` " +
+			"(documented in help_topics.go, used by scripts/golden-path.sh) " +
+			"would fail with \"unknown flag: --quick\"")
+	}
+	if f.Value.Type() != "bool" {
+		t.Fatalf("--quick should be a bool flag, got %q", f.Value.Type())
+	}
+}
+
 // TestDoctorCmd_UnknownFlagRejected verifies unknown flags fail fast.
 func TestDoctorCmd_UnknownFlagRejected(t *testing.T) {
 	root := newDoctorCmd()
