@@ -147,8 +147,11 @@ func runRestart(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		ui.Warn(fmt.Sprintf("Health check error: %v", err))
 	} else {
+		// Same predicate as report.Unhealthy below (health.HealthResult.OK) —
+		// see issue #268: a per-service loop that only accepted "healthy"
+		// disagreed with an aggregate that also accepted "running".
 		for _, r := range report.Results {
-			if r.Status == "healthy" {
+			if r.OK() {
 				ui.Success(fmt.Sprintf("%-20s %s (%s)", r.Service, r.Status, r.Duration.Round(time.Millisecond)))
 			} else {
 				ui.Warn(fmt.Sprintf("%-20s %s (%s)", r.Service, r.Status, r.Details))

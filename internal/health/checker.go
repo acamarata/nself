@@ -19,19 +19,20 @@ type HealthResult struct {
 	Details  string        `json:"details"`
 }
 
-// OK reports whether this result counts as healthy. A container with no
-// Docker healthcheck configured reports "running" rather than "healthy"
-// (see resolveServiceHealth's comment on buildComposeHealthMap) and is
-// intentionally accepted here.
+// OK is the single accept-predicate for whether a HealthResult counts as
+// healthy. A container with no Docker healthcheck configured reports
+// "running" rather than "healthy" (see resolveServiceHealth's comment on
+// buildComposeHealthMap) and is intentionally accepted here.
 //
-// This is the single decision point for what counts as healthy. Every
-// caller — the aggregate count in RunAllChecks and every per-service
-// printer in cmd/commands/start_health.go — must call this method rather
-// than re-deriving the comparison, or the aggregate and per-service verdicts
-// can silently drift apart again (see issue #268: a report could print
-// "4/4 healthy (100%)" on one line and "✗ nginx: running" on the next,
-// because the printers compared against only "healthy" while the aggregate
-// also accepted "running").
+// Both aggregate and per-service verdicts MUST call this method — the
+// aggregate count in RunAllChecks, every per-service printer in
+// cmd/commands/start_health.go, and the CI readiness gate in waitCIReady.
+// Do not reintroduce an inline `Status == "healthy"` (or `!=`) comparison
+// anywhere a HealthResult is judged: that is exactly how issue #268
+// happened. A report printed "4/4 healthy (100%)" on one line and
+// "✗ nginx: running" on the next because the printers compared against only
+// "healthy" while the aggregate also accepted "running" — four copies of
+// the same decision that quietly drifted apart.
 func (r HealthResult) OK() bool {
 	return r.Status == "healthy" || r.Status == "running"
 }

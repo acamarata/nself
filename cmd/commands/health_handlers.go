@@ -86,10 +86,14 @@ func printReport(report *health.HealthReport) {
 	fmt.Printf("\n%d/%d services healthy\n", report.Healthy, report.Total)
 }
 
-// printServiceResult prints a single health result line.
+// printServiceResult prints a single health result line. Called both for
+// RunAllChecks results (where a no-healthcheck container reports "running")
+// and for CheckService/CheckEndpoint results (which never report "running"),
+// so it must use the same HealthResult.OK() predicate as every other
+// aggregate/per-service comparison — see issue #268.
 func printServiceResult(r *health.HealthResult) {
 	marker := "\u2717"
-	if r.Status == "healthy" {
+	if r.OK() {
 		marker = "\u2713"
 	}
 	fmt.Printf("%-20s %s %-10s %-8s %s\n", r.Service, marker, r.Status, r.Duration.Truncate(time.Millisecond), r.Details)

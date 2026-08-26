@@ -63,9 +63,11 @@ func printStatusTable(report *health.HealthReport, verbose, healthOnly, metrics 
 
 	tbl := ui.NewTable(headers...)
 
+	// Same predicate the report's Healthy/Unhealthy counts use
+	// (health.HealthResult.OK) — see issue #268.
 	for _, r := range report.Results {
 		var icon, statusText string
-		if r.Status == "healthy" {
+		if r.OK() {
 			icon = ui.IconSuccess
 			statusText = icon + " healthy"
 		} else {
@@ -134,7 +136,7 @@ func printStatusSuggestions(report *health.HealthReport) {
 	// Collect names of unhealthy services.
 	var unhealthyNames []string
 	for _, r := range report.Results {
-		if r.Status != "healthy" {
+		if !r.OK() {
 			unhealthyNames = append(unhealthyNames, r.Service)
 		}
 	}

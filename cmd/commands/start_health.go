@@ -232,7 +232,7 @@ func waitCIReady(ctx context.Context, cfg *config.Config, workdir string, timeou
 			healthyCount := 0
 			for _, r := range report.Results {
 				for _, want := range ciReadyServices {
-					if r.Service == want && (r.Status == "healthy" || r.Status == "running") {
+					if r.Service == want && r.OK() {
 						healthyCount++
 					}
 				}
