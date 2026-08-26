@@ -83,15 +83,28 @@ func contains(haystack, needle string) bool {
 // denied", which is what timed out the golden path's health wait.
 func TestNginxCanReadBindMountedTLS(t *testing.T) {
 	sec := NginxSecurity()
-	found := false
+	have := map[string]bool{}
 	for _, c := range sec.CapAdd {
-		if c == "DAC_READ_SEARCH" {
-			found = true
+		have[c] = true
+	}
+	// Each of these was found by nginx refusing to start without it. They are
+	// the only things the master does before dropping to the worker user.
+	for cap, why := range map[string]string{
+		"NET_BIND_SERVICE": "bind ports 80 and 443",
+		"DAC_READ_SEARCH":  "read the bind-mounted TLS material (0600 key, host ownership)",
+		"CHOWN":            "chown /var/cache/nginx/client_temp to the worker uid",
+		"SETUID":           "fork workers as the nginx user per `user nginx;`",
+		"SETGID":           "fork workers as the nginx group per `user nginx;`",
+	} {
+		if !have[cap] {
+			t.Errorf("NginxSecurity().CapAdd = %v, missing %s (needed to %s); "+
+				"with CapDrop ALL the master cannot start and nginx crash-loops",
+				sec.CapAdd, cap, why)
 		}
 	}
-	if !found {
-		t.Errorf("NginxSecurity().CapAdd = %v, missing DAC_READ_SEARCH; with "+
-			"CapDrop ALL the master cannot read the bind-mounted 0600 private "+
-			"key and nginx will crash-loop", sec.CapAdd)
+	if have["DAC_OVERRIDE"] {
+		t.Error("DAC_OVERRIDE should not be granted: DAC_READ_SEARCH covers " +
+			"reading and traversing the TLS material, while DAC_OVERRIDE would " +
+			"also grant write bypass across the filesystem")
 	}
 }
