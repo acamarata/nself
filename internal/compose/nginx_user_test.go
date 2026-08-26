@@ -52,6 +52,14 @@ func TestNginxWorkersStayUnprivileged(t *testing.T) {
 		if !contains(m, "uid=101") || !contains(m, "gid=101") {
 			t.Errorf("tmpfs %q should be owned by the unprivileged nginx worker (uid=101,gid=101)", m)
 		}
+		// The root master creates client_temp and the pid file here before
+		// forking workers, and CapDrop: ALL denies it a write bypass, so the
+		// mode has to admit both. Without this nginx exits with
+		// mkdir() "/var/cache/nginx/client_temp" failed (13: Permission denied).
+		if !contains(m, "mode=0777") {
+			t.Errorf("tmpfs %q needs mode=0777: the root master and the uid-101 "+
+				"workers both write here, and CapDrop ALL removes root's write bypass", m)
+		}
 	}
 }
 
