@@ -218,9 +218,21 @@ wait_healthy() {
   local interval=3
   local elapsed=0
   log "Waiting for services healthy (timeout ${timeout}s)..."
+  # `nself doctor` exits 0 when everything passes, 2 when there are warnings but
+  # no failures, and 1 on a real failure (cmd/commands/doctor.go). Accept 0 and
+  # 2 here: a warning is not an unhealthy service.
+  #
+  # Demanding exit 0 made this loop unsatisfiable. Once the stack is up, doctor
+  # warns that ports 80, 443, 5432, 8080 and 4000 are "already in use" -- by our
+  # own containers -- and that the JWT secret lives in .env.secrets rather than
+  # .env, which is where it belongs. None of those can clear while the stack is
+  # running, so the wait could only ever time out, and did, for as long as the
+  # smoke has existed.
   while (( elapsed < timeout )); do
-    if nself doctor --quick >/dev/null 2>&1; then
-      ok "All services healthy after ${elapsed}s"
+    nself doctor --quick >/dev/null 2>&1
+    local rc=$?
+    if (( rc == 0 || rc == 2 )); then
+      ok "All services healthy after ${elapsed}s (doctor exit ${rc})"
       return 0
     fi
     sleep "${interval}"
