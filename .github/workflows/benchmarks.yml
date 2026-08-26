@@ -16,8 +16,39 @@ permissions:
   pull-requests: write
 
 jobs:
+  # cron ORs day-of-month with day-of-week when both are restricted, so
+  # "0 7 1-7 3,6,9,12 1" matches the 1st-7th AND every Monday of those months,
+  # not the first Monday. That is roughly ten fires per quarter instead of one,
+  # each a 30-minute job holding contents:write and pull-requests:write.
+  # Same defect the DR drill reminder carried until #235.
+  #
+  # Gating as a separate job keeps the condition in one place rather than
+  # repeating `if:` on every step of the benchmark job.
+  gate:
+    name: First Monday check
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.check.outputs.proceed }}
+    steps:
+      - id: check
+        run: |
+          DOM=$(date -u +%-d)
+          DOW=$(date -u +%u)   # 1 = Monday
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "manual dispatch — bypassing the first-Monday gate"
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          elif [ "$DOW" -eq 1 ] && [ "$DOM" -le 7 ]; then
+            echo "first Monday (dom=${DOM}) — proceeding"
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "not the first Monday (dom=${DOM} dow=${DOW}) — skipping benchmarks"
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+          fi
+
   benchmark:
     name: Run Benchmarks
+    needs: gate
+    if: needs.gate.outputs.proceed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
