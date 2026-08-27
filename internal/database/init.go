@@ -115,6 +115,31 @@ func createDatabase(ctx context.Context, cfg *config.Config) error {
 	}
 	createSQL := fmt.Sprintf("CREATE DATABASE %s", quotedDB)
 	if err := runSQLOnDB(ctx, cfg, "postgres", createSQL); err != nil {
+		// "already exists" here is success, not failure.
+		//
+		// The existence check above and this CREATE can see two different
+		// servers. The postgres image runs a TEMPORARY server to execute its
+		// entrypoint scripts, then shuts it down and starts the real one. The
+		// check can land on the temporary server, where the database genuinely
+		// does not exist yet, while POSTGRES_DB has already created it on the
+		// real server by the time CREATE runs:
+		//
+		//   Error: database init: create database testproject:
+		//   psql exec failed: ERROR: database "testproject" already exists
+		//
+		// That killed `nself start` at step 5 of the golden path on a clean
+		// first run. The comment above already records this window biting the
+		// check; the check was wrapped in retryTransientPG and this call was
+		// not.
+		//
+		// Retrying cannot help — the database exists and will keep existing.
+		// The function's contract is "create it if it does not already exist",
+		// so the only correct response to finding it already there is to carry
+		// on. Any other error still fails.
+		if isDatabaseAlreadyExists(err) {
+			slog.Info("database already exists (created concurrently by the postgres image)", "database", db)
+			return nil
+		}
 		return fmt.Errorf("create database %s: %w", db, err)
 	}
 
@@ -228,4 +253,23 @@ func InitializeDatabase(ctx context.Context, cfg *config.Config) error {
 
 	slog.Info("database initialization complete")
 	return nil
+}
+
+// isDatabaseAlreadyExists reports whether err is Postgres telling us the
+// database is already there.
+//
+// Matched on message text rather than SQLSTATE because the command runs via
+// `docker exec ... psql`, which surfaces the server error as stderr text and an
+// exit status; there is no structured error to read a 42P04 out of. The message
+// is stable across every supported Postgres major.
+//
+// Deliberately narrow: it must not swallow "permission denied to create
+// database" or a connection failure, which are real and must still fail.
+func isDatabaseAlreadyExists(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "already exists") &&
+		strings.Contains(msg, "database")
 }
