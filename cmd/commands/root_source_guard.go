@@ -93,9 +93,38 @@ To override (testing only): export NSELF_ALLOW_SOURCE_DIR=1`, cwd)
 // isSourceSafeCommand returns true for commands that are safe to run from
 // anywhere, including the source repository.
 func isSourceSafeCommand(name string) bool {
+	if isRepoScopedCommand(name) {
+		return true
+	}
 	safe := map[string]bool{
 		"help": true, "version": true, "completion": true,
 		"update": true, "upgrade": true, "doctor": true, "nself": true,
 	}
 	return safe[name]
+}
+
+// isRepoScopedCommand returns true for commands that operate on a source
+// repository rather than on a running nSelf stack.
+//
+// These must be exempt from two behaviours that exist for stack lifecycle
+// commands and are actively wrong here:
+//
+//   - The source-repo guard. Refusing to run inside a checkout is right for
+//     `nself start`; for `nself ci` the checkout IS the subject.
+//   - The monorepo redirect. PersistentPreRunE chdirs into the detected
+//     backend/ before RunE, so `nself ci` resolved "." — and any relative
+//     [repo-root] argument — against backend/ instead of the repo. From
+//     inside ntask it announced "Using backend as project root" and failed,
+//     because backend/ has no manifest while the repo root has package.json
+//     and pnpm-workspace.yaml. It silently overrode an explicitly passed
+//     path, which is the part that makes it a correctness bug rather than a
+//     convenience one.
+//
+// Keeping this separate from isSourceSafeCommand records WHY each name is
+// exempt, so a future addition to either list does not silently inherit the
+// other's semantics.
+func isRepoScopedCommand(name string) bool {
+	return map[string]bool{
+		"ci": true,
+	}[name]
 }
