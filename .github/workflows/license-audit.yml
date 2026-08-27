@@ -31,7 +31,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Install go-licenses
-        run: go install github.com/google/go-licenses@v1.6.0
+        run: bash .github/scripts/go-install-retry.sh github.com/google/go-licenses@v1.6.0
 
       - name: Check for disallowed licenses
         env:
