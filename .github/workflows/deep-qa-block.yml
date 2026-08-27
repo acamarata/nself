@@ -43,7 +43,7 @@ jobs:
 
       - name: govulncheck
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
+          bash .github/scripts/go-install-retry.sh golang.org/x/vuln/cmd/govulncheck@v1.7.0
           bash .github/scripts/govuln-gate.sh
 
       - name: Generate report stub
