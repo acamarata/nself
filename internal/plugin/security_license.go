@@ -90,6 +90,28 @@ func checkLicense(ctx context.Context, name string) error {
 			}
 		}
 
+		// An all-access tier entitles every plugin, whether or not the server
+		// bothered to enumerate them.
+		//
+		// Without this, a valid ɳSelf+ licence was refused outright. The server
+		// returns tier "plus" with an EMPTY plugins list — all-access has
+		// nothing to enumerate — and the only grant above is membership of that
+		// list, so the empty list fell through to ErrLicenseTierTooLow:
+		//
+		//   error installing "ai": plugin "ai": license tier does not include
+		//   this plugin
+		//
+		// which is precisely backwards for the tier that includes everything.
+		// That is step 9 of the golden path, and it had never run before today.
+		//
+		// This does not widen anything for a bundle tier: "chat" is not
+		// all-access, so a ɳChat licence still only grants what its plugins
+		// list names.
+		if lvr != nil && license.IsAllAccessTier(lvr.Tier) {
+			_ = cacheEntitlements(cacheDir, lvr.Tier, lvr.Plugins)
+			return nil
+		}
+
 		if valid {
 			lastErr = fmt.Errorf("plugin %q: %w", name, errs.ErrLicenseTierTooLow)
 			continue
