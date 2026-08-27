@@ -17,7 +17,26 @@ nself start [flags]
 <!-- BEGIN PROSE:description -->
 `nself start` brings up the entire ɳSelf stack in the correct order: PostgreSQL first, then automatic database initialization (schemas, extensions, permissions), then Hasura, Auth, Nginx, optional services, monitoring, and custom services. Each service is health-checked before the next group starts.
 
-Before launching containers, `nself start` validates that `docker-compose.yml` exists (run `nself build` first), the Docker daemon is running, and all required ports are available. A pre-flight port check scans for conflicts on ports 80, 443, 5432, 8080, 4000, 6379, and 9000 and reports the conflicting process name if a port is in use.
+Before launching containers, `nself start` validates that `docker-compose.yml` exists (run `nself build` first), the Docker daemon is running, and all required ports are available. The pre-flight port check reports the conflicting process name if a port is in use.
+
+### Which ports get checked
+
+The check reads the ports your project actually publishes, from the resolved `docker compose config`. It does not test a fixed list of ɳSelf defaults.
+
+That matters when you run more than one ɳSelf project on one host. The second project has to move off the defaults:
+
+```bash
+POSTGRES_PORT=5433
+HASURA_PORT=8181
+AUTH_PORT=4001
+REDIS_PORT=6380
+```
+
+Those are the ports it binds, so those are the ports checked. The first project holding 5432 and 8080 is not a conflict for the second and no longer blocks it. Before v1.3.4 it did, which could leave a correctly configured stack unable to start over ports it never touches.
+
+Conflicts name the service from your compose file, so a moved port reads `Port 8181 (hasura)` rather than `unknown service`.
+
+If the compose config cannot be read, the check falls back to the default list (80, 443, 5432, 8080, 4000, 6379, 9000, 9001, 7700, 3021, 1025, 8025, 3008, 5000) and says so. It never skips the check silently.
 
 Database initialization is automatic and idempotent, ɳSelf creates the database, schemas (`auth`, `storage`, `public`), and extensions (`pgcrypto`, `citext`, `uuid-ossp`) if they do not already exist. After all services are healthy, the console prints all service URLs.
 

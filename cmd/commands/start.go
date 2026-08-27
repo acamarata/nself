@@ -352,28 +352,32 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	if opts.skipPortCheck {
 		ui.Warn("Port check skipped (--skip-port-check)")
 	} else {
-		conflicts, err := docker.CheckAllPortsFiltered(ctx, docker.ReservedPorts, projectDir, composeFiles...)
+		// Check the ports THIS stack will actually bind, read from the resolved
+		// compose config, rather than a fixed list of nSelf defaults.
+		//
+		// A second project on the same host has to move off the defaults
+		// (POSTGRES_PORT=5433, HASURA_PORT=8181, ...). Checking the default
+		// list then blocks it on 5432 and 8080 — ports it was never going to
+		// bind — purely because the first project holds them. That is not a
+		// conflict, and it is what kept the ɳTask staging stack down: its
+		// compose published 5433/8181/4001/6380/9010/9011, every one free,
+		// while start refused over six defaults it does not use.
+		checkPorts, portServiceMap, derr := docker.DeclaredHostPorts(ctx, projectDir, composeFiles...)
+		if derr != nil || len(checkPorts) == 0 {
+			// Fall back to the default list rather than check nothing. Checking
+			// an empty list would be a port check that cannot fail, which is
+			// worse than one that is occasionally too strict.
+			if derr != nil {
+				ui.Warn(fmt.Sprintf("Could not read published ports from compose (%v); using the default port list", derr))
+			}
+			checkPorts = docker.ReservedPorts
+			portServiceMap = docker.DefaultPortServiceNames()
+		}
+
+		conflicts, err := docker.CheckAllPortsFiltered(ctx, checkPorts, projectDir, composeFiles...)
 		if err != nil {
 			ui.Warn(fmt.Sprintf("Port check error: %v", err))
 		} else if len(conflicts) > 0 {
-			// Map ports to their service names for clear diagnostics.
-			portServiceMap := map[int]string{
-				80:   "HTTP (Nginx)",
-				443:  "HTTPS (Nginx)",
-				5432: "PostgreSQL",
-				8080: "Hasura GraphQL",
-				4000: "Auth",
-				6379: "Redis",
-				9000: "MinIO",
-				9001: "MinIO Console",
-				7700: "MeiliSearch",
-				3021: "nSelf Admin",
-				1025: "Mailpit SMTP",
-				8025: "Mailpit UI",
-				3008: "Functions",
-				5000: "MLflow",
-			}
-
 			var portList []string
 			for _, c := range conflicts {
 				svc := portServiceMap[c.Port]
