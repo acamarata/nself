@@ -19,6 +19,24 @@ Detects the repo stack (Go, Node/TS, Flutter) and runs the appropriate
 lint, test, and build checks plus a gitleaks secret scan. Posts a
 "nself-ci" GitHub commit status via gh OAuth so branch protection can
 require nself-ci instead of billing-blocked GitHub Actions checks.
+
+### Which directory is gated
+
+`[repo-root]` is resolved against the directory you run the command from,
+and defaults to `.`. Unlike the stack lifecycle commands (`start`, `stop`,
+`status`, `logs`, `build`), `nself ci` is **not** redirected into a
+detected `backend/` sub-directory.
+
+That distinction matters in a monorepo. `nself start` from the repo root
+deliberately retargets `backend/`, because that is where the stack lives.
+`nself ci` must not: the gate belongs to the whole checkout, and the
+manifests it looks for (`package.json`, `pnpm-workspace.yaml`, `go.mod`)
+usually sit at the repo root while `backend/` holds only `.env`.
+
+Before this was fixed, `nself ci --check .` in such a repo announced
+"Detected monorepo layout. Using backend as project root" and gated
+`backend/` instead — overriding the path you passed. If you relied on that
+behaviour, pass the sub-directory explicitly: `nself ci ./backend`.
 <!-- END PROSE:description -->
 
 ## Flags
