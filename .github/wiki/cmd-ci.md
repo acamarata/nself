@@ -35,8 +35,37 @@ usually sit at the repo root while `backend/` holds only `.env`.
 
 Before this was fixed, `nself ci --check .` in such a repo announced
 "Detected monorepo layout. Using backend as project root" and gated
-`backend/` instead — overriding the path you passed. If you relied on that
+`backend/` instead, overriding the path you passed. If you relied on that
 behaviour, pass the sub-directory explicitly: `nself ci ./backend`.
+
+### Where the gate binary comes from
+
+The gates themselves live in a separate binary, `nself-ci`, built from the
+free `ci` plugin. `nself ci` resolves it in this order:
+
+1. `nself-ci` already on `PATH`.
+2. Plugin source next to the CLI checkout (`plugins/free/ci`), built on
+   demand. This is the developer path.
+3. Otherwise fetched once with `go install` and cached at
+   `~/.nself/bin/nself-ci`.
+
+Step 3 is what makes the command usable from a single-file install, where
+no plugin source is on disk. It requires a Go toolchain and runs only once
+per machine. Expect it to take a couple of minutes the first time: the gate
+module declares a newer Go than most machines have, so Go downloads a
+matching toolchain before building. Progress is printed, and the fetch is
+bounded at 10 minutes rather than left to stall.
+
+To skip the fetch entirely, put a pre-built `nself-ci` on your `PATH`:
+
+```bash
+git clone https://github.com/nself-org/plugins
+cd plugins/free/ci && go build -o ~/.nself/bin/nself-ci ./cmd/
+```
+
+Until this existed, an installed CLI failed with `nself-ci binary not found
+on PATH` and expected you to clone a second repo by hand. That manual step
+is why `nself ci` could not be used as a required status check.
 <!-- END PROSE:description -->
 
 ## Flags
