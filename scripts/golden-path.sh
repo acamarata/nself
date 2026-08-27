@@ -358,6 +358,20 @@ else
   WORK_DIR="$(mktemp -d /tmp/nself-golden-path-XXXXXX)"
 fi
 
+# mktemp -d creates 0700. The stack bind-mounts paths from under this directory
+# into containers that run as their own uid, and nginx is not the uid that owns
+# it, so it cannot traverse in:
+#
+#   nginx: [emerg] cannot load certificate
+#   "/etc/nginx/ssl/certificates/local-nself-org/fullchain.pem":
+#   BIO_new_file() failed (... Permission denied ...)
+#
+# The certificate itself is already 0644 in a 0755 directory; only the temp
+# parent was unreachable, so nginx crash-looped and the run died at step 6.
+# 0755 on the work dir is safe here: it holds a throwaway test project, and
+# nself still writes .env at 0600 and privkey.pem at 0640 inside it.
+chmod 755 "${WORK_DIR}"
+
 run_step 2 "mkdir testproject && cd" \
   bash -c "mkdir -p ${WORK_DIR}/testproject"
 [ "${STEP_STATUS[2]}" = "fail" ] && { write_report; exit 1; }
