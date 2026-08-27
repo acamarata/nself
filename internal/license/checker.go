@@ -107,8 +107,9 @@ func bundleEntitledFromCache(key, bundleName string) (bool, error) {
 	}
 
 	tier := strings.ToLower(entry.Tier)
-	// ɳSelf+ / owner / enterprise covers all bundles.
-	if tier == "plus" || tier == "enterprise" || tier == "owner" {
+	// ɳSelf+ / owner / enterprise cover all bundles. Delegated to IsAllAccessTier
+	// so this rule has one definition; the plugin installer needs the same one.
+	if IsAllAccessTier(tier) {
 		return true, nil
 	}
 
