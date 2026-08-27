@@ -10,12 +10,10 @@ package commands
 // SPORT: CLI-CMD-CI-001
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	nscicmd "github.com/nself-org/cli/internal/cmd/ci"
 	"github.com/nself-org/cli/internal/ui"
@@ -130,90 +128,4 @@ func runCI(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("nself-ci: %w", err)
 	}
 	return nil
-}
-
-// ensureCIBinary returns the path to the nself-ci binary, building it first
-// if necessary. Looks for the plugin source relative to the CLI source tree,
-// or falls back to PATH if a pre-built nself-ci is already there.
-func ensureCIBinary(verbose bool) (string, error) {
-	// Fast path: nself-ci already on PATH (installed or previously built).
-	if p, err := exec.LookPath("nself-ci"); err == nil {
-		return p, nil
-	}
-
-	// Locate the plugin source relative to this binary.
-	// The CLI binary lives at, e.g., ~/Sites/nself/cli/nself (dev) or
-	// /usr/local/bin/nself (installed). In dev the plugin source is adjacent.
-	exe, err := os.Executable()
-	if err != nil {
-		return "", fmt.Errorf("cannot determine executable path: %w", err)
-	}
-	exe, _ = filepath.EvalSymlinks(exe)
-
-	candidates := []string{
-		// Dev: cli/ → parent nself/ → plugins/free/ci
-		filepath.Join(filepath.Dir(exe), "..", "plugins", "free", "ci"),
-		filepath.Join(filepath.Dir(exe), "..", "..", "plugins", "free", "ci"),
-	}
-
-	var pluginDir string
-	for _, c := range candidates {
-		abs, _ := filepath.Abs(c)
-		if fileExists(filepath.Join(abs, "cmd", "main.go")) {
-			pluginDir = abs
-			break
-		}
-	}
-
-	if pluginDir == "" {
-		return "", fmt.Errorf("nself-ci binary not found on PATH and plugin source not found near CLI binary.\n" +
-			"Install gitleaks and build the plugin:\n" +
-			"  cd plugins/free/ci && go build -o nself-ci ./cmd/")
-	}
-
-	binary := filepath.Join(pluginDir, "nself-ci")
-
-	// Build if binary is missing or source is newer.
-	if needsBuild(binary, pluginDir) {
-		if verbose {
-			fmt.Fprintf(os.Stderr, "[nself-ci] building gate binary from %s\n", pluginDir)
-		}
-		var stderr bytes.Buffer
-		build := exec.Command("go", "build", "-o", binary, "./cmd/")
-		build.Dir = pluginDir
-		build.Stderr = &stderr
-		if err := build.Run(); err != nil {
-			return "", fmt.Errorf("go build failed: %w\n%s", err, strings.TrimSpace(stderr.String()))
-		}
-	}
-	return binary, nil
-}
-
-// needsBuild returns true if the binary is missing or any source file is newer.
-func needsBuild(binary, pluginDir string) bool {
-	info, err := os.Stat(binary)
-	if err != nil {
-		return true // binary missing
-	}
-	sources := []string{
-		filepath.Join(pluginDir, "cmd", "main.go"),
-		filepath.Join(pluginDir, "internal", "gate.go"),
-		filepath.Join(pluginDir, "internal", "status.go"),
-	}
-	for _, src := range sources {
-		si, err := os.Stat(src)
-		if err != nil {
-			continue
-		}
-		if si.ModTime().After(info.ModTime()) {
-			return true
-		}
-	}
-	return false
-}
-
-// fileExists returns true if the path exists.
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
 }
