@@ -85,6 +85,31 @@ jobs:
         working-directory: sdk/ts-sdk
         run: pnpm build
 
+      # pnpm does not expand ${VAR} inside .npmrc, but actions/setup-node writes
+      # exactly that: //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}.
+      # pnpm therefore sends the literal string as the token, publishes
+      # unauthenticated, and npm masks the auth failure as a 404:
+      #
+      #   WARN Issue while reading ".npmrc". Failed to replace env in config:
+      #        ${NODE_AUTH_TOKEN}
+      #   npm error 404
+      #
+      # A 404 on a package that already exists (@nself/sdk was on 1.3.3) is npm
+      # declining to confirm the package exists to an unauthenticated caller.
+      # Writing the resolved token avoids the expansion entirely.
+      - name: Authenticate pnpm to npm
+        if: steps.check.outputs.proceed == 'true'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NPM_TOKEN:-}" ]; then
+            echo "NPM_TOKEN not set — publish would be unauthenticated; failing loudly instead of 404ing."
+            exit 1
+          fi
+          printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_TOKEN" >> "$HOME/.npmrc"
+          echo "wrote resolved auth token to ~/.npmrc"
+
       - name: Publish to npm
         if: steps.check.outputs.proceed == 'true'
         working-directory: sdk/ts-sdk
