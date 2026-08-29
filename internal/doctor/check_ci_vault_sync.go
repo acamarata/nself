@@ -32,6 +32,19 @@ var ciVaultInfraTokens = []string{
 	"POSTMARK_SERVER_API_TOKEN",
 }
 
+// isCIEnvironment reports whether we are running on a CI runner. It mirrors the
+// detection used by cmd/commands/browser.go so the two cannot drift.
+func isCIEnvironment() bool {
+	return os.Getenv("CI") == "true" || os.Getenv("GITHUB_ACTIONS") == "true"
+}
+
+// fileExists reports whether path exists and is a regular file. A directory at
+// the vault path is treated as absent: it cannot be parsed for keys either way.
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.Mode().IsRegular()
+}
+
 // vaultEnvPath returns the canonical path to vault.env on the current machine.
 // The file lives at ~/.claude/vault.env per GCI Global Credentials Vault.
 func vaultEnvPath() string {
@@ -58,6 +71,27 @@ func CheckCIVaultSync(projectDir string) CheckResult {
 	section := "security"
 
 	vault := vaultEnvPath()
+
+	// vault.env is a developer-workstation artifact (~/.claude/vault.env). A CI
+	// runner has no such file by design: workflows receive these PATs as
+	// per-workflow GitHub Actions secrets, which are not in the ambient
+	// environment of an unrelated job. Running the check there reported CRITICAL
+	// on every single run — a gate that could never pass, which is worse than no
+	// gate because it trains people to ignore a security failure.
+	//
+	// Deliberately narrow: only skip when the vault file is genuinely absent. A
+	// self-hosted runner that does have one is still checked, so this cannot
+	// become a gate that never fails.
+	if isCIEnvironment() && !fileExists(vault) {
+		return CheckResult{
+			Section: section,
+			Name:    name,
+			Status:  "skip",
+			Message: "CI-VAULT-SYNC-01: skipped — no vault.env on this machine and CI detected. " +
+				"Vault sync is a developer-workstation concern; CI receives these PATs as " +
+				"GitHub Actions secrets. Run `nself doctor --deep` locally to verify vault coverage.",
+		}
+	}
 
 	// Collect missing critical PATs.
 	var missingPATs []string
