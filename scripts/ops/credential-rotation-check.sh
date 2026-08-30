@@ -15,7 +15,7 @@
 set -euo pipefail
 
 # ---- defaults
-PPI_ROOT="${PPI_ROOT:-/Volumes/X9/Sites/nself}"
+PPI_ROOT="${PPI_ROOT:-/Volumes/UG/Sites/nself}"
 DRY_RUN="${DRY_RUN:-0}"
 
 # ---- arg parse
