@@ -62,7 +62,7 @@ func RegisterFreeAccount(ctx context.Context, pingURL string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("free-register network error: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
@@ -113,6 +113,6 @@ func SendFreeInstallTelemetry(pingURL string, licenseKey string, pluginName stri
 		if err != nil {
 			return
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 	})
 }

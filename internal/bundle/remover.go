@@ -93,12 +93,12 @@ func Remove(ctx context.Context, bundleSlug string, opts RemoveOpts) (*RemoveRes
 	printRemovePlan(out, b, result, opts)
 
 	if opts.DryRun {
-		fmt.Fprintln(out, "(dry-run) no changes made.")
+		_, _ = fmt.Fprintln(out, "(dry-run) no changes made.")
 		return result, nil
 	}
 
 	if len(result.Planned) == 0 {
-		fmt.Fprintln(out, "Nothing to remove.")
+		_, _ = fmt.Fprintln(out, "Nothing to remove.")
 		return result, nil
 	}
 
@@ -123,19 +123,19 @@ func Remove(ctx context.Context, bundleSlug string, opts RemoveOpts) (*RemoveRes
 	// are typically dependencies (ai before claw, realtime before chat).
 	for i := len(result.Planned) - 1; i >= 0; i-- {
 		name := result.Planned[i]
-		fmt.Fprintf(out, "  → removing %s...\n", name)
+		_, _ = fmt.Fprintf(out, "  → removing %s...\n", name)
 		// force=true: operator opted into full bundle teardown; skip the
 		// reverse-dependency check that would otherwise block.
 		if err := removeFn(ctx, cfg, name, pluginDir, opts.KeepData, true); err != nil {
-			fmt.Fprintf(out, "  ✗ %s remove failed: %v\n", name, err)
+			_, _ = fmt.Fprintf(out, "  ✗ %s remove failed: %v\n", name, err)
 			result.Failed = append(result.Failed, name)
 			continue
 		}
 		result.Removed = append(result.Removed, name)
-		fmt.Fprintf(out, "  ✓ %s removed\n", name)
+		_, _ = fmt.Fprintf(out, "  ✓ %s removed\n", name)
 	}
 
-	fmt.Fprintf(out, "\nBundle %q (%s) remove summary: %d removed, %d failed, %d already absent.\n",
+	_, _ = fmt.Fprintf(out, "\nBundle %q (%s) remove summary: %d removed, %d failed, %d already absent.\n",
 		b.Name, b.Slug, len(result.Removed), len(result.Failed), len(result.NotInstalled))
 
 	// Trigger a single nself build to regenerate docker-compose.yml and nginx
@@ -143,8 +143,8 @@ func Remove(ctx context.Context, bundleSlug string, opts RemoveOpts) (*RemoveRes
 	// actually removed — mirrors the install path in installer.go.
 	if len(result.Removed) > 0 {
 		if err := triggerBuild(ctx, out); err != nil {
-			fmt.Fprintf(out, "\nWARNING: nself build failed after bundle remove: %v\n", err)
-			fmt.Fprintln(out, "Run 'nself build' manually to apply the changes.")
+			_, _ = fmt.Fprintf(out, "\nWARNING: nself build failed after bundle remove: %v\n", err)
+			_, _ = fmt.Fprintln(out, "Run 'nself build' manually to apply the changes.")
 		}
 	}
 
@@ -160,19 +160,19 @@ func printRemovePlan(out io.Writer, b Bundle, r *RemoveResult, opts RemoveOpts) 
 	if opts.DryRun {
 		header = "Remove plan (dry-run)"
 	}
-	fmt.Fprintf(out, "%s for bundle %s (%s)\n", header, b.Name, b.Slug)
+	_, _ = fmt.Fprintf(out, "%s for bundle %s (%s)\n", header, b.Name, b.Slug)
 	if opts.KeepData {
-		fmt.Fprintln(out, "  data: preserve (--keep-data)")
+		_, _ = fmt.Fprintln(out, "  data: preserve (--keep-data)")
 	} else {
-		fmt.Fprintln(out, "  data: drop plugin schema/tables")
+		_, _ = fmt.Fprintln(out, "  data: drop plugin schema/tables")
 	}
 	if len(r.Planned) == 0 {
-		fmt.Fprintln(out, "  (no installed plugins from this bundle)")
+		_, _ = fmt.Fprintln(out, "  (no installed plugins from this bundle)")
 	}
 	for _, name := range r.Planned {
-		fmt.Fprintf(out, "  • %s\n", name)
+		_, _ = fmt.Fprintf(out, "  • %s\n", name)
 	}
 	if len(r.NotInstalled) > 0 {
-		fmt.Fprintf(out, "  not-installed: %s\n", strings.Join(r.NotInstalled, ", "))
+		_, _ = fmt.Fprintf(out, "  not-installed: %s\n", strings.Join(r.NotInstalled, ", "))
 	}
 }

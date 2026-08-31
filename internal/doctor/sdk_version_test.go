@@ -71,7 +71,7 @@ func TestVersionDriftStatus(t *testing.T) {
 func TestCheckOneSDK_Pass(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"version": "1.0.13"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"version": "1.0.13"})
 	}))
 	defer ts.Close()
 
@@ -116,7 +116,7 @@ func TestCheckOneSDK_Warn(t *testing.T) {
 func TestCheckOneSDK_Drift(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"version": "1.0.10"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"version": "1.0.10"})
 	}))
 	defer ts.Close()
 
@@ -142,7 +142,7 @@ func TestCheckOneSDK_Drift(t *testing.T) {
 func TestCheckOneSDK_MajorMismatch(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"version": "2.0.0"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"version": "2.0.0"})
 	}))
 	defer ts.Close()
 

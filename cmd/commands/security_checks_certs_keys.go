@@ -60,7 +60,7 @@ func checkKeyRotationAge() finding {
 				if strings.HasPrefix(lower, prefix) {
 					dateStr := strings.TrimSpace(line[len(prefix):])
 					t, parseErr := time.Parse("2006-01-02", dateStr)
-					f.Close()
+					_ = f.Close()
 					if parseErr != nil {
 						return finding{Name: "Key rotation age", OK: true, Detail: "last-rotated header unparseable (skipped)"}
 					}
@@ -74,7 +74,7 @@ func checkKeyRotationAge() finding {
 				}
 			}
 		}
-		f.Close()
+		_ = f.Close()
 	}
 	return finding{Name: "Key rotation age", OK: true, Detail: "no last-rotated header found (skipped)"}
 }
@@ -85,13 +85,13 @@ func checkAdminPortBinding() finding {
 	ln, err := net.Listen("tcp", "127.0.0.1:3021")
 	if err == nil {
 		// Port is free — admin is not running.
-		ln.Close()
+		_ = ln.Close()
 		return finding{Name: "Admin port (3021)", OK: true, Detail: "admin not running on port 3021"}
 	}
 	// Port is in use. Check whether it's world-accessible by trying 0.0.0.0.
 	conn, connErr := net.DialTimeout("tcp", "0.0.0.0:3021", 500*time.Millisecond)
 	if connErr == nil {
-		conn.Close()
+		_ = conn.Close()
 		return finding{Name: "Admin port (3021)", OK: false,
 			Detail: "admin port bound on 0.0.0.0 — should be 127.0.0.1 only"}
 	}
@@ -117,12 +117,12 @@ func checkCSRFGuard() finding {
 			if strings.HasPrefix(upper, "CSRF_DISABLED=TRUE") ||
 				strings.HasPrefix(upper, "CSRF_DISABLED=1") ||
 				strings.HasPrefix(upper, "CSRF_DISABLED=YES") {
-				f.Close()
+				_ = f.Close()
 				return finding{Name: "CSRF guard", OK: false,
 					Detail: fmt.Sprintf("CSRF_DISABLED is set in %s — remove to enable CSRF protection", p)}
 			}
 		}
-		f.Close()
+		_ = f.Close()
 	}
 	return finding{Name: "CSRF guard", OK: true, Detail: "no CSRF_DISABLED flag found"}
 }

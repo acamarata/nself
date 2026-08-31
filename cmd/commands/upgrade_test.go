@@ -29,8 +29,8 @@ func makeTarGzArchive(t *testing.T, binaryName string, content []byte) []byte {
 	if err != nil {
 		t.Fatalf("creating temp archive: %v", err)
 	}
-	defer os.Remove(tmp.Name())
-	defer tmp.Close()
+	defer func() { _ = os.Remove(tmp.Name()) }()
+	defer func() { _ = tmp.Close() }()
 
 	gw := gzip.NewWriter(tmp)
 	tw := tar.NewWriter(gw)
@@ -427,7 +427,7 @@ func TestSelfUpdateFromURLWithSHA(t *testing.T) {
 			return
 		}
 		if strings.HasSuffix(r.URL.Path, ".tar.gz") {
-			w.Write(archive)
+			_, _ = w.Write(archive)
 			return
 		}
 		http.NotFound(w, r)

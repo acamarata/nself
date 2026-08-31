@@ -356,7 +356,7 @@ func TestAuthRouteNoDoubleDomain(t *testing.T) {
 // zone.
 func TestAuthRateLimitDefault(t *testing.T) {
 	// Ensure AUTH_RATE_LIMIT is not set in env.
-	os.Unsetenv("AUTH_RATE_LIMIT")
+	_ = os.Unsetenv("AUTH_RATE_LIMIT")
 
 	cfg := &config.Config{
 		BaseDomain: "local.nself.org",
@@ -757,8 +757,8 @@ func TestServiceConf_HSTS(t *testing.T) {
 // TestAuthRateLimitOverride verifies that setting AUTH_RATE_LIMIT=10r/m causes
 // the generated rate-limits.conf to use "10r/m" for the auth zone.
 func TestAuthRateLimitOverride(t *testing.T) {
-	os.Setenv("AUTH_RATE_LIMIT", "10r/m")
-	t.Cleanup(func() { os.Unsetenv("AUTH_RATE_LIMIT") })
+	_ = os.Setenv("AUTH_RATE_LIMIT", "10r/m")
+	t.Cleanup(func() { _ = os.Unsetenv("AUTH_RATE_LIMIT") })
 
 	cfg := &config.Config{
 		BaseDomain: "local.nself.org",

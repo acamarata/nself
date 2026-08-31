@@ -80,7 +80,7 @@ func RegisterIdentity(ctx context.Context, pluginName string, pubKey ed25519.Pub
 	if err != nil {
 		return fmt.Errorf("posting identity registration to %s: %w", url, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return fmt.Errorf("identity registration returned HTTP %d for plugin %q", resp.StatusCode, pluginName)
@@ -119,7 +119,7 @@ func RevokeIdentity(ctx context.Context, pluginName string) error {
 	if err != nil {
 		return fmt.Errorf("revoking identity for %q: %w", pluginName, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// 404 means already gone — treat as success.
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotFound {

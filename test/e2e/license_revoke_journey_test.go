@@ -43,7 +43,7 @@ func revokeJourneyPingHandler(t *testing.T) *httptest.Server {
 		w.Header().Set("Content-Type", "application/json")
 		if callCount == 1 {
 			// First call: license is valid.
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"valid":      true,
 				"tier":       "pro",
 				"plugins":    []string{"ai", "claw", "mux"},
@@ -53,7 +53,7 @@ func revokeJourneyPingHandler(t *testing.T) *httptest.Server {
 		}
 		// Subsequent calls: license has been revoked.
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"valid":  false,
 			"reason": "revoked",
 		})
@@ -128,7 +128,7 @@ func TestLicenseRevokeJourney_RevokedKeyBlocksPluginAccess(t *testing.T) {
 	// Start a server that always returns revoked.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"valid":  false,
 			"reason": "revoked",
 		})
@@ -170,7 +170,7 @@ func TestLicenseRevokeJourney_Headless(t *testing.T) {
 	go func() {
 		defer close(done)
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"valid":  false,
 				"reason": "revoked",
 			})
@@ -197,7 +197,7 @@ func TestLicenseRevokeJourney_Headless(t *testing.T) {
 func TestLicenseRevokeJourney_CacheIgnoredAfterRevoke(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Always returns revoked regardless of what cache says.
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"valid":  false,
 			"reason": "revoked",
 		})
@@ -271,7 +271,7 @@ func validateRemoteForJourney(ctx context.Context, key, pingURL string) (*valida
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result validateResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {

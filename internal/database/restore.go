@@ -36,7 +36,7 @@ func Restore(ctx context.Context, cfg *config.Config, inputPath string) error {
 	if err != nil {
 		return fmt.Errorf("open backup file %s: %w", inputPath, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	container := cfg.ProjectName + "_postgres"
 

@@ -115,10 +115,10 @@ func (r *Registry) IsDeprecated(name string) bool {
 // Format: [DEPRECATED] 'nself <item>' (since v<X.Y.Z>) → use 'nself <replacement>'. Docs: <url>
 func (r *Registry) Warn(w io.Writer, item Item) {
 	if item.Phase >= 2 {
-		fmt.Fprintf(w, "[DEPRECATED] '%s' (since %s) → use '%s'. Will be removed in a future release. Docs: %s\n",
+		_, _ = fmt.Fprintf(w, "[DEPRECATED] '%s' (since %s) → use '%s'. Will be removed in a future release. Docs: %s\n",
 			item.Name, item.Since, item.Replacement, item.DocsURL)
 	} else {
-		fmt.Fprintf(w, "[DEPRECATED] '%s' (since %s) → use '%s'. Docs: %s\n",
+		_, _ = fmt.Fprintf(w, "[DEPRECATED] '%s' (since %s) → use '%s'. Docs: %s\n",
 			item.Name, item.Since, item.Replacement, item.DocsURL)
 	}
 }
@@ -126,6 +126,6 @@ func (r *Registry) Warn(w io.Writer, item Item) {
 // Warn is a package-level convenience that creates a one-shot warning
 // without needing a Registry. Used for inline deprecations.
 func Warn(w io.Writer, name, since, replacement, docsURL string) {
-	fmt.Fprintf(w, "[DEPRECATED] '%s' (since %s) → use '%s'. Docs: %s\n",
+	_, _ = fmt.Fprintf(w, "[DEPRECATED] '%s' (since %s) → use '%s'. Docs: %s\n",
 		name, since, replacement, docsURL)
 }

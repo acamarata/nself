@@ -118,7 +118,7 @@ func Start(t *testing.T, cfg FleetConfig) *Fleet {
 	// 1. Generate ephemeral ED25519 key-pair.
 	pubKeyPEM, keyPath := generateKeyPair(t)
 	f.PrivateKeyPath = keyPath
-	f.cleanup = append(f.cleanup, func() { os.Remove(keyPath) })
+	f.cleanup = append(f.cleanup, func() { _ = os.Remove(keyPath) })
 
 	// 2. Create isolated bridge network.
 	networkName := fmt.Sprintf("nself-sim-%d", time.Now().UnixNano())

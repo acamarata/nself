@@ -54,7 +54,7 @@ func newOutdatedTestCmd(t *testing.T, jsonOut bool) (run func() error, stdout fu
 
 	run = func() error {
 		err := runPluginOutdated(cmd, nil)
-		w.Close()
+		_ = w.Close()
 		os.Stdout = origStdout
 		return err
 	}

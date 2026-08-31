@@ -48,12 +48,12 @@ var licenseValidateCmd = &cobra.Command{
 
 			masked := license.MaskKey(key)
 			if err != nil {
-				fmt.Fprintf(cmd.ErrOrStderr(), "%s: validation failed: %v\n", masked, err)
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "%s: validation failed: %v\n", masked, err)
 				allValid = false
 			} else if valid {
 				fmt.Printf("%s: valid\n", masked)
 			} else {
-				fmt.Fprintf(cmd.ErrOrStderr(), "%s: invalid or expired\n", masked)
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "%s: invalid or expired\n", masked)
 				allValid = false
 			}
 		}

@@ -36,7 +36,7 @@ func DisablePlugin(name, pluginDir string) error {
 	if err != nil {
 		return fmt.Errorf("creating disable marker: %w", err)
 	}
-	f.Close()
+	_ = f.Close()
 	return nil
 }
 

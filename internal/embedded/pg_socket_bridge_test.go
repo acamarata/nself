@@ -79,7 +79,7 @@ func TestPGSocketBridge_UnsupportedCommandIntercepted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("backend listen: %v", err)
 	}
-	defer backendLn.Close()
+	defer func() { _ = backendLn.Close() }()
 
 	backendReceived := make(chan []byte, 1)
 	go func() {
@@ -87,7 +87,7 @@ func TestPGSocketBridge_UnsupportedCommandIntercepted(t *testing.T) {
 		if err != nil {
 			return
 		}
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 		buf, _ := io.ReadAll(conn)
 		backendReceived <- buf
 	}()
@@ -103,20 +103,20 @@ func TestPGSocketBridge_UnsupportedCommandIntercepted(t *testing.T) {
 	if err := bridge.Listen(t.Context(), bridgeSock, rt); err != nil {
 		t.Fatalf("Listen: %v", err)
 	}
-	defer bridge.Close()
+	defer func() { _ = bridge.Close() }()
 
 	// Connect as a Postgres client.
 	client, err := net.Dial("unix", bridgeSock)
 	if err != nil {
 		t.Fatalf("client dial: %v", err)
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	// Send a simple-query (Q) message with COPY.
 	sendSimpleQuery(t, client, "COPY foo FROM STDIN")
 
 	// Expect an ErrorResponse back.
-	client.SetDeadline(time.Now().Add(2 * time.Second))
+	_ = client.SetDeadline(time.Now().Add(2 * time.Second))
 	resp := make([]byte, 512)
 	n, err := client.Read(resp)
 	if err != nil {
@@ -170,7 +170,7 @@ func TestPGSocketBridge_SocketFile(t *testing.T) {
 	if err := bridge.Listen(t.Context(), bridgeSock, rt); err != nil {
 		t.Fatalf("Listen: %v", err)
 	}
-	defer bridge.Close()
+	defer func() { _ = bridge.Close() }()
 
 	if _, err := os.Stat(bridgeSock); err != nil {
 		t.Errorf("socket file not created: %v", err)

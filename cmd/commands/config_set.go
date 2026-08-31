@@ -113,7 +113,7 @@ func setEnvFileLine(envFile, key, value string) (updated bool, err error) {
 	if openErr != nil {
 		return false, fmt.Errorf("opening %s: %w", envFile, openErr)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var lines []string
 	found := false
@@ -141,7 +141,7 @@ func setEnvFileLine(envFile, key, value string) (updated bool, err error) {
 	if scanErr := scanner.Err(); scanErr != nil {
 		return false, fmt.Errorf("scanning %s: %w", envFile, scanErr)
 	}
-	f.Close()
+	_ = f.Close()
 
 	if !found {
 		lines = append(lines, newLine)

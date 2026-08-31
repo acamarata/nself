@@ -80,7 +80,7 @@ func mockMeiliServer(t *testing.T, statusCode int) *httptest.Server {
 func serverPort(srv *httptest.Server) int {
 	addr := srv.Listener.Addr().String()
 	var port int
-	fmt.Sscanf(strings.SplitN(addr, ":", 2)[1], "%d", &port)
+	_, _ = fmt.Sscanf(strings.SplitN(addr, ":", 2)[1], "%d", &port)
 	return port
 }
 

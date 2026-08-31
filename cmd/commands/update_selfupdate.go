@@ -64,8 +64,8 @@ func selfUpdateFromURLInner(binaryURL, expectedSum string) error {
 	if err != nil {
 		return fmt.Errorf("creating temp file: %w", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	defer func() { _ = tmpFile.Close() }()
 
 	if err := downloadFile(binaryURL, tmpFile); err != nil {
 		return fmt.Errorf("downloading %s: %w", binaryURL, err)
@@ -91,7 +91,7 @@ func selfUpdateFromURLInner(binaryURL, expectedSum string) error {
 		if err != nil {
 			return fmt.Errorf("extracting binary from archive: %w", err)
 		}
-		defer os.Remove(extracted)
+		defer func() { _ = os.Remove(extracted) }()
 		tmpBinary = extracted
 	} else {
 		// Raw binary: copy to a new temp file so we can chmod it independently.
@@ -99,9 +99,9 @@ func selfUpdateFromURLInner(binaryURL, expectedSum string) error {
 		if err != nil {
 			return fmt.Errorf("creating raw binary temp file: %w", err)
 		}
-		defer os.Remove(rawTmp.Name())
+		defer func() { _ = os.Remove(rawTmp.Name()) }()
 		if _, err := io.Copy(rawTmp, tmpFile); err != nil {
-			rawTmp.Close()
+			_ = rawTmp.Close()
 			return fmt.Errorf("copying binary data: %w", err)
 		}
 		if err := rawTmp.Close(); err != nil {
@@ -165,8 +165,8 @@ func selfUpdate(tag string) error {
 	if err != nil {
 		return fmt.Errorf("creating temp file: %w", err)
 	}
-	defer os.Remove(tmpArchive.Name())
-	defer tmpArchive.Close()
+	defer func() { _ = os.Remove(tmpArchive.Name()) }()
+	defer func() { _ = tmpArchive.Close() }()
 
 	if err := downloadFile(archiveURL, tmpArchive); err != nil {
 		return fmt.Errorf("downloading %s: %w", archiveURL, err)
@@ -188,7 +188,7 @@ func selfUpdate(tag string) error {
 	if err != nil {
 		return fmt.Errorf("extracting binary from archive: %w", err)
 	}
-	defer os.Remove(tmpBinary)
+	defer func() { _ = os.Remove(tmpBinary) }()
 
 	// Determine the path of the running executable.
 	exePath, err := os.Executable()

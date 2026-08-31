@@ -97,7 +97,7 @@ func SaveHistory(report *HealthReport, historyDir string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// Write JSON line followed by newline.
 	data = append(data, '\n')
@@ -118,7 +118,7 @@ func GetHistory(historyDir string, limit int) ([]HealthReport, error) {
 		}
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// Read all lines first, then take the tail.  Health history files
 	// are expected to stay small (hundreds of entries at most).

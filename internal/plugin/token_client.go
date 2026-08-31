@@ -111,7 +111,7 @@ func RequestToken(ctx context.Context, pluginDataDir, sourcePlugin, targetPlugin
 	if err != nil {
 		return "", fmt.Errorf("requesting plugin token from %s: %w", url, err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	if httpResp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("token endpoint returned HTTP %d for %s→%s", httpResp.StatusCode, sourcePlugin, targetPlugin)

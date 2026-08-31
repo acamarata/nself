@@ -271,7 +271,7 @@ func dispatchRemoteIfNeeded(cmd *cobra.Command, remoteArgs ...string) (handled b
 	}
 
 	if !cmd.Flags().Changed("json") {
-		fmt.Fprintf(cmd.OutOrStdout(), "Running 'nself %s' on %s:%s (env=%s)...\n", strings.Join(remoteArgs, " "), target.SSHTarget, target.RemotePath, target.EnvName)
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Running 'nself %s' on %s:%s (env=%s)...\n", strings.Join(remoteArgs, " "), target.SSHTarget, target.RemotePath, target.EnvName)
 	}
 
 	return true, runRemoteNselfCommand(cmd.Context(), target, remoteArgs...)

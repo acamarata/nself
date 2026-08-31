@@ -45,7 +45,7 @@ func VerifySBOM(ctx context.Context, pluginName, version string, opts SBOMCheckO
 	if err != nil {
 		return fmt.Errorf("sbom: download from %s: %w", url, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		// SBOM not present on release — warn but don't fail (older plugin releases pre-S2.T11).

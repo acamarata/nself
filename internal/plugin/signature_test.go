@@ -30,7 +30,7 @@ func writeTempFile(t *testing.T, content []byte) string {
 	if err != nil {
 		t.Fatalf("CreateTemp: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if _, err := f.Write(content); err != nil {
 		t.Fatalf("Write: %v", err)
 	}

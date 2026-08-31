@@ -32,13 +32,13 @@ func copyAndReplace(src, dst string) error {
 	if err != nil {
 		return fmt.Errorf("creating temp file in %s: %w", dir, err)
 	}
-	defer os.Remove(tmpDst.Name())
+	defer func() { _ = os.Remove(tmpDst.Name()) }()
 
 	srcFile, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("opening source binary: %w", err)
 	}
-	defer srcFile.Close()
+	defer func() { _ = srcFile.Close() }()
 
 	if _, err := io.Copy(tmpDst, srcFile); err != nil {
 		return fmt.Errorf("copying binary data: %w", err)
@@ -63,7 +63,7 @@ func fetchExpectedChecksum(checksumURL, filename string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("HTTP request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("checksum file returned HTTP %d", resp.StatusCode)
@@ -100,7 +100,7 @@ func downloadFile(url string, dst io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("HTTP request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("server returned HTTP %d", resp.StatusCode)
@@ -133,7 +133,7 @@ func extractBinary(r io.Reader, binaryName string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("creating gzip reader: %w", err)
 	}
-	defer gr.Close()
+	defer func() { _ = gr.Close() }()
 
 	tr := tar.NewReader(gr)
 	for {
@@ -157,12 +157,12 @@ func extractBinary(r io.Reader, binaryName string) (string, error) {
 			return "", fmt.Errorf("creating temp file for binary: %w", err)
 		}
 		if _, err := io.Copy(tmpFile, tr); err != nil {
-			tmpFile.Close()
-			os.Remove(tmpFile.Name())
+			_ = tmpFile.Close()
+			_ = os.Remove(tmpFile.Name())
 			return "", fmt.Errorf("extracting binary data: %w", err)
 		}
 		if err := tmpFile.Close(); err != nil {
-			os.Remove(tmpFile.Name())
+			_ = os.Remove(tmpFile.Name())
 			return "", fmt.Errorf("closing extracted binary: %w", err)
 		}
 		return tmpFile.Name(), nil

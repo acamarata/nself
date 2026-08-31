@@ -70,7 +70,7 @@ func SendInstallEvent() {
 			}
 			return
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if os.Getenv("NSELF_TELEMETRY_DEBUG") == "1" && resp.StatusCode >= 400 {
 			fmt.Fprintf(os.Stderr, "[telemetry DEBUG] SendInstallEvent: server %d\n", resp.StatusCode)

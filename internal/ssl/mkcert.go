@@ -49,7 +49,7 @@ func generateWithOpenSSL(certDir string, domains []string) (int, error) {
 	if err := os.WriteFile(confPath, []byte(confContent), 0644); err != nil {
 		return 0, fmt.Errorf("writing openssl config: %w", err)
 	}
-	defer os.Remove(confPath)
+	defer func() { _ = os.Remove(confPath) }()
 
 	fullchain := filepath.Join(certDir, "fullchain.pem")
 	privkey := filepath.Join(certDir, "privkey.pem")

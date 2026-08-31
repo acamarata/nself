@@ -55,7 +55,7 @@ func healthCheckRunE(cmd *cobra.Command, args []string) error {
 // Returns the config and the project working directory.
 func loadHealthConfig() (*config.Config, string, error) {
 	if healthEnv != "" {
-		os.Setenv("ENV", healthEnv)
+		_ = os.Setenv("ENV", healthEnv)
 	}
 	dir, err := os.Getwd()
 	if err != nil {

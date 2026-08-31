@@ -128,7 +128,7 @@ func getTotalMemoryMBFallback() (int, error) {
 			return 0, err
 		}
 		var bytes int64
-		fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &bytes)
+		_, _ = fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &bytes)
 		return int(bytes / 1024 / 1024), nil
 	default:
 		return installer.MemAvailableMB()

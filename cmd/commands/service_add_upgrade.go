@@ -232,7 +232,7 @@ func setEnvKeyInFile(filename, key, value string) error {
 		for scanner.Scan() {
 			lines = append(lines, scanner.Text())
 		}
-		f.Close()
+		_ = f.Close()
 		if err := scanner.Err(); err != nil {
 			return fmt.Errorf("reading %s: %w", filename, err)
 		}

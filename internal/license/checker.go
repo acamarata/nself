@@ -62,7 +62,7 @@ func BundleEntitled(ctx context.Context, key, bundleName string) (bool, error) {
 		}
 		return false, fmt.Errorf("license validation network error (bundle=%q): %w", bundleName, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	switch resp.StatusCode {
 	case http.StatusOK:

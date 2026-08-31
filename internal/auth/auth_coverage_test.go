@@ -230,7 +230,7 @@ func TestWriteRotationLog_OpenFileFail(t *testing.T) {
 	if err := os.Chmod(logDir, 0555); err != nil {
 		t.Fatalf("Chmod: %v", err)
 	}
-	t.Cleanup(func() { os.Chmod(logDir, 0755) })
+	t.Cleanup(func() { _ = os.Chmod(logDir, 0755) })
 
 	logPath := filepath.Join(logDir, "jwt-rotation.log")
 	t.Setenv("NSELF_JWT_ROTATION_LOG", logPath)
@@ -351,7 +351,7 @@ func TestWriteAuthFile_WriteFileFail(t *testing.T) {
 	if err := os.Chmod(nselfDir, 0555); err != nil {
 		t.Fatalf("Chmod: %v", err)
 	}
-	t.Cleanup(func() { os.Chmod(nselfDir, 0755) })
+	t.Cleanup(func() { _ = os.Chmod(nselfDir, 0755) })
 
 	err := WriteAuthFile(&AuthFile{AccessToken: "tok", SessionToken: "sess", Email: "x@x.com", Tier: "free"})
 	if err == nil {

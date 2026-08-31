@@ -85,7 +85,7 @@ func CheckPluginCompat(installed []InstalledPlugin, reg *PluginRegistry) []Warni
 // PrintWarnings writes all warnings to w, one per line.
 func PrintWarnings(w io.Writer, warnings []Warning) {
 	for _, warn := range warnings {
-		fmt.Fprintln(w, warn.String())
+		_, _ = fmt.Fprintln(w, warn.String())
 	}
 }
 

@@ -159,7 +159,7 @@ func runAdminStart(cmd *cobra.Command, args []string) error {
 	probeReq, _ := http.NewRequestWithContext(probeCtx, http.MethodGet, adminURL, nil)
 	resp, err := httptimeout.Health.Do(probeReq)
 	if err == nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
 			fmt.Println("Admin is already running at http://localhost:" + port)
 			return nil
@@ -276,7 +276,7 @@ func runAdminHealth(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Admin health: unhealthy (%v)\n", err)
 		return fmt.Errorf("admin unreachable: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusOK {
 		fmt.Printf("Admin health: healthy (HTTP %d, %s)\n", resp.StatusCode, elapsed.Truncate(time.Millisecond))

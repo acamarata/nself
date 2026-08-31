@@ -94,7 +94,7 @@ func runPluginAuditTables(cmd *cobra.Command, _ []string) error {
 // printAuditTable renders the audit report as a human-readable table.
 func printAuditTable(report *audit.AuditReport) {
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "TABLE\tSOURCE_ACCOUNT_ID\tHASURA_FILTER\tROW_COUNT\tWARNING")
+	_, _ = fmt.Fprintln(tw, "TABLE\tSOURCE_ACCOUNT_ID\tHASURA_FILTER\tROW_COUNT\tWARNING")
 	for _, t := range report.Tables {
 		hasCol := "yes"
 		if !t.HasSourceAccountID {
@@ -102,9 +102,9 @@ func printAuditTable(report *audit.AuditReport) {
 		}
 		filter := string(t.HasHasuraFilter)
 		warning := t.Warning
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%d\t%s\n",
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%d\t%s\n",
 			t.Table, hasCol, filter, t.TotalRows, warning)
 	}
-	tw.Flush()
+	_ = tw.Flush()
 	fmt.Printf("\nAudit completed at %s (%d tables)\n", report.AuditAt, len(report.Tables))
 }

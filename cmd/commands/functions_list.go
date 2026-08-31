@@ -122,7 +122,7 @@ func probeFunctionHealth(ctx context.Context, port int, name string) string {
 	if err != nil {
 		return "unreachable"
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	if resp.StatusCode < 500 {
 		return "healthy"
 	}

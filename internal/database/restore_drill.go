@@ -194,7 +194,7 @@ func RecordDrillResult(projectDir string, result RestoreDrillResult) error {
 	if err != nil {
 		return fmt.Errorf("open drill log %s: %w", logPath, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if _, err := f.Write(append(data, '\n')); err != nil {
 		return fmt.Errorf("write drill log entry: %w", err)

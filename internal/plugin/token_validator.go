@@ -186,7 +186,7 @@ func getPublicKey(ctx context.Context, kid string) (ed25519.PublicKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("fetching public key: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("public-key endpoint returned HTTP %d for kid=%q", resp.StatusCode, kid)

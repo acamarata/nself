@@ -91,7 +91,7 @@ func RunTableAuditWithConfig(ctx context.Context, cfg AuditConfig) (*AuditReport
 	if err != nil {
 		return nil, fmt.Errorf("open DB: %w", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	auditCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
@@ -157,7 +157,7 @@ func listNPTables(ctx context.Context, db *sql.DB) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list np_* tables: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var names []string
 	for rows.Next() {

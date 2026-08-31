@@ -65,7 +65,7 @@ func Write(event string, fields map[string]string) error {
 	if err != nil {
 		return fmt.Errorf("audit: opening log %s: %w", logPath, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if _, err := f.Write(line); err != nil {
 		return fmt.Errorf("audit: writing to log %s: %w", logPath, err)

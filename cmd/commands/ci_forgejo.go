@@ -67,7 +67,7 @@ func runCIForgejo(cmd *cobra.Command, _ []string) error {
 	serverMsg := "unreachable"
 	resp, err := client.Get(baseURL + "/-/health")
 	if err == nil {
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		var h forgejoHealthResponse
 		if json.NewDecoder(resp.Body).Decode(&h) == nil && h.Healthy {
 			serverOK = true
@@ -113,7 +113,7 @@ func runCIForgejo(cmd *cobra.Command, _ []string) error {
 		req, _ := http.NewRequest("GET", baseURL+"/api/v1/repos/search?limit=0", nil)
 		req.SetBasicAuth(adminUser, adminPass)
 		if r, err := client.Do(req); err == nil {
-			defer r.Body.Close()
+			defer func() { _ = r.Body.Close() }()
 			if r.StatusCode == http.StatusOK {
 				jobsInfo = "API reachable (admin authenticated)"
 			} else {

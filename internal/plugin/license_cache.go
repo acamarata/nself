@@ -29,7 +29,7 @@ func pruneExpiredCacheEntries(cachePath string, maxAge time.Duration) error {
 		// File missing or unreadable -- nothing to prune.
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	hmacKey := loadHMACKeyOrFallback()
 	now := time.Now()
@@ -71,7 +71,7 @@ func pruneExpiredCacheEntries(cachePath string, maxAge time.Duration) error {
 		kept = append(kept, line)
 	}
 
-	f.Close()
+	_ = f.Close()
 
 	// Rewrite file with only valid, non-expired entries.
 	content := strings.Join(kept, "\n")
@@ -124,7 +124,7 @@ func checkLicenseCache(key string, cacheDir string) (valid bool, found bool) {
 	if err != nil {
 		return false, false
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	hmacKey := loadHMACKeyOrFallback()
 	prefix := keyPrefix(key)
@@ -143,8 +143,8 @@ func checkLicenseCache(key string, cacheDir string) (valid bool, found bool) {
 		// Verify HMAC before trusting anything in the entry.
 		if !hmacVerify(data, sig, hmacKey) {
 			// Tampered or unsigned entry — nuke cache file.
-			f.Close()
-			os.Remove(cachePath)
+			_ = f.Close()
+			_ = os.Remove(cachePath)
 			return false, false
 		}
 
@@ -182,7 +182,7 @@ func checkLicenseCacheOffline(key string, cacheDir string) (valid bool, found bo
 	if err != nil {
 		return false, false
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	hmacKey := loadHMACKeyOrFallback()
 	prefix := keyPrefix(key)
@@ -200,8 +200,8 @@ func checkLicenseCacheOffline(key string, cacheDir string) (valid bool, found bo
 
 		// Verify HMAC before trusting anything in the entry.
 		if !hmacVerify(data, sig, hmacKey) {
-			f.Close()
-			os.Remove(cachePath)
+			_ = f.Close()
+			_ = os.Remove(cachePath)
 			return false, false
 		}
 

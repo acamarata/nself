@@ -163,7 +163,7 @@ func downloadAndVerify(ctx context.Context, url, dst, want string) error {
 	if err != nil {
 		return fmt.Errorf("embedded/pglite: download %s: %w", url, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("embedded/pglite: server returned %d for %s", resp.StatusCode, url)
@@ -179,7 +179,7 @@ func downloadAndVerify(ctx context.Context, url, dst, want string) error {
 
 	h := sha256.New()
 	if _, err := io.Copy(io.MultiWriter(tmp, h), resp.Body); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return fmt.Errorf("embedded/pglite: write download: %w", err)
 	}
 	if err := tmp.Close(); err != nil {
@@ -203,7 +203,7 @@ func sha256HexFile(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {

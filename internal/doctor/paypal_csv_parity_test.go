@@ -13,13 +13,13 @@ func TestCheckPayPalCSVParity_Mismatch(t *testing.T) {
 	originalIDs := os.Getenv("PAYPAL_CLIENT_IDS")
 	originalSecrets := os.Getenv("PAYPAL_CLIENT_SECRETS")
 	defer func() {
-		os.Setenv("PAYPAL_CLIENT_IDS", originalIDs)
-		os.Setenv("PAYPAL_CLIENT_SECRETS", originalSecrets)
+		_ = os.Setenv("PAYPAL_CLIENT_IDS", originalIDs)
+		_ = os.Setenv("PAYPAL_CLIENT_SECRETS", originalSecrets)
 	}()
 
 	// Test: 3 IDs, 2 secrets.
-	os.Setenv("PAYPAL_CLIENT_IDS", "id1,id2,id3")
-	os.Setenv("PAYPAL_CLIENT_SECRETS", "sec1,sec2")
+	_ = os.Setenv("PAYPAL_CLIENT_IDS", "id1,id2,id3")
+	_ = os.Setenv("PAYPAL_CLIENT_SECRETS", "sec1,sec2")
 
 	result := CheckPayPalCSVParity(context.Background())
 
@@ -40,13 +40,13 @@ func TestCheckPayPalCSVParity_Match(t *testing.T) {
 	originalIDs := os.Getenv("PAYPAL_CLIENT_IDS")
 	originalSecrets := os.Getenv("PAYPAL_CLIENT_SECRETS")
 	defer func() {
-		os.Setenv("PAYPAL_CLIENT_IDS", originalIDs)
-		os.Setenv("PAYPAL_CLIENT_SECRETS", originalSecrets)
+		_ = os.Setenv("PAYPAL_CLIENT_IDS", originalIDs)
+		_ = os.Setenv("PAYPAL_CLIENT_SECRETS", originalSecrets)
 	}()
 
 	// Test: 2 IDs, 2 secrets.
-	os.Setenv("PAYPAL_CLIENT_IDS", "id1,id2")
-	os.Setenv("PAYPAL_CLIENT_SECRETS", "sec1,sec2")
+	_ = os.Setenv("PAYPAL_CLIENT_IDS", "id1,id2")
+	_ = os.Setenv("PAYPAL_CLIENT_SECRETS", "sec1,sec2")
 
 	result := CheckPayPalCSVParity(context.Background())
 
@@ -64,13 +64,13 @@ func TestCheckPayPalCSVParity_NotConfigured(t *testing.T) {
 	originalIDs := os.Getenv("PAYPAL_CLIENT_IDS")
 	originalSecrets := os.Getenv("PAYPAL_CLIENT_SECRETS")
 	defer func() {
-		os.Setenv("PAYPAL_CLIENT_IDS", originalIDs)
-		os.Setenv("PAYPAL_CLIENT_SECRETS", originalSecrets)
+		_ = os.Setenv("PAYPAL_CLIENT_IDS", originalIDs)
+		_ = os.Setenv("PAYPAL_CLIENT_SECRETS", originalSecrets)
 	}()
 
 	// Test: both empty.
-	os.Setenv("PAYPAL_CLIENT_IDS", "")
-	os.Setenv("PAYPAL_CLIENT_SECRETS", "")
+	_ = os.Setenv("PAYPAL_CLIENT_IDS", "")
+	_ = os.Setenv("PAYPAL_CLIENT_SECRETS", "")
 
 	result := CheckPayPalCSVParity(context.Background())
 

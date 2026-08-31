@@ -43,8 +43,8 @@ func TestFileExists_True(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.Close()
-	defer os.Remove(f.Name())
+	_ = f.Close()
+	defer func() { _ = os.Remove(f.Name()) }()
 
 	if !fileExists(f.Name()) {
 		t.Errorf("fileExists(%q) = false, want true", f.Name())
@@ -234,11 +234,11 @@ func TestReadHostsFile_PermissionError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.Close()
-	defer os.Remove(f.Name())
+	_ = f.Close()
+	defer func() { _ = os.Remove(f.Name()) }()
 	// Remove all permissions so Open fails with EACCES
-	os.Chmod(f.Name(), 0000)
-	defer os.Chmod(f.Name(), 0644)
+	_ = os.Chmod(f.Name(), 0000)
+	defer func() { _ = os.Chmod(f.Name(), 0644) }()
 
 	_, err = readHostsFile(f.Name())
 	if err == nil {
@@ -268,10 +268,10 @@ func TestWriteHostsFile_PermissionError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.Close()
-	defer os.Remove(f.Name())
-	os.Chmod(f.Name(), 0000)
-	defer os.Chmod(f.Name(), 0644)
+	_ = f.Close()
+	defer func() { _ = os.Remove(f.Name()) }()
+	_ = os.Chmod(f.Name(), 0000)
+	defer func() { _ = os.Chmod(f.Name(), 0644) }()
 
 	err = writeHostsFile(f.Name(), "127.0.0.1 test.local\n")
 	if err != ErrSudoRequired {
@@ -320,8 +320,8 @@ func writeSelfSignedCert(t *testing.T, notBefore, notAfter time.Time) string {
 	if err := pem.Encode(f, &pem.Block{Type: "CERTIFICATE", Bytes: certDER}); err != nil {
 		t.Fatal(err)
 	}
-	f.Close()
-	t.Cleanup(func() { os.Remove(f.Name()) })
+	_ = f.Close()
+	t.Cleanup(func() { _ = os.Remove(f.Name()) })
 	return f.Name()
 }
 
@@ -367,9 +367,9 @@ func TestCheckCertExpiry_NoPEMBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.WriteString("not a pem file\n")
-	f.Close()
-	defer os.Remove(f.Name())
+	_, _ = f.WriteString("not a pem file\n")
+	_ = f.Close()
+	defer func() { _ = os.Remove(f.Name()) }()
 
 	_, err = CheckCertExpiry(f.Name())
 	if err == nil {
@@ -386,9 +386,9 @@ func TestCheckCertExpiry_InvalidPEMBytes(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Write a PEM block with garbage DER bytes
-	pem.Encode(f, &pem.Block{Type: "CERTIFICATE", Bytes: []byte("not valid der")})
-	f.Close()
-	defer os.Remove(f.Name())
+	_ = pem.Encode(f, &pem.Block{Type: "CERTIFICATE", Bytes: []byte("not valid der")})
+	_ = f.Close()
+	defer func() { _ = os.Remove(f.Name()) }()
 
 	_, err = CheckCertExpiry(f.Name())
 	if err == nil {
@@ -417,8 +417,8 @@ func TestCopyMkcertCerts_Success(t *testing.T) {
 
 	chainPath := filepath.Join(src, "fullchain.pem")
 	keyPath := filepath.Join(src, "privkey.pem")
-	os.WriteFile(chainPath, []byte("chain data"), 0640)
-	os.WriteFile(keyPath, []byte("key data"), 0640)
+	_ = os.WriteFile(chainPath, []byte("chain data"), 0640)
+	_ = os.WriteFile(keyPath, []byte("key data"), 0640)
 
 	if err := copyMkcertCerts(chainPath, keyPath, dst); err != nil {
 		t.Fatalf("copyMkcertCerts: unexpected error: %v", err)
@@ -446,7 +446,7 @@ func TestCopyMkcertCerts_ReadPrivkeyFail(t *testing.T) {
 	src := t.TempDir()
 	dst := t.TempDir()
 	chainPath := filepath.Join(src, "fullchain.pem")
-	os.WriteFile(chainPath, []byte("chain data"), 0640)
+	_ = os.WriteFile(chainPath, []byte("chain data"), 0640)
 
 	err := copyMkcertCerts(chainPath, "/tmp/no-such-privkey-99999.pem", dst)
 	if err == nil {
@@ -467,12 +467,12 @@ func TestCopyMkcertCerts_WriteFullchainFail(t *testing.T) {
 	src := t.TempDir()
 	chainPath := filepath.Join(src, "fullchain.pem")
 	keyPath := filepath.Join(src, "privkey.pem")
-	os.WriteFile(chainPath, []byte("chain data"), 0640)
-	os.WriteFile(keyPath, []byte("key data"), 0640)
+	_ = os.WriteFile(chainPath, []byte("chain data"), 0640)
+	_ = os.WriteFile(keyPath, []byte("key data"), 0640)
 
 	dst := t.TempDir()
-	os.Chmod(dst, 0555)
-	t.Cleanup(func() { os.Chmod(dst, 0755) })
+	_ = os.Chmod(dst, 0555)
+	t.Cleanup(func() { _ = os.Chmod(dst, 0755) })
 
 	err := copyMkcertCerts(chainPath, keyPath, dst)
 	if err == nil {
@@ -484,8 +484,8 @@ func TestCopyMkcertCerts_WritePrivkeyFail(t *testing.T) {
 	src := t.TempDir()
 	chainPath := filepath.Join(src, "fullchain.pem")
 	keyPath := filepath.Join(src, "privkey.pem")
-	os.WriteFile(chainPath, []byte("chain data"), 0640)
-	os.WriteFile(keyPath, []byte("key data"), 0640)
+	_ = os.WriteFile(chainPath, []byte("chain data"), 0640)
+	_ = os.WriteFile(keyPath, []byte("key data"), 0640)
 
 	// Make dst/privkey.pem a directory so WriteFile fails (EISDIR)
 	dst := t.TempDir()

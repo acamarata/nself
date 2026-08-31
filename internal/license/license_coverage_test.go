@@ -64,7 +64,7 @@ func TestWriteCache_CreateTempFail(t *testing.T) {
 	if err := os.Chmod(cacheDir, 0555); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { os.Chmod(cacheDir, 0755) })
+	t.Cleanup(func() { _ = os.Chmod(cacheDir, 0755) })
 
 	cachePath := filepath.Join(cacheDir, "license.json")
 	t.Setenv("LICENSE_CACHE_PATH", cachePath)
@@ -208,7 +208,7 @@ func TestMigrateLicenseFromV1_OpenFileFail(t *testing.T) {
 	if err := os.Chmod(v2Dir, 0555); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { os.Chmod(v2Dir, 0755) })
+	t.Cleanup(func() { _ = os.Chmod(v2Dir, 0755) })
 
 	err := MigrateLicenseFromV1(home)
 	if err == nil {

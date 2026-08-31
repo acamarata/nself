@@ -144,7 +144,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 
 	steps.Next() // Stopping containers
 	if err := runDockerComposeDown(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), cwd, purge); err != nil {
-		fmt.Fprintf(cmd.ErrOrStderr(), "  %s docker compose down: %v (continuing)\n",
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  %s docker compose down: %v (continuing)\n",
 			ui.C(ui.Yellow, ui.IconWarning), err)
 	}
 
@@ -200,7 +200,7 @@ func runDockerComposeDown(ctx context.Context, stdout, stderr io.Writer, project
 // This allows tests to inject a closed reader (EOF) via root.SetIn() rather
 // than blocking forever on the real os.Stdin.
 func confirmPrompt(cmd *cobra.Command, prompt string) bool {
-	fmt.Fprint(cmd.OutOrStdout(), prompt)
+	_, _ = fmt.Fprint(cmd.OutOrStdout(), prompt)
 	scanner := bufio.NewScanner(cmd.InOrStdin())
 	if !scanner.Scan() {
 		return false

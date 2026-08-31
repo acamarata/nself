@@ -71,7 +71,7 @@ func createFullBackup(ctx context.Context, cfg *config.Config, backupDir, ts, ta
 		_ = cmd.Wait()
 		return fmt.Errorf("create backup file %s: %w", outputPath, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if _, err := io.Copy(f, stdout); err != nil {
 		_ = cmd.Process.Kill()

@@ -51,7 +51,7 @@ func fetchTemplateList(ctx context.Context, baseURL string, params url.Values) (
 	if err != nil {
 		return nil, fmt.Errorf("fetching template registry: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, fmt.Errorf("template not found")
@@ -86,7 +86,7 @@ func fetchTemplateSingle(ctx context.Context, baseURL, slug string) (*templateEn
 	if err != nil {
 		return nil, fmt.Errorf("fetching template %q: %w", slug, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, fmt.Errorf("template %q not found in registry", slug)

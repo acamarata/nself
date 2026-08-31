@@ -67,7 +67,7 @@ func TailStream(ctx context.Context, opts TailOptions) error {
 		client = &http.Client{Timeout: 0} // streaming — no timeout
 	}
 
-	fmt.Fprintln(stdout, "Streaming license validation events (Ctrl-C to stop)...")
+	_, _ = fmt.Fprintln(stdout, "Streaming license validation events (Ctrl-C to stop)...")
 
 	backoff := time.Second
 	for {
@@ -80,7 +80,7 @@ func TailStream(ctx context.Context, opts TailOptions) error {
 			if ctx.Err() != nil {
 				return nil
 			}
-			fmt.Fprintf(stdout, "\033[33mreconnecting in %s (lost connection: %v)\033[0m\n", backoff, err)
+			_, _ = fmt.Fprintf(stdout, "\033[33mreconnecting in %s (lost connection: %v)\033[0m\n", backoff, err)
 			select {
 			case <-ctx.Done():
 				return nil
@@ -117,7 +117,7 @@ func streamOnce(ctx context.Context, client *http.Client, pingURL string, filter
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("stream endpoint returned HTTP %d", resp.StatusCode)
@@ -208,7 +208,7 @@ func printEvent(w io.Writer, ev LicenseEvent) {
 		}
 	}
 
-	fmt.Fprintf(w, "%s%s  %-10s  key=%-12s  plugin=%-20s%s\n",
+	_, _ = fmt.Fprintf(w, "%s%s  %-10s  key=%-12s  plugin=%-20s%s\n",
 		color,
 		ts,
 		strings.ToUpper(ev.Result),

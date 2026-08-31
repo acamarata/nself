@@ -48,7 +48,7 @@ func acquireInstallLock(pluginDir string) (*os.File, error) {
 		f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 		if err == nil {
 			// Lock acquired — write our PID for diagnostic purposes.
-			fmt.Fprintf(f, "%d\n", os.Getpid())
+			_, _ = fmt.Fprintf(f, "%d\n", os.Getpid())
 			return f, nil
 		}
 		if !os.IsExist(err) {
@@ -67,8 +67,8 @@ func acquireInstallLock(pluginDir string) (*os.File, error) {
 // acquireInstallLock. Errors are silently ignored; a stale lock file will be
 // cleaned up on the next acquire attempt.
 func releaseInstallLock(f *os.File, pluginDir string) {
-	f.Close()
-	os.Remove(installLockPath(pluginDir))
+	_ = f.Close()
+	_ = os.Remove(installLockPath(pluginDir))
 }
 
 // Install downloads, extracts, and configures a plugin. For paid plugins it

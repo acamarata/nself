@@ -46,13 +46,13 @@ func AuditRLS(ctx context.Context, cfg *config.Config) ([]RLSTableInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("audit rls: %w", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	rows, err := db.QueryContext(ctx, auditRLSQuery)
 	if err != nil {
 		return nil, fmt.Errorf("audit rls query: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var results []RLSTableInfo
 	for rows.Next() {
@@ -114,7 +114,7 @@ func hasUserIDColumn(ctx context.Context, cfg *config.Config, schema, table stri
 	if err != nil {
 		return false, fmt.Errorf("check user_id column: %w", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	var exists bool
 	if err := db.QueryRowContext(ctx, q, schema, table).Scan(&exists); err != nil {

@@ -90,7 +90,7 @@ func Refresh(ctx context.Context, opts RefreshOptions) (*RefreshResult, error) {
 		providers = []string{opts.Provider}
 	}
 
-	fmt.Fprintf(stdout, "Triggering OAuth refresh for provider(s): %s\n", strings.Join(providers, ", "))
+	_, _ = fmt.Fprintf(stdout, "Triggering OAuth refresh for provider(s): %s\n", strings.Join(providers, ", "))
 
 	// Run providers in parallel.
 	resultCh := make(chan ProviderResult, len(providers)*4)
@@ -116,18 +116,18 @@ func Refresh(ctx context.Context, opts RefreshOptions) (*RefreshResult, error) {
 	for r := range resultCh {
 		allResults = append(allResults, r)
 		if r.Err != nil {
-			fmt.Fprintf(stderr, "  FAIL provider=%s account=%s: %v\n",
+			_, _ = fmt.Fprintf(stderr, "  FAIL provider=%s account=%s: %v\n",
 				r.Provider, r.AccountID, r.Err)
 			failCount++
 		} else {
-			fmt.Fprintf(stdout, "  OK   provider=%s account=%s\n",
+			_, _ = fmt.Fprintf(stdout, "  OK   provider=%s account=%s\n",
 				r.Provider, r.AccountID)
 		}
 	}
 
 	result := &RefreshResult{Results: allResults, FailCount: failCount}
 
-	fmt.Fprintf(stdout, "\nRefresh complete: %d/%d succeeded\n",
+	_, _ = fmt.Fprintf(stdout, "\nRefresh complete: %d/%d succeeded\n",
 		len(allResults)-failCount, len(allResults))
 
 	if failCount > 0 {
@@ -149,7 +149,7 @@ func listProviders(ctx context.Context, client *http.Client, baseURL string) ([]
 	if err != nil {
 		return nil, fmt.Errorf("GET %s: %w", url, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("list providers returned HTTP %d", resp.StatusCode)
@@ -191,7 +191,7 @@ func refreshProvider(ctx context.Context, client *http.Client, baseURL, provider
 			Err:       fmt.Errorf("POST %s: %w", url, err),
 		}}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return []ProviderResult{{

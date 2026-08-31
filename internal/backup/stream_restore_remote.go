@@ -62,7 +62,7 @@ func RestoreFromRemote(ctx context.Context, cfg *config.Config, from, keyPath st
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		defer dlW.Close()
+		defer func() { _ = dlW.Close() }()
 		cmd := exec.CommandContext(ctx, "rclone", "cat", from)
 		cmd.Stdout = dlW
 		stderr, err := cmd.StderrPipe()
@@ -99,7 +99,7 @@ func RestoreFromRemote(ctx context.Context, cfg *config.Config, from, keyPath st
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			defer decW.Close()
+			defer func() { _ = decW.Close() }()
 			cmd := exec.CommandContext(ctx, "age", "--decrypt", "-i", keyPath)
 			cmd.Stdin = downloadReader
 			cmd.Stdout = decW
@@ -145,7 +145,7 @@ func RestoreFromRemote(ctx context.Context, cfg *config.Config, from, keyPath st
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		defer restoreReader.Close()
+		defer func() { _ = restoreReader.Close() }()
 		args := []string{
 			"exec", "-i", container,
 			"pg_restore",

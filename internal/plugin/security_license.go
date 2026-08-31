@@ -172,7 +172,7 @@ func checkAuthorRevocation(ctx context.Context, author string) error {
 		fmt.Fprintf(os.Stderr, "warning: could not fetch author revocation list (offline?): %v\n", err)
 		return nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil

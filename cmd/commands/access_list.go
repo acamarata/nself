@@ -71,7 +71,7 @@ func runAccessList(cmd *cobra.Command, args []string) error {
 		fmt.Println("No nself-managed keys found. Run 'nself access grant' to add one.")
 	} else {
 		tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(tw, "USER\tFINGERPRINT\tSUDO\tDOCKER\tEXPIRES\tSTATUS")
+		_, _ = fmt.Fprintln(tw, "USER\tFINGERPRINT\tSUDO\tDOCKER\tEXPIRES\tSTATUS")
 		for _, r := range rows {
 			sudo, docker, status := "no", "no", "active"
 			if r.Sudo {
@@ -87,7 +87,7 @@ func runAccessList(cmd *cobra.Command, args []string) error {
 			if expires == "" {
 				expires = "-"
 			}
-			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", r.User, r.Fingerprint, sudo, docker, expires, status)
+			_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", r.User, r.Fingerprint, sudo, docker, expires, status)
 		}
 		if err := tw.Flush(); err != nil {
 			return fmt.Errorf("flush table: %w", err)

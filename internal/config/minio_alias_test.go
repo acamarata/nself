@@ -33,14 +33,14 @@ func clearMinioEnv(t *testing.T) {
 		"S3_ACCESS_KEY", "S3_SECRET_KEY",
 	} {
 		orig, had := os.LookupEnv(k)
-		os.Unsetenv(k)
+		_ = os.Unsetenv(k)
 		if had {
 			t.Cleanup(func(k, orig string) func() {
-				return func() { os.Setenv(k, orig) }
+				return func() { _ = os.Setenv(k, orig) }
 			}(k, orig))
 		} else {
 			t.Cleanup(func(k string) func() {
-				return func() { os.Unsetenv(k) }
+				return func() { _ = os.Unsetenv(k) }
 			}(k))
 		}
 	}

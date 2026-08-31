@@ -132,7 +132,7 @@ func TestProbePluginHTTP_ConnectionRefused(t *testing.T) {
 			return
 		}
 		conn, _, _ := hj.Hijack()
-		conn.Close()
+		_ = conn.Close()
 	}))
 	defer srv.Close()
 

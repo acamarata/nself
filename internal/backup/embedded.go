@@ -184,7 +184,7 @@ func backupEmbeddedSQL(ctx context.Context, cfg *config.Config, backupDir, ts st
 	header := fmt.Sprintf("-- nself embedded-pg SQL dump\n-- timestamp: %s\n-- tables: %d\n\n",
 		ts, len(tables))
 	if _, err := fmt.Fprint(f, header); err != nil {
-		f.Close()
+		_ = f.Close()
 		_ = os.Remove(tmpPath)
 		return nil, fmt.Errorf("write backup header: %w", err)
 	}
@@ -203,7 +203,7 @@ func backupEmbeddedSQL(ctx context.Context, cfg *config.Config, backupDir, ts st
 
 		// Write the COPY-FROM form for restore compatibility.
 		if _, err := fmt.Fprintf(f, "-- table: %s\n%s\n", table, copyIn); err != nil {
-			f.Close()
+			_ = f.Close()
 			_ = os.Remove(tmpPath)
 			return nil, fmt.Errorf("write table header for %s: %w", table, err)
 		}

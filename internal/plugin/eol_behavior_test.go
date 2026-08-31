@@ -147,7 +147,7 @@ func TestCheckEOLBlock_NetworkOffline(t *testing.T) {
 	ctx := context.Background()
 	// Point at a registry URL that will fail immediately.
 	_ = os.Setenv("NSELF_PLUGIN_REGISTRY", "http://127.0.0.1:0/registry.json")
-	defer os.Unsetenv("NSELF_PLUGIN_REGISTRY")
+	defer func() { _ = os.Unsetenv("NSELF_PLUGIN_REGISTRY") }()
 
 	// CheckEOLBlock must not return an error for network failures.
 	err := CheckEOLBlock(ctx, "some-plugin", false)

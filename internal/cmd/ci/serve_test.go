@@ -325,7 +325,7 @@ func TestIntegration_HttpServer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("healthz GET: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("/healthz: got %d, want 200", resp.StatusCode)
 	}
@@ -341,7 +341,7 @@ func TestIntegration_HttpServer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("webhook POST: %v", err)
 	}
-	resp2.Body.Close()
+	_ = resp2.Body.Close()
 	if resp2.StatusCode != http.StatusAccepted {
 		t.Errorf("signed webhook: got %d, want 202", resp2.StatusCode)
 	}
@@ -354,7 +354,7 @@ func TestIntegration_HttpServer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("bad-sig POST: %v", err)
 	}
-	resp3.Body.Close()
+	_ = resp3.Body.Close()
 	if resp3.StatusCode != http.StatusForbidden {
 		t.Errorf("bad-sig: got %d, want 403", resp3.StatusCode)
 	}

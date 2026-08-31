@@ -41,8 +41,8 @@ func TestEnvExplain_NoArgLists_Cascade(t *testing.T) {
 		".env":         "PROJECT_NAME=demo\n",
 		".env.secrets": "POSTGRES_PASSWORD=abc\n",
 	})
-	os.Unsetenv("ENV")
-	os.Unsetenv("NSELF_LEGACY_ENV_ORDER")
+	_ = os.Unsetenv("ENV")
+	_ = os.Unsetenv("NSELF_LEGACY_ENV_ORDER")
 
 	out, err := captureStdout(t, func() error {
 		return runEnvExplain(envExplainRoot(t), nil)
@@ -65,8 +65,8 @@ func TestEnvExplain_NoArgLists_Cascade(t *testing.T) {
 // warns about it.
 func TestEnvExplain_NoArgLegacyMode_ShowsWarning(t *testing.T) {
 	envExplainProject(t, map[string]string{".env": "X=1\n"})
-	os.Setenv("NSELF_LEGACY_ENV_ORDER", "1")
-	t.Cleanup(func() { os.Unsetenv("NSELF_LEGACY_ENV_ORDER") })
+	_ = os.Setenv("NSELF_LEGACY_ENV_ORDER", "1")
+	t.Cleanup(func() { _ = os.Unsetenv("NSELF_LEGACY_ENV_ORDER") })
 
 	out, err := captureStdout(t, func() error {
 		return runEnvExplain(envExplainRoot(t), nil)
@@ -89,8 +89,8 @@ func TestEnvExplain_VarArg_RedactsByDefault(t *testing.T) {
 		".env":         "API_KEY=secret-value\n",
 		".env.secrets": "API_KEY=different-secret-value\n",
 	})
-	os.Unsetenv("ENV")
-	os.Unsetenv("NSELF_LEGACY_ENV_ORDER")
+	_ = os.Unsetenv("ENV")
+	_ = os.Unsetenv("NSELF_LEGACY_ENV_ORDER")
 
 	out, err := captureStdout(t, func() error {
 		return runEnvExplain(envExplainRoot(t), []string{"API_KEY"})
@@ -112,8 +112,8 @@ func TestEnvExplain_VarArg_RevealShowsValue(t *testing.T) {
 	envExplainProject(t, map[string]string{
 		".env.local": "API_KEY=personal-secret\n",
 	})
-	os.Unsetenv("ENV")
-	os.Unsetenv("NSELF_LEGACY_ENV_ORDER")
+	_ = os.Unsetenv("ENV")
+	_ = os.Unsetenv("NSELF_LEGACY_ENV_ORDER")
 
 	root := envExplainRoot(t)
 	if err := root.Flags().Set("reveal", "true"); err != nil {
@@ -135,8 +135,8 @@ func TestEnvExplain_VarArg_RevealShowsValue(t *testing.T) {
 // cascade file gets a clear "not set" message instead of an error.
 func TestEnvExplain_VarArg_NotSetAnywhere(t *testing.T) {
 	envExplainProject(t, map[string]string{".env": "OTHER_VAR=1\n"})
-	os.Unsetenv("ENV")
-	os.Unsetenv("NSELF_LEGACY_ENV_ORDER")
+	_ = os.Unsetenv("ENV")
+	_ = os.Unsetenv("NSELF_LEGACY_ENV_ORDER")
 
 	out, err := captureStdout(t, func() error {
 		return runEnvExplain(envExplainRoot(t), []string{"MISSING_VAR"})

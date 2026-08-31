@@ -90,9 +90,9 @@ func (r *EmbeddedPGRuntime) boot(ctx context.Context) error {
 
 	// Configure WASI: preopened filesystem, environment.
 	wasiCfg := wasmtime.NewWasiConfig()
-	wasiCfg.SetStdoutFile(filepath.Join(r.runtimeDir, "pglite-stdout.log"))
-	wasiCfg.SetStderrFile(filepath.Join(r.runtimeDir, "pglite-stderr.log"))
-	wasiCfg.PreopenDir(filepath.Join(r.runtimeDir, wasmPreopenDir), "/data")
+	_ = wasiCfg.SetStdoutFile(filepath.Join(r.runtimeDir, "pglite-stdout.log"))
+	_ = wasiCfg.SetStderrFile(filepath.Join(r.runtimeDir, "pglite-stderr.log"))
+	_ = wasiCfg.PreopenDir(filepath.Join(r.runtimeDir, wasmPreopenDir), "/data")
 
 	store.SetWasi(wasiCfg)
 
@@ -183,10 +183,10 @@ func (r *EmbeddedPGRuntime) loadOrCompileModule() (*wasmtime.Module, error) {
 		tmp, err := os.CreateTemp(filepath.Dir(cachePath), ".pglite-compiled-*")
 		if err == nil {
 			if _, werr := tmp.Write(serialized); werr == nil {
-				tmp.Close()
+				_ = tmp.Close()
 				_ = os.Rename(tmp.Name(), cachePath)
 			} else {
-				tmp.Close()
+				_ = tmp.Close()
 				_ = os.Remove(tmp.Name())
 			}
 		}
@@ -217,7 +217,7 @@ func (r *EmbeddedPGRuntime) waitForSocket(ctx context.Context, exitCh <-chan err
 		conn, err := (&net.Dialer{}).DialContext(dialCtx, "unix", r.sockPath)
 		cancel()
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return nil // ready
 		}
 
@@ -271,6 +271,6 @@ func (r *EmbeddedPGRuntime) Healthy() bool {
 	if err != nil {
 		return false
 	}
-	conn.Close()
+	_ = conn.Close()
 	return true
 }

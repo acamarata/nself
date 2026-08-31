@@ -77,7 +77,7 @@ func (e *Executor) runNotifySlack(ctx context.Context, params map[string]string)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 300 {
 		return fmt.Errorf("slack webhook returned %d", resp.StatusCode)
 	}
@@ -118,7 +118,7 @@ func (e *Executor) runEscalate(ctx context.Context, params map[string]string) er
 
 func (e *Executor) printf(format string, args ...interface{}) {
 	if e.Out != nil {
-		fmt.Fprintf(e.Out, format, args...)
+		_, _ = fmt.Fprintf(e.Out, format, args...)
 	}
 }
 

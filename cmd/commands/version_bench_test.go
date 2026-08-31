@@ -130,6 +130,6 @@ func emitBenchmarkResult(name string, b *testing.B) {
 	if err != nil {
 		return
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	_, _ = f.Write(append(data, '\n'))
 }

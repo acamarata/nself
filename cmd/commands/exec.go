@@ -59,7 +59,7 @@ func runExec(cmd *cobra.Command, args []string) error {
 		Env:         envVars,
 	}
 
-	fmt.Fprintf(cmd.ErrOrStderr(), "Executing in %s: %v\n", service, command)
+	_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Executing in %s: %v\n", service, command)
 
 	if err := docker.Exec(cmd.Context(), service, command, opts); err != nil {
 		return fmt.Errorf("exec failed: %w", err)

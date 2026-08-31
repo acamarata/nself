@@ -64,7 +64,7 @@ func writeAudit(r auditRecord) error {
 	if err != nil {
 		return fmt.Errorf("open audit log: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	line := fmt.Sprintf("ts=%s action=%s host=%s user=%s fingerprint=%s sudo=%t docker=%t",
 		time.Now().UTC().Format(time.RFC3339),

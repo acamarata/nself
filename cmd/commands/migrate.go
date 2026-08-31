@@ -120,7 +120,7 @@ func runMigrate(cmd *cobra.Command, args []string) error {
 	if len(artifacts) == 0 {
 		ui.Success("No v1 artifacts detected. This project is ready for nSelf v2.")
 	} else {
-		fmt.Fprintf(cmd.ErrOrStderr(), "\n%s %s\n\n", ui.C(ui.Yellow, ui.IconWarning), ui.C(ui.Bold, "Legacy nSelf v1 artifacts detected:"))
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "\n%s %s\n\n", ui.C(ui.Yellow, ui.IconWarning), ui.C(ui.Bold, "Legacy nSelf v1 artifacts detected:"))
 
 		tbl := ui.NewTable("Path", "Description", "Action")
 		for _, a := range artifacts {

@@ -114,32 +114,32 @@ func runClean(cmd *cobra.Command, args []string) error {
 	}
 
 	// 4. Docker build cache (non-fatal if docker not available)
-	fmt.Fprintln(cmd.OutOrStdout(), "Pruning Docker build cache...")
+	_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Pruning Docker build cache...")
 	pruneCmd := exec.CommandContext(cmd.Context(), "docker", "builder", "prune",
 		"--filter", "type=exec.cachemount",
 		"--force",
 	)
 	pruneOut, pruneErr := pruneCmd.CombinedOutput()
 	if pruneErr != nil {
-		fmt.Fprintf(cmd.ErrOrStderr(), "Warning: docker builder prune failed (Docker may not be running): %v\n", pruneErr)
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: docker builder prune failed (Docker may not be running): %v\n", pruneErr)
 	} else {
 		trimmed := strings.TrimSpace(string(pruneOut))
 		if trimmed != "" {
-			fmt.Fprintln(cmd.OutOrStdout(), trimmed)
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), trimmed)
 		}
 	}
 
 	// Summary
 	out := cmd.OutOrStdout()
-	fmt.Fprintln(out)
+	_, _ = fmt.Fprintln(out)
 	if len(removed) == 0 {
-		fmt.Fprintln(out, "Nothing to remove — already clean.")
+		_, _ = fmt.Fprintln(out, "Nothing to remove — already clean.")
 	} else {
-		fmt.Fprintf(out, "Removed %d file(s):\n", len(removed))
+		_, _ = fmt.Fprintf(out, "Removed %d file(s):\n", len(removed))
 		for _, r := range removed {
-			fmt.Fprintf(out, "  - %s\n", r)
+			_, _ = fmt.Fprintf(out, "  - %s\n", r)
 		}
-		fmt.Fprintln(out, "\nRun 'nself build' to regenerate.")
+		_, _ = fmt.Fprintln(out, "\nRun 'nself build' to regenerate.")
 	}
 
 	// 5. --all: host-wide docker system prune, gated behind confirmation.
@@ -151,16 +151,16 @@ func runClean(cmd *cobra.Command, args []string) error {
 	skipConfirm, _ := cmd.Flags().GetBool("yes")
 	if !skipConfirm {
 		if confirmErr := confirm.ConfirmHostWidePrune(cmd.InOrStdin(), out); confirmErr != nil {
-			fmt.Fprintln(out, "\nHost-wide prune canceled.")
+			_, _ = fmt.Fprintln(out, "\nHost-wide prune canceled.")
 			return nil
 		}
 	}
 
-	fmt.Fprintln(out, "\nPruning all unused Docker resources on this host...")
+	_, _ = fmt.Fprintln(out, "\nPruning all unused Docker resources on this host...")
 	if pruneAllErr := dockerSystemPrune(cmd.Context(), out, cmd.ErrOrStderr()); pruneAllErr != nil {
-		fmt.Fprintf(cmd.ErrOrStderr(), "Warning: docker system prune failed (Docker may not be running): %v\n", pruneAllErr)
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: docker system prune failed (Docker may not be running): %v\n", pruneAllErr)
 	} else {
-		fmt.Fprintln(out, "Host-wide prune complete.")
+		_, _ = fmt.Fprintln(out, "Host-wide prune complete.")
 	}
 
 	return nil

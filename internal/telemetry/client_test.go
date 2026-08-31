@@ -39,7 +39,7 @@ func TestSendNoOpWhenOptInUnset(t *testing.T) {
 	_ = orig
 
 	// Ensure opt-in is NOT set.
-	os.Unsetenv("NSELF_TELEMETRY_OPT_IN")
+	_ = os.Unsetenv("NSELF_TELEMETRY_OPT_IN")
 
 	Send("test_event", map[string]any{"key": "value"})
 
@@ -84,7 +84,7 @@ func TestSendFiresWhenOptedIn(t *testing.T) {
 	if err != nil {
 		t.Fatalf("do request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	_ = p // used above
 
@@ -95,7 +95,7 @@ func TestSendFiresWhenOptedIn(t *testing.T) {
 
 // TestIsOptedIn verifies the opt-in gate logic.
 func TestIsOptedIn(t *testing.T) {
-	os.Unsetenv("NSELF_TELEMETRY_OPT_IN")
+	_ = os.Unsetenv("NSELF_TELEMETRY_OPT_IN")
 	if IsOptedIn() {
 		t.Error("expected IsOptedIn=false when env unset")
 	}
@@ -145,9 +145,9 @@ func TestInstallSourceOneShot(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Setenv("USERPROFILE", tmpHome)
 	}
-	os.Unsetenv("NSELF_INSTALL_SOURCE")
-	os.Unsetenv("NSELF_INSTALL_APP")
-	os.Unsetenv("NSELF_INSTALL_METHOD")
+	_ = os.Unsetenv("NSELF_INSTALL_SOURCE")
+	_ = os.Unsetenv("NSELF_INSTALL_APP")
+	_ = os.Unsetenv("NSELF_INSTALL_METHOD")
 
 	// Create the one-shot file.
 	dir := filepath.Join(tmpHome, ".config", "nself")

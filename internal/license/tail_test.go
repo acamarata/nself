@@ -30,7 +30,7 @@ func buildEventStream(t *testing.T, events []LicenseEvent) *httptest.Server {
 				ev.Plugin,
 				ev.Result,
 			)
-			fmt.Fprintf(w, "data: %s\n\n", data)
+			_, _ = fmt.Fprintf(w, "data: %s\n\n", data)
 			flusher.Flush()
 		}
 	}))

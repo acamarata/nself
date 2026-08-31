@@ -106,7 +106,7 @@ func buildAuthImport(authExportFile string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("opening auth export: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var export firebaseAuthExport
 	if err := json.NewDecoder(f).Decode(&export); err != nil {

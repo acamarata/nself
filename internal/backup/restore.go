@@ -50,7 +50,7 @@ func Restore(ctx context.Context, cfg *config.Config, opts RestoreOptions) error
 			return fmt.Errorf("decrypt backup: %w", err)
 		}
 		workFile = decrypted
-		defer os.Remove(decrypted) // Clean up decrypted temp file.
+		defer func() { _ = os.Remove(decrypted) }()
 	}
 
 	// Determine what to restore.
@@ -158,7 +158,7 @@ func restorePgDump(ctx context.Context, container, user, db, backupFile string) 
 	if err != nil {
 		return fmt.Errorf("open backup file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	args := []string{
 		"exec", "-i", container,

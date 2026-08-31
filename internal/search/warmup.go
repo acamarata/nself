@@ -131,7 +131,7 @@ func issueWarmupQuery(ctx context.Context, client *http.Client, baseURL, masterK
 	if err != nil {
 		return fmt.Errorf("http: %w", err)
 	}
-	defer func() { _, _ = io.Copy(io.Discard, resp.Body); resp.Body.Close() }()
+	defer func() { _, _ = io.Copy(io.Discard, resp.Body); _ = resp.Body.Close() }()
 
 	// 2xx = success.  404 = index absent (brand-new instance) — treat as OK
 	// because the warm-up still exercised the Meili request-parsing path.

@@ -35,7 +35,7 @@ func CheckPort(port int) (bool, error) {
 		// Connection refused or timed out — port is available.
 		return false, nil
 	}
-	conn.Close()
+	_ = conn.Close()
 	// Connection succeeded — something is listening.
 	return true, nil
 }

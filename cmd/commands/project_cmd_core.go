@@ -43,7 +43,7 @@ var projectCreateCmd = &cobra.Command{
 			return fmt.Errorf("--domain is required")
 		}
 
-		fmt.Fprintf(cmd.OutOrStdout(), "Creating project %q at %s...\n",
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Creating project %q at %s...\n",
 			projectCreateFlags.Slug, projectCreateFlags.Domain)
 
 		body, code, err := doControllerRequest("POST", "/projects/create", map[string]string{
@@ -68,7 +68,7 @@ var projectCreateCmd = &cobra.Command{
 			Status string `json:"status"`
 		}
 		_ = json.Unmarshal(body, &proj)
-		fmt.Fprintf(cmd.OutOrStdout(), "Project ready: https://%s (id: %s)\n", proj.Domain, proj.ID)
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Project ready: https://%s (id: %s)\n", proj.Domain, proj.ID)
 		return nil
 	},
 }
@@ -105,7 +105,7 @@ var projectDeleteCmd = &cobra.Command{
 			return fmt.Errorf("delete failed (%d): %s", code, e.Error)
 		}
 
-		fmt.Fprintf(cmd.OutOrStdout(), "Project %q deleted.\n", projectDeleteFlags.Slug)
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Project %q deleted.\n", projectDeleteFlags.Slug)
 		return nil
 	},
 }

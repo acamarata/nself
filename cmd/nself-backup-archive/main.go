@@ -72,6 +72,6 @@ func logFailure(walPath string, err error) {
 	if ferr != nil {
 		return
 	}
-	defer f.Close()
-	fmt.Fprintf(f, "%s FAIL %s: %v\n", time.Now().Format(time.RFC3339), walPath, err)
+	defer func() { _ = f.Close() }()
+	_, _ = fmt.Fprintf(f, "%s FAIL %s: %v\n", time.Now().Format(time.RFC3339), walPath, err)
 }

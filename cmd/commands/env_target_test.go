@@ -117,7 +117,7 @@ func TestEnvTargetList_JSON(t *testing.T) {
 	}
 
 	err := runEnvTargetList(cmd, nil)
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	if err != nil {
@@ -337,7 +337,7 @@ func TestEnvTargetProbe_LocalEnv(t *testing.T) {
 	_ = cmd.Flags().Set("json", "true")
 
 	err := runEnvTargetProbe(cmd, []string{"local"})
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	if err != nil {

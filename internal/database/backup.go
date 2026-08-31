@@ -83,7 +83,7 @@ func Backup(ctx context.Context, cfg *config.Config, outputPath string) error {
 		_ = cmd.Wait()
 		return fmt.Errorf("create backup file %s: %w", outputPath, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// Stream pg_dump output to the file.
 	if _, err := io.Copy(f, stdout); err != nil {

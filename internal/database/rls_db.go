@@ -22,7 +22,7 @@ func Open(ctx context.Context, cfg *config.Config) (*sql.DB, error) {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
 	if err := db.PingContext(ctx); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("connect to database: %w (is the postgres container running?)", err)
 	}
 	return db, nil

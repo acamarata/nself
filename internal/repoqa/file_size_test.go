@@ -56,7 +56,7 @@ func oversizedFiles(t *testing.T, root string) map[string]int {
 			if err != nil {
 				return err
 			}
-			defer f.Close()
+			defer func() { _ = f.Close() }()
 
 			n := 0
 			sc := bufio.NewScanner(f)

@@ -130,7 +130,7 @@ func (a *Alerter) queryDailyCosts(ctx context.Context) (map[string]float64, erro
 		}
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	totals := map[string]float64{}
 	for rows.Next() {
@@ -178,7 +178,7 @@ func (a *Alerter) postSlack(ctx context.Context, message string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 300 {
 		return fmt.Errorf("Slack webhook returned HTTP %d", resp.StatusCode)

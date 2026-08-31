@@ -100,7 +100,7 @@ func collectMinIOStorage(ctx context.Context, cfg *config.Config, pgContainer, p
 			continue
 		}
 		body, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 
 		if resp.StatusCode == http.StatusNotFound {
 			// Bucket does not exist yet; record 0 bytes.
@@ -164,7 +164,7 @@ func collectNginxBandwidth(ctx context.Context, cfg *config.Config, pgContainer,
 		slog.Warn("Prometheus unavailable for bandwidth metering", "error", err)
 		return nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		slog.Warn("Prometheus returned non-200 for bandwidth query", "status", resp.StatusCode)

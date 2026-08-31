@@ -111,7 +111,7 @@ func runEnvTargetProbe(cmd *cobra.Command, args []string) error {
 	}
 
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "ENV\tSERVER\tCAPABILITY\tSSH\tDOCKER\tLATENCY\tREASON")
+	_, _ = fmt.Fprintln(tw, "ENV\tSERVER\tCAPABILITY\tSSH\tDOCKER\tLATENCY\tREASON")
 	for _, r := range rows {
 		ssh := boolMark(r.SSHReachable)
 		docker := boolMark(r.DockerOK)
@@ -119,7 +119,7 @@ func runEnvTargetProbe(cmd *cobra.Command, args []string) error {
 		if r.LatencyMS > 0 {
 			latency = fmt.Sprintf("%dms", r.LatencyMS)
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			r.Env, r.Server, r.Capability, ssh, docker, latency, r.Reason)
 	}
 	return tw.Flush()

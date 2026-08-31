@@ -35,7 +35,7 @@ func Audit(ctx context.Context, cfg *config.Config, opts AuditOptions) ([]AuditE
 	if err != nil {
 		return nil, fmt.Errorf("querying audit log: %w", err)
 	}
-	defer sqlDB.Close()
+	defer func() { _ = sqlDB.Close() }()
 
 	// Build query with $N placeholders. The since interval is passed as a
 	// PostgreSQL interval string derived from parseDuration (digits+unit only,
@@ -59,7 +59,7 @@ func Audit(ctx context.Context, cfg *config.Config, opts AuditOptions) ([]AuditE
 	if err != nil {
 		return nil, fmt.Errorf("querying audit log: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var entries []AuditEntry
 	for rows.Next() {

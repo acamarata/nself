@@ -80,7 +80,7 @@ func aiPluginRequest(ctx context.Context, method, path string, body []byte) ([]b
 	if err != nil {
 		return nil, 0, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	// Capped read: this talks to a local daemon, but doctor must not be a way to
 	// exhaust memory if that daemon misbehaves.
 	b, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))

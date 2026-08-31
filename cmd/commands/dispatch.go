@@ -284,6 +284,6 @@ func reportProxyFailure(w io.Writer, err error) error {
 		return errs.Exit(code)
 	}
 
-	fmt.Fprintf(w, "Plugin error: %v\n", err)
+	_, _ = fmt.Fprintf(w, "Plugin error: %v\n", err)
 	return errs.Exit(1)
 }

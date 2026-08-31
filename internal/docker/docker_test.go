@@ -759,7 +759,7 @@ func TestCheckPort_FreePort(t *testing.T) {
 		t.Fatalf("could not open listener: %v", err)
 	}
 	port := ln.Addr().(*net.TCPAddr).Port
-	ln.Close() // Release before CheckPort probe.
+	_ = ln.Close()
 
 	// The port MAY be grabbed by another process in the tiny window, but in
 	// test environments this is acceptable. We simply verify CheckPort returns
@@ -780,7 +780,7 @@ func TestCheckPort_InUsePort(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not bind listener: %v", err)
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }()
 
 	port := ln.Addr().(*net.TCPAddr).Port
 	inUse, err := CheckPort(port)
@@ -797,7 +797,7 @@ func TestCheckAllPorts_WithActiveListener(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not bind listener: %v", err)
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }()
 
 	port := ln.Addr().(*net.TCPAddr).Port
 	conflicts, err := CheckAllPorts([]int{port})
@@ -816,7 +816,7 @@ func TestCheckAllPorts_NoConflicts(t *testing.T) {
 		t.Fatalf("could not bind: %v", err)
 	}
 	port := ln.Addr().(*net.TCPAddr).Port
-	ln.Close()
+	_ = ln.Close()
 
 	conflicts, err := CheckAllPorts([]int{port})
 	if err != nil {
@@ -912,7 +912,7 @@ func TestExecutorInterface_MockSatisfiesInterface(t *testing.T) {
 	if err != nil || rc == nil {
 		t.Fatalf("unexpected ComposeLogs result: %v", err)
 	}
-	rc.Close()
+	_ = rc.Close()
 
 	info, err := e.Inspect(ctx, "container1")
 	if err != nil || info != nil {
@@ -1062,7 +1062,7 @@ func TestCheckAllPortsFiltered_OwnPortNotConflict(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not bind listener: %v", err)
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }()
 
 	port := ln.Addr().(*net.TCPAddr).Port
 
@@ -1093,7 +1093,7 @@ func TestCheckAllPortsFiltered_UnownedPortIsConflict(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not bind listener: %v", err)
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }()
 
 	port := ln.Addr().(*net.TCPAddr).Port
 

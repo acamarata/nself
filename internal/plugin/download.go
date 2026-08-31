@@ -106,7 +106,7 @@ func downloadFromURL(ctx context.Context, url string, extraHeaders map[string]st
 	if err != nil {
 		return "", fmt.Errorf("HTTP GET %s: %w", url, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("HTTP GET %s: status %d", url, resp.StatusCode)
@@ -116,10 +116,10 @@ func downloadFromURL(ctx context.Context, url string, extraHeaders map[string]st
 	if err != nil {
 		return "", fmt.Errorf("creating temp file: %w", err)
 	}
-	defer tmp.Close()
+	defer func() { _ = tmp.Close() }()
 
 	if _, err := io.Copy(tmp, resp.Body); err != nil {
-		os.Remove(tmp.Name())
+		_ = os.Remove(tmp.Name())
 		return "", fmt.Errorf("writing download to temp file: %w", err)
 	}
 
@@ -164,13 +164,13 @@ func extractTarGz(archivePath, destDir string) error {
 	if err != nil {
 		return fmt.Errorf("opening archive: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	gz, err := gzip.NewReader(f)
 	if err != nil {
 		return fmt.Errorf("gzip reader: %w", err)
 	}
-	defer gz.Close()
+	defer func() { _ = gz.Close() }()
 
 	tr := tar.NewReader(gz)
 	for {
@@ -216,10 +216,10 @@ func extractTarGz(archivePath, destDir string) error {
 				return fmt.Errorf("creating file %s: %w", target, err)
 			}
 			if _, err := io.Copy(outFile, tr); err != nil {
-				outFile.Close()
+				_ = outFile.Close()
 				return fmt.Errorf("writing file %s: %w", target, err)
 			}
-			outFile.Close()
+			_ = outFile.Close()
 		}
 	}
 

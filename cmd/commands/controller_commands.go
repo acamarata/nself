@@ -43,8 +43,8 @@ var controllerStartCmd = &cobra.Command{
 		c.Stderr = cmd.ErrOrStderr()
 		if err := c.Run(); err != nil {
 			// Fallback for non-systemd environments.
-			fmt.Fprintln(cmd.OutOrStdout(), "Hint: run the controller binary directly:")
-			fmt.Fprintln(cmd.OutOrStdout(), "  NSELF_FLAG_MULTI_TENANT_CONTROLLER=true nself-tenant-controller &")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Hint: run the controller binary directly:")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "  NSELF_FLAG_MULTI_TENANT_CONTROLLER=true nself-tenant-controller &")
 		}
 		return nil
 	},
@@ -101,9 +101,9 @@ var controllerStatusCmd = &cobra.Command{
 		}
 
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-		fmt.Fprintf(w, "SLUG\tDOMAIN\tSTATUS\tCONNS\tSIZE\tHEALTHY\n")
+		_, _ = fmt.Fprintf(w, "SLUG\tDOMAIN\tSTATUS\tCONNS\tSIZE\tHEALTHY\n")
 		for _, p := range cs.Projects {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\t%v\n",
+			_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\t%v\n",
 				p.Project.Slug,
 				p.Project.Domain,
 				p.Project.Status,
@@ -112,8 +112,8 @@ var controllerStatusCmd = &cobra.Command{
 				p.Healthy,
 			)
 		}
-		w.Flush()
-		fmt.Fprintf(cmd.OutOrStdout(), "\n%d / %d projects active (%.0f%% utilized)\n",
+		_ = w.Flush()
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "\n%d / %d projects active (%.0f%% utilized)\n",
 			cs.TotalActive, cs.MaxProjects, cs.UtilizationPct)
 		return nil
 	},

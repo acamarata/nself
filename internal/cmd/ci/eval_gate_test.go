@@ -18,7 +18,7 @@ func evalGateServer(t *testing.T, statusCode int, body interface{}) *httptest.Se
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
 		if body != nil {
-			json.NewEncoder(w).Encode(body)
+			_ = json.NewEncoder(w).Encode(body)
 		}
 	}))
 	t.Cleanup(srv.Close)

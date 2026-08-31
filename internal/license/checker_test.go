@@ -26,7 +26,7 @@ func newRefusingServer(t *testing.T) *httptest.Server {
 			return
 		}
 		conn, _, _ := hj.Hijack()
-		conn.Close()
+		_ = conn.Close()
 	}))
 	t.Cleanup(srv.Close)
 	return srv

@@ -89,19 +89,19 @@ func InstallMultiple(ctx context.Context, bundleSlugs []string, opts InstallOpts
 
 	// Log conflicts to out.
 	if len(conflicts) > 0 {
-		fmt.Fprintf(out, "Cross-bundle version conflicts resolved (%d):\n", len(conflicts))
+		_, _ = fmt.Fprintf(out, "Cross-bundle version conflicts resolved (%d):\n", len(conflicts))
 		for _, c := range conflicts {
 			if c.Resolved == "" {
 				// Skip scenario: installed version is higher than all bundles want.
-				fmt.Fprintf(out, "  ⚠ %s: installed version is higher than all bundle pins %v — skipping to avoid downgrade\n",
+				_, _ = fmt.Fprintf(out, "  ⚠ %s: installed version is higher than all bundle pins %v — skipping to avoid downgrade\n",
 					c.PluginName, c.Versions)
 			} else {
-				fmt.Fprintf(out, "  → %s: versions %v across bundles %v → resolved to %s (MAX)\n",
+				_, _ = fmt.Fprintf(out, "  → %s: versions %v across bundles %v → resolved to %s (MAX)\n",
 					c.PluginName, c.Versions, c.BundleNames, c.Resolved)
 				if opts.Strict {
 					for i, v := range c.Versions {
 						if v != c.Resolved && plugin.CompareVersions(c.Resolved, v) > 0 {
-							fmt.Fprintf(out, "    WARNING: --strict: bundle %q was tested against %s (lower than resolved %s)\n",
+							_, _ = fmt.Fprintf(out, "    WARNING: --strict: bundle %q was tested against %s (lower than resolved %s)\n",
 								c.BundleNames[i], v, c.Resolved)
 						}
 					}

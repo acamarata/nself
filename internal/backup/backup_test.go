@@ -16,7 +16,7 @@ func TestValidateBackupPath_Valid(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(backupDir)
+	defer func() { _ = os.RemoveAll(backupDir) }()
 
 	got, err := ValidateBackupPath(backupDir, "data.dump")
 	if err != nil {
@@ -41,7 +41,7 @@ func TestValidateBackupPath_PathTraversal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(backupDir)
+	defer func() { _ = os.RemoveAll(backupDir) }()
 
 	_, err = ValidateBackupPath(backupDir, "../../etc/passwd")
 	if err == nil {
@@ -61,13 +61,13 @@ func TestValidateBackupPath_Symlink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create backup temp dir: %v", err)
 	}
-	defer os.RemoveAll(backupDir)
+	defer func() { _ = os.RemoveAll(backupDir) }()
 
 	evilDir, err := os.MkdirTemp("", "evil-*")
 	if err != nil {
 		t.Fatalf("create evil temp dir: %v", err)
 	}
-	defer os.RemoveAll(evilDir)
+	defer func() { _ = os.RemoveAll(evilDir) }()
 
 	// Create a symlink named "safe-link" inside backupDir that points outside.
 	linkPath := filepath.Join(backupDir, "safe-link")
@@ -110,7 +110,7 @@ func TestListBackups_MultipleFiles(t *testing.T) {
 		if err != nil {
 			t.Fatalf("create file %s: %v", name, err)
 		}
-		f.Close()
+		_ = f.Close()
 	}
 
 	// Also create a subdirectory — it must NOT appear in the result.
@@ -255,7 +255,7 @@ func TestValidateBackupPath_ValidSubdir(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(backupDir)
+	defer func() { _ = os.RemoveAll(backupDir) }()
 
 	subdir := filepath.Join(backupDir, "2024", "monthly")
 	if err := os.MkdirAll(subdir, 0o755); err != nil {

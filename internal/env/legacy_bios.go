@@ -113,7 +113,7 @@ func applyLegacyBIOSFallback(
 			// Never abort the whole CLI on a single env promotion failure —
 			// that would brick the operator's command. Log to stderr and
 			// continue.
-			fmt.Fprintf(stderr, "warning: failed to promote %s -> %s: %v\n", legacy, canonical, err)
+			_, _ = fmt.Fprintf(stderr, "warning: failed to promote %s -> %s: %v\n", legacy, canonical, err)
 			continue
 		}
 		promoted = append(promoted, LegacyBIOSPromotion{
@@ -147,7 +147,7 @@ func emitLegacyBIOSWarning(w io.Writer, promoted []LegacyBIOSPromotion) {
 		fmt.Fprintf(&b, "              %s  ->  %s\n", p.Legacy, p.Canonical)
 	}
 	b.WriteString("\n")
-	fmt.Fprint(w, b.String())
+	_, _ = fmt.Fprint(w, b.String())
 }
 
 // resetLegacyWarningOnce is a test-only helper that resets the

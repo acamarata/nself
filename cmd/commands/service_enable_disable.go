@@ -80,7 +80,7 @@ func runServiceDisable(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(os.Stderr, "Warning: the following services depend on %s: %s\n", canonName, strings.Join(activeDeps, ", "))
 			fmt.Fprint(os.Stderr, "Continue? [y/N] ")
 			var response string
-			fmt.Scanln(&response)
+			_, _ = fmt.Scanln(&response)
 			if strings.ToLower(strings.TrimSpace(response)) != "y" {
 				fmt.Fprintln(os.Stderr, "Aborted.")
 				return nil

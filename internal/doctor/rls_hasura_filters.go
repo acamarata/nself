@@ -65,7 +65,7 @@ func checkHasuraRowFilters(ctx context.Context, tables []rlsTableInfo, warnStatu
 			Message: fmt.Sprintf("Hasura metadata API unreachable: %v (skipping filter audit)", err),
 		}}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return []CheckResult{{

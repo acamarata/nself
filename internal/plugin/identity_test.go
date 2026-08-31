@@ -152,7 +152,7 @@ func TestRemoveIdentityKey(t *testing.T) {
 // TestMissingSecretReturnsError verifies that missing PLUGIN_INTERNAL_SECRET
 // is caught early.
 func TestMissingSecretReturnsError(t *testing.T) {
-	os.Unsetenv("PLUGIN_INTERNAL_SECRET")
+	_ = os.Unsetenv("PLUGIN_INTERNAL_SECRET")
 
 	dir := t.TempDir()
 	if _, err := GenerateEd25519Keypair(dir, "ai"); err == nil {

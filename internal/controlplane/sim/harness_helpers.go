@@ -107,7 +107,7 @@ func generateKeyPair(t *testing.T) (authorizedKey string, keyPath string) {
 	if err != nil {
 		t.Fatalf("sim: create key file: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if err := f.Chmod(0600); err != nil {
 		t.Fatalf("sim: chmod key file: %v", err)
@@ -202,7 +202,7 @@ func waitForPort(t *testing.T, addr string, timeout time.Duration) {
 	for time.Now().Before(deadline) {
 		conn, err := net.DialTimeout("tcp", addr, 500*time.Millisecond)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return
 		}
 		time.Sleep(500 * time.Millisecond)
@@ -220,7 +220,7 @@ func extractPort(line string) int {
 		return 2222
 	}
 	var p int
-	fmt.Sscanf(parts[len(parts)-1], "%d", &p)
+	_, _ = fmt.Sscanf(parts[len(parts)-1], "%d", &p)
 	return p
 }
 

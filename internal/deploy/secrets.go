@@ -146,6 +146,6 @@ func checkReadable(path string) error {
 	if err != nil {
 		return err
 	}
-	f.Close()
+	_ = f.Close()
 	return nil
 }

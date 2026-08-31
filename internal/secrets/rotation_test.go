@@ -46,7 +46,7 @@ func TestLoadRotationStateDefault(t *testing.T) {
 
 func TestSaveAndLoadRotationState(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, SecretsDir), 0700)
+	_ = os.MkdirAll(filepath.Join(dir, SecretsDir), 0700)
 
 	state := &RotationState{
 		Schedules: []RotationSchedule{
@@ -73,7 +73,7 @@ func TestSaveAndLoadRotationState(t *testing.T) {
 
 func TestCheckScheduleOverdue(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, SecretsDir), 0700)
+	_ = os.MkdirAll(filepath.Join(dir, SecretsDir), 0700)
 
 	pastDue := time.Now().UTC().AddDate(0, 0, -10).Format(time.RFC3339)
 	state := &RotationState{
@@ -100,7 +100,7 @@ func TestCheckScheduleOverdue(t *testing.T) {
 
 func TestCheckScheduleWarning(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, SecretsDir), 0700)
+	_ = os.MkdirAll(filepath.Join(dir, SecretsDir), 0700)
 
 	// Due in 3 days — should trigger warning (<7d)
 	nearDue := time.Now().UTC().AddDate(0, 0, 3).Format(time.RFC3339)

@@ -57,7 +57,7 @@ func RefreshRevocationList(ctx context.Context) (*RevocationCache, error) {
 	if err != nil {
 		return nil, fmt.Errorf("fetching revocation list: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotModified {
 		// Server confirms cache is current; touch FetchedAt so the

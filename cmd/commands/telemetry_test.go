@@ -26,7 +26,7 @@ func setupTelemetryTestHome(t *testing.T) (homeDir string, cleanup func()) {
 func TestTelemetryStatusShowsCorrectState(t *testing.T) {
 	_, cleanup := setupTelemetryTestHome(t)
 	defer cleanup()
-	os.Unsetenv("NSELF_TELEMETRY_OPT_OUT")
+	_ = os.Unsetenv("NSELF_TELEMETRY_OPT_OUT")
 
 	// Default: enabled from default source
 	pref := config.GetTelemetryPreference()
@@ -42,7 +42,7 @@ func TestTelemetryStatusShowsCorrectState(t *testing.T) {
 func TestTelemetryOffPersistsPreference(t *testing.T) {
 	homeDir, cleanup := setupTelemetryTestHome(t)
 	defer cleanup()
-	os.Unsetenv("NSELF_TELEMETRY_OPT_OUT")
+	_ = os.Unsetenv("NSELF_TELEMETRY_OPT_OUT")
 
 	if err := config.SetTelemetryEnabled(false); err != nil {
 		t.Fatalf("SetTelemetryEnabled(false) failed: %v", err)

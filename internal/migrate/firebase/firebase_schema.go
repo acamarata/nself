@@ -134,7 +134,7 @@ func parseExportFile(path string, fields map[string]map[string]map[string]int, s
 	if err != nil {
 		return fmt.Errorf("opening %s: %w", path, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var raw json.RawMessage
 	if err := json.NewDecoder(f).Decode(&raw); err != nil {

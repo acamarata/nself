@@ -77,7 +77,7 @@ func verifyChecksum(filePath string, expectedHash string, publishStatus string) 
 	if err != nil {
 		return fmt.Errorf("opening file for checksum: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
@@ -132,7 +132,7 @@ func verifyPluginSignature(archivePath, authorPublicKeyHex, signatureHex, publis
 	if err != nil {
 		return fmt.Errorf("opening archive for signature verification: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {

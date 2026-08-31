@@ -336,14 +336,14 @@ func setHomeForTest(t *testing.T, home string) {
 	}
 	t.Cleanup(func() {
 		if homeSet {
-			os.Setenv("HOME", origHome)
+			_ = os.Setenv("HOME", origHome)
 		} else {
-			os.Unsetenv("HOME")
+			_ = os.Unsetenv("HOME")
 		}
 		if profileSet {
-			os.Setenv("USERPROFILE", origProfile)
+			_ = os.Setenv("USERPROFILE", origProfile)
 		} else {
-			os.Unsetenv("USERPROFILE")
+			_ = os.Unsetenv("USERPROFILE")
 		}
 	})
 }

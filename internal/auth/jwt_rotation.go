@@ -57,8 +57,8 @@ func RotationLogPath() string {
 		// Directory exists; check write permission via O_WRONLY probe.
 		probe := filepath.Join(primaryDir, ".nself-write-probe")
 		if f, err := os.OpenFile(probe, os.O_CREATE|os.O_WRONLY, 0o600); err == nil {
-			f.Close()
-			os.Remove(probe)
+			_ = f.Close()
+			_ = os.Remove(probe)
 			return DefaultRotationLogPath
 		}
 	}
@@ -220,7 +220,7 @@ func writeRotationLog(entry string) error {
 	if err != nil {
 		return fmt.Errorf("open rotation log: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// Acquire an exclusive advisory lock before writing so concurrent calls
 	// cannot produce torn (interleaved) log lines. lockExclusive is a per-OS

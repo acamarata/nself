@@ -49,9 +49,9 @@ func runServicePs(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "NAME\tSERVICE\tSTATUS\tHEALTH\tID")
+	_, _ = fmt.Fprintln(w, "NAME\tSERVICE\tSTATUS\tHEALTH\tID")
 	for _, e := range entries {
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
 			e.Name, e.Service, e.Status, e.Health, e.ID)
 	}
 	return w.Flush()

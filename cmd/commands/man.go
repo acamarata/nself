@@ -43,7 +43,7 @@ func runManGen(cmd *cobra.Command, _ []string) error {
 		}
 		count++
 	}
-	fmt.Fprintf(cmd.OutOrStdout(), "Generated %d man page(s) in %s\n", count, manOutDir)
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Generated %d man page(s) in %s\n", count, manOutDir)
 	return nil
 }
 
@@ -90,7 +90,7 @@ func writeManPage(dir string, c *cobra.Command) error {
 	if err != nil {
 		return fmt.Errorf("creating %s: %w", path, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	now := time.Now()
 	short := c.Short
@@ -103,30 +103,30 @@ func writeManPage(dir string, c *cobra.Command) error {
 	}
 
 	// Write a minimal groff/troff man page (section 1 — user commands).
-	fmt.Fprintf(f, ".TH %s 1 \"%s\" \"nself\" \"nself Manual\"\n", strings.ToUpper(name), now.Format("January 2006"))
-	fmt.Fprintf(f, ".SH NAME\n%s \\- %s\n", name, roffEscape(short))
-	fmt.Fprintf(f, ".SH SYNOPSIS\n.B %s\n", name)
+	_, _ = fmt.Fprintf(f, ".TH %s 1 \"%s\" \"nself\" \"nself Manual\"\n", strings.ToUpper(name), now.Format("January 2006"))
+	_, _ = fmt.Fprintf(f, ".SH NAME\n%s \\- %s\n", name, roffEscape(short))
+	_, _ = fmt.Fprintf(f, ".SH SYNOPSIS\n.B %s\n", name)
 
 	// Usage line (strip angle-bracket args for brevity).
 	usageLine := c.UseLine()
 	if usageLine != "" {
-		fmt.Fprintf(f, "[%s]\n", roffEscape(usageLine))
+		_, _ = fmt.Fprintf(f, "[%s]\n", roffEscape(usageLine))
 	}
 
-	fmt.Fprintf(f, ".SH DESCRIPTION\n%s\n", roffEscape(longDesc))
+	_, _ = fmt.Fprintf(f, ".SH DESCRIPTION\n%s\n", roffEscape(longDesc))
 
 	// Flags section.
 	flagUsages := c.Flags().FlagUsages()
 	if flagUsages != "" {
-		fmt.Fprintf(f, ".SH OPTIONS\n.nf\n%s\n.fi\n", roffEscape(flagUsages))
+		_, _ = fmt.Fprintf(f, ".SH OPTIONS\n.nf\n%s\n.fi\n", roffEscape(flagUsages))
 	}
 
 	// See also: parent command.
 	if p := c.Parent(); p != nil && p != RootCmd {
 		parentName := commandPath(p)
-		fmt.Fprintf(f, ".SH SEE ALSO\n.BR %s (1)\n", parentName)
+		_, _ = fmt.Fprintf(f, ".SH SEE ALSO\n.BR %s (1)\n", parentName)
 	} else if c != RootCmd {
-		fmt.Fprintf(f, ".SH SEE ALSO\n.BR nself (1)\n")
+		_, _ = fmt.Fprintf(f, ".SH SEE ALSO\n.BR nself (1)\n")
 	}
 
 	return nil

@@ -176,7 +176,7 @@ func runLogs(cmd *cobra.Command, args []string) error {
 	psCmd.Dir = workdir
 	psOut, _ := psCmd.Output()
 	if len(bytes.TrimSpace(psOut)) == 0 {
-		fmt.Fprintln(cmd.ErrOrStderr(), "No containers found. Is the stack running? Try 'nself status' to check.")
+		_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "No containers found. Is the stack running? Try 'nself status' to check.")
 		return fmt.Errorf("no containers found")
 	}
 

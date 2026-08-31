@@ -21,8 +21,8 @@ func TestIsCAInstalled_EmptyFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("creating temp file: %v", err)
 	}
-	defer os.Remove(f.Name())
-	f.Close()
+	defer func() { _ = os.Remove(f.Name()) }()
+	_ = f.Close()
 
 	// Should return false (not trusted), not an error.
 	installed, err := IsCAInstalled(f.Name())

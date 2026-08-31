@@ -243,7 +243,7 @@ func runDBRestoreDrillList(_ *cobra.Command, _ []string) error {
 		}
 		return fmt.Errorf("open drill log: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	fmt.Printf("%-25s %-8s %-40s %-10s %-12s\n", "STARTED", "STATUS", "BACKUP FILE", "TABLES", "DURATION")
 
