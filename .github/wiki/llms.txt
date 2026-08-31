@@ -162,6 +162,7 @@ Subcommands:
 Flags:
 
 - `--check` (default false) — Run gates only; do not post a GitHub commit status
+- `--filesystem` (default false) — Force gitleaks filesystem scan (--no-git) even inside a git checkout; opt-in for non-checkout source trees such as an exported tarball
 - `--no-gitleaks` (default false) — Skip the gitleaks secret scan
 - `--no-status` (default false) — Alias for --check
 - `--owner` (default "") — GitHub owner (default: from git remote)
