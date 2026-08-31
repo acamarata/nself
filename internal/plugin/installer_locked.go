@@ -156,7 +156,10 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	if names := cliBinaryNames(name, manifest); len(names) > 0 {
 		firstBinary = names[0]
 	}
-	archivePath, err := downloadPluginPackage(ctx, name, manifest.Version, manifest.Repository, firstBinary)
+	// Tier comes from the registry manifest, not the paidPlugins name map,
+	// which has drifted — see isPaidPluginManifest in license.go.
+	paid := isPaidPluginManifest(manifest)
+	archivePath, err := downloadPluginPackageForTier(ctx, name, manifest.Version, manifest.Repository, firstBinary, paid)
 	if err != nil {
 		return fmt.Errorf("downloading plugin %q: %w", name, err)
 	}
