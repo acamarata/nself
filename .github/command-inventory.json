@@ -432,6 +432,7 @@
     "group_id": "deploy",
     "flags": [
       "--check",
+      "--filesystem",
       "--no-gitleaks",
       "--no-status",
       "--owner",
