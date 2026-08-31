@@ -16,7 +16,6 @@ import (
 	"github.com/nself-org/cli/internal/health"
 	"github.com/nself-org/cli/internal/lifecycle"
 	"github.com/nself-org/cli/internal/migration"
-	"github.com/nself-org/cli/internal/ports"
 	"github.com/nself-org/cli/internal/search"
 	"github.com/nself-org/cli/internal/telemetry"
 	"github.com/nself-org/cli/internal/ui"
@@ -156,69 +155,9 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	currentStep++
 	ui.Step(currentStep, totalSteps, "Checking port availability")
 
-	if opts.skipPortCheck {
-		ui.Warn("Port check skipped (--skip-port-check)")
-	} else {
-		// Check the ports THIS stack will actually bind, read from the resolved
-		// compose config, rather than a fixed list of nSelf defaults.
-		//
-		// A second project on the same host has to move off the defaults
-		// (POSTGRES_PORT=5433, HASURA_PORT=8181, ...). Checking the default
-		// list then blocks it on 5432 and 8080 — ports it was never going to
-		// bind — purely because the first project holds them. That is not a
-		// conflict, and it is what kept the ɳTask staging stack down: its
-		// compose published 5433/8181/4001/6380/9010/9011, every one free,
-		// while start refused over six defaults it does not use.
-		checkPorts, portServiceMap, derr := docker.DeclaredHostPorts(ctx, projectDir, composeFiles...)
-		if derr != nil || len(checkPorts) == 0 {
-			// Fall back to the default list rather than check nothing. Checking
-			// an empty list would be a port check that cannot fail, which is
-			// worse than one that is occasionally too strict.
-			if derr != nil {
-				ui.Warn(fmt.Sprintf("Could not read published ports from compose (%v); using the default port list", derr))
-			}
-			checkPorts = docker.ReservedPorts
-			portServiceMap = docker.DefaultPortServiceNames()
-		}
-
-		conflicts, err := docker.CheckAllPortsFiltered(ctx, checkPorts, projectDir, composeFiles...)
-		if err != nil {
-			ui.Warn(fmt.Sprintf("Port check error: %v", err))
-		} else if len(conflicts) > 0 {
-			var portList []string
-			for _, c := range conflicts {
-				svc := portServiceMap[c.Port]
-				if svc == "" {
-					svc = "unknown service"
-				}
-				// Attempt to identify the holder process for a richer message.
-				holder, _ := ports.WhoHoldsPort(c.Port)
-				var detail string
-				if holder != nil {
-					detail = fmt.Sprintf("Port %d (%s): %s", c.Port, svc,
-						ports.FormatConflictMessage(c.Port, holder))
-				} else {
-					detail = fmt.Sprintf("Port %d (%s) is already in use", c.Port, svc)
-				}
-				ui.Error(detail)
-				portList = append(portList, fmt.Sprintf("%d", c.Port))
-			}
-
-			suggestions := []string{
-				fmt.Sprintf("Find what is using these ports: lsof -i :%s", strings.Join(portList, " -i :")),
-				"Stop the conflicting services before starting nSelf",
-				"Or change the conflicting ports in your .env file (e.g., NGINX_HTTP_PORT, HASURA_PORT, POSTGRES_EXPOSE_PORT)",
-				"Use --skip-port-check to start anyway (not recommended)",
-			}
-			ui.UXError(
-				fmt.Sprintf("Port conflicts detected (%d port(s))", len(conflicts)),
-				fmt.Sprintf("Ports in use: %s", strings.Join(portList, ", ")),
-				suggestions,
-			)
-			return fmt.Errorf("port conflicts detected: %d port(s) in use", len(conflicts))
-		} else {
-			ui.Success("All ports available")
-		}
+	// Extracted to start_ports.go (T-P6-E2-W1-S1-T3).
+	if err := checkStartPorts(ctx, opts, projectDir, composeFiles); err != nil {
+		return err
 	}
 
 	// ── Step 4: Start PostgreSQL (Phase 1) ──────────────────────────
