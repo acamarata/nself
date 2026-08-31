@@ -8,10 +8,8 @@ package commands
 import (
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
-	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/migration"
 	"github.com/nself-org/cli/internal/scaffold"
 	"github.com/nself-org/cli/internal/setup"
@@ -41,43 +39,18 @@ func runInit(cmd *cobra.Command, args []string) error {
 	listPresets, _ := cmd.Flags().GetBool("list-presets")
 	csTemplate, _ := cmd.Flags().GetString("cs-template")
 
-	// --list-presets: print preset catalog and exit.
-	if listPresets {
-		listInitPresets()
+	// --list-presets/--cs-template/--preset validation + --name/--domain
+	// sanitization, extracted to init_run_validate.go for 300-line compliance
+	// (T-P6-E2-W1-S1-T3). done=true means runInit must return nil immediately
+	// (the --list-presets case); err is returned as-is otherwise.
+	var done bool
+	var err error
+	name, domainFlag, done, err = validateAndSanitizeInitFlags(csTemplate, preset, name, domainFlag, listPresets)
+	if done {
 		return nil
 	}
-
-	// Validate --cs-template if given.
-	if csTemplate != "" && !scaffold.IsValidLang(csTemplate) {
-		return fmt.Errorf("--cs-template %q is not a supported language; choose one of: %s",
-			csTemplate, strings.Join(scaffold.SupportedLangs(), ", "))
-	}
-
-	// Validate --preset if given.
-	if preset != "" {
-		if _, ok := initPresets[preset]; !ok {
-			fmt.Fprintf(os.Stderr, "%s Unknown preset %q.\n", ui.C(ui.Yellow, ui.IconWarning), preset)
-			listInitPresets()
-			return fmt.Errorf("unknown preset %q — see presets above", preset)
-		}
-	}
-
-	// Sanitize user-supplied --name before it enters the config system.
-	if name != "" {
-		sanitized, err := config.SanitizeName(name)
-		if err != nil {
-			return fmt.Errorf("--name: PROJECT_NAME contains no valid characters after sanitization")
-		}
-		name = sanitized
-	}
-
-	// Sanitize user-supplied --domain before it enters the config system.
-	if domainFlag != "" {
-		sanitized, err := config.SanitizeDomain(domainFlag)
-		if err != nil {
-			return fmt.Errorf("--domain: BASE_DOMAIN contains no valid characters after sanitization")
-		}
-		domainFlag = sanitized
+	if err != nil {
+		return err
 	}
 
 	if template != "" {
