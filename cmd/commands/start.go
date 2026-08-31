@@ -15,7 +15,6 @@ import (
 	"github.com/nself-org/cli/internal/database"
 	"github.com/nself-org/cli/internal/docker"
 	"github.com/nself-org/cli/internal/embedded"
-	"github.com/nself-org/cli/internal/errs"
 	"github.com/nself-org/cli/internal/health"
 	"github.com/nself-org/cli/internal/lifecycle"
 	"github.com/nself-org/cli/internal/migration"
@@ -98,19 +97,10 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	}
 
 	// ── v0.9 artifact detection (S60-T02) ────────────────────────────────
-	// Requires ≥2 of 5 heuristics to trigger (prevents false positives).
-	// A single artifact warns but proceeds. ≥2 artifacts fail unless --allow-legacy.
-	if count, names := migration.CheckLegacyProject(projectDir); count >= migration.DetectionThreshold {
-		if allowLegacy {
-			ui.Warn(fmt.Sprintf("WARNING: v0.9 project detected (%d artifact(s): %s). Proceeding due to --allow-legacy (not recommended).", count, strings.Join(names, ", ")))
-		} else {
-			ui.Error(fmt.Sprintf("v0.9 project detected. Found %d legacy artifact(s): %s", count, strings.Join(names, ", ")))
-			fmt.Fprintln(os.Stderr, "Run `nself migrate` first. See https://nself.org/docs/migrate/from-v0.9")
-			startErr = fmt.Errorf("v0.9 project detected — run `nself migrate` first")
-			return startErr
-		}
-	} else if count == 1 {
-		ui.Warn(fmt.Sprintf("One possible v0.9 artifact found (%s). Proceeding — run `nself migrate` if this is a v0.9 project.", names[0]))
+	// Extracted to start_checks.go (T-P6-E2-W1-S1-T3).
+	if err := checkLegacyProjectGate(projectDir, allowLegacy); err != nil {
+		startErr = err
+		return startErr
 	}
 
 	ctx, cancel := context.WithCancel(cmd.Context())
@@ -127,45 +117,14 @@ func runStart(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// ── AI auto-install (T-05-05) ──────────────────────────────────
-	// If AI_AUTO_INSTALL=true (default in the AI config block), run doctor
-	// --ai --yes --skip-pool to at least get Ollama running before the stack
-	// boots.
-	//
-	// CLI-R18: the AI config block (and NSELF_MASTER_SECRET) used to live in
-	// a dedicated .env.ai file, and its mere existence gated this block.
-	// .env.ai is now folded into .env.secrets, so the gate is
-	// NSELF_MASTER_SECRET presence in the resolved environment — the same
-	// signal ("zero-config AI was set up for this project"), just read from
-	// the cascade instead of the filesystem.
-	if aiAutoInstall := os.Getenv("AI_AUTO_INSTALL"); aiAutoInstall == "" || strings.EqualFold(aiAutoInstall, "true") {
-		if os.Getenv("NSELF_MASTER_SECRET") != "" {
-			if !ollamaHealthy(ctx) {
-				ui.Info("AI_AUTO_INSTALL: setting up local AI...")
-				_ = runDoctorAI(ctx, doctorAIFlags{
-					yes:        true,
-					skipPool:   true,
-					skipOllama: false,
-					headless:   false,
-					jsonOut:    false,
-				})
-			}
-		}
-	}
+	// ── AI auto-install (T-05-05) + Auto-build detection ──────────────
+	// Both extracted to start_checks.go (T-P6-E2-W1-S1-T3). Auto-build runs
+	// BEFORE the docker-compose.yml check because build creates it.
+	autoInstallAIIfNeeded(ctx)
 
-	// ── Auto-build detection ────────────────────────────────────────
-	// Run BEFORE the docker-compose.yml check because build creates it.
 	if !opts.skipBuild {
-		needsRebuild, err := build.NeedsRebuild(projectDir)
-		if err != nil {
-			return fmt.Errorf("checking build state: %w", err)
-		}
-		if needsRebuild {
-			ui.Info("Configuration changed — rebuilding before start...")
-			if _, err := build.Build(projectDir, build.BuildOptions{Profile: opts.profile}); err != nil {
-				return fmt.Errorf("auto-build failed: %w", err)
-			}
-			ui.Success("Build completed")
+		if err := autoRebuildIfNeeded(projectDir, opts); err != nil {
+			return err
 		}
 	}
 
@@ -173,17 +132,8 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	currentStep++
 	ui.Step(currentStep, totalSteps, "Checking docker-compose.yml")
 
-	composePath := filepath.Join(projectDir, "docker-compose.yml")
-	if _, err := os.Stat(composePath); os.IsNotExist(err) {
-		ui.UXError(
-			"docker-compose.yml not found",
-			fmt.Sprintf("Looked in %s", projectDir),
-			[]string{
-				"Run 'nself build' to generate your compose configuration",
-				"Make sure you are in the correct project directory",
-			},
-		)
-		return fmt.Errorf("docker-compose.yml not found in %s: %w", projectDir, errs.ErrComposeNotFound)
+	if err := checkComposeFileExists(projectDir); err != nil {
+		return err
 	}
 	ui.Success("docker-compose.yml found")
 
