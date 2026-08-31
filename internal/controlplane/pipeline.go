@@ -66,6 +66,9 @@ func Run(ctx context.Context, inv *Inventory, prober Prober, composePath string)
 
 		// Step 1: Local environment — build once.
 		if env.Kind == "local" {
+			//lint:ignore SA4023 runLocal always errors by design (local
+			// deploy is not yet supported via the pipeline); see its doc
+			// comment.
 			sr, err := runLocal(ctx, env, envStatuses)
 			if err != nil {
 				return result, fmt.Errorf("controlplane: local build: %w", err)

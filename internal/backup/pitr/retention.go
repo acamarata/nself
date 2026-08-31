@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -74,6 +75,18 @@ func PruneRetention(ctx context.Context, catalogPath string, opts PruneOptions) 
 				// Log but don't abort — partial success is better than none.
 				fmt.Fprintf(os.Stderr, "warning: failed to delete remote segment %s: %v\n", key, delErr)
 			}
+		}
+	}
+
+	// Delete local base backup files. toDeleteLocal holds the same remote keys
+	// as toDeleteRemote for entries that also have a local copy; the local
+	// file is expected to live under LocalBaseBackupDir named by the remote
+	// key's basename (see PruneOptions.LocalBaseBackupDir).
+	for _, key := range toDeleteLocal {
+		localPath := filepath.Join(opts.LocalBaseBackupDir, filepath.Base(key))
+		if delErr := os.Remove(localPath); delErr != nil && !os.IsNotExist(delErr) {
+			// Log but don't abort — partial success is better than none.
+			fmt.Fprintf(os.Stderr, "warning: failed to delete local base backup %s: %v\n", localPath, delErr)
 		}
 	}
 
