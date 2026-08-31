@@ -135,6 +135,24 @@ func Validate(ctx context.Context, key string, opts *ValidatorOptions) (*Validat
 	}
 
 	age := clk.Now().Sub(time.Unix(entry.FetchedAt, 0))
+
+	// BUILD-LEDGER Finding #14: the local revocation cache is the
+	// compensating control that makes FAIL-OPEN safe. Consult it
+	// unconditionally before either fail-open branch below can grant
+	// CanProceed: true — a revoked license must never ride the soft or
+	// hard TTL window just because the remote validator is unreachable.
+	// KeyHash (not JTI) is the join key here: CacheEntry never carries a
+	// JTI (see LicenseRecord.KeyHash doc comment in revocation.go).
+	if IsRecordRevoked(LicenseRecord{KeyHash: entry.KeyHash}) {
+		return &ValidatorResult{
+			Status:     StatusFailClosed,
+			CanProceed: false,
+			FromCache:  true,
+			Tier:       entry.Tier,
+			Reason:     "license revoked; cannot fail-open a revoked license",
+		}, nil
+	}
+
 	switch {
 	case age <= FailOpenSoftTTL:
 		return &ValidatorResult{

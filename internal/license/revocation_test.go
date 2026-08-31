@@ -302,6 +302,7 @@ func TestMatchAny(t *testing.T) {
 			{Type: "jti", ID: "j1"},
 			{Type: "user_id", ID: "u1"},
 			{Type: "kid", ID: "k1"},
+			{Type: "key_hash", ID: "h1"},
 		},
 	}
 	cases := []struct {
@@ -312,6 +313,8 @@ func TestMatchAny(t *testing.T) {
 		{"jti hit", LicenseRecord{JTI: "j1"}, true},
 		{"user_id hit", LicenseRecord{UserID: "u1"}, true},
 		{"kid hit", LicenseRecord{Kid: "k1"}, true},
+		{"key_hash hit", LicenseRecord{KeyHash: "h1"}, true},
+		{"key_hash miss", LicenseRecord{KeyHash: "h-other"}, false},
 		{"empty record", LicenseRecord{}, false},
 		{"miss", LicenseRecord{JTI: "j2", UserID: "u2", Kid: "k2"}, false},
 		{"jti empty does not collide with empty entry", LicenseRecord{JTI: ""}, false},

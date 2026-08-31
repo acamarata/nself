@@ -169,6 +169,10 @@ func matchAny(list *RevocationList, rec LicenseRecord) bool {
 			if rec.Kid != "" && e.ID == rec.Kid {
 				return true
 			}
+		case "key_hash":
+			if rec.KeyHash != "" && e.ID == rec.KeyHash {
+				return true
+			}
 		}
 	}
 	return false

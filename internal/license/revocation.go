@@ -4,7 +4,8 @@
 // The CLI fetches `GET /license/revocation-list` from ping.nself.org hourly
 // and stores the signed payload at `~/.config/nself/revocation-cache.json`.
 // Every license validation pass consults the local cache to decide whether
-// a presented JWT (jti / user_id / kid) has been revoked.
+// a presented JWT (jti / user_id / kid) or cached license (key_hash) has
+// been revoked.
 //
 // FAIL-OPEN policy (per PPI § Vendor Stack — license validation fail-mode):
 //   - Cache up to 7 days stale: still authoritative; refresh attempts run
@@ -49,7 +50,7 @@ const revocationHTTPTimeout = 10 * time.Second
 // RevocationEntry is one revoked identifier.  Field order matters for the
 // canonical JSON encoder; struct tags pin the wire names.
 type RevocationEntry struct {
-	Type      string `json:"type"`       // "jti" | "user_id" | "kid"
+	Type      string `json:"type"`       // "jti" | "user_id" | "kid" | "key_hash"
 	ID        string `json:"id"`         // identifier value
 	Reason    string `json:"reason"`     // human-readable
 	RevokedAt string `json:"revoked_at"` // ISO8601
@@ -66,10 +67,19 @@ type RevocationList struct {
 
 // LicenseRecord is the minimal shape needed to evaluate revocation.
 // Each field is optional: zero values are treated as "no match attempted".
+//
+// KeyHash (BUILD-LEDGER Finding #14, closed here): the fail-open cache-only
+// path (validator_validate.go) has no JTI/UserID/Kid available — the server's
+// ValidateResponse never carries one — but it always has entry.KeyHash
+// (HashKey(key), already computed and cached in CacheEntry). KeyHash is
+// therefore the join key that lets a server-published revocation list name a
+// revoked license without minting a JTI. Do not "simplify" this back to JTI:
+// JTI is simply not populated anywhere on the fail-open path.
 type LicenseRecord struct {
-	JTI    string
-	UserID string
-	Kid    string
+	JTI     string
+	UserID  string
+	Kid     string
+	KeyHash string
 }
 
 // RevocationCache is the on-disk cache wrapper around RevocationList.
