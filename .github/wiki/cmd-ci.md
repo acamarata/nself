@@ -74,6 +74,7 @@ is why `nself ci` could not be used as a required status check.
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--check` | `false` | Run gates only; do not post a GitHub commit status |
+| `--filesystem` | `false` | Force gitleaks filesystem scan (--no-git) even inside a git checkout; opt-in for non-checkout source trees such as an exported tarball |
 | `--no-gitleaks` | `false` | Skip the gitleaks secret scan |
 | `--no-status` | `false` | Alias for --check |
 | `--owner` | `""` | GitHub owner (default: from git remote) |
@@ -101,6 +102,7 @@ nself ci                        # gate current directory, post status
   nself ci --check                # gate only, no status posted
   nself ci --no-gitleaks .        # skip secret scan
   nself ci --sha abc1234 .        # override commit SHA
+  nself ci --filesystem /tmp/x    # force filesystem scan (non-checkout source, e.g. a tarball)
   nself ci /path/to/repo          # gate a specific repo
 ```
 <!-- END PROSE:examples -->

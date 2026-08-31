@@ -35,6 +35,7 @@ Examples:
   nself ci --check                # gate only, no status posted
   nself ci --no-gitleaks .        # skip secret scan
   nself ci --sha abc1234 .        # override commit SHA
+  nself ci --filesystem /tmp/x    # force filesystem scan (non-checkout source, e.g. a tarball)
   nself ci /path/to/repo          # gate a specific repo`,
 	RunE: runCI,
 }
@@ -47,6 +48,7 @@ func init() {
 	ciCmd.Flags().String("owner", "", "GitHub owner (default: from git remote)")
 	ciCmd.Flags().String("repo", "", "GitHub repo name (default: from git remote)")
 	ciCmd.Flags().BoolP("verbose", "v", false, "Print each gate command before running")
+	ciCmd.Flags().Bool("filesystem", false, "Force gitleaks filesystem scan (--no-git) even inside a git checkout; opt-in for non-checkout source trees such as an exported tarball")
 
 	// Wire eval subcommand group: `nself ci eval` and `nself ci eval gate`.
 	evalCmd := nscicmd.NewEvalCmd()
@@ -76,6 +78,7 @@ func runCI(cmd *cobra.Command, args []string) error {
 	owner, _ := cmd.Flags().GetString("owner")
 	repo, _ := cmd.Flags().GetString("repo")
 	verbose, _ := cmd.Flags().GetBool("verbose")
+	filesystem, _ := cmd.Flags().GetBool("filesystem")
 
 	postStatus := !checkMode && !noStatus
 
@@ -92,6 +95,9 @@ func runCI(cmd *cobra.Command, args []string) error {
 	}
 	if noGitleaks {
 		ciArgs = append(ciArgs, "--no-gitleaks")
+	}
+	if filesystem {
+		ciArgs = append(ciArgs, "--filesystem")
 	}
 	if verbose {
 		ciArgs = append(ciArgs, "-v")
