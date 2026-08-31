@@ -156,7 +156,13 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	if names := cliBinaryNames(name, manifest); len(names) > 0 {
 		firstBinary = names[0]
 	}
-	archivePath, err := downloadPluginPackage(ctx, name, manifest.Version, manifest.Repository, firstBinary)
+	// isPaidPluginManifest reads the registry's own tier/requires_license
+	// fields (authoritative) rather than the static paidPlugins name map
+	// (drifts — see license.go). This is what routes "storage" and
+	// "nself-uptime-monitor" to the licensed ping.nself.org path instead of
+	// the free-plugin path they were silently falling into.
+	paid := isPaidPluginManifest(manifest)
+	archivePath, err := downloadPluginPackageForTier(ctx, name, manifest.Version, manifest.Repository, firstBinary, paid)
 	if err != nil {
 		return fmt.Errorf("downloading plugin %q: %w", name, err)
 	}

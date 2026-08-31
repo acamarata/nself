@@ -46,7 +46,16 @@ var validLicensePrefixes = []string{
 	"nself_owner_",
 }
 
-// paidPlugins is the hardcoded set of pro plugin names that require a license.
+// paidPlugins is a name-only allowlist that predates registry-driven tier
+// metadata. As of 2026-08-31 it covers 59 of the 127 registered paid plugins
+// — the other 68 (e.g. "storage", "nself-uptime-monitor",
+// "ai") are NOT in this map. Do not "complete" this map as the fix: it is
+// exactly the kind of hand-maintained list that caused the gap, and any fix
+// that re-derives it by hand will drift again the next time plugins-pro adds
+// a plugin. The real fix is isPaidPluginManifest (below), which reads the
+// registry's own tier/requires_license fields. This map exists ONLY because
+// installLocked's Step 1 license check runs before the registry has been
+// fetched — see license.go's isPaidPluginManifest doc comment.
 var paidPlugins = map[string]bool{
 	// Auth & Access
 	"access-controls": true,
@@ -126,8 +135,43 @@ const cacheTTL = 24 * time.Hour
 const offlineGraceTTL = 7 * 24 * time.Hour
 
 // IsPaidPlugin returns true if the named plugin requires a license key.
+//
+// paidPlugins is a name-only allowlist that predates per-plugin registry
+// metadata and has drifted: it lists 59 names while the pro registry
+// (plugins-pro/registry.json) carries 127 entries with requires_license=true.
+// Every plugin missing from this map — e.g. "storage", "nself-uptime-monitor" —
+// was silently routed down the FREE download path (plugins.nself.org tarball +
+// GitHub Releases fallback) instead of the paid path (ping.nself.org + license
+// header), producing a 404 for plugins that were never published as free
+// releases. See qa/bugs/plugin-distribution-broken.md.
+//
+// isPaidPlugin is retained only as a pre-registry-fetch fallback (used once,
+// in installLocked's Step 1 license check, before the registry has been
+// fetched). Every call site downstream of a registry fetch MUST prefer
+// isPaidPluginManifest(manifest), which reads the registry's own tier /
+// requires_license fields — the authoritative source — instead of this map.
 func isPaidPlugin(name string) bool {
 	return paidPlugins[name]
+}
+
+// isPaidPluginManifest reports whether a fetched plugin manifest describes a
+// paid (license-gated) plugin, using the registry's own fields rather than
+// the static paidPlugins name allowlist above. This is authoritative: it
+// reflects whatever plugins-pro/registry.json and plugins/registry.json
+// actually publish, so it can never drift out of sync the way a hardcoded
+// name list does.
+func isPaidPluginManifest(m *PluginManifest) bool {
+	if m == nil {
+		return false
+	}
+	if m.RequiresLicense {
+		return true
+	}
+	switch m.Tier {
+	case "pro", "max":
+		return true
+	}
+	return false
 }
 
 // ValidateLicenseFormat checks that a license key has a recognized prefix and

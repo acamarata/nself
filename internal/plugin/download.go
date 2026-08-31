@@ -28,12 +28,32 @@ import (
 // For paid plugins, it sends the X-License-Key header required by ping.nself.org.
 // For free plugins, it tries the R2-backed worker URL first and falls back to
 // GitHub Releases on 5xx responses (S67-T03).
+//
+// This entry point has no registry manifest available, so it can only use the
+// name-only isPaidPlugin fallback. Callers that already fetched a manifest
+// (the normal install path) MUST use downloadPluginPackageForTier instead —
+// see license.go's isPaidPluginManifest doc comment for why the name map
+// drifts and the registry fields do not.
 func downloadPlugin(ctx context.Context, name, version, repository string) (string, error) {
 	return downloadPluginPackage(ctx, name, version, repository, "")
 }
 
-// downloadPluginPackage fetches a plugin package, preferring a build for the
-// running platform when the plugin ships a command binary.
+// downloadPluginPackage fetches a plugin package using the name-only
+// isPaidPlugin fallback. Prefer downloadPluginPackageForTier when a manifest
+// is available (see its doc comment).
+func downloadPluginPackage(ctx context.Context, name, version, repository, binaryName string) (string, error) {
+	return downloadPluginPackageForTier(ctx, name, version, repository, binaryName, isPaidPlugin(name))
+}
+
+// downloadPluginPackageForTier fetches a plugin package, preferring a build
+// for the running platform when the plugin ships a command binary.
+//
+// paid must come from the registry manifest (isPaidPluginManifest), not the
+// static paidPlugins name map — that map only lists 59 of 127 registered paid
+// plugins (S6-BUG-checksum-drift). A plugin missing from the map but tier
+// "pro"/"max" in the registry would otherwise be routed down the free
+// download path (plugins.nself.org tarball + GitHub Releases fallback) and
+// 404, since it was never published as a free release.
 //
 // binaryName is empty for a service plugin, whose package is source and works
 // everywhere. For a CLI plugin it is the command binary's name, and the package
@@ -41,7 +61,7 @@ func downloadPlugin(ctx context.Context, name, version, repository string) (stri
 // someone on macOS. Those live as per-platform release assets, so they are
 // tried first, with the generic package as the fallback for a plugin whose
 // release predates per-platform assets.
-func downloadPluginPackage(ctx context.Context, name, version, repository, binaryName string) (string, error) {
+func downloadPluginPackageForTier(ctx context.Context, name, version, repository, binaryName string, paid bool) (string, error) {
 	// Platform-specific package first, for a plugin that provides a command.
 	if binaryName != "" {
 		if platform, err := PlatformArch(); err == nil {
@@ -57,10 +77,10 @@ func downloadPluginPackage(ctx context.Context, name, version, repository, binar
 		}
 	}
 
-	primaryURL := buildDownloadURL(name, version, repository)
+	primaryURL := buildDownloadURLForTier(name, version, repository, paid)
 
 	var extraHeaders map[string]string
-	if isPaidPlugin(name) {
+	if paid {
 		// ping.nself.org/plugins/:name/download requires X-License-Key.
 		// Use the first available key from env vars or stored key file.
 		keys := license.CollectLicenseKeys()
@@ -75,7 +95,7 @@ func downloadPluginPackage(ctx context.Context, name, version, repository, binar
 	}
 
 	// If not a paid plugin, attempt GitHub Releases fallback on primary failure.
-	if !isPaidPlugin(name) {
+	if !paid {
 		fallbackURL := buildFallbackDownloadURL(name, version, repository)
 		if fallbackURL != primaryURL {
 			tmp2, fallbackErr := downloadFromURL(ctx, fallbackURL, nil)
@@ -126,11 +146,20 @@ func downloadFromURL(ctx context.Context, url string, extraHeaders map[string]st
 	return tmp.Name(), nil
 }
 
-// buildDownloadURL constructs the tarball URL for a plugin. Pro plugins use
-// the ping API download endpoint; free plugins use the plugins.nself.org worker
-// which 302-redirects to R2 (primary) with GitHub Releases as fallback.
+// buildDownloadURL constructs the tarball URL for a plugin using the
+// name-only isPaidPlugin fallback. Prefer buildDownloadURLForTier when a
+// manifest-derived tier is available (see downloadPluginPackageForTier).
 func buildDownloadURL(name, version, repository string) string {
-	if isPaidPlugin(name) {
+	return buildDownloadURLForTier(name, version, repository, isPaidPlugin(name))
+}
+
+// buildDownloadURLForTier constructs the tarball URL for a plugin. Pro
+// plugins use the ping API download endpoint; free plugins use the
+// plugins.nself.org worker which 302-redirects to R2 (primary) with GitHub
+// Releases as fallback. paid must come from the registry manifest, not the
+// name-only static map — see downloadPluginPackageForTier's doc comment.
+func buildDownloadURLForTier(name, version, repository string, paid bool) string {
+	if paid {
 		base := pingAPIURL()
 		return fmt.Sprintf("%s/plugins/%s/download", base, name)
 	}
@@ -146,12 +175,18 @@ func buildDownloadURL(name, version, repository string) string {
 
 // buildFallbackDownloadURL constructs the GitHub Releases fallback URL for a
 // free plugin. Used when the primary R2/worker download fails.
+//
+// Filename has NO "v" prefix on the version segment (e.g. "backup-1.1.9.tar.gz"),
+// matching what `nself-org/plugins` release automation actually publishes
+// (verified via `gh release view v1.1.9 --repo nself-org/plugins`). A "v"
+// prefix here — as this function previously emitted — 404s against every
+// real release asset.
 func buildFallbackDownloadURL(name, version, repository string) string {
 	if repository != "" {
 		repo := strings.TrimSuffix(repository, ".git")
-		return fmt.Sprintf("%s/releases/download/v%s/%s-v%s.tar.gz", repo, version, name, version)
+		return fmt.Sprintf("%s/releases/download/v%s/%s-%s.tar.gz", repo, version, name, version)
 	}
-	return fmt.Sprintf("https://github.com/nself-org/plugins/releases/download/v%s/%s-v%s.tar.gz", version, name, version)
+	return fmt.Sprintf("https://github.com/nself-org/plugins/releases/download/v%s/%s-%s.tar.gz", version, name, version)
 }
 
 // extractTarGz extracts a gzipped tarball into destDir.
