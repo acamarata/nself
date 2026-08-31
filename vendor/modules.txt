@@ -1,19 +1,3 @@
-# github.com/alecthomas/chroma/v2 v2.20.0
-## explicit; go 1.22
-github.com/alecthomas/chroma/v2
-github.com/alecthomas/chroma/v2/formatters
-github.com/alecthomas/chroma/v2/formatters/html
-github.com/alecthomas/chroma/v2/formatters/svg
-github.com/alecthomas/chroma/v2/lexers
-github.com/alecthomas/chroma/v2/quick
-github.com/alecthomas/chroma/v2/styles
-# github.com/aymanbagabas/go-osc52/v2 v2.0.1
-## explicit; go 1.16
-github.com/aymanbagabas/go-osc52/v2
-# github.com/aymerick/douceur v0.2.0
-## explicit
-github.com/aymerick/douceur/css
-github.com/aymerick/douceur/parser
 # github.com/beorn7/perks v1.0.1
 ## explicit; go 1.11
 github.com/beorn7/perks/quantile
@@ -33,39 +17,8 @@ github.com/cenkalti/backoff/v5
 # github.com/cespare/xxhash/v2 v2.3.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/charmbracelet/colorprofile v0.2.3-0.20250311203215-f60798e515dc
-## explicit; go 1.18
-github.com/charmbracelet/colorprofile
-# github.com/charmbracelet/glamour v1.0.0
-## explicit; go 1.24.0
-github.com/charmbracelet/glamour
-github.com/charmbracelet/glamour/ansi
-github.com/charmbracelet/glamour/internal/autolink
-github.com/charmbracelet/glamour/styles
-# github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
-## explicit; go 1.18
-github.com/charmbracelet/lipgloss
-github.com/charmbracelet/lipgloss/table
-# github.com/charmbracelet/x/ansi v0.10.2
-## explicit; go 1.24.0
-github.com/charmbracelet/x/ansi
-github.com/charmbracelet/x/ansi/parser
-# github.com/charmbracelet/x/cellbuf v0.0.13
-## explicit; go 1.18
-github.com/charmbracelet/x/cellbuf
-# github.com/charmbracelet/x/exp/slice v0.0.0-20250327172914-2fdc97757edf
-## explicit; go 1.19
-github.com/charmbracelet/x/exp/slice
-# github.com/charmbracelet/x/term v0.2.1
-## explicit; go 1.18
-github.com/charmbracelet/x/term
-# github.com/chzyer/readline v1.5.1
-## explicit; go 1.15
-github.com/chzyer/readline
 # github.com/dlclark/regexp2 v1.11.5
 ## explicit; go 1.13
-github.com/dlclark/regexp2
-github.com/dlclark/regexp2/syntax
 # github.com/go-chi/chi/v5 v5.3.2
 ## explicit; go 1.23
 github.com/go-chi/chi/v5
@@ -82,9 +35,6 @@ github.com/google/jsonschema-go/jsonschema
 # github.com/google/uuid v1.6.0
 ## explicit
 github.com/google/uuid
-# github.com/gorilla/css v1.0.1
-## explicit; go 1.20
-github.com/gorilla/css/scanner
 # github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0
 ## explicit; go 1.25.0
 github.com/grpc-ecosystem/grpc-gateway/v2/internal/httprule
@@ -120,33 +70,11 @@ github.com/jackc/puddle/v2/internal/genstack
 # github.com/joho/godotenv v1.5.1
 ## explicit; go 1.12
 github.com/joho/godotenv
-# github.com/lucasb-eyer/go-colorful v1.3.0
-## explicit; go 1.12
-github.com/lucasb-eyer/go-colorful
 # github.com/mark3labs/mcp-go v0.58.0
 ## explicit; go 1.25.5
 github.com/mark3labs/mcp-go/mcp
 github.com/mark3labs/mcp-go/server
 github.com/mark3labs/mcp-go/tracing
-# github.com/mattn/go-isatty v0.0.20
-## explicit; go 1.15
-github.com/mattn/go-isatty
-# github.com/mattn/go-runewidth v0.0.17
-## explicit; go 1.9
-github.com/mattn/go-runewidth
-# github.com/microcosm-cc/bluemonday v1.0.27
-## explicit; go 1.19
-github.com/microcosm-cc/bluemonday
-github.com/microcosm-cc/bluemonday/css
-# github.com/muesli/reflow v0.3.0
-## explicit; go 1.13
-github.com/muesli/reflow/ansi
-github.com/muesli/reflow/indent
-github.com/muesli/reflow/padding
-github.com/muesli/reflow/wordwrap
-# github.com/muesli/termenv v0.16.0
-## explicit; go 1.17
-github.com/muesli/termenv
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 ## explicit
 github.com/munnerz/goautoneg
@@ -171,18 +99,10 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/rivo/uniseg v0.4.7
-## explicit; go 1.18
-github.com/rivo/uniseg
 # github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 ## explicit; go 1.21
 github.com/santhosh-tekuri/jsonschema/v6
 github.com/santhosh-tekuri/jsonschema/v6/kind
-# github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
-## explicit; go 1.13
-github.com/skip2/go-qrcode
-github.com/skip2/go-qrcode/bitset
-github.com/skip2/go-qrcode/reedsolomon
 # github.com/spf13/cast v1.7.1
 ## explicit; go 1.19
 github.com/spf13/cast
@@ -192,33 +112,14 @@ github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.10
 ## explicit; go 1.12
 github.com/spf13/pflag
-# github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e
-## explicit; go 1.19
-github.com/xo/terminfo
 # github.com/yosida95/uritemplate/v3 v3.0.2
 ## explicit; go 1.14
 github.com/yosida95/uritemplate/v3
-# github.com/yuin/goldmark v1.7.17
-## explicit; go 1.22
-github.com/yuin/goldmark
-github.com/yuin/goldmark/ast
-github.com/yuin/goldmark/extension
-github.com/yuin/goldmark/extension/ast
-github.com/yuin/goldmark/parser
-github.com/yuin/goldmark/renderer
-github.com/yuin/goldmark/renderer/html
-github.com/yuin/goldmark/text
-github.com/yuin/goldmark/util
-# github.com/yuin/goldmark-emoji v1.0.6
-## explicit; go 1.22
-github.com/yuin/goldmark-emoji
-github.com/yuin/goldmark-emoji/ast
-github.com/yuin/goldmark-emoji/definition
 # go.opentelemetry.io/auto/sdk v1.2.1
 ## explicit; go 1.24.0
 go.opentelemetry.io/auto/sdk
 go.opentelemetry.io/auto/sdk/internal/telemetry
-# go.opentelemetry.io/otel v1.45.0
+# go.opentelemetry.io/otel v1.46.0
 ## explicit; go 1.25.0
 go.opentelemetry.io/otel
 go.opentelemetry.io/otel/attribute
@@ -249,7 +150,7 @@ go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/observ
 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlpconfig
 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/retry
 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/x
-# go.opentelemetry.io/otel/metric v1.45.0
+# go.opentelemetry.io/otel/metric v1.46.0
 ## explicit; go 1.25.0
 go.opentelemetry.io/otel/metric
 go.opentelemetry.io/otel/metric/embedded
@@ -264,7 +165,7 @@ go.opentelemetry.io/otel/sdk/resource
 go.opentelemetry.io/otel/sdk/trace
 go.opentelemetry.io/otel/sdk/trace/internal/env
 go.opentelemetry.io/otel/sdk/trace/internal/observ
-# go.opentelemetry.io/otel/trace v1.45.0
+# go.opentelemetry.io/otel/trace v1.46.0
 ## explicit; go 1.25.0
 go.opentelemetry.io/otel/trace
 go.opentelemetry.io/otel/trace/embedded
@@ -278,8 +179,6 @@ go.opentelemetry.io/proto/otlp/resource/v1
 go.opentelemetry.io/proto/otlp/trace/v1
 # golang.org/x/net v0.57.0
 ## explicit; go 1.25.0
-golang.org/x/net/html
-golang.org/x/net/html/atom
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
