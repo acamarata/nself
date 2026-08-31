@@ -188,13 +188,34 @@ func LintSecrets(projectRoot string) ([]LintFinding, error) {
 		return nil, fmt.Errorf("gitleaks not found in PATH — install with: brew install gitleaks")
 	}
 
-	cmd := exec.Command(gitleaksPath, "detect", "--source", projectRoot, "--no-git", "--report-format", "json", "--report-path", "/dev/stdout")
-	output, err := cmd.Output()
+	// Write the report to a real temp file rather than the literal path
+	// "/dev/stdout". gitleaks >=8.x opens --report-path with O_CREATE, which
+	// fails against the stdout character device on several platforms/
+	// sandboxes ("open /dev/stdout: permission denied") — when that happens
+	// gitleaks still exits 1 (findings-may-be-present) but writes no JSON at
+	// all, so every call fell through to the "parse-error" placeholder finding
+	// below regardless of whether the source actually contained a secret.
+	// That made `nself secrets lint` unconditionally report exactly one bogus
+	// finding — a false positive on clean trees and a masked true negative on
+	// leaky ones — which defeats the command's purpose entirely.
+	reportFile, err := os.CreateTemp("", "nself-gitleaks-report-*.json")
+	if err != nil {
+		return nil, fmt.Errorf("creating gitleaks report file: %w", err)
+	}
+	reportPath := reportFile.Name()
+	_ = reportFile.Close()
+	defer func() { _ = os.Remove(reportPath) }()
+
+	cmd := exec.Command(gitleaksPath, "detect", "--source", projectRoot, "--no-git", "--report-format", "json", "--report-path", reportPath)
+	runErr := cmd.Run()
 
 	// gitleaks exits 1 when findings are present.
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
-			// Parse findings.
+	if runErr != nil {
+		if exitErr, ok := runErr.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+			output, readErr := os.ReadFile(reportPath)
+			if readErr != nil {
+				return nil, fmt.Errorf("reading gitleaks report: %w", readErr)
+			}
 			var findings []LintFinding
 			if jsonErr := json.Unmarshal(output, &findings); jsonErr != nil {
 				// If JSON parse fails, just report raw output.
@@ -206,7 +227,7 @@ func LintSecrets(projectRoot string) ([]LintFinding, error) {
 			}
 			return findings, nil
 		}
-		return nil, fmt.Errorf("running gitleaks: %w", err)
+		return nil, fmt.Errorf("running gitleaks: %w", runErr)
 	}
 
 	return nil, nil

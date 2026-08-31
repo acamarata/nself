@@ -13,12 +13,23 @@ package commands
 import (
 	"fmt"
 	"os"
+	"regexp"
 
 	"github.com/nself-org/cli/internal/secrets"
 	"github.com/nself-org/cli/internal/ui"
 
 	"github.com/spf13/cobra"
 )
+
+// everyPattern matches a well-formed rotation cadence: one or more digits
+// (no sign, no leading zero beyond a bare "0") followed by a literal "d",
+// and NOTHING else. fmt.Sscanf("%dd", ...) previously accepted this flag
+// as a prefix match, so "90days" silently parsed as 90 (ignoring the
+// trailing "ays") and "-90d" silently parsed as a negative cadence that
+// SaveRotationState would then persist as a schedule that is either
+// permanently overdue or never due — a rotation schedule nobody actually
+// enforces is a silent security regression, not a cosmetic one.
+var everyPattern = regexp.MustCompile(`^(0|[1-9][0-9]*)d$`)
 
 var secretsScheduleCmd = &cobra.Command{
 	Use:   "schedule",
@@ -41,6 +52,9 @@ Examples:
 
 		// If both --secret and --every are supplied, create/update the schedule.
 		if secretName != "" && everyFlag != "" {
+			if !everyPattern.MatchString(everyFlag) {
+				return fmt.Errorf("--every must be in format <N>d with a non-negative integer N (e.g. 90d), got %q", everyFlag)
+			}
 			var cadenceDays int
 			if _, err := fmt.Sscanf(everyFlag, "%dd", &cadenceDays); err != nil {
 				return fmt.Errorf("--every must be in format <N>d (e.g. 90d): %w", err)
