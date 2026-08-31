@@ -203,7 +203,7 @@ Use --json for machine-readable output.`,
 		if cache != nil {
 			fetchedAt := cache.FetchedAt
 			ttlExpiry := license.CacheTTLExpiry(cache.Tier, timeFromUnix(fetchedAt))
-			remaining := ttlExpiry.Sub(time.Now())
+			remaining := time.Until(ttlExpiry)
 			if remaining > 0 {
 				days := int(remaining.Hours() / 24)
 				daysToExpire = &days

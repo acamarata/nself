@@ -19,15 +19,15 @@ import (
 
 func buildSummary(collections []CollectionInfo, projectName string) []byte {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("# Firebase → nSelf Migration Summary\n\n"))
-	sb.WriteString(fmt.Sprintf("**Project:** %s  \n", projectName))
-	sb.WriteString(fmt.Sprintf("**Generated:** %s\n\n", time.Now().UTC().Format(time.RFC3339)))
+	sb.WriteString("# Firebase → nSelf Migration Summary\n\n")
+	fmt.Fprintf(&sb, "**Project:** %s  \n", projectName)
+	fmt.Fprintf(&sb, "**Generated:** %s\n\n", time.Now().UTC().Format(time.RFC3339))
 
 	sb.WriteString("## Inferred Tables\n\n")
 	sb.WriteString("| Firestore Collection | PostgreSQL Table | Columns | Documents Sampled |\n")
 	sb.WriteString("|---|---|---|---|\n")
 	for _, c := range collections {
-		sb.WriteString(fmt.Sprintf("| `%s` | `%s` | %d | %d |\n", c.Name, c.TableName, len(c.Columns), c.SampleCount))
+		fmt.Fprintf(&sb, "| `%s` | `%s` | %d | %d |\n", c.Name, c.TableName, len(c.Columns), c.SampleCount)
 	}
 
 	sb.WriteString("\n## Next Steps\n\n")

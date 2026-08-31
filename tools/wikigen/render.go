@@ -211,10 +211,10 @@ func flagTable(c *cobra.Command) string {
 			name = "`--" + f.Name + "`, `-" + f.Shorthand + "`"
 		}
 		def := f.DefValue
-		switch {
-		case def == "":
+		switch def {
+		case "":
 			def = `""`
-		case def == "[]":
+		case "[]":
 			def = "—"
 		}
 		rows = append(rows, row{name, "`" + def + "`", escapeCell(f.Usage)})

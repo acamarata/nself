@@ -54,7 +54,7 @@ func FormatConflictMessage(port int, holder *Holder) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("port %d is held by %s (pid %d)", port, holder.Name, holder.PID))
+	fmt.Fprintf(&sb, "port %d is held by %s (pid %d)", port, holder.Name, holder.PID)
 
 	if holder.IsOurs {
 		sb.WriteString(" [nSelf container]")
@@ -64,7 +64,7 @@ func FormatConflictMessage(port int, holder *Holder) string {
 
 	// Suggest the likely env var name based on the port.
 	if envVar := portEnvVar(port); envVar != "" {
-		sb.WriteString(fmt.Sprintf(" (e.g. %s)", envVar))
+		fmt.Fprintf(&sb, " (e.g. %s)", envVar)
 	}
 
 	return sb.String()

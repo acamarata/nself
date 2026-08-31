@@ -39,7 +39,7 @@ func runTemplatePublish(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("resolving manifest path: %w", err)
 	}
 	if _, statErr := os.Stat(absManifest); os.IsNotExist(statErr) {
-		return fmt.Errorf("manifest not found at %s\nCreate a template.yml before publishing.", absManifest)
+		return fmt.Errorf("manifest not found at %s\ncreate a template.yml before publishing", absManifest)
 	}
 
 	ui.Info(fmt.Sprintf("Validating manifest at %s...", absManifest))
@@ -110,8 +110,8 @@ func runTemplateUpdate(cmd *cobra.Command, args []string) error {
 				if strings.Contains(content, "DROP ") || strings.Contains(content, "TRUNCATE ") {
 					if !force {
 						return fmt.Errorf(
-							"migration %s contains destructive changes (DROP/TRUNCATE).\n"+
-								"Re-run with --force to apply after reviewing carefully.",
+							"migration %s contains destructive changes (DROP/TRUNCATE)\n"+
+								"re-run with --force to apply after reviewing carefully",
 							e.Name(),
 						)
 					}

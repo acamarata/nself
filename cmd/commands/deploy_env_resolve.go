@@ -53,7 +53,7 @@ func writeResolvedDeployEnv(workdir, target string) (path string, cleanup func()
 
 	var b strings.Builder
 	b.WriteString("# GENERATED — resolved deploy env snapshot, do not commit or hand-edit.\n")
-	b.WriteString(fmt.Sprintf("# Merged from the same cascade config.Load used to build docker-compose.yml for target=%s.\n", target))
+	fmt.Fprintf(&b, "# Merged from the same cascade config.Load used to build docker-compose.yml for target=%s.\n", target)
 	for _, k := range order {
 		b.WriteString(k)
 		b.WriteString("=")

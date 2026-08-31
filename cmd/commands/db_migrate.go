@@ -36,7 +36,7 @@ func runDBMigrateUp(cmd *cobra.Command, _ []string) error {
 	checkCmd := exec.CommandContext(cmd.Context(), "docker", "exec", container,
 		"pg_isready", "-U", user)
 	if err := checkCmd.Run(); err != nil {
-		return fmt.Errorf("PostgreSQL is not running. Start with 'nself start' first.")
+		return fmt.Errorf("PostgreSQL is not running — start with 'nself start' first")
 	}
 
 	plugin, _ := cmd.Flags().GetString("plugin")

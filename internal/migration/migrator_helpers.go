@@ -119,7 +119,7 @@ func pluginWarning(projectDir, backupDir string) {
 		for _, p := range plugins {
 			installCmd += " " + p
 		}
-		_, _ = fmt.Fprintln(os.Stdout, fmt.Sprintf("  Step 2: Re-install your %d plugin(s) (detected from v0.9 .env)", len(plugins)))
+		_, _ = fmt.Fprintf(os.Stdout, "  Step 2: Re-install your %d plugin(s) (detected from v0.9 .env)\n", len(plugins))
 		_, _ = fmt.Fprintln(os.Stdout, bold+"    "+installCmd+reset)
 	} else {
 		_, _ = fmt.Fprintln(os.Stdout, "  Step 2: Re-install your plugins")

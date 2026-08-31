@@ -70,8 +70,8 @@ func GenerateTenantRLSSQL(cfg TenantRLSConfig) (string, error) {
 	var sb strings.Builder
 
 	// Enable and force RLS.
-	sb.WriteString(fmt.Sprintf("ALTER TABLE %s ENABLE ROW LEVEL SECURITY;\n", quoted))
-	sb.WriteString(fmt.Sprintf("ALTER TABLE %s FORCE ROW LEVEL SECURITY;\n", quoted))
+	fmt.Fprintf(&sb, "ALTER TABLE %s ENABLE ROW LEVEL SECURITY;\n", quoted)
+	fmt.Fprintf(&sb, "ALTER TABLE %s FORCE ROW LEVEL SECURITY;\n", quoted)
 
 	// Drop pre-existing standard policies (idempotent).
 	for _, pol := range []string{
@@ -80,7 +80,7 @@ func GenerateTenantRLSSQL(cfg TenantRLSConfig) (string, error) {
 		tbl + "_update_own",
 		tbl + "_delete_own",
 	} {
-		sb.WriteString(fmt.Sprintf("DROP POLICY IF EXISTS %q ON %s;\n", pol, quoted))
+		fmt.Fprintf(&sb, "DROP POLICY IF EXISTS %q ON %s;\n", pol, quoted)
 	}
 
 	switch cfg.Pattern {
@@ -90,10 +90,10 @@ func GenerateTenantRLSSQL(cfg TenantRLSConfig) (string, error) {
 			`(current_setting('hasura.user', true))::uuid = %s OR current_setting('hasura.role', true) = 'admin'`,
 			col,
 		)
-		sb.WriteString(fmt.Sprintf("CREATE POLICY %q ON %s FOR SELECT USING (%s);\n", tbl+"_select_own", quoted, pred))
-		sb.WriteString(fmt.Sprintf("CREATE POLICY %q ON %s FOR INSERT WITH CHECK (%s);\n", tbl+"_insert_own", quoted, pred))
-		sb.WriteString(fmt.Sprintf("CREATE POLICY %q ON %s FOR UPDATE USING (%s) WITH CHECK (%s);\n", tbl+"_update_own", quoted, pred, pred))
-		sb.WriteString(fmt.Sprintf("CREATE POLICY %q ON %s FOR DELETE USING (%s);\n", tbl+"_delete_own", quoted, pred))
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR SELECT USING (%s);\n", tbl+"_select_own", quoted, pred)
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR INSERT WITH CHECK (%s);\n", tbl+"_insert_own", quoted, pred)
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR UPDATE USING (%s) WITH CHECK (%s);\n", tbl+"_update_own", quoted, pred, pred)
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR DELETE USING (%s);\n", tbl+"_delete_own", quoted, pred)
 
 	case PatternTenantScoped:
 		col := cfg.tenantColumn()
@@ -101,24 +101,24 @@ func GenerateTenantRLSSQL(cfg TenantRLSConfig) (string, error) {
 			`(current_setting('hasura.tenant', true))::uuid = %s OR current_setting('hasura.role', true) = 'admin'`,
 			col,
 		)
-		sb.WriteString(fmt.Sprintf("CREATE POLICY %q ON %s FOR SELECT USING (%s);\n", tbl+"_select_own", quoted, pred))
-		sb.WriteString(fmt.Sprintf("CREATE POLICY %q ON %s FOR INSERT WITH CHECK (%s);\n", tbl+"_insert_own", quoted, pred))
-		sb.WriteString(fmt.Sprintf("CREATE POLICY %q ON %s FOR UPDATE USING (%s) WITH CHECK (%s);\n", tbl+"_update_own", quoted, pred, pred))
-		sb.WriteString(fmt.Sprintf("CREATE POLICY %q ON %s FOR DELETE USING (%s);\n", tbl+"_delete_own", quoted, pred))
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR SELECT USING (%s);\n", tbl+"_select_own", quoted, pred)
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR INSERT WITH CHECK (%s);\n", tbl+"_insert_own", quoted, pred)
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR UPDATE USING (%s) WITH CHECK (%s);\n", tbl+"_update_own", quoted, pred, pred)
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR DELETE USING (%s);\n", tbl+"_delete_own", quoted, pred)
 
 	case PatternPublic:
 		// Public: always return true — no filter on any operation.
-		sb.WriteString(fmt.Sprintf("CREATE POLICY %q ON %s FOR SELECT USING (true);\n", tbl+"_select_own", quoted))
-		sb.WriteString(fmt.Sprintf("CREATE POLICY %q ON %s FOR INSERT WITH CHECK (true);\n", tbl+"_insert_own", quoted))
-		sb.WriteString(fmt.Sprintf("CREATE POLICY %q ON %s FOR UPDATE USING (true) WITH CHECK (true);\n", tbl+"_update_own", quoted))
-		sb.WriteString(fmt.Sprintf("CREATE POLICY %q ON %s FOR DELETE USING (true);\n", tbl+"_delete_own", quoted))
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR SELECT USING (true);\n", tbl+"_select_own", quoted)
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR INSERT WITH CHECK (true);\n", tbl+"_insert_own", quoted)
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR UPDATE USING (true) WITH CHECK (true);\n", tbl+"_update_own", quoted)
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR DELETE USING (true);\n", tbl+"_delete_own", quoted)
 
 	case PatternAdminOnly:
 		pred := `current_setting('hasura.role', true) = 'admin'`
-		sb.WriteString(fmt.Sprintf("CREATE POLICY %q ON %s FOR SELECT USING (%s);\n", tbl+"_select_own", quoted, pred))
-		sb.WriteString(fmt.Sprintf("CREATE POLICY %q ON %s FOR INSERT WITH CHECK (%s);\n", tbl+"_insert_own", quoted, pred))
-		sb.WriteString(fmt.Sprintf("CREATE POLICY %q ON %s FOR UPDATE USING (%s) WITH CHECK (%s);\n", tbl+"_update_own", quoted, pred, pred))
-		sb.WriteString(fmt.Sprintf("CREATE POLICY %q ON %s FOR DELETE USING (%s);\n", tbl+"_delete_own", quoted, pred))
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR SELECT USING (%s);\n", tbl+"_select_own", quoted, pred)
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR INSERT WITH CHECK (%s);\n", tbl+"_insert_own", quoted, pred)
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR UPDATE USING (%s) WITH CHECK (%s);\n", tbl+"_update_own", quoted, pred, pred)
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR DELETE USING (%s);\n", tbl+"_delete_own", quoted, pred)
 
 	default:
 		return "", fmt.Errorf("generate tenant rls sql: unknown pattern %q", cfg.Pattern)
@@ -152,8 +152,8 @@ func GenerateRollbackSQL(schema, table string) string {
 		table + "_update_own",
 		table + "_delete_own",
 	} {
-		sb.WriteString(fmt.Sprintf("DROP POLICY IF EXISTS %q ON %s;\n", pol, quoted))
+		fmt.Fprintf(&sb, "DROP POLICY IF EXISTS %q ON %s;\n", pol, quoted)
 	}
-	sb.WriteString(fmt.Sprintf("ALTER TABLE %s DISABLE ROW LEVEL SECURITY;\n", quoted))
+	fmt.Fprintf(&sb, "ALTER TABLE %s DISABLE ROW LEVEL SECURITY;\n", quoted)
 	return sb.String()
 }

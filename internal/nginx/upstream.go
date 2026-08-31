@@ -63,18 +63,18 @@ func GenerateWeightedUpstream(cfg UpstreamConfig, canaryPercent int) (string, er
 	greenWeight := canaryPercent
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("upstream %s {\n", name))
+	fmt.Fprintf(&sb, "upstream %s {\n", name)
 
 	if blueWeight > 0 {
-		sb.WriteString(fmt.Sprintf("    server %s:%d weight=%d;   # blue\n", cfg.BlueHost, cfg.BluePort, blueWeight))
+		fmt.Fprintf(&sb, "    server %s:%d weight=%d;   # blue\n", cfg.BlueHost, cfg.BluePort, blueWeight)
 	} else {
-		sb.WriteString(fmt.Sprintf("    server %s:%d weight=0 backup;   # blue (idle)\n", cfg.BlueHost, cfg.BluePort))
+		fmt.Fprintf(&sb, "    server %s:%d weight=0 backup;   # blue (idle)\n", cfg.BlueHost, cfg.BluePort)
 	}
 
 	if greenWeight > 0 {
-		sb.WriteString(fmt.Sprintf("    server %s:%d weight=%d;   # green (%d%% canary)\n", cfg.GreenHost, cfg.GreenPort, greenWeight, canaryPercent))
+		fmt.Fprintf(&sb, "    server %s:%d weight=%d;   # green (%d%% canary)\n", cfg.GreenHost, cfg.GreenPort, greenWeight, canaryPercent)
 	} else {
-		sb.WriteString(fmt.Sprintf("    server %s:%d weight=0 backup;   # green (idle)\n", cfg.GreenHost, cfg.GreenPort))
+		fmt.Fprintf(&sb, "    server %s:%d weight=0 backup;   # green (idle)\n", cfg.GreenHost, cfg.GreenPort)
 	}
 
 	sb.WriteString("}\n")

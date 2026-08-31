@@ -65,7 +65,7 @@ func TestHashTenantID_IsHex(t *testing.T) {
 	id := "550e8400-e29b-41d4-a716-446655440000"
 	h := hashTenantID(id)
 	for _, c := range h {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
 			t.Errorf("hashTenantID contains non-hex character %q in %q", c, h)
 		}
 	}

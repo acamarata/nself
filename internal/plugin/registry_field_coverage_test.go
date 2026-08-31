@@ -135,7 +135,7 @@ func populate(t *testing.T, v reflect.Value) {
 			f.Set(m)
 		case reflect.Struct:
 			populate(t, f)
-		case reflect.Ptr:
+		case reflect.Pointer:
 			p := reflect.New(f.Type().Elem())
 			if p.Elem().Kind() == reflect.Struct {
 				populate(t, p.Elem())

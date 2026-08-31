@@ -49,9 +49,10 @@ func runBundleList(cmd *cobra.Command, _ []string) error {
 		}
 
 		status := "active"
-		if key == "ntask" {
+		switch key {
+		case "ntask":
 			status = "free"
-		} else if key == "nsentry" || key == "nfamily" || key == "clawde" {
+		case "nsentry", "nfamily", "clawde":
 			status = "planned"
 		}
 

@@ -104,9 +104,9 @@ func PrintMatrix(matrix EnvMatrix) string {
 	var sb strings.Builder
 	for _, env := range envs {
 		files := matrix[env]
-		sb.WriteString(fmt.Sprintf("[%s] (%d file(s))\n", env, len(files)))
+		fmt.Fprintf(&sb, "[%s] (%d file(s))\n", env, len(files))
 		for _, f := range files {
-			sb.WriteString(fmt.Sprintf("  %s\n", f))
+			fmt.Fprintf(&sb, "  %s\n", f)
 		}
 	}
 

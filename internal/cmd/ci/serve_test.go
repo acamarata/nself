@@ -261,7 +261,7 @@ func TestWebhookHandler_concurrencyLimit(t *testing.T) {
 	body := []byte(`{"after":"aabbcc","ref":"refs/heads/main","deleted":false,"repository":{"full_name":"o/r","clone_url":"https://github.com/o/r.git"}}`)
 	handler := &webhookHandler{
 		secret:     "",
-		sem:        make(chan struct{}, 0),
+		sem:        make(chan struct{}),
 		binaryPath: "/usr/local/bin/nself-ci",
 		cfg:        ServeConfig{Concurrency: 0, JobTimeout: 60},
 	}

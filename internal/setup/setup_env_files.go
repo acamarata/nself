@@ -232,12 +232,12 @@ func writeFullEnvFiles(workDir, projectName, baseDomain string) ([]string, error
 	var created []string
 
 	// .env.dev
-	devContent := fmt.Sprintf(`# Development environment overrides
+	devContent := `# Development environment overrides
 ENV=dev
 BASE_DOMAIN=local.nself.org
 HASURA_GRAPHQL_ENABLE_CONSOLE=true
 HASURA_GRAPHQL_DEV_MODE=true
-`)
+`
 	if err := writeFile(filepath.Join(workDir, ".env.dev"), devContent, 0600); err != nil {
 		return nil, err
 	}
