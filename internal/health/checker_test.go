@@ -1,6 +1,7 @@
 package health
 
 import (
+	"context"
 	"testing"
 )
 
@@ -49,7 +50,7 @@ func TestResolveServiceHealth_DirectServiceNameMatch(t *testing.T) {
 		"hasura":   "starting",
 	}
 
-	result := resolveServiceHealth(nil, "myproject", "postgres", composeMap)
+	result := resolveServiceHealth(context.Background(), "myproject", "postgres", composeMap)
 	if result.Status != "healthy" {
 		t.Errorf("expected status %q, got %q", "healthy", result.Status)
 	}
@@ -68,7 +69,7 @@ func TestResolveServiceHealth_ContainerNameFallback(t *testing.T) {
 		"nclaw_postgres": "healthy",
 	}
 
-	result := resolveServiceHealth(nil, "nclaw", "postgres", composeMap)
+	result := resolveServiceHealth(context.Background(), "nclaw", "postgres", composeMap)
 	if result.Status != "healthy" {
 		t.Errorf("expected status %q via container name fallback, got %q", "healthy", result.Status)
 	}
@@ -83,7 +84,7 @@ func TestResolveServiceHealth_ComposeV2NameFallback(t *testing.T) {
 		"myapp-redis-1": "healthy",
 	}
 
-	result := resolveServiceHealth(nil, "myapp", "redis", composeMap)
+	result := resolveServiceHealth(context.Background(), "myapp", "redis", composeMap)
 	if result.Status != "healthy" {
 		t.Errorf("expected status %q via v2 name fallback, got %q", "healthy", result.Status)
 	}
@@ -92,7 +93,7 @@ func TestResolveServiceHealth_ComposeV2NameFallback(t *testing.T) {
 // TestBuildComposeHealthMap_EmptyWorkdir verifies that buildComposeHealthMap
 // returns an empty map (not nil, not a panic) when workdir is empty string.
 func TestBuildComposeHealthMap_EmptyWorkdir(t *testing.T) {
-	m := buildComposeHealthMap(nil, "")
+	m := buildComposeHealthMap(context.Background(), "")
 	if m == nil {
 		t.Fatal("buildComposeHealthMap(\"\") returned nil, expected empty map")
 	}
@@ -119,7 +120,7 @@ func TestHealthReport_AllServicesHealthy(t *testing.T) {
 	}
 
 	for _, svc := range services {
-		result := resolveServiceHealth(nil, "testproj", svc, composeMap)
+		result := resolveServiceHealth(context.Background(), "testproj", svc, composeMap)
 		if result.Status == "healthy" {
 			report.Healthy++
 		} else {
@@ -212,7 +213,7 @@ func TestHealthReport_AllServicesHealthy_RunningCountsHealthy(t *testing.T) {
 	}
 
 	for _, svc := range services {
-		result := resolveServiceHealth(nil, "testproj", svc, composeMap)
+		result := resolveServiceHealth(context.Background(), "testproj", svc, composeMap)
 		if result.OK() {
 			report.Healthy++
 		} else {

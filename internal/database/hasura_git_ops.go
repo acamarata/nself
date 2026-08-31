@@ -176,10 +176,10 @@ func CompareSnapshots(before, after []byte) (string, error) {
 	var sb strings.Builder
 	sb.WriteString("Snapshot diff:\n")
 	for _, t := range added {
-		sb.WriteString(fmt.Sprintf("  + %s\n", t))
+		fmt.Fprintf(&sb, "  + %s\n", t)
 	}
 	for _, t := range removed {
-		sb.WriteString(fmt.Sprintf("  - %s\n", t))
+		fmt.Fprintf(&sb, "  - %s\n", t)
 	}
 	return sb.String(), nil
 }

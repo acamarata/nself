@@ -66,9 +66,9 @@ func runConfigExport(cmd *cobra.Command, args []string) error {
 		for _, k := range keys {
 			v := maskValue(k, pairs[k], reveal)
 			if strings.ContainsAny(v, ": \t#\"'\\") || v == "" {
-				sb.WriteString(fmt.Sprintf("%s: %q\n", k, v))
+				fmt.Fprintf(&sb, "%s: %q\n", k, v)
 			} else {
-				sb.WriteString(fmt.Sprintf("%s: %s\n", k, v))
+				fmt.Fprintf(&sb, "%s: %s\n", k, v)
 			}
 		}
 	default: // env

@@ -311,7 +311,7 @@ func TestSanitize_UnicodeAndNullBytes(t *testing.T) {
 		{"null_byte", "foo\x00bar"},
 		{"unicode_smp", "𝕳𝖊𝖑𝖑𝖔"}, // supplementary plane chars
 		{"rtl_text", "مرحبا"},
-		{"zero_width", "a​b"},        // zero-width space
+		{"zero_width", "a\u200bb"},   // zero-width space
 		{"bom", "\xef\xbb\xbfhello"}, // byte order mark (UTF-8 BOM)
 		{"sql_metachar_mix", "'; UPDATE tenants SET plan='enterprise' WHERE '1'='1"},
 		{"newline_in_value", "line1\nline2"},

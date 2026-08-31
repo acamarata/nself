@@ -50,7 +50,7 @@ func ValidateHasuraDevMode(cfg *Config) error {
 		"hostname", hostname,
 		"remediation", "set HASURA_GRAPHQL_DEV_MODE=false in .env.prod",
 	)
-	return fmt.Errorf("HASURA_GRAPHQL_DEV_MODE must not be enabled in production.\nSet HASURA_GRAPHQL_DEV_MODE=false in your .env.prod file.")
+	return fmt.Errorf("HASURA_GRAPHQL_DEV_MODE must not be enabled in production\nset HASURA_GRAPHQL_DEV_MODE=false in your .env.prod file")
 }
 
 // nginx rate limit format: "30r/m", "10r/s", etc.

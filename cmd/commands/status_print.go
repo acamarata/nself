@@ -109,9 +109,9 @@ func wrapDockerError(err error, containerName string) error {
 		return fmt.Errorf("container %s is not running — try: nself start", containerName)
 	}
 	msg := err.Error()
-	if strings.Contains(msg, "Docker is not running") ||
+	if strings.Contains(msg, "docker is not running") ||
 		strings.Contains(msg, "Cannot connect to the Docker daemon") {
-		return fmt.Errorf("Docker is not running — start Docker Desktop or run: systemctl start docker")
+		return fmt.Errorf("docker is not running — start Docker Desktop or run: systemctl start docker")
 	}
 	if strings.Contains(msg, "No such container") || strings.Contains(msg, "not found") {
 		return fmt.Errorf("container %s is not running — try: nself start", containerName)

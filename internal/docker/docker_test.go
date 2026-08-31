@@ -992,7 +992,7 @@ func TestComposeBaseArgs_WithFilesForStop(t *testing.T) {
 func TestStop_PsErrorDoesNotPreventStop(t *testing.T) {
 	// Simulate the decision logic in runStop:
 	// "if psErr == nil && len(containers) == 0 && len(args) == 0 → nothing to do"
-	var psErr error = fmt.Errorf("compose ps failed")
+	var psErr = fmt.Errorf("compose ps failed")
 	containers := []ContainerInfo{}
 	args := []string{}
 

@@ -66,8 +66,8 @@ func Run(ctx context.Context, inv *Inventory, prober Prober, composePath string)
 
 		// Step 1: Local environment — build once.
 		if env.Kind == "local" {
-			sr, err := runLocal(ctx, env, envStatuses)
-			if err != nil {
+			sr, err := runLocal(ctx, env, envStatuses) //nolint:staticcheck // SA4023: runLocal always errors by design (local deploy not yet supported via the pipeline); see its doc comment
+			if err != nil {                            //nolint:staticcheck // SA4023: same reason as above
 				return result, fmt.Errorf("controlplane: local build: %w", err)
 			}
 			result.Servers = append(result.Servers, sr...)
@@ -156,7 +156,7 @@ func serversByRole(env Environment, statuses []TargetStatus, role ServerRole) []
 // the operator. When local-deploy execution primitives exist (future ticket),
 // this function should be replaced with a real implementation that builds a
 // ServerResult per local server.
-func runLocal(_ context.Context, env Environment, _ []TargetStatus) ([]ServerResult, error) {
+func runLocal(_ context.Context, env Environment, _ []TargetStatus) ([]ServerResult, error) { //nolint:staticcheck // SA4023: deliberately never returns nil; see comment above
 	return nil, fmt.Errorf(
 		"controlplane: local deploy target %q is not yet supported via the pipeline — "+
 			"use `nself build` and `nself start` to manage the local environment",

@@ -78,10 +78,9 @@ func runAccountLogin(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Step 3: poll for the token.
+	// cmdCtx never returns nil (falls back to context.Background()), so no
+	// nil-check is needed here.
 	baseCtx := cmdCtx(cmd)
-	if baseCtx == nil {
-		baseCtx = context.Background()
-	}
 	timeout := time.Duration(timeoutSec) * time.Second
 	if timeout <= 0 {
 		timeout = 5 * time.Minute

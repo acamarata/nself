@@ -32,9 +32,9 @@ type UXError struct {
 // Error implements the error interface.
 func (e *UXError) Error() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("[%s] %s", e.Code, e.What))
+	fmt.Fprintf(&b, "[%s] %s", e.Code, e.What)
 	if e.Why != "" {
-		b.WriteString(fmt.Sprintf(" (%s)", e.Why))
+		fmt.Fprintf(&b, " (%s)", e.Why)
 	}
 	return b.String()
 }

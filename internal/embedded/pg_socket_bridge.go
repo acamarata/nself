@@ -156,7 +156,7 @@ func (b *PGSocketBridge) handleConn(ctx context.Context, client net.Conn) {
 	// client → backend: intercept unsupported commands.
 	go func() {
 		defer wg.Done()
-		if err := proxyClientToBackend(client, backend); err != nil {
+		if err := proxyClientToBackend(client, backend); err != nil { //nolint:staticcheck // SA4023: the loop only exits via an error return (EOF/connection-close is the normal path); discarded intentionally
 			// Connection closed or read error — normal EOF.
 		}
 	}()
@@ -170,7 +170,7 @@ func (b *PGSocketBridge) handleConn(ctx context.Context, client net.Conn) {
 // the client instead.
 //
 // The function returns when either side closes the connection.
-func proxyClientToBackend(client, backend net.Conn) error {
+func proxyClientToBackend(client, backend net.Conn) error { //nolint:staticcheck // SA4023: deliberately never returns nil; see comment above
 	for {
 		// Read one Postgres message from the client.
 		// Postgres frontend message format:

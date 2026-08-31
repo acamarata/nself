@@ -69,13 +69,13 @@ func Restore(ctx context.Context, cfg *config.Config, opts RestoreOptions) error
 	}
 
 	if restoreComponents["minio"] && cfg.Minio.Enabled {
-		if err := restoreMinio(ctx, cfg, backupDir, opts.BackupID); err != nil {
+		if err := restoreMinio(ctx, cfg, backupDir, opts.BackupID); err != nil { //nolint:staticcheck // SA4023: restoreMinio always errors by design (not automated); see its doc comment
 			slog.Warn("minio restore failed", "error", err)
 		}
 	}
 
 	if restoreComponents["metadata"] {
-		if err := restoreMetadata(ctx, cfg, backupDir, opts.BackupID); err != nil {
+		if err := restoreMetadata(ctx, cfg, backupDir, opts.BackupID); err != nil { //nolint:staticcheck // SA4023: restoreMetadata always errors by design (not automated); see its doc comment
 			slog.Warn("metadata restore failed", "error", err)
 		}
 	}
@@ -204,14 +204,14 @@ func restoreBaseBackup(_ context.Context, _ *config.Config, _, _, backupFile str
 		"pg_dump format (nself backup create)", errs.ErrBackupRestoreFailed, backupFile)
 }
 
-func restoreMinio(_ context.Context, _ *config.Config, _, backupID string) error {
+func restoreMinio(_ context.Context, _ *config.Config, _, backupID string) error { //nolint:staticcheck // SA4023: deliberately never returns nil; see comment below
 	// Return an error (not nil) so the caller's slog.Warn reflects reality:
 	// object storage is NOT restored. A silent nil falsely implied success.
 	return fmt.Errorf("%w: minio object-storage restore is not automated; restore the bucket contents manually (backup_id=%s)",
 		errs.ErrBackupRestoreFailed, backupID)
 }
 
-func restoreMetadata(_ context.Context, _ *config.Config, _, backupID string) error {
+func restoreMetadata(_ context.Context, _ *config.Config, _, backupID string) error { //nolint:staticcheck // SA4023: deliberately never returns nil; see comment below
 	// Return an error (not nil) so the caller's slog.Warn reflects reality:
 	// Hasura metadata is NOT restored. A silent nil falsely implied success.
 	return fmt.Errorf("%w: hasura metadata restore is not automated; re-apply metadata manually (backup_id=%s)",

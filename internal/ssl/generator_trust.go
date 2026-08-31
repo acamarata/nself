@@ -84,7 +84,7 @@ func hostsManualNote(hostnames []string) string {
 	sb.WriteString("  sudo nself dns-setup\n\n")
 	sb.WriteString("Or add manually to /etc/hosts:\n")
 	for _, h := range hostnames {
-		sb.WriteString(fmt.Sprintf("  127.0.0.1\t%s\n", h))
+		fmt.Fprintf(&sb, "  127.0.0.1\t%s\n", h)
 	}
 	return sb.String()
 }

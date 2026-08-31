@@ -152,14 +152,11 @@ func TestCheckLicenseCacheOffline_InvalidEntryDenied(t *testing.T) {
 	// Fresh cache, but marked invalid.
 	writeCacheEntryWithAge(t, cacheDir, key, "invalid", 0)
 
-	valid, found := checkLicenseCacheOffline(key, cacheDir)
-	if !found {
-		// An "invalid" entry IS found — it is returned so the caller can see
-		// that the cache says invalid (not just missing).
-		// Accept this as a valid outcome too; the key constraint is valid=false.
-	}
-	// Regardless of found, valid must be false for an "invalid" cached entry.
-	_ = found
+	// An "invalid" entry IS found — it is returned so the caller can see that
+	// the cache says invalid (not just missing) — but `found` isn't asserted
+	// either way here; regardless of found, valid must be false for an
+	// "invalid" cached entry.
+	valid, _ := checkLicenseCacheOffline(key, cacheDir)
 	if valid {
 		t.Fatal("offline grace must not grant access when cached result is 'invalid'")
 	}

@@ -98,7 +98,7 @@ func (t *Table) printRow(values []string) {
 		}
 		// Left-align with 1 space padding on each side
 		b.WriteString(" ")
-		b.WriteString(fmt.Sprintf("%-*s", w-2, val))
+		fmt.Fprintf(&b, "%-*s", w-2, val)
 		b.WriteString(" │")
 	}
 	fmt.Println(b.String())

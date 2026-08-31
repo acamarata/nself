@@ -31,15 +31,15 @@ type CLIError struct {
 // Error implements the error interface with the structured 4-field format.
 func (e *CLIError) Error() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("[%s] %s", e.Code, e.What))
+	fmt.Fprintf(&b, "[%s] %s", e.Code, e.What)
 	if e.Why != "" {
-		b.WriteString(fmt.Sprintf("\n  Why: %s", e.Why))
+		fmt.Fprintf(&b, "\n  Why: %s", e.Why)
 	}
 	if e.Fix != "" {
-		b.WriteString(fmt.Sprintf("\n  Fix: %s", e.Fix))
+		fmt.Fprintf(&b, "\n  Fix: %s", e.Fix)
 	}
 	if e.DocsPath != "" {
-		b.WriteString(fmt.Sprintf("\n  Docs: https://nself.org/docs/%s", e.DocsPath))
+		fmt.Fprintf(&b, "\n  Docs: https://nself.org/docs/%s", e.DocsPath)
 	}
 	return b.String()
 }

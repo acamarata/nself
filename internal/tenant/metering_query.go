@@ -84,7 +84,7 @@ func QueryUsage(ctx context.Context, cfg *config.Config, tenantID, month, format
 	var sb strings.Builder
 	sb.WriteString("tenant_id,day,metric,value\n")
 	for _, r := range results {
-		sb.WriteString(fmt.Sprintf("%s,%s,%s,%d\n", r.TenantID, r.Day, r.Metric, r.Value))
+		fmt.Fprintf(&sb, "%s,%s,%s,%d\n", r.TenantID, r.Day, r.Metric, r.Value)
 	}
 	return strings.TrimSpace(sb.String()), nil
 }
