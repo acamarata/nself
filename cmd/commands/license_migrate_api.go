@@ -97,7 +97,7 @@ func fetchMigrationStatus(ctx context.Context, key string, pingURL string) (*mig
 }
 
 // fetchMigrationInfo is kept for backward compatibility with any callers.
-func fetchMigrationInfo(ctx context.Context, key string, pingURL string) (*migrationInfo, error) {
+func fetchMigrationInfo(ctx context.Context, key string, pingURL string) (*migrationInfo, error) { //nolint:unused // kept: licence-migration path has no entry point; see qa/bugs/declared-but-never-wired-symbols.md
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
@@ -127,7 +127,7 @@ func fetchMigrationInfo(ctx context.Context, key string, pingURL string) (*migra
 	return &info, nil
 }
 
-func productDisplayName(product string) string {
+func productDisplayName(product string) string { //nolint:unused // kept: licence-migration path has no entry point; see qa/bugs/declared-but-never-wired-symbols.md
 	names := map[string]string{
 		"claw":   "ɳClaw ($0.99/mo)",
 		"chat":   "ɳChat ($0.99/mo)",

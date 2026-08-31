@@ -29,7 +29,7 @@ import (
 // file header for the handled/err contract.
 func runDeployBlueGreenCanary(cmd *cobra.Command, target, workdir string, canaryPct int, skipCanary, forceMigration, dryRun, force, jsonOut bool) (handled bool, err error) {
 	bgEnabled := os.Getenv("NSELF_FEATURE_BLUE_GREEN_DEPLOY") == "true"
-	if !((canaryPct > 0 || skipCanary) && bgEnabled) {
+	if (canaryPct <= 0 && !skipCanary) || !bgEnabled {
 		return false, nil
 	}
 	if !jsonOut {

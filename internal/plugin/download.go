@@ -34,7 +34,7 @@ import (
 // (the normal install path) MUST use downloadPluginPackageForTier instead —
 // see license.go's isPaidPluginManifest doc comment for why the name map
 // drifts and the registry fields do not.
-func downloadPlugin(ctx context.Context, name, version, repository string) (string, error) {
+func downloadPlugin(ctx context.Context, name, version, repository string) (string, error) { //nolint:unused // kept: name-only fallback entry point retained deliberately; see qa/bugs/declared-but-never-wired-symbols.md
 	return downloadPluginPackage(ctx, name, version, repository, "")
 }
 

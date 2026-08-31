@@ -36,7 +36,7 @@ import (
 // maxClockSkew is the maximum tolerated difference between the JWT iat and the
 // local clock. This is not the same as the replay window; the exp claim is
 // authoritative for expiry.
-const maxClockSkew = 30 * time.Second
+const maxClockSkew = 30 * time.Second //nolint:unused // kept: plugin JWT iat is parsed but never validated against this tolerance; see qa/bugs/declared-but-never-wired-symbols.md
 
 // jwtHeader is the decoded JWT header.
 type jwtHeader struct {

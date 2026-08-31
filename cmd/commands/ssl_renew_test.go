@@ -18,6 +18,7 @@ package commands
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -78,8 +79,14 @@ func TestInstallRenewedCertIfDue_InstallsWhenRenewed(t *testing.T) {
 		if statErr != nil {
 			t.Fatalf("expected %s to exist: %v", path, statErr)
 		}
-		if perm := info.Mode().Perm(); perm != 0o600 {
-			t.Errorf("%s: got perm %o, want 0600", path, perm)
+		// Windows does not implement Unix permission bits — Go reports 0666
+		// there regardless of what os.WriteFile was given, so this assertion
+		// can only be made where the permission actually exists. Same guard
+		// as internal/sentryapi/client_test.go and the sibling ssl tests.
+		if runtime.GOOS != "windows" {
+			if perm := info.Mode().Perm(); perm != 0o600 {
+				t.Errorf("%s: got perm %o, want 0600", path, perm)
+			}
 		}
 		got, readErr := os.ReadFile(path)
 		if readErr != nil {

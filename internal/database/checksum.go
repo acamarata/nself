@@ -63,7 +63,7 @@ func ensureMigrationsTable(ctx context.Context, cfg *config.Config) error {
 }
 
 // ensurePromotionsTable creates the nself_ops.promotions table if it does not exist.
-func ensurePromotionsTable(ctx context.Context, cfg *config.Config) error {
+func ensurePromotionsTable(ctx context.Context, cfg *config.Config) error { //nolint:unused // kept: nself_ops.promotions is created by nothing and read by nothing; see qa/bugs/declared-but-never-wired-symbols.md
 	if err := ensureOpsSchema(ctx, cfg); err != nil {
 		return err
 	}
