@@ -71,7 +71,7 @@ func (g *Generator) GenerateWithResult(outputDir string) (*GenerateResult, error
 
 	// Build the certificate directory name from BASE_DOMAIN.
 	// Dots become dashes: nself.org -> nself-org, localhost stays localhost.
-	certDirName := domainToDirName(g.cfg.BaseDomain)
+	certDirName := DomainToDirName(g.cfg.BaseDomain)
 	if certDirName == "" {
 		certDirName = "localhost"
 	}

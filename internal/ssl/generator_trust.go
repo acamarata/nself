@@ -89,8 +89,11 @@ func hostsManualNote(hostnames []string) string {
 	return sb.String()
 }
 
-// domainToDirName converts a domain to a directory-safe name by replacing dots with dashes.
-func domainToDirName(domain string) string {
+// DomainToDirName converts a domain to a directory-safe name by replacing dots with dashes.
+// Exported so callers outside this package (cmd/commands' ssl_add.go) can assert
+// their own domain-to-directory conversion agrees with this one instead of
+// duplicating the literal replacement rule, which could silently diverge.
+func DomainToDirName(domain string) string {
 	return strings.ReplaceAll(domain, ".", "-")
 }
 
