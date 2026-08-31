@@ -420,6 +420,21 @@ PASS=$((PASS + 1))
 # before it, assert a state the running stack cannot reach.
 #
 # Exit 1 (a real failure) still fails the step.
+#
+# P6-E11-W2-S4-T23 (2026-08-31): --quick itself is not stale — it is a real,
+# registered flag (cmd/commands/doctor.go) with a regression guard
+# (doctor_test.go: TestDoctorCmd_QuickFlagRegistered). Runs 33086844923 and
+# 33092121374 (2026-08-27) failed here with "Error: unknown flag: --quick",
+# not because the flag was missing from source, but because
+# GOLDEN_PATH_SOURCE defaults to "release" (see the comment above this
+# script's source-selection block) — those runs installed the last published
+# release, which predated the --quick fix landing in a tagged release. That
+# is expected, self-healing behavior of testing "last release" rather than
+# "current source": a later run (33353502333, 2026-08-31) confirms Step 7
+# passes once a release containing the fix ships. It surfaced an unrelated,
+# separate live failure instead (Step 9, nself plugin install ai: checksum
+# mismatch) — out of scope for this ticket (plugin registry/checksum
+# subsystem, not golden-path.sh/doctor.go), filed as a follow-up PCI.
 run_step 7 "nself doctor --quick" \
   bash -c "cd ${PROJECT_DIR} && nself doctor --quick; rc=\$?; [ \$rc -eq 2 ] && exit 0; exit \$rc"
 [ "${STEP_STATUS[7]}" = "fail" ] && { write_report; exit 1; }

@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/nself-org/cli/internal/httptimeout"
 )
 
 const (
@@ -159,7 +161,7 @@ func downloadAndVerify(ctx context.Context, url, dst, want string) error {
 		return fmt.Errorf("embedded/pglite: build request: %w", err)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Installer.Do(req)
 	if err != nil {
 		return fmt.Errorf("embedded/pglite: download %s: %w", url, err)
 	}

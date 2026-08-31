@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nself-org/cli/internal/httptimeout"
 	"github.com/nself-org/cli/internal/ui"
 )
 
@@ -76,7 +77,7 @@ func emitEvent(ev completionEvent) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Default.Do(req)
 	if err != nil {
 		ui.Warn(fmt.Sprintf("[ci-serve] event sink %s: %v", sink, err))
 		return

@@ -10,10 +10,30 @@ linters:
     - govet
     - unused
     - staticcheck
+    - forbidigo
+  settings:
+    forbidigo:
+      forbid:
+        # siege-security-http-defaultclient-no-timeout (reopened 2026-08-31,
+        # Finding #15): http.DefaultClient/http.Get/http.Post/http.Head have a
+        # zero Timeout, so a stalled remote hangs the CLI indefinitely instead
+        # of erroring. Production code must use a scoped client from
+        # internal/httptimeout instead. This rule is the actual enforcement
+        # mechanism the internal/httptimeout package doc comment already
+        # claimed existed but did not — that gap is why the prior 4 sites went
+        # unnoticed after an earlier "0 residual sites" closure.
+        - pattern: '^http\.DefaultClient$'
+          msg: "use a scoped client from internal/httptimeout (e.g. httptimeout.Default) instead of http.DefaultClient — it has no timeout and can hang the CLI indefinitely"
+        - pattern: '^http\.(Get|Post|PostForm|Head)$'
+          msg: "use a scoped client from internal/httptimeout instead of the http.Get/Post/PostForm/Head package-level helpers — they use http.DefaultClient internally and have no timeout"
+      analyze-types: true
   exclusions:
     paths:
       - vendor
       - testdata
+      - _test\.go$
+      - ^test/e2e/
+      - ^internal/httptimeout/
 formatters:
   enable:
     - gofmt

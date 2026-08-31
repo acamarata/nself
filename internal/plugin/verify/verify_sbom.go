@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/nself-org/cli/internal/httptimeout"
 )
 
 // SBOMCheckOptions controls SBOM verification behavior.
@@ -41,7 +43,7 @@ func VerifySBOM(ctx context.Context, pluginName, version string, opts SBOMCheckO
 	}
 	req.Header.Set("User-Agent", "nself-cli")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httptimeout.Default.Do(req)
 	if err != nil {
 		return fmt.Errorf("sbom: download from %s: %w", url, err)
 	}

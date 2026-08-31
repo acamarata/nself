@@ -63,7 +63,7 @@ func SendInstallEvent() {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("User-Agent", "nself-cli/install-counter")
 
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			if os.Getenv("NSELF_TELEMETRY_DEBUG") == "1" {
 				fmt.Fprintf(os.Stderr, "[telemetry DEBUG] SendInstallEvent failed: %v\n", err)

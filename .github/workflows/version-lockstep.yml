@@ -182,6 +182,16 @@ jobs:
           check "admin/Dockerfile (LABEL image.version)" "${V}" 1
 
           # 11. homebrew-nself/Formula/nself.rb (warn-only)
+          #
+          # Regression guard (P6-E11-W2-S1-T7, added after cli#230/admin#75):
+          # a plain mismatch here used to fall through to the generic
+          # "expected X, got Y (warn-only)" message, which is exactly the
+          # unnamed-file, no-fix-command shape that caused the original
+          # Formula/nself.rb-stale-after-tag incident to be misdiagnosed as a
+          # cross-repo deadlock instead of a one-line bump. When this is a
+          # tag push (i.e. cli already has a published vTARGET release) and
+          # the Formula version disagrees, emit a distinct, actionable
+          # message naming the stale file and the exact fix command instead.
           if [ -f "${NSELF_HB_ROOT}/Formula/nself.rb" ]; then
             V=$(grep -E '^\s+version\s+"' "${NSELF_HB_ROOT}/Formula/nself.rb" \
                   | grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' | tr -d '"' | head -1)
@@ -189,7 +199,14 @@ jobs:
               V=$(grep -E 'url.*v[0-9]+\.[0-9]+\.[0-9]+' "${NSELF_HB_ROOT}/Formula/nself.rb" \
                     | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | tr -d 'v' | head -1)
             fi
-            check "homebrew-nself/Formula/nself.rb" "${V}" 0
+            if [ -n "${V}" ] && [ "${V}" != "${TARGET}" ] \
+                && printf '%s' "${GITHUB_REF}" | grep -q '^refs/tags/v'; then
+              printf '::warning::homebrew-nself/Formula/nself.rb is pinned to %s but cli is tagged v%s — this is NOT a cross-repo deadlock, run scripts/bump-version.sh %s from homebrew-nself and re-run this check\n' \
+                "${V}" "${TARGET}" "${TARGET}"
+              WARNINGS=$((WARNINGS + 1))
+            else
+              check "homebrew-nself/Formula/nself.rb" "${V}" 0
+            fi
           else
             printf '  SKIP  homebrew-nself/Formula/nself.rb (checkout not available)\n'
           fi
