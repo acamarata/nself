@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -178,69 +177,5 @@ func runSSLStatus(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("one or more certificates are expired")
 	}
 
-	return nil
-}
-
-// runSSLRenew implements `nself ssl renew [domain]`.
-func runSSLRenew(cmd *cobra.Command, args []string) error {
-	ui.CommandHeader("nself ssl renew", "Reload nginx and optionally renew certificates")
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		ui.Error("Failed to determine working directory")
-		return fmt.Errorf("getting working directory: %w", err)
-	}
-
-	workdir, err := config.FindNSelfRoot(cwd)
-	if err != nil {
-		return fmt.Errorf("no nself project found in current directory or parents: run 'nself init' to create a project")
-	}
-
-	// 1. Reload nginx via docker compose exec.
-	fmt.Println("Reloading nginx...")
-	reloadCmd := exec.Command("docker", "compose", "exec", "nginx", "nginx", "-s", "reload")
-	reloadCmd.Dir = workdir
-	reloadCmd.Stdout = os.Stdout
-	reloadCmd.Stderr = os.Stderr
-	if err := reloadCmd.Run(); err != nil {
-		// Non-fatal: nginx container may not be running.
-		fmt.Fprintf(os.Stderr, "Warning: nginx reload reported an error (may not be running): %v\n", err)
-	} else {
-		fmt.Println("  nginx reloaded.")
-	}
-
-	// 2. certbot if available and domain provided.
-	if len(args) > 0 {
-		domain := args[0]
-		if certbotPath, lookErr := exec.LookPath("certbot"); lookErr == nil {
-			fmt.Printf("Running certbot renew for %s...\n", domain)
-			certbotCmd := exec.Command(certbotPath, "renew", "--cert-name", domain)
-			certbotCmd.Stdout = os.Stdout
-			certbotCmd.Stderr = os.Stderr
-			if err := certbotCmd.Run(); err != nil {
-				return fmt.Errorf("certbot renew failed: %w", err)
-			}
-		} else {
-			fmt.Println("certbot not found — skipping ACME renewal (nginx reloaded only).")
-		}
-	}
-
-	// 3. Show updated certificate status for the provided domain.
-	if len(args) > 0 {
-		domain := args[0]
-		fmt.Printf("\nCertificate status for %s:\n", domain)
-		cert, tlsErr := checkDomainTLS(domain, 10*time.Second)
-		if tlsErr != nil {
-			fmt.Printf("  Could not connect to %s: %v\n", domain, tlsErr)
-		} else {
-			now := time.Now()
-			daysRemaining := int(cert.NotAfter.Sub(now).Hours()) / 24
-			issuer := certIssuer(cert)
-			fmt.Printf("  Issuer: %s\n", issuer)
-			fmt.Printf("  Expiry: %s (%d days remaining)\n", cert.NotAfter.Format("2006-01-02"), daysRemaining)
-		}
-	}
-
-	fmt.Println("SSL renew complete.")
 	return nil
 }
