@@ -121,3 +121,49 @@ func TestCriticalTables_Stable(t *testing.T) {
 		}
 	}
 }
+
+// TestSmokeCheck_ZeroRowsFails is the inversion proof for the hollow-gate bug:
+// a restore that reports plenty of tables but zero rows across all of them
+// must FAIL the drill. Proven live on staging 2026-08-31 — a real drill
+// returned tables_checked=107, rows_observed=0, success=true — because the
+// old smoke gate only ever compared TablesVerified against len(CriticalTables)
+// and never looked at RowsVerified at all. Against the code before this fix,
+// this case reports err == nil (the bug); against the fix, it must fail.
+func TestSmokeCheck_ZeroRowsFails(t *testing.T) {
+	sub := RestoreDrillResult{
+		Success:        true,
+		TablesVerified: 107, // well over len(CriticalTables) — the old gate's only check
+		RowsVerified:   0,   // fresh-init / nothing-really-restored signal
+	}
+	if err := smokeCheck(sub); err == nil {
+		t.Fatalf("smokeCheck: want error for 0 rows observed across %d tables, got nil (hollow gate)", sub.TablesVerified)
+	}
+}
+
+// TestSmokeCheck_RealDataPasses: a restore with real rows in at least one
+// table, and enough tables present, must pass. Guards against overcorrecting
+// the zero-rows fix into a check that fails good restores too.
+func TestSmokeCheck_RealDataPasses(t *testing.T) {
+	sub := RestoreDrillResult{
+		Success:        true,
+		TablesVerified: 107,
+		RowsVerified:   4213,
+	}
+	if err := smokeCheck(sub); err != nil {
+		t.Errorf("smokeCheck: want nil for a real restore with rows observed, got %v", err)
+	}
+}
+
+// TestSmokeCheck_TooFewTablesFails preserves the pre-existing table-count
+// floor: fewer than len(CriticalTables) tables found still fails, even with a
+// nonzero row count (e.g. one giant table).
+func TestSmokeCheck_TooFewTablesFails(t *testing.T) {
+	sub := RestoreDrillResult{
+		Success:        true,
+		TablesVerified: len(CriticalTables) - 1,
+		RowsVerified:   999,
+	}
+	if err := smokeCheck(sub); err == nil {
+		t.Fatalf("smokeCheck: want error for too few tables verified, got nil")
+	}
+}

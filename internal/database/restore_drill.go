@@ -15,14 +15,20 @@ import (
 
 // RestoreDrillResult describes the outcome of a restore test.
 type RestoreDrillResult struct {
-	StartedAt      time.Time     `json:"started_at"`
-	CompletedAt    time.Time     `json:"completed_at"`
-	BackupFile     string        `json:"backup_file"`
-	Success        bool          `json:"success"`
-	TablesVerified int           `json:"tables_verified"`
-	RowsVerified   int64         `json:"rows_verified"`
-	ErrorMessage   string        `json:"error_message,omitempty"`
-	Duration       time.Duration `json:"duration_ns"`
+	StartedAt      time.Time `json:"started_at"`
+	CompletedAt    time.Time `json:"completed_at"`
+	BackupFile     string    `json:"backup_file"`
+	Success        bool      `json:"success"`
+	TablesVerified int       `json:"tables_verified"`
+	RowsVerified   int64     `json:"rows_verified"`
+	// MissingCriticalTables lists the entries of CriticalTables that were not
+	// found (by name, any schema) in the restored database. Informational —
+	// see the naming-mismatch note in drill.go: several drilled environments
+	// do not use the np_ prefix, so this is reported rather than failing the
+	// drill outright.
+	MissingCriticalTables []string      `json:"missing_critical_tables,omitempty"`
+	ErrorMessage          string        `json:"error_message,omitempty"`
+	Duration              time.Duration `json:"duration_ns"`
 }
 
 // RestoreDrill runs a restore drill using the most recent backup.
@@ -90,6 +96,20 @@ func RestoreDrill(ctx context.Context, cfg *config.Config, backupFile string) (R
 	result.TablesVerified = tables
 	result.RowsVerified = rows
 
+	// Which of the canonical CriticalTables actually exist by name. Query
+	// while the scratch DB is still alive — the caller in drill.go cannot
+	// requery after this function drops it below.
+	missing, missErr := verifyCriticalTables(ctx, cfg, drillDB)
+	if missErr != nil {
+		_ = runSQLOnDB(ctx, cfg, "postgres", "DROP DATABASE IF EXISTS "+quotedDrillDB)
+		result.ErrorMessage = missErr.Error()
+		result.CompletedAt = time.Now()
+		result.Duration = result.CompletedAt.Sub(result.StartedAt)
+		_ = RecordDrillResult(".", result)
+		return result, fmt.Errorf("verify critical tables: %w", missErr)
+	}
+	result.MissingCriticalTables = missing
+
 	// Drop the drill database.
 	if err := runSQLOnDB(ctx, cfg, "postgres", "DROP DATABASE IF EXISTS "+quotedDrillDB); err != nil {
 		return result, fmt.Errorf("drop drill database %s: %w", drillDB, err)
@@ -123,47 +143,35 @@ func VerifyRestoredDatabase(ctx context.Context, cfg *config.Config, drillDB str
 		}
 	}
 
-	// Get up to 10 user tables to sample row counts from.
-	tableListSQL := `SELECT table_schema || '.' || table_name FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema') LIMIT 10`
-	tableListOut, err := querySQL(ctx, cfg, drillDB, tableListSQL)
+	// Exact total row count across ALL user tables, in one round trip.
+	//
+	// The prior approach sampled up to 10 tables (LIMIT 10, no ORDER BY) and
+	// summed their row counts. On a schema with many tables that sample could
+	// land entirely on empty ones and report zero rows for a perfectly good
+	// restore — a false fail. It could just as easily miss the tables that
+	// actually hold data and report zero for the opposite reason: a false
+	// pass. Neither is acceptable once the caller (drill.go) starts asserting
+	// on this number.
+	//
+	// query_to_xml lets Postgres build and run one dynamic COUNT(*) per table
+	// server-side and return all the results in a single query. format('%I.%I', ...)
+	// is Postgres's own identifier quoting (SEC-SQL-01: table_schema/table_name
+	// here are DB-sourced and must never be interpolated by the Go side without
+	// it — %I does that quoting inside the server, so no client-side
+	// SanitizeIdentifier call is needed for this query).
+	rowTotalSQL := `SELECT COALESCE(SUM((xpath('/row/c/text()', ` +
+		`query_to_xml(format('SELECT count(*) AS c FROM %I.%I', table_schema, table_name), false, true, '')` +
+		`))[1]::text::bigint), 0) FROM information_schema.tables ` +
+		`WHERE table_schema NOT IN ('pg_catalog','information_schema')`
+	rowOut, err := querySQL(ctx, cfg, drillDB, rowTotalSQL)
 	if err != nil {
-		return tableCount, 0, fmt.Errorf("list sample tables in %s: %w", drillDB, err)
+		return tableCount, 0, fmt.Errorf("count total rows in %s: %w", drillDB, err)
 	}
-
+	rowOut = strings.TrimSpace(rowOut)
 	var totalRows int64
-	for _, tableLine := range strings.Split(tableListOut, "\n") {
-		tableLine = strings.TrimSpace(tableLine)
-		if tableLine == "" {
-			continue
-		}
-		// tableLine is "schema.table_name" returned by information_schema.
-		// Sanitize each component individually to produce a safe qualified identifier.
-		// SEC-SQL-01: never interpolate DB-sourced identifiers without quoting.
-		parts := strings.SplitN(tableLine, ".", 2)
-		var qualifiedTable string
-		if len(parts) == 2 {
-			quotedSchema, schErr := SanitizeIdentifier(parts[0])
-			quotedTable, tblErr := SanitizeIdentifier(parts[1])
-			if schErr != nil || tblErr != nil {
-				continue // skip unquotable identifiers
-			}
-			qualifiedTable = quotedSchema + "." + quotedTable
-		} else {
-			quoted, qErr := SanitizeIdentifier(tableLine)
-			if qErr != nil {
-				continue
-			}
-			qualifiedTable = quoted
-		}
-		countSQL := "SELECT count(*) FROM " + qualifiedTable
-		rowOut, rowErr := querySQL(ctx, cfg, drillDB, countSQL)
-		if rowErr != nil {
-			continue
-		}
-		rowOut = strings.TrimSpace(rowOut)
-		var n int64
-		if _, scanErr := fmt.Sscanf(rowOut, "%d", &n); scanErr == nil {
-			totalRows += n
+	if rowOut != "" {
+		if _, scanErr := fmt.Sscanf(rowOut, "%d", &totalRows); scanErr != nil {
+			return tableCount, 0, fmt.Errorf("parse row total %q: %w", rowOut, scanErr)
 		}
 	}
 
@@ -174,6 +182,43 @@ func VerifyRestoredDatabase(ctx context.Context, cfg *config.Config, drillDB str
 	}
 
 	return tableCount, totalRows, nil
+}
+
+// verifyCriticalTables reports which entries of CriticalTables (drill.go) are
+// missing by name, in any schema, from drillDB. CriticalTables are
+// compile-time-constant literals defined in this package, not DB-sourced
+// input, so they are safe to place directly into a SQL literal list here —
+// SEC-SQL-01's "never interpolate DB-sourced identifiers without quoting"
+// concerns table_schema/table_name values read back FROM the database
+// (handled via format('%I.%I') in VerifyRestoredDatabase above), not our own
+// hardcoded constants.
+func verifyCriticalTables(ctx context.Context, cfg *config.Config, drillDB string) ([]string, error) {
+	literals := make([]string, len(CriticalTables))
+	for i, name := range CriticalTables {
+		literals[i] = "'" + strings.ReplaceAll(name, "'", "''") + "'"
+	}
+	sqlText := fmt.Sprintf(
+		`SELECT DISTINCT table_name FROM information_schema.tables WHERE table_name = ANY(ARRAY[%s])`,
+		strings.Join(literals, ","),
+	)
+	out, err := querySQL(ctx, cfg, drillDB, sqlText)
+	if err != nil {
+		return nil, fmt.Errorf("query critical tables in %s: %w", drillDB, err)
+	}
+	present := make(map[string]bool, len(CriticalTables))
+	for _, line := range strings.Split(out, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			present[line] = true
+		}
+	}
+	var missing []string
+	for _, name := range CriticalTables {
+		if !present[name] {
+			missing = append(missing, name)
+		}
+	}
+	return missing, nil
 }
 
 // RecordDrillResult appends the drill result to .nself/restore-drills.log

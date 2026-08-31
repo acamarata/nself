@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/doctor"
 	"github.com/nself-org/cli/internal/plugin"
 	"github.com/nself-org/cli/internal/ui"
@@ -118,6 +119,20 @@ Exit codes:
 		defer cancel()
 
 		cwd, _ := os.Getwd()
+		// `doctor` is intentionally exempt from PersistentPreRunE's monorepo
+		// chdir (see isSourceSafeCommand in root_source_guard.go — doctor must
+		// stay runnable from inside the nself source repo too). But that means
+		// checks below that read <projectDir>/.nself/* (e.g. OPS-DRILL-01) see
+		// the invocation-time directory, while `nself backup drill` — which IS
+		// redirected by that chdir — writes its log under backend/.nself/.
+		// From a monorepo root the two therefore disagree, and OPS-DRILL-01
+		// reports "no drill recorded" even right after a real one ran. Detect
+		// the same layout here, scoped to doctor's own projectDir variable, so
+		// its reads land where backup's writes did without re-enabling the
+		// source-repo guard doctor is deliberately exempt from.
+		if backendRoot := config.DetectMonorepoRoot(cwd); backendRoot != "" {
+			cwd = backendRoot
+		}
 
 		// Deep mode: run all 12 subsystem checks via doctor package
 		if deep {
