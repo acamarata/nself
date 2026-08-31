@@ -47,7 +47,7 @@ func runConfigList(cmd *cobra.Command, args []string) error {
 	for _, k := range known {
 		val, ok := pairs[k]
 		source := filepath.Base(envFile)
-		displayVal := val
+		var displayVal string
 		if !ok || val == "" {
 			displayVal = config.DefaultFor(k)
 			if displayVal != "" {

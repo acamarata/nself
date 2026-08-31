@@ -192,7 +192,7 @@ func runStreamPipeline(ctx context.Context, cfg *config.Config, pgURL, destinati
 		}
 	}
 
-	full := destination
+	var full string
 	if !strings.HasSuffix(destination, "/") {
 		full = destination + "/" + key
 	} else {

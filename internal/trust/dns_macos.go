@@ -91,11 +91,9 @@ func SetupDNSDarwin(cfg TrustConfig) (dnsAlreadyDone bool, resolverAlreadyDone b
 		// Restart dnsmasq after writing the resolver so it is in sync regardless of
 		// whether the conf was already configured. Errors are non-fatal.
 		_ = restartDnsmasq()
-		if err = flushDNSCache(); err != nil {
-			// Non-fatal: warn but don't fail.
-			_ = err
-			err = nil
-		}
+		// Non-fatal: a stale DNS cache resolves itself; the caller returns nil
+		// either way, so the error is deliberately dropped rather than stored.
+		_ = flushDNSCache()
 	}
 
 	return dnsAlreadyDone, resolverAlreadyDone, nil
