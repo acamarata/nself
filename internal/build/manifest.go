@@ -27,8 +27,6 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/nself-org/cli/internal/bundle"
-	"github.com/nself-org/cli/internal/config"
-	"github.com/nself-org/cli/internal/plugin"
 )
 
 // manifestFilenames are the accepted names for the project manifest, checked
@@ -137,6 +135,24 @@ func (m *ProjectManifest) DeclaredPlugins() []string {
 	if m.Bundle != "" {
 		bundles = append(bundles, m.Bundle)
 	}
+	if len(bundles) > 0 {
+		// P6-E4-W3-S3-T10 CI regression: bundle.Load() is only wired into
+		// `nself bundle`'s PersistentPreRunE. Every OTHER command that
+		// reaches this expansion (build/start/restart/stop/ops/status, via
+		// internal/build's manifest loader) needs the resolver populated
+		// too, or a manifest's `bundles:` entries silently expand to
+		// nothing — exactly the silent-drop this file's own PCI charter
+		// forbids. EnsureLoaded is idempotent: a no-op once any caller in
+		// this process has already loaded the registry.
+		if err := bundle.EnsureLoaded(context.Background()); err != nil {
+			// Never silently drop: loudly report and continue with
+			// whatever plugins are already flat-declared. A manifest that
+			// ONLY uses bundles: with no cache and no network will end up
+			// with zero plugins here — surfaced, not hidden.
+			slog.Warn("could not resolve bundle catalog — declared bundle(s) will NOT be expanded",
+				"bundles", bundles, "err", err)
+		}
+	}
 	for _, slug := range bundles {
 		b, ok := bundle.Get(slug)
 		if !ok {
@@ -186,107 +202,3 @@ func autoInstallEnabled() bool {
 // autoInstallTimeout bounds a single best-effort plugin auto-install so an
 // unreachable registry can never hang `nself build`.
 const autoInstallTimeout = 60 * time.Second
-
-// ResolveDeclaredPlugins guarantees every plugin declared in nself.yaml is
-// wired into the build, in three steps per declared plugin:
-//
-//  1. Already installed in pluginDir → satisfied (its compose fragment, if
-//     any, is picked up by DiscoverPluginComposeFiles).
-//  2. Provided by a core compose service (auth, storage) → satisfied.
-//  3. Otherwise attempt a best-effort auto-install from the registry, then
-//     re-check. Still absent → reported in missing.
-//
-// Returns the list of declared plugins that could not be wired. Callers MUST
-// surface missing plugins to the user (build warning + BuildResult) — a
-// declared plugin is never silently dropped.
-func ResolveDeclaredPlugins(ctx context.Context, cfg *config.Config, workdir, pluginDir string, composeServices []string) (missing []string) {
-	manifest, err := LoadProjectManifest(workdir)
-	if err != nil {
-		slog.Warn("could not parse project manifest — declared plugins not resolved", "err", err)
-		return nil
-	}
-	declared := manifest.DeclaredPlugins()
-	if len(declared) == 0 {
-		return nil
-	}
-
-	serviceSet := make(map[string]bool, len(composeServices))
-	for _, s := range composeServices {
-		serviceSet[s] = true
-	}
-
-	for _, name := range declared {
-		if pluginInstalled(pluginDir, name) {
-			continue
-		}
-		if satisfiedByCoreService(name, serviceSet) {
-			continue
-		}
-		if autoInstallEnabled() {
-			installCtx, cancel := context.WithTimeout(ctx, autoInstallTimeout)
-			err := plugin.Install(installCtx, cfg, name, pluginDir)
-			cancel()
-			if err == nil && pluginInstalled(pluginDir, name) {
-				slog.Info("auto-installed declared plugin", "plugin", name, "source", "nself.yaml")
-				continue
-			}
-			slog.Warn("declared plugin auto-install failed", "plugin", name, "err", err)
-		}
-		missing = append(missing, name)
-	}
-
-	return missing
-}
-
-// pluginInstalled reports whether the named plugin has an install directory
-// (with at least a plugin.json or compose fragment) under pluginDir.
-func pluginInstalled(pluginDir, name string) bool {
-	dir := filepath.Join(pluginDir, name)
-	info, err := os.Stat(dir)
-	if err != nil || !info.IsDir() {
-		return false
-	}
-	// A directory with a manifest or compose fragment counts as installed.
-	for _, f := range []string{"plugin.json", pluginComposeFilename} {
-		if _, err := os.Stat(filepath.Join(dir, f)); err == nil {
-			return true
-		}
-	}
-	return false
-}
-
-// satisfiedByCoreService reports whether a declared plugin name is provided
-// by a generated core compose service instead of a plugin container.
-func satisfiedByCoreService(name string, serviceSet map[string]bool) bool {
-	if serviceSet[name] {
-		return true
-	}
-	for _, alias := range coreServiceAliases[name] {
-		if serviceSet[alias] {
-			return true
-		}
-	}
-	return false
-}
-
-// expectedCoreServices returns the compose service names the generator will
-// emit for core/optional services, derived from config. Used by
-// ResolveDeclaredPlugins to recognise declared names (auth, storage) that a
-// core service satisfies — the compose YAML is generated after plugin
-// resolution, so the names are derived rather than parsed.
-func expectedCoreServices(cfg *config.Config) []string {
-	services := []string{"postgres", "hasura", "auth", "nginx"}
-	if cfg.Minio.Enabled {
-		services = append(services, "minio")
-	}
-	if cfg.Redis.Enabled {
-		services = append(services, "redis")
-	}
-	if cfg.Functions.Enabled {
-		services = append(services, "functions")
-	}
-	if cfg.Mailpit.Enabled {
-		services = append(services, "mailpit")
-	}
-	return services
-}
