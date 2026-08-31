@@ -198,7 +198,7 @@ func health(ctx context.Context, name string, port int) (bool, error) {
 	if err != nil {
 		return false, nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	return resp.StatusCode == http.StatusOK, nil
 }

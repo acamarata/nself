@@ -79,7 +79,7 @@ func checkHSTSHeader(ctx context.Context) CheckResult {
 		return CheckResult{Section: "security", Name: checkName, Status: "warn",
 			Message: fmt.Sprintf("unreachable: %v", err)}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	hsts := resp.Header.Get("Strict-Transport-Security")
 	if hsts == "" {
@@ -130,7 +130,7 @@ func checkHttpOnlyCookies(ctx context.Context) CheckResult {
 		return CheckResult{Section: "security", Name: checkName, Status: "warn",
 			Message: fmt.Sprintf("unreachable: %v", err)}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	cookies := resp.Cookies()
 	if len(cookies) == 0 {

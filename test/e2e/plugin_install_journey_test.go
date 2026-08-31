@@ -37,13 +37,13 @@ func pluginPingServer(t *testing.T, tier string, allowedPlugins []string) *httpt
 		case "/license/validate":
 			if tier == "" {
 				// No license — invalid.
-				json.NewEncoder(w).Encode(map[string]interface{}{
+				_ = json.NewEncoder(w).Encode(map[string]interface{}{
 					"valid":  false,
 					"reason": "no_license",
 				})
 				return
 			}
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"valid":      true,
 				"tier":       tier,
 				"plugins":    allowedPlugins,
@@ -54,7 +54,7 @@ func pluginPingServer(t *testing.T, tier string, allowedPlugins []string) *httpt
 			pluginName := r.URL.Query().Get("name")
 			if !allowedSet[pluginName] {
 				w.WriteHeader(http.StatusForbidden)
-				json.NewEncoder(w).Encode(map[string]string{
+				_ = json.NewEncoder(w).Encode(map[string]string{
 					"error":  "not_in_tier",
 					"plugin": pluginName,
 				})
@@ -62,7 +62,7 @@ func pluginPingServer(t *testing.T, tier string, allowedPlugins []string) *httpt
 			}
 			// Return a minimal plugin tarball stub (just the JSON header).
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]string{"plugin": pluginName, "status": "download_ok"})
+			_ = json.NewEncoder(w).Encode(map[string]string{"plugin": pluginName, "status": "download_ok"})
 
 		default:
 			http.NotFound(w, r)
@@ -103,7 +103,7 @@ func TestPluginInstallJourney_ProPluginWithValidLicense(t *testing.T) {
 	if err != nil {
 		t.Fatalf("plugin download request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("plugin download for ai: status %d, want 200", resp.StatusCode)
@@ -159,7 +159,7 @@ func TestPluginInstallJourney_PluginNotInTier(t *testing.T) {
 	if err != nil {
 		t.Fatalf("plugin download request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusForbidden {
 		t.Errorf("plugin not in tier: status %d, want 403", resp.StatusCode)

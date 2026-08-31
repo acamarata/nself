@@ -50,7 +50,7 @@ func runJob(job ciJob, binaryPath string, cfg ServeConfig) {
 		})
 		return
 	}
-	defer os.RemoveAll(workdir) // always clean up
+	defer func() { _ = os.RemoveAll(workdir) }()
 
 	// Run gate inside Docker container with resource limits.
 	passed, summary, runErr := runGateInDocker(binaryPath, workdir, cfg)

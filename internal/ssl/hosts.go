@@ -146,7 +146,7 @@ func readHostsFile(path string) ([]string, error) {
 		}
 		return nil, fmt.Errorf("opening %s: %w", path, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var lines []string
 	scanner := bufio.NewScanner(f)

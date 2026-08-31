@@ -106,7 +106,7 @@ func InstallFromURL(ctx context.Context, cfg *config.Config, sourceURL string, p
 	if err != nil {
 		return fmt.Errorf("downloading third-party plugin from %s: %w", u.Host, err)
 	}
-	defer os.Remove(archivePath)
+	defer func() { _ = os.Remove(archivePath) }()
 
 	// Checksum policy for unofficial sources: verify ONLY when the caller
 	// supplied an expected value (out-of-band, e.g. --checksum). Checked
@@ -130,7 +130,7 @@ func InstallFromURL(ctx context.Context, cfg *config.Config, sourceURL string, p
 	if err != nil {
 		return fmt.Errorf("creating staging directory: %w", err)
 	}
-	defer os.RemoveAll(stagingDir)
+	defer func() { _ = os.RemoveAll(stagingDir) }()
 
 	if err := extractTarGz(archivePath, stagingDir); err != nil {
 		return fmt.Errorf("extracting third-party plugin archive from %s: %w", u.Host, err)

@@ -38,7 +38,7 @@ func probePluginHTTP(client *http.Client, pluginName string, port int) CheckResu
 				FixCmd:  fmt.Sprintf("nself start --plugin %s", pluginName),
 			}
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
 			return CheckResult{
 				Section: "plugins",

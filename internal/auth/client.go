@@ -104,7 +104,7 @@ func DeviceAuthorize(ctx context.Context) (*DeviceCodeResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("contacting auth server: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return nil, parseAPIError(resp)
@@ -134,7 +134,7 @@ func PollToken(ctx context.Context, deviceCode string) (*TokenResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("polling token: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// authorization_pending → user hasn't clicked "Authorize" yet
 	if resp.StatusCode == http.StatusAccepted {
@@ -166,7 +166,7 @@ func RefreshToken(ctx context.Context, accessToken string) (*TokenResponse, erro
 	if err != nil {
 		return nil, fmt.Errorf("refreshing token: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, parseAPIError(resp)
@@ -197,7 +197,7 @@ func RevokeSession(ctx context.Context, accessToken string, all bool) error {
 	if err != nil {
 		return fmt.Errorf("revoking session: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return parseAPIError(resp)
@@ -220,7 +220,7 @@ func GetSession(ctx context.Context, accessToken string) (*AccountInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getting session: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return nil, ErrNotLoggedIn
@@ -252,7 +252,7 @@ func GetLicenses(ctx context.Context, accessToken string) ([]LicenseInfo, error)
 	if err != nil {
 		return nil, fmt.Errorf("getting licenses: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, parseAPIError(resp)

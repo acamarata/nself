@@ -95,7 +95,7 @@ func fetchMarketplace(ctx context.Context, baseURL string, params url.Values) (*
 	if err != nil {
 		return nil, fmt.Errorf("fetching marketplace: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("marketplace API returned status %d", resp.StatusCode)

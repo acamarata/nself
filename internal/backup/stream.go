@@ -151,7 +151,7 @@ func runStreamPipeline(ctx context.Context, cfg *config.Config, pgURL, destinati
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		defer pgW.Close()
+		defer func() { _ = pgW.Close() }()
 		if err := runPgDump(ctx, cfg, pgURL, pgW); err != nil {
 			cancel()
 			errc <- fmt.Errorf("pg_dump: %w", err)
@@ -163,7 +163,7 @@ func runStreamPipeline(ctx context.Context, cfg *config.Config, pgURL, destinati
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			defer encW.Close()
+			defer func() { _ = encW.Close() }()
 			if err := ageEncryptStream(ctx, pgR, encW, recipients); err != nil {
 				cancel()
 				pgR.CloseWithError(err)
@@ -176,7 +176,7 @@ func runStreamPipeline(ctx context.Context, cfg *config.Config, pgURL, destinati
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		defer uploadReader.Close()
+		defer func() { _ = uploadReader.Close() }()
 		if err := rcloneRcat(ctx, uploadReader, destination, key); err != nil {
 			cancel()
 			errc <- fmt.Errorf("rclone upload: %w", err)

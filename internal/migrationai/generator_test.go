@@ -235,7 +235,7 @@ func TestGenerator_Generate_HappyPath(t *testing.T) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockResp)
+		_ = json.NewEncoder(w).Encode(mockResp)
 	}))
 	defer srv.Close()
 
@@ -274,7 +274,7 @@ func TestGenerator_Generate_LowConfidence(t *testing.T) {
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockResp)
+		_ = json.NewEncoder(w).Encode(mockResp)
 	}))
 	defer srv.Close()
 

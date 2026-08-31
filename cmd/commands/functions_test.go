@@ -22,8 +22,8 @@ func TestFunctionsDeploy_CopiesFiles(t *testing.T) {
 
 	// Change into project dir so copyFile resolves correctly.
 	origDir, _ := os.Getwd()
-	t.Cleanup(func() { os.Chdir(origDir) })
-	os.Chdir(projectDir)
+	t.Cleanup(func() { _ = os.Chdir(origDir) })
+	_ = os.Chdir(projectDir)
 
 	destDir := filepath.Join(projectDir, "functions", "hello")
 	if err := os.MkdirAll(destDir, 0750); err != nil {
@@ -56,7 +56,7 @@ func TestFunctionsList_ScansDirectory(t *testing.T) {
 	}
 	// Create a non-directory entry — should be ignored.
 	f := filepath.Join(projectDir, "functions", "README.md")
-	os.WriteFile(f, []byte("docs"), 0640)
+	_ = os.WriteFile(f, []byte("docs"), 0640)
 
 	entries, err := os.ReadDir(filepath.Join(projectDir, "functions"))
 	if err != nil {

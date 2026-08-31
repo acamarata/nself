@@ -58,8 +58,8 @@ func TestIsEnabledDefault(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
 	t.Setenv("USERPROFILE", tmpHome)
-	os.Unsetenv("NSELF_TELEMETRY")
-	os.Unsetenv("NSELF_TELEMETRY_OPT_OUT")
+	_ = os.Unsetenv("NSELF_TELEMETRY")
+	_ = os.Unsetenv("NSELF_TELEMETRY_OPT_OUT")
 
 	if !IsEnabled() {
 		t.Error("expected IsEnabled=true by default (opt-out model)")
@@ -95,7 +95,7 @@ func TestIsEnabledLegacyOptOut(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
 	t.Setenv("USERPROFILE", tmpHome)
-	os.Unsetenv("NSELF_TELEMETRY")
+	_ = os.Unsetenv("NSELF_TELEMETRY")
 	t.Setenv("NSELF_TELEMETRY_OPT_OUT", "1")
 
 	if IsEnabled() {
@@ -108,8 +108,8 @@ func TestIsEnabledStatefile(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
 	t.Setenv("USERPROFILE", tmpHome)
-	os.Unsetenv("NSELF_TELEMETRY")
-	os.Unsetenv("NSELF_TELEMETRY_OPT_OUT")
+	_ = os.Unsetenv("NSELF_TELEMETRY")
+	_ = os.Unsetenv("NSELF_TELEMETRY_OPT_OUT")
 
 	path := filepath.Join(tmpHome, telemetryStateFile)
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
@@ -159,8 +159,8 @@ func TestWriteStatefile(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
 	t.Setenv("USERPROFILE", tmpHome)
-	os.Unsetenv("NSELF_TELEMETRY")
-	os.Unsetenv("NSELF_TELEMETRY_OPT_OUT")
+	_ = os.Unsetenv("NSELF_TELEMETRY")
+	_ = os.Unsetenv("NSELF_TELEMETRY_OPT_OUT")
 
 	if err := WriteStatefile(false); err != nil {
 		t.Fatalf("WriteStatefile(false): %v", err)

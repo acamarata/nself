@@ -67,7 +67,7 @@ func TestGracePeriod_ClampMin(t *testing.T) {
 // TestGracePeriod_Unset verifies behavior when env var key is not present at all.
 func TestGracePeriod_Unset(t *testing.T) {
 	// Ensure the env var is completely absent.
-	os.Unsetenv("DOCKER_STOP_GRACE_PERIOD")
+	_ = os.Unsetenv("DOCKER_STOP_GRACE_PERIOD")
 	got := gracePeriod()
 	if got != 30*time.Second {
 		t.Errorf("unset env var: got %v, want 30s", got)

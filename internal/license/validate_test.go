@@ -75,7 +75,7 @@ func TestImportCache_SkipVerifyWithForceEmitsWarning(t *testing.T) {
 	// write attempt.
 	ImportCache(data) //nolint:errcheck
 
-	w.Close()
+	_ = w.Close()
 	os.Stderr = origStderr
 	buf := make([]byte, 512)
 	n, _ := r.Read(buf)

@@ -89,7 +89,7 @@ func TestDownloadBinaryPlugin_ChecksumMismatch(t *testing.T) {
 	// Correct SHA-256 of tarContent would pass; we serve a WRONG checksum.
 	archiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/gzip")
-		w.Write(tarContent)
+		_, _ = w.Write(tarContent)
 	}))
 	defer archiveSrv.Close()
 
@@ -97,7 +97,7 @@ func TestDownloadBinaryPlugin_ChecksumMismatch(t *testing.T) {
 		// Return wrong checksum for the archive filename.
 		filename := filepath.Base(r.URL.Path)
 		_ = filename
-		fmt.Fprintf(w, "%s  test-plugin-1.0.0-linux-amd64.tar.gz\n",
+		_, _ = fmt.Fprintf(w, "%s  test-plugin-1.0.0-linux-amd64.tar.gz\n",
 			"0000000000000000000000000000000000000000000000000000000000000000")
 	}))
 	defer checksumSrv.Close()

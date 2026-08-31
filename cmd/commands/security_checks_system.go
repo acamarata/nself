@@ -75,7 +75,7 @@ func checkSSHConfig() finding {
 	if err != nil {
 		return finding{Name: "SSH password auth", OK: true, Detail: "sshd_config not readable (skipped)"}
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -98,7 +98,7 @@ func checkRootLogin() finding {
 	if err != nil {
 		return finding{Name: "SSH root login", OK: true, Detail: "sshd_config not readable (skipped)"}
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())

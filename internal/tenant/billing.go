@@ -37,7 +37,7 @@ func BillingReport(ctx context.Context, cfg *config.Config, opts BillingReportOp
 	if err != nil {
 		return "", fmt.Errorf("generating billing report: %w", err)
 	}
-	defer sqlDB.Close()
+	defer func() { _ = sqlDB.Close() }()
 
 	// Build query with $N placeholders. Filters are applied only when provided.
 	args := []interface{}{}
@@ -65,7 +65,7 @@ func BillingReport(ctx context.Context, cfg *config.Config, opts BillingReportOp
 	if err != nil {
 		return "", fmt.Errorf("generating billing report: %w", err)
 	}
-	defer dbRows.Close()
+	defer func() { _ = dbRows.Close() }()
 
 	type reportRow struct {
 		Slug   string  `json:"slug"`
@@ -117,7 +117,7 @@ func RetryStripeEvent(ctx context.Context, cfg *config.Config, eventID string) e
 	if err != nil {
 		return fmt.Errorf("retrying stripe event: %w", err)
 	}
-	defer sqlDB.Close()
+	defer func() { _ = sqlDB.Close() }()
 
 	var returnedID string
 	err = sqlDB.QueryRowContext(ctx,

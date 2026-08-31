@@ -46,7 +46,7 @@ func Run(ctx context.Context, projectDir string) error {
 		return nil
 	}
 
-	fmt.Fprintln(os.Stdout, "\n"+ui.C(ui.Yellow, ui.IconWarning)+" "+ui.C(ui.Bold, fmt.Sprintf("Migrating %d v1 artifact(s) to v2...", len(artifacts)))+"\n")
+	_, _ = fmt.Fprintln(os.Stdout, "\n"+ui.C(ui.Yellow, ui.IconWarning)+" "+ui.C(ui.Bold, fmt.Sprintf("Migrating %d v1 artifact(s) to v2...", len(artifacts)))+"\n")
 
 	// 2. Stop all running containers gracefully
 	ui.Section("Stopping containers")
@@ -146,7 +146,7 @@ func Rollback(ctx context.Context, projectDir, backupTimestamp string) error {
 	}
 
 	ui.Success(fmt.Sprintf("Restored %d file(s) from backup %s", len(manifest.Files), filepath.Base(backupDir)))
-	fmt.Fprintln(os.Stdout)
+	_, _ = fmt.Fprintln(os.Stdout)
 	ui.Info("Rollback complete. Run `docker compose up -d` to start your v1 stack.")
 	return nil
 }

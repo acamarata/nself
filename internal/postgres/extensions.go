@@ -24,7 +24,7 @@ func InstallExtensions(ctx context.Context, dsn string, extras []string) error {
 	if err != nil {
 		return fmt.Errorf("open: %w", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	all := dedupStrings(append(DefaultExtensions, extras...))
 	for _, ext := range all {

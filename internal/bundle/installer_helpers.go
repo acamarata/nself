@@ -54,9 +54,9 @@ func rollbackInstalled(
 	rolled := make([]string, 0, len(installed))
 	for i := len(installed) - 1; i >= 0; i-- {
 		name := installed[i]
-		fmt.Fprintf(out, "  ↩ rolling back %s...\n", name)
+		_, _ = fmt.Fprintf(out, "  ↩ rolling back %s...\n", name)
 		if err := remove(ctx, cfg, name, pluginDir); err != nil {
-			fmt.Fprintf(out, "  ! rollback of %s failed: %v (manual cleanup may be required)\n", name, err)
+			_, _ = fmt.Fprintf(out, "  ! rollback of %s failed: %v (manual cleanup may be required)\n", name, err)
 			continue
 		}
 		rolled = append(rolled, name)
@@ -70,20 +70,20 @@ func printPlan(out io.Writer, b Bundle, ch Channel, planned []string, pins Versi
 	if opts.DryRun {
 		header = "Install plan (dry-run)"
 	}
-	fmt.Fprintf(out, "%s for bundle %s (%s) — channel %s\n", header, b.Name, b.Slug, ch)
+	_, _ = fmt.Fprintf(out, "%s for bundle %s (%s) — channel %s\n", header, b.Name, b.Slug, ch)
 	if len(planned) == 0 {
-		fmt.Fprintln(out, "  (no plugins to install)")
+		_, _ = fmt.Fprintln(out, "  (no plugins to install)")
 	}
 	for _, name := range planned {
-		fmt.Fprintf(out, "  • %s@%s\n", name, pins[name])
+		_, _ = fmt.Fprintf(out, "  • %s@%s\n", name, pins[name])
 	}
 	if len(skipped) > 0 {
-		fmt.Fprintf(out, "  skipped (not in registry, non-strict): %s\n", strings.Join(skipped, ", "))
+		_, _ = fmt.Fprintf(out, "  skipped (not in registry, non-strict): %s\n", strings.Join(skipped, ", "))
 	}
 	if opts.Force {
-		fmt.Fprintln(out, "  license: will validate (--force only skips same-version check)")
+		_, _ = fmt.Fprintln(out, "  license: will validate (--force only skips same-version check)")
 	} else {
-		fmt.Fprintln(out, "  license: will validate each plugin before any FS change")
+		_, _ = fmt.Fprintln(out, "  license: will validate each plugin before any FS change")
 	}
 }
 
@@ -184,7 +184,7 @@ func buildInstalledVersionMap(pluginDir string) map[string]string {
 // docker-compose.yml and nginx configs are regenerated with the new plugins.
 // This is a subprocess call matching the pattern in internal/promote/promote.go.
 func triggerBuild(ctx context.Context, out io.Writer) error {
-	fmt.Fprintln(out, "\nRunning 'nself build' to apply installed plugins...")
+	_, _ = fmt.Fprintln(out, "\nRunning 'nself build' to apply installed plugins...")
 	nself, err := exec.LookPath("nself")
 	if err != nil {
 		// nself binary not found — likely running in tests or a non-standard PATH.

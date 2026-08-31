@@ -43,7 +43,7 @@ func TestInstallerHTTPTimeout(t *testing.T) {
 	elapsed := time.Since(start)
 
 	if err == nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		t.Fatalf("expected timeout error, got nil after %v", elapsed)
 	}
 	// Timeout should fire near 100ms, well below the server's 400ms sleep.

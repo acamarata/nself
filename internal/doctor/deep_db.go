@@ -97,7 +97,7 @@ func HasuraChecks(ctx context.Context, verbose bool) []CheckResult {
 		results = append(results, CheckResult{Section: "hasura", Name: "Hasura healthz", Status: "pass", Message: "200 OK"})
 	}
 	if resp != nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 
 	// Metadata consistency — check via metadata API

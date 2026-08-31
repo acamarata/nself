@@ -48,7 +48,7 @@ func postMetadata(ctx context.Context, cfg *config.Config, payload metadataReque
 	if err != nil {
 		return nil, fmt.Errorf("hasura metadata request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {

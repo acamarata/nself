@@ -100,13 +100,13 @@ func Start(ctx context.Context, pluginDir string, name string) error {
 	setNewProcessGroup(cmd)
 
 	if err := cmd.Start(); err != nil {
-		logFile.Close()
+		_ = logFile.Close()
 		_ = writeState(name, "failed")
 		return fmt.Errorf("starting plugin %s: %w", name, err)
 	}
 
 	pid := cmd.Process.Pid
-	logFile.Close()
+	_ = logFile.Close()
 
 	// Write PID file.
 	if err := writePID(name, pid); err != nil {

@@ -115,7 +115,7 @@ func PingChecks(ctx context.Context, verbose bool) []CheckResult {
 		results = append(results, CheckResult{Section: "ping", Name: "ping.nself.org", Status: "warn",
 			Message: fmt.Sprintf("unreachable: %v", err)})
 	} else {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if resp.StatusCode == 200 {
 			results = append(results, CheckResult{Section: "ping", Name: "ping.nself.org", Status: "pass", Message: "reachable"})
 		} else {

@@ -112,8 +112,8 @@ func acquireBuildLock(workdir string) (*os.File, error) {
 
 // releaseBuildLock closes and removes the lock file returned by acquireBuildLock.
 func releaseBuildLock(f *os.File, workdir string) {
-	f.Close()
-	os.Remove(filepath.Join(workdir, buildLockFile))
+	_ = f.Close()
+	_ = os.Remove(filepath.Join(workdir, buildLockFile))
 }
 
 // Build orchestrates the full nself build pipeline.
@@ -573,7 +573,7 @@ func persistGeneratedSecrets(workdir string, cfg *config.Config) error {
 				onDisk[line[:idx]] = true
 			}
 		}
-		f.Close()
+		_ = f.Close()
 	}
 
 	// Determine which secrets need persisting.
@@ -610,7 +610,7 @@ func persistGeneratedSecrets(workdir string, cfg *config.Config) error {
 	if err != nil {
 		return fmt.Errorf("opening %s: %w", secretsPath, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	for _, s := range toWrite {
 		if _, err := fmt.Fprintf(f, "%s=%s\n", s.envKey, config.QuoteEnvValue(s.value)); err != nil {

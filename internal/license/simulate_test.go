@@ -7,7 +7,7 @@ import (
 )
 
 func TestSimulateOffline_GuardRequired(t *testing.T) {
-	os.Unsetenv(SimulationGuardEnv)
+	_ = os.Unsetenv(SimulationGuardEnv)
 	_, err := SimulateOffline(7)
 	if err == nil {
 		t.Fatal("expected error when simulation guard is not set")

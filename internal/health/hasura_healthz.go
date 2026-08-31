@@ -109,7 +109,7 @@ func HasuraHealthzHandler(cfg HasuraHealthzConfig) http.HandlerFunc {
 				resultCh <- probeResult{reachable: false}
 				return
 			}
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			resultCh <- probeResult{reachable: resp.StatusCode == http.StatusOK}
 		}()
 

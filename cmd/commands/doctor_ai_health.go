@@ -25,7 +25,7 @@ func ollamaHealthy(ctx context.Context) bool {
 	if err != nil {
 		return false
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	return resp.StatusCode == 200
 }
 
@@ -42,7 +42,7 @@ func testLocalChat(ctx context.Context) bool {
 	if err != nil {
 		return false
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	return resp.StatusCode == 200
 }
 
@@ -59,7 +59,7 @@ func testLocalEmbed(ctx context.Context) bool {
 	if err != nil {
 		return false
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	return resp.StatusCode == 200
 }
 

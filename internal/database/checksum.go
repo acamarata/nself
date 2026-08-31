@@ -226,7 +226,7 @@ func ResetChecksum(ctx context.Context, cfg *config.Config, migrationID string) 
 			if err != nil {
 				return fmt.Errorf("open database for checksum update: %w", err)
 			}
-			defer conn.Close()
+			defer func() { _ = conn.Close() }()
 			_, err = conn.ExecContext(ctx,
 				"UPDATE nself_ops.migrations SET checksum = $1 WHERE id = $2",
 				cs, migrationID)

@@ -35,13 +35,13 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return fmt.Errorf("open %s: %w", src, err)
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	out, err := os.Create(dst)
 	if err != nil {
 		return fmt.Errorf("create %s: %w", dst, err)
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	if _, err := io.Copy(out, in); err != nil {
 		return fmt.Errorf("copy %s → %s: %w", src, dst, err)
@@ -101,35 +101,35 @@ func pluginWarning(projectDir, backupDir string) {
 		reset = "\033[0m"
 		red   = "\033[31m"
 	)
-	fmt.Fprintln(os.Stdout)
-	fmt.Fprintln(os.Stdout, bold+"┌─────────────────────────────────────────────────────────┐"+reset)
-	fmt.Fprintln(os.Stdout, bold+"│  PLUGINS MUST BE RE-INSTALLED                           │"+reset)
-	fmt.Fprintln(os.Stdout, bold+"│                                                          │"+reset)
-	fmt.Fprintln(os.Stdout, bold+"│  v0.9 plugin code is not compatible with v1.0.9 signed  │"+reset)
-	fmt.Fprintln(os.Stdout, bold+"│  bundles. Re-install each plugin after migration.        │"+reset)
-	fmt.Fprintln(os.Stdout, bold+"└─────────────────────────────────────────────────────────┘"+reset)
-	fmt.Fprintln(os.Stdout)
+	_, _ = fmt.Fprintln(os.Stdout)
+	_, _ = fmt.Fprintln(os.Stdout, bold+"┌─────────────────────────────────────────────────────────┐"+reset)
+	_, _ = fmt.Fprintln(os.Stdout, bold+"│  PLUGINS MUST BE RE-INSTALLED                           │"+reset)
+	_, _ = fmt.Fprintln(os.Stdout, bold+"│                                                          │"+reset)
+	_, _ = fmt.Fprintln(os.Stdout, bold+"│  v0.9 plugin code is not compatible with v1.0.9 signed  │"+reset)
+	_, _ = fmt.Fprintln(os.Stdout, bold+"│  bundles. Re-install each plugin after migration.        │"+reset)
+	_, _ = fmt.Fprintln(os.Stdout, bold+"└─────────────────────────────────────────────────────────┘"+reset)
+	_, _ = fmt.Fprintln(os.Stdout)
 
-	fmt.Fprintln(os.Stdout, "  Step 1: Re-enter your license key")
-	fmt.Fprintln(os.Stdout, bold+"    nself license set <your-key>"+reset)
-	fmt.Fprintln(os.Stdout)
+	_, _ = fmt.Fprintln(os.Stdout, "  Step 1: Re-enter your license key")
+	_, _ = fmt.Fprintln(os.Stdout, bold+"    nself license set <your-key>"+reset)
+	_, _ = fmt.Fprintln(os.Stdout)
 
 	if len(plugins) > 0 {
 		installCmd := "nself plugin install"
 		for _, p := range plugins {
 			installCmd += " " + p
 		}
-		fmt.Fprintln(os.Stdout, fmt.Sprintf("  Step 2: Re-install your %d plugin(s) (detected from v0.9 .env)", len(plugins)))
-		fmt.Fprintln(os.Stdout, bold+"    "+installCmd+reset)
+		_, _ = fmt.Fprintln(os.Stdout, fmt.Sprintf("  Step 2: Re-install your %d plugin(s) (detected from v0.9 .env)", len(plugins)))
+		_, _ = fmt.Fprintln(os.Stdout, bold+"    "+installCmd+reset)
 	} else {
-		fmt.Fprintln(os.Stdout, "  Step 2: Re-install your plugins")
-		fmt.Fprintln(os.Stdout, bold+"    nself plugin install <plugin1> <plugin2> ..."+reset)
-		fmt.Fprintln(os.Stdout, red+"    (Could not detect plugin list from .env — check manually)"+reset)
+		_, _ = fmt.Fprintln(os.Stdout, "  Step 2: Re-install your plugins")
+		_, _ = fmt.Fprintln(os.Stdout, bold+"    nself plugin install <plugin1> <plugin2> ..."+reset)
+		_, _ = fmt.Fprintln(os.Stdout, red+"    (Could not detect plugin list from .env — check manually)"+reset)
 	}
 
-	fmt.Fprintln(os.Stdout)
-	fmt.Fprintln(os.Stdout, "  See: https://nself.org/docs/migrate/from-v0.9#step-3-re-install-plugins")
-	fmt.Fprintln(os.Stdout)
+	_, _ = fmt.Fprintln(os.Stdout)
+	_, _ = fmt.Fprintln(os.Stdout, "  See: https://nself.org/docs/migrate/from-v0.9#step-3-re-install-plugins")
+	_, _ = fmt.Fprintln(os.Stdout)
 }
 
 // parseV09Plugins reads a v0.9 .env file and returns the list of enabled plugins.

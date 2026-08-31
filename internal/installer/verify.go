@@ -47,7 +47,7 @@ func DownloadAndVerify(ctx context.Context, url, expectedSHA string) (string, er
 	if err != nil {
 		return "", errf(ErrOllamaInstallFailed, fmt.Sprintf("download %s", url), err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", errf(ErrOllamaInstallFailed,
@@ -62,14 +62,14 @@ func DownloadAndVerify(ctx context.Context, url, expectedSHA string) (string, er
 		return "", errf(ErrOllamaInstallFailed, "create temp dir", err)
 	}
 	if err = os.Chmod(dir, 0o700); err != nil {
-		os.RemoveAll(dir)
+		_ = os.RemoveAll(dir)
 		return "", errf(ErrOllamaInstallFailed, "chmod temp dir", err)
 	}
 
 	tmpPath := dir + "/install.sh"
 	tmp, err := os.OpenFile(tmpPath, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0o600)
 	if err != nil {
-		os.RemoveAll(dir)
+		_ = os.RemoveAll(dir)
 		return "", errf(ErrOllamaInstallFailed, "create temp file", err)
 	}
 
@@ -77,18 +77,18 @@ func DownloadAndVerify(ctx context.Context, url, expectedSHA string) (string, er
 	w := io.MultiWriter(tmp, h)
 
 	if _, err = io.Copy(w, io.LimitReader(resp.Body, 2*1024*1024)); err != nil {
-		tmp.Close()
-		os.RemoveAll(dir)
+		_ = tmp.Close()
+		_ = os.RemoveAll(dir)
 		return "", errf(ErrOllamaInstallFailed, "write temp file", err)
 	}
 	if err = tmp.Close(); err != nil {
-		os.RemoveAll(dir)
+		_ = os.RemoveAll(dir)
 		return "", errf(ErrOllamaInstallFailed, "close temp file", err)
 	}
 
 	got := hex.EncodeToString(h.Sum(nil))
 	if got != expectedSHA {
-		os.RemoveAll(dir)
+		_ = os.RemoveAll(dir)
 		return "", errf(ErrOllamaInstallFailed,
 			fmt.Sprintf("checksum mismatch: got %s want %s", got, expectedSHA), nil)
 	}

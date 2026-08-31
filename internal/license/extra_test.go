@@ -497,7 +497,7 @@ func TestRefreshCache_InvalidLicense(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(ValidateResponse{
+		_ = json.NewEncoder(w).Encode(ValidateResponse{
 			Valid:   false,
 			Reason:  "revoked",
 			Tier:    "",
@@ -643,7 +643,7 @@ func TestValidateFull_RemoteSuccess(t *testing.T) {
 	future := time.Now().Add(30 * 24 * time.Hour)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ValidateResponse{
+		_ = json.NewEncoder(w).Encode(ValidateResponse{
 			Valid:     true,
 			Tier:      "pro",
 			Plugins:   []string{"ai", "claw"},
@@ -677,7 +677,7 @@ func TestValidateFull_RemoteReturnsInvalid(t *testing.T) {
 	setupCacheDir(t)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ValidateResponse{
+		_ = json.NewEncoder(w).Encode(ValidateResponse{
 			Valid:   false,
 			Reason:  "key not found",
 			Tier:    "",

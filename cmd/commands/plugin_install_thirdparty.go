@@ -32,13 +32,13 @@ func confirmThirdPartyInstall(cmd *cobra.Command, sourceURL string, yes bool) er
 	}
 
 	out := cmd.ErrOrStderr()
-	fmt.Fprintf(out, "\nwarning: %s is a THIRD-PARTY plugin source (host: %s).\n", sourceURL, u.Host)
-	fmt.Fprintf(out, "  It is not part of the official nself plugin registry: its author is not\n")
-	fmt.Fprintf(out, "  vetted and its tarball is NOT signature-verified. Checksum is verified\n")
-	fmt.Fprintf(out, "  only if the plugin's own manifest declares one.\n")
+	_, _ = fmt.Fprintf(out, "\nwarning: %s is a THIRD-PARTY plugin source (host: %s).\n", sourceURL, u.Host)
+	_, _ = fmt.Fprintf(out, "  It is not part of the official nself plugin registry: its author is not\n")
+	_, _ = fmt.Fprintf(out, "  vetted and its tarball is NOT signature-verified. Checksum is verified\n")
+	_, _ = fmt.Fprintf(out, "  only if the plugin's own manifest declares one.\n")
 
 	if yes {
-		fmt.Fprintf(out, "  Proceeding without confirmation (--yes).\n")
+		_, _ = fmt.Fprintf(out, "  Proceeding without confirmation (--yes).\n")
 		return nil
 	}
 

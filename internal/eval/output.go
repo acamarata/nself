@@ -44,7 +44,7 @@ func WriteResult(w io.Writer, result EvalRunResult, format, repoRoot string) err
 	// Always write the JSON artifact.
 	if err := writeArtifact(result, repoRoot); err != nil {
 		// Non-fatal: print warning and continue.
-		fmt.Fprintf(w, "warning: could not write eval artifact: %v\n", err)
+		_, _ = fmt.Fprintf(w, "warning: could not write eval artifact: %v\n", err)
 	}
 
 	switch format {
@@ -85,28 +85,28 @@ func writeJSON(w io.Writer, result EvalRunResult) error {
 // writeTable writes a per-task tabular report to w.
 func writeTable(w io.Writer, result EvalRunResult) error {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	defer tw.Flush()
+	defer func() { _ = tw.Flush() }()
 
 	status := "PASSED"
 	if !result.Passed {
 		status = "FAILED"
 	}
 
-	fmt.Fprintf(tw, "Suite:\t%s\n", result.SuiteSlug)
-	fmt.Fprintf(tw, "Run ID:\t%s\n", result.ID)
-	fmt.Fprintf(tw, "Status:\t%s\n", status)
-	fmt.Fprintf(tw, "Pass Rate:\t%.1f%%\n", result.PassRate*100)
-	fmt.Fprintf(tw, "Suite Score:\t%.4f\n", result.SuiteScore)
-	fmt.Fprintln(tw)
+	_, _ = fmt.Fprintf(tw, "Suite:\t%s\n", result.SuiteSlug)
+	_, _ = fmt.Fprintf(tw, "Run ID:\t%s\n", result.ID)
+	_, _ = fmt.Fprintf(tw, "Status:\t%s\n", status)
+	_, _ = fmt.Fprintf(tw, "Pass Rate:\t%.1f%%\n", result.PassRate*100)
+	_, _ = fmt.Fprintf(tw, "Suite Score:\t%.4f\n", result.SuiteScore)
+	_, _ = fmt.Fprintln(tw)
 
 	if len(result.Tasks) == 0 {
-		fmt.Fprintln(tw, "(no task results)")
+		_, _ = fmt.Fprintln(tw, "(no task results)")
 		return nil
 	}
 
 	// Header.
-	fmt.Fprintf(tw, "TASK\tMODE\tSCORE\tPASS\tRATIONALE\n")
-	fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n",
+	_, _ = fmt.Fprintf(tw, "TASK\tMODE\tSCORE\tPASS\tRATIONALE\n")
+	_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n",
 		strings.Repeat("-", 24), strings.Repeat("-", 8),
 		strings.Repeat("-", 6), strings.Repeat("-", 4),
 		strings.Repeat("-", 30))
@@ -120,7 +120,7 @@ func writeTable(w io.Writer, result EvalRunResult) error {
 		if len(rationale) > 50 {
 			rationale = rationale[:47] + "..."
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%.4f\t%s\t%s\n",
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%.4f\t%s\t%s\n",
 			truncate(t.TaskID, 24), t.ScoringMode, t.Score, passStr, rationale)
 	}
 	return nil
@@ -152,23 +152,23 @@ func WriteGateStatus(w io.Writer, gs GateStatus, verbose bool) {
 		icon = "✗"
 		label = "BLOCKED"
 	}
-	fmt.Fprintf(w, "%s  tier=%s  %s\n", icon, gs.Tier, label)
+	_, _ = fmt.Fprintf(w, "%s  tier=%s  %s\n", icon, gs.Tier, label)
 	if !gs.Cleared && len(gs.BlockingSuites) > 0 {
-		fmt.Fprintln(w, "Blocking suites:")
+		_, _ = fmt.Fprintln(w, "Blocking suites:")
 		for _, slug := range gs.BlockingSuites {
-			fmt.Fprintf(w, "  - %s\n", slug)
+			_, _ = fmt.Fprintf(w, "  - %s\n", slug)
 		}
 	}
 	if !gs.Enforced {
-		fmt.Fprintln(w, "  (note: tier enforcement is disabled — gate result is advisory)")
+		_, _ = fmt.Fprintln(w, "  (note: tier enforcement is disabled — gate result is advisory)")
 	}
 }
 
 // WriteValidationErrors prints validation errors to w.
 func WriteValidationErrors(w io.Writer, errs []ValidationError) {
-	fmt.Fprintf(w, "Validation failed (%d error(s)):\n", len(errs))
+	_, _ = fmt.Fprintf(w, "Validation failed (%d error(s)):\n", len(errs))
 	for _, e := range errs {
-		fmt.Fprintf(w, "  [%s] %s\n", e.Field, e.Message)
+		_, _ = fmt.Fprintf(w, "  [%s] %s\n", e.Field, e.Message)
 	}
 }
 

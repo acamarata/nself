@@ -227,7 +227,7 @@ func getJSON(ctx context.Context, client *http.Client, url string) ([]byte, erro
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, nil // not yet published — caller treats empty string as warn

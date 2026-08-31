@@ -78,7 +78,7 @@ func runConfigValidate(cmd *cobra.Command, args []string) error {
 	// For validate, use the cascade loader so all defaults apply.
 	// Temporarily honour --env by setting ENV if provided.
 	if envFlag != "" {
-		os.Setenv("ENV", envFlag)
+		_ = os.Setenv("ENV", envFlag)
 	}
 
 	cfg, err := config.Load(projectDir)

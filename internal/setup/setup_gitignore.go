@@ -51,7 +51,7 @@ func ensureGitignore(workDir string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// Add a header comment if the file is new or we're appending.
 	header := "\n# nSelf\n"

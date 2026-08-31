@@ -100,11 +100,11 @@ func decryptWithKey(projectRoot, env, key string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer os.Remove(tmpKey.Name())
+	defer func() { _ = os.Remove(tmpKey.Name()) }()
 	if _, err := tmpKey.WriteString(key); err != nil {
 		return "", err
 	}
-	tmpKey.Close()
+	_ = tmpKey.Close()
 
 	cmd := exec.Command("age", "--decrypt", "-i", tmpKey.Name(), path)
 	output, err := cmd.Output()

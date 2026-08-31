@@ -60,7 +60,7 @@ func TestPluginInstallSkipVerifyWithForceEmitsWarning(t *testing.T) {
 	// must have been emitted to stderr before that failure.
 	runPluginInstall(pluginInstallCmd, []string{"ai"}) //nolint:errcheck
 
-	w.Close()
+	_ = w.Close()
 	os.Stderr = origStderr
 	var buf strings.Builder
 	buf.Grow(512)

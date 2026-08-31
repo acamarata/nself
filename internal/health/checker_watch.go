@@ -87,7 +87,7 @@ func CheckEndpoint(ctx context.Context, url string) (*HealthResult, error) {
 			Details:  err.Error(),
 		}, nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	status := "unhealthy"
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {

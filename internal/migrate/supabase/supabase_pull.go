@@ -169,7 +169,7 @@ func (c *Client) PullRLSPolicies(ctx context.Context) ([]RLSPolicy, error) {
 		// an artifact with a manual-review note.
 		return nil, fmt.Errorf("RLS policy fetch network error (check connectivity): %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

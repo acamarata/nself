@@ -70,7 +70,7 @@ func CheckCompliance(ctx context.Context, name string, port int) *ComplianceResu
 		} else {
 			check.Status = resp.StatusCode
 			check.Available = resp.StatusCode >= 200 && resp.StatusCode < 300
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			if !check.Available && ep.Required {
 				result.Compliant = false
 			}

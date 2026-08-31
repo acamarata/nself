@@ -80,7 +80,7 @@ func downloadBinaryPlugin(name, version, platform, archiveURL, checksumURL, dest
 	if err != nil {
 		return fmt.Errorf("download binary plugin: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("download binary plugin: server returned %d for %s", resp.StatusCode, archiveURL)
 	}
@@ -89,14 +89,14 @@ func downloadBinaryPlugin(name, version, platform, archiveURL, checksumURL, dest
 	if err != nil {
 		return fmt.Errorf("create temp file: %w", err)
 	}
-	defer os.Remove(tmp.Name())
+	defer func() { _ = os.Remove(tmp.Name()) }()
 
 	hasher := sha256.New()
 	if _, err := io.Copy(io.MultiWriter(tmp, hasher), resp.Body); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return fmt.Errorf("write download: %w", err)
 	}
-	tmp.Close()
+	_ = tmp.Close()
 	actualChecksum := hex.EncodeToString(hasher.Sum(nil))
 
 	// Verify checksum if provided.
@@ -115,7 +115,7 @@ func downloadBinaryPlugin(name, version, platform, archiveURL, checksumURL, dest
 
 	// Extract tarball to destDir.
 	if err := extractTarGz(tmp.Name(), destDir); err != nil {
-		os.RemoveAll(destDir)
+		_ = os.RemoveAll(destDir)
 		return fmt.Errorf("extract binary plugin: %w", err)
 	}
 
@@ -137,7 +137,7 @@ func fetchExpectedChecksum(client *http.Client, checksumURL, filename string) (s
 	if err != nil {
 		return "", fmt.Errorf("fetch checksums.txt: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("checksums.txt returned %d", resp.StatusCode)
 	}

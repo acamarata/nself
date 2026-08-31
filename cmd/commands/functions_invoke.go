@@ -89,7 +89,7 @@ func runFunctionsInvoke(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("invoking %s: %w", name, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {

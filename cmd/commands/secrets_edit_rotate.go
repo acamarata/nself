@@ -48,12 +48,12 @@ var secretsEditCmd = &cobra.Command{
 			return err
 		}
 		tmpPath := tmpFile.Name()
-		defer os.Remove(tmpPath)
+		defer func() { _ = os.Remove(tmpPath) }()
 
 		if _, err := tmpFile.WriteString(strings.Join(lines, "\n") + "\n"); err != nil {
 			return err
 		}
-		tmpFile.Close()
+		_ = tmpFile.Close()
 
 		// Open editor.
 		c := exec.Command(editor, tmpPath)

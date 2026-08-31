@@ -54,7 +54,7 @@ func downloadAndRunInstaller(ctx context.Context, log func(string, string, map[s
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(filepath.Dir(tmpPath))
+	defer func() { _ = os.RemoveAll(filepath.Dir(tmpPath)) }()
 
 	log("info", "install.sh checksum verified", map[string]any{"sha256": ExpectedOllamaInstallChecksum()})
 
@@ -121,7 +121,7 @@ func probeUntilReady(ctx context.Context, url string, total time.Duration) error
 		req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
 		resp, err := httptimeout.Installer.Do(req)
 		if err == nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			if resp.StatusCode == 200 {
 				return nil
 			}
@@ -137,7 +137,7 @@ func probeOllamaVersion(ctx context.Context) string {
 	if err != nil {
 		return ""
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	var body struct {
 		Version string `json:"version"`
 	}
@@ -159,7 +159,7 @@ func pullOllamaModel(ctx context.Context, name string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return fmt.Errorf("pull %s HTTP %d: %s", name, resp.StatusCode, string(body))

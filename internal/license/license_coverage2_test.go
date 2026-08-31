@@ -362,7 +362,7 @@ func TestBundleEntitled_ValidResponseTrue(t *testing.T) {
 	body, _ := json.Marshal(resp)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write(body)
+		_, _ = w.Write(body)
 	}))
 	defer srv.Close()
 	t.Setenv("LICENSE_PING_URL", srv.URL)
@@ -381,7 +381,7 @@ func TestBundleEntitled_ValidResponseFalse(t *testing.T) {
 	body, _ := json.Marshal(resp)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write(body)
+		_, _ = w.Write(body)
 	}))
 	defer srv.Close()
 	t.Setenv("LICENSE_PING_URL", srv.URL)
@@ -403,7 +403,7 @@ func TestBundleEntitled_ValidResponseFalseEmptyReason(t *testing.T) {
 	body, _ := json.Marshal(resp)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write(body)
+		_, _ = w.Write(body)
 	}))
 	defer srv.Close()
 	t.Setenv("LICENSE_PING_URL", srv.URL)
@@ -554,7 +554,7 @@ func TestWarnFailOpenOnce_RunsTwiceOnlyWarnsOnce(t *testing.T) {
 func TestTryRemote_HTTP500C2(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`server error`))
+		_, _ = w.Write([]byte(`server error`))
 	}))
 	defer srv.Close()
 
@@ -577,7 +577,7 @@ func TestTryRemote_HTTP200_ValidResponseC2(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write(respBody)
+		_, _ = w.Write(respBody)
 	}))
 	defer srv.Close()
 

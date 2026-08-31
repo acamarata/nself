@@ -68,7 +68,7 @@ func TestHTTPMetricsMiddleware(t *testing.T) {
 	r.Use(m.Middleware("test"))
 	r.Get("/api/test", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 	})
 
 	req := httptest.NewRequest("GET", "/api/test", nil)

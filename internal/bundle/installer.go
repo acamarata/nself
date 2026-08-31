@@ -134,7 +134,7 @@ func Install(ctx context.Context, bundleSlug string, opts InstallOpts) (*Install
 	printPlan(out, b, result.Channel, planned, pins, result.Skipped, opts)
 
 	if opts.DryRun {
-		fmt.Fprintln(out, "(dry-run) no changes made.")
+		_, _ = fmt.Fprintln(out, "(dry-run) no changes made.")
 		return result, nil
 	}
 
@@ -209,7 +209,7 @@ func Install(ctx context.Context, bundleSlug string, opts InstallOpts) (*Install
 			cmp := plugin.CompareVersions(existingVer, targetVer)
 			if cmp == 0 {
 				// Same version: skip silently.
-				fmt.Fprintf(out, "  ✓ %s@%s (already installed, same version)\n", name, targetVer)
+				_, _ = fmt.Fprintf(out, "  ✓ %s@%s (already installed, same version)\n", name, targetVer)
 				continue
 			}
 			if cmp > 0 {
@@ -220,27 +220,27 @@ func Install(ctx context.Context, bundleSlug string, opts InstallOpts) (*Install
 					return result, fmt.Errorf("--strict: plugin %q is at %s (higher than bundle pin %s); use without --strict to skip", name, existingVer, targetVer)
 				}
 				// Default: skip with warning, no silent downgrade.
-				fmt.Fprintf(out, "  ⚠ %s: installed at %s (higher than bundle pin %s) — skipping to avoid downgrade\n", name, existingVer, targetVer)
+				_, _ = fmt.Fprintf(out, "  ⚠ %s: installed at %s (higher than bundle pin %s) — skipping to avoid downgrade\n", name, existingVer, targetVer)
 				continue
 			}
 			// cmp < 0: existing is lower → upgrade, fall through to install.
-			fmt.Fprintf(out, "  ↑ upgrading %s: %s → %s\n", name, existingVer, targetVer)
+			_, _ = fmt.Fprintf(out, "  ↑ upgrading %s: %s → %s\n", name, existingVer, targetVer)
 		} else {
-			fmt.Fprintf(out, "  → installing %s@%s...\n", name, targetVer)
+			_, _ = fmt.Fprintf(out, "  → installing %s@%s...\n", name, targetVer)
 		}
 
 		if err := installFn(ctx, cfg, name, pluginDir); err != nil {
-			fmt.Fprintf(out, "  ✗ %s install failed: %v\n", name, err)
+			_, _ = fmt.Fprintf(out, "  ✗ %s install failed: %v\n", name, err)
 			result.RolledBack = rollbackInstalled(ctx, cfg, removeFn, pluginDir, result.Installed, out)
 			return result, fmt.Errorf("bundle %q install failed at plugin %q: %w", b.Slug, name, err)
 		}
 		result.Installed = append(result.Installed, name)
-		fmt.Fprintf(out, "  ✓ %s@%s installed\n", name, targetVer)
+		_, _ = fmt.Fprintf(out, "  ✓ %s@%s installed\n", name, targetVer)
 	}
 
-	fmt.Fprintf(out, "\nBundle %q (%s) installed: %d plugins.\n", b.Name, b.Slug, len(result.Installed))
+	_, _ = fmt.Fprintf(out, "\nBundle %q (%s) installed: %d plugins.\n", b.Name, b.Slug, len(result.Installed))
 	if len(result.Skipped) > 0 {
-		fmt.Fprintf(out, "Skipped (missing from registry): %s\n", strings.Join(result.Skipped, ", "))
+		_, _ = fmt.Fprintf(out, "Skipped (missing from registry): %s\n", strings.Join(result.Skipped, ", "))
 	}
 
 	// Trigger a single nself build to regenerate docker-compose.yml and nginx
@@ -250,8 +250,8 @@ func Install(ctx context.Context, bundleSlug string, opts InstallOpts) (*Install
 		if err := triggerBuild(ctx, out); err != nil {
 			// Build failure is non-fatal: plugins are on disk; user can run
 			// nself build manually. Surface as a warning, not a hard error.
-			fmt.Fprintf(out, "\nWARNING: nself build failed after bundle install: %v\n", err)
-			fmt.Fprintln(out, "Run 'nself build' manually to apply the new plugins.")
+			_, _ = fmt.Fprintf(out, "\nWARNING: nself build failed after bundle install: %v\n", err)
+			_, _ = fmt.Fprintln(out, "Run 'nself build' manually to apply the new plugins.")
 		}
 	}
 

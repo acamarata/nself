@@ -161,7 +161,7 @@ func runInitMarketplaceTemplate(slug, destDir string, force, quiet bool) error {
 	if err != nil {
 		return fmt.Errorf("downloading template tarball: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("access denied for template %q — check your license key", slug)
@@ -201,7 +201,7 @@ func runInitMarketplaceTemplate(slug, destDir string, force, quiet bool) error {
 	if err != nil {
 		return fmt.Errorf("opening gzip stream: %w", err)
 	}
-	defer gr.Close()
+	defer func() { _ = gr.Close() }()
 
 	tr := tar.NewReader(gr)
 	for {
@@ -233,10 +233,10 @@ func runInitMarketplaceTemplate(slug, destDir string, force, quiet bool) error {
 				return fmt.Errorf("creating file %s: %w", target, createErr)
 			}
 			if _, copyErr := io.Copy(f, tr); copyErr != nil {
-				f.Close()
+				_ = f.Close()
 				return fmt.Errorf("writing file %s: %w", target, copyErr)
 			}
-			f.Close()
+			_ = f.Close()
 		}
 	}
 

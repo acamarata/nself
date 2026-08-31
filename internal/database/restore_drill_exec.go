@@ -26,7 +26,7 @@ func restoreToDB(ctx context.Context, cfg *config.Config, backupFile string, tar
 	if err != nil {
 		return fmt.Errorf("open backup file %s: %w", backupFile, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	container := containerName(cfg)
 	user := cfg.Postgres.User

@@ -19,7 +19,7 @@ func withCwd(t *testing.T, dir string) {
 	if err := os.Chdir(dir); err != nil {
 		t.Fatalf("chdir %s: %v", dir, err)
 	}
-	t.Cleanup(func() { os.Chdir(orig) })
+	t.Cleanup(func() { _ = os.Chdir(orig) })
 }
 
 // mkdirAll creates a directory (and parents) inside base, failing the test on error.

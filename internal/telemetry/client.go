@@ -137,7 +137,7 @@ func sendPayload(ctx context.Context, p payload) error {
 	if err != nil {
 		return fmt.Errorf("http post: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("server responded %d", resp.StatusCode)
@@ -285,7 +285,7 @@ func SendEvent(eventType string, metadata map[string]any) {
 			}
 			return
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if os.Getenv("NSELF_TELEMETRY_DEBUG") == "1" && resp.StatusCode >= 400 {
 			fmt.Fprintf(os.Stderr, "[telemetry DEBUG] SendEvent %s: server %d\n", eventType, resp.StatusCode)

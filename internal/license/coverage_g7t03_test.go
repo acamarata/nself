@@ -620,7 +620,7 @@ func TestIsTerminal_NotTerminal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateTemp: %v", err)
 	}
-	defer tmpFile.Close()
+	defer func() { _ = tmpFile.Close() }()
 	if isTerminal(tmpFile) {
 		t.Error("isTerminal(regular file) should be false")
 	}
@@ -632,7 +632,7 @@ func TestIsTerminal_ClosedFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateTemp: %v", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 	// Stat on a closed file fails on most platforms.
 	_ = isTerminal(tmpFile) // do not panic
 }
@@ -678,12 +678,12 @@ func TestTailStream_DefaultStdout(t *testing.T) {
 	os.Stdout = w
 	defer func() {
 		os.Stdout = origStdout
-		w.Close()
-		r.Close()
+		_ = w.Close()
+		_ = r.Close()
 	}()
 
 	// Drain pipe in background to avoid blocking write.
-	go io.Copy(io.Discard, r)
+	go func() { _, _ = io.Copy(io.Discard, r) }()
 
 	err := TailStream(ctx, TailOptions{
 		// Stdout: nil — exercises default branch.

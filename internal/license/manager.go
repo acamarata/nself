@@ -216,14 +216,14 @@ func MigrateLicenseFromV1(home string) error {
 	if err != nil {
 		return fmt.Errorf("opening v1 license: %w", err)
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 
 	// Create v2 destination with restricted permissions.
 	dst, err := os.OpenFile(v2Path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		return fmt.Errorf("creating v2 license file: %w", err)
 	}
-	defer dst.Close()
+	defer func() { _ = dst.Close() }()
 
 	if _, err := io.Copy(dst, src); err != nil {
 		// Remove incomplete destination on copy failure.

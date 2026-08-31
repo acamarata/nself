@@ -115,7 +115,7 @@ func CheckNSelfAuditScan(ctx context.Context, projectDir string) []CheckResult {
 		// fresh project will hit this; it's not an error.
 		return []CheckResult{nselfAuditSkipped(fmt.Sprintf("nself-audit plugin not reachable on :%s (run `nself plugin install nself-audit`)", port))}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))

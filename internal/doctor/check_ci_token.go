@@ -181,7 +181,7 @@ func RecordCITokenRotation(projectDir string) error {
 	if err != nil {
 		return fmt.Errorf("opening rotation log: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	line := fmt.Sprintf("rotated %s\n", time.Now().UTC().Format(time.RFC3339))
 	if _, err := f.WriteString(line); err != nil {

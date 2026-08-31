@@ -114,9 +114,9 @@ const cascadeTestVar = "NSELF_TEST_CASCADE_VAR"
 // .env.secrets beats .env.dev beats bare .env. Table-driven: each case adds
 // one more, higher-precedence file and checks the winner shifts.
 func TestLoad_CanonicalPrecedenceChain(t *testing.T) {
-	os.Unsetenv("ENV")
-	os.Unsetenv(LegacyEnvOrderVar)
-	t.Cleanup(func() { os.Unsetenv(cascadeTestVar) })
+	_ = os.Unsetenv("ENV")
+	_ = os.Unsetenv(LegacyEnvOrderVar)
+	t.Cleanup(func() { _ = os.Unsetenv(cascadeTestVar) })
 
 	dir := t.TempDir()
 
@@ -161,9 +161,9 @@ func TestLoad_CanonicalPrecedenceChain(t *testing.T) {
 // (pre-CLI-R18 projects) is no longer part of the cascade at all under the
 // canonical order: it must not win even though it used to be loaded last.
 func TestLoad_CanonicalOrder_EnvAiIsIgnored(t *testing.T) {
-	os.Unsetenv("ENV")
-	os.Unsetenv(LegacyEnvOrderVar)
-	t.Cleanup(func() { os.Unsetenv(cascadeTestVar) })
+	_ = os.Unsetenv("ENV")
+	_ = os.Unsetenv(LegacyEnvOrderVar)
+	t.Cleanup(func() { _ = os.Unsetenv(cascadeTestVar) })
 
 	dir := t.TempDir()
 	mustWriteFile(t, filepath.Join(dir, ".env"), cascadeTestVar+"=from-env\n")
@@ -183,11 +183,11 @@ func TestLoad_CanonicalOrder_EnvAiIsIgnored(t *testing.T) {
 // set, the historical order is restored: bare .env and then .env.ai win last,
 // overriding .env.secrets and .env.local exactly as before CLI-R18.
 func TestLoad_LegacyOrder_EnvAiWinsLast(t *testing.T) {
-	os.Unsetenv("ENV")
-	os.Setenv(LegacyEnvOrderVar, "1")
+	_ = os.Unsetenv("ENV")
+	_ = os.Setenv(LegacyEnvOrderVar, "1")
 	t.Cleanup(func() {
-		os.Unsetenv(LegacyEnvOrderVar)
-		os.Unsetenv(cascadeTestVar)
+		_ = os.Unsetenv(LegacyEnvOrderVar)
+		_ = os.Unsetenv(cascadeTestVar)
 	})
 
 	dir := t.TempDir()
@@ -208,9 +208,9 @@ func TestLoad_LegacyOrder_EnvAiWinsLast(t *testing.T) {
 // NSELF_LEGACY_ENV_ORDER emits a slog.Warn naming the variable and a removal
 // version on every single Load() call, not just the first.
 func TestLoad_LegacyOrder_WarnsOnEveryUse(t *testing.T) {
-	os.Unsetenv("ENV")
-	os.Setenv(LegacyEnvOrderVar, "1")
-	t.Cleanup(func() { os.Unsetenv(LegacyEnvOrderVar) })
+	_ = os.Unsetenv("ENV")
+	_ = os.Setenv(LegacyEnvOrderVar, "1")
+	t.Cleanup(func() { _ = os.Unsetenv(LegacyEnvOrderVar) })
 
 	dir := t.TempDir()
 	mustWriteFile(t, filepath.Join(dir, ".env"), "X=1\n")

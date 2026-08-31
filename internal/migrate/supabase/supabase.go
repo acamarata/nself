@@ -140,7 +140,7 @@ func (c *Client) get(ctx context.Context, url string, extraHeaders map[string]st
 		if err != nil {
 			return nil, fmt.Errorf("http request: %w", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		data, readErr := io.ReadAll(resp.Body)
 		if readErr != nil {

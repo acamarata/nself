@@ -31,7 +31,7 @@ func QueryUsage(ctx context.Context, cfg *config.Config, tenantID, month, format
 	if err != nil {
 		return "", fmt.Errorf("querying usage: %w", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Build query with $N placeholders. Month filtering appends a date-range
 	// predicate using a CAST to date so the comparison is type-safe.
@@ -48,7 +48,7 @@ func QueryUsage(ctx context.Context, cfg *config.Config, tenantID, month, format
 	if err != nil {
 		return "", fmt.Errorf("querying usage: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	type usageRow struct {
 		TenantID string `json:"tenant_id"`

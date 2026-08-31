@@ -54,7 +54,7 @@ func ArchiveWAL(ctx context.Context, opts ArchiveWALOptions) error {
 			return fmt.Errorf("%w: age encrypt failed: %s", errs.ErrWALArchiveFailed, string(output))
 		}
 		uploadPath = encPath
-		defer os.Remove(encPath)
+		defer func() { _ = os.Remove(encPath) }()
 		walBase = walBase + ".age"
 	}
 

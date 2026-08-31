@@ -61,7 +61,7 @@ func ReadComposeManifest(workdir string) ([]string, error) {
 		}
 		return nil, fmt.Errorf("opening compose manifest: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var paths []string
 	scanner := bufio.NewScanner(f)

@@ -103,7 +103,7 @@ func writeAIConfig(projectDir string) (ok bool, err error) {
 	if err != nil {
 		return false, fmt.Errorf("open .env.secrets: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if _, werr := f.WriteString(block); werr != nil {
 		return false, fmt.Errorf("write AI config to .env.secrets: %w", werr)

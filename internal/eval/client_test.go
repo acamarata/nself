@@ -16,7 +16,7 @@ func TestRunSuite(t *testing.T) {
 			return
 		}
 		w.WriteHeader(http.StatusAccepted)
-		json.NewEncoder(w).Encode(RunQueued{RunID: "run-abc123", Status: "queued"})
+		_ = json.NewEncoder(w).Encode(RunQueued{RunID: "run-abc123", Status: "queued"})
 	}))
 	defer srv.Close()
 
@@ -39,7 +39,7 @@ func TestGetRun(t *testing.T) {
 			http.Error(w, "not found", http.StatusNotFound)
 			return
 		}
-		json.NewEncoder(w).Encode(EvalRunResult{
+		_ = json.NewEncoder(w).Encode(EvalRunResult{
 			SchemaVer:  expectedSchemaVer,
 			ID:         "run-xyz",
 			SuiteSlug:  "recall-quality-v1",
@@ -66,7 +66,7 @@ func TestGetRun(t *testing.T) {
 
 func TestGetRunSchemaVersionMismatch(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(EvalRunResult{
+		_ = json.NewEncoder(w).Encode(EvalRunResult{
 			SchemaVer: 99,
 			ID:        "run-abc",
 			Status:    "passed",
@@ -89,7 +89,7 @@ func TestWaitForRunPollsUntilTerminal(t *testing.T) {
 		if calls >= 3 {
 			status = "passed"
 		}
-		json.NewEncoder(w).Encode(EvalRunResult{
+		_ = json.NewEncoder(w).Encode(EvalRunResult{
 			SchemaVer: expectedSchemaVer,
 			ID:        "run-poll",
 			Status:    status,
@@ -123,7 +123,7 @@ func TestWaitForRunPollsUntilTerminal(t *testing.T) {
 
 func TestWaitForRunPreconditionFailed(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(EvalRunResult{
+		_ = json.NewEncoder(w).Encode(EvalRunResult{
 			SchemaVer:          expectedSchemaVer,
 			ID:                 "run-pre",
 			Status:             "failed",
@@ -144,7 +144,7 @@ func TestWaitForRunPreconditionFailed(t *testing.T) {
 
 func TestValidateYAMLValid(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(ValidationResult{Valid: true})
+		_ = json.NewEncoder(w).Encode(ValidationResult{Valid: true})
 	}))
 	defer srv.Close()
 
@@ -160,7 +160,7 @@ func TestValidateYAMLValid(t *testing.T) {
 
 func TestValidateYAMLInvalid(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(ValidationResult{
+		_ = json.NewEncoder(w).Encode(ValidationResult{
 			Valid:  false,
 			Errors: []ValidationError{{Field: "suite", Message: "suite is required"}},
 		})
@@ -186,7 +186,7 @@ func TestGetGateStatus(t *testing.T) {
 			http.Error(w, "not found", http.StatusNotFound)
 			return
 		}
-		json.NewEncoder(w).Encode(GateStatus{
+		_ = json.NewEncoder(w).Encode(GateStatus{
 			Tier:    "semi-auto",
 			Cleared: true,
 		})

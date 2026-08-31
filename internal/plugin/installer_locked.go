@@ -160,20 +160,20 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	if err != nil {
 		return fmt.Errorf("downloading plugin %q: %w", name, err)
 	}
-	defer os.Remove(archivePath)
+	defer func() { _ = os.Remove(archivePath) }()
 
 	// Step 5: Verify checksum before extraction.
 	// For stable plugins a missing checksum is a hard error (V06-F2).
 	// For non-stable plugins an absent checksum emits a warning and continues.
 	if manifest.Checksum != "" {
 		if err := verifyChecksum(archivePath, manifest.Checksum, manifest.PublishStatus); err != nil {
-			os.Remove(archivePath)
+			_ = os.Remove(archivePath)
 			return fmt.Errorf("checksum verification for plugin %q: %w", name, err)
 		}
 	} else {
 		if err := verifyChecksum(archivePath, "", manifest.PublishStatus); err != nil {
 			// stable plugin — hard fail returned by verifyChecksum
-			os.Remove(archivePath)
+			_ = os.Remove(archivePath)
 			return fmt.Errorf("checksum verification for plugin %q: %w", name, err)
 		}
 		fmt.Fprintf(os.Stderr, "warning: no checksum in registry for plugin %q, skipping verification\n", name)
@@ -188,7 +188,7 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	// In prod/staging these bypass vars are fatal — dev-only escapes must never reach production.
 	bypassed, bypassErr := checkSigBypassAllowed(cfg.Env, name)
 	if bypassErr != nil {
-		os.Remove(archivePath)
+		_ = os.Remove(archivePath)
 		return bypassErr
 	}
 	if bypassed {
@@ -203,7 +203,7 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 		}
 	} else {
 		if err := verifyPluginSignature(archivePath, manifest.AuthorPublicKey, manifest.Signature, manifest.PublishStatus); err != nil {
-			os.Remove(archivePath)
+			_ = os.Remove(archivePath)
 			return fmt.Errorf("signature verification for plugin %q: %w", name, err)
 		}
 	}
@@ -216,7 +216,7 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 		SkipCheck: sbomSkip,
 		Version:   manifest.Version,
 	}); err != nil {
-		os.Remove(archivePath)
+		_ = os.Remove(archivePath)
 		return fmt.Errorf("sbom verification for plugin %q: %w", name, err)
 	}
 

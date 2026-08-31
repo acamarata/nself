@@ -36,7 +36,7 @@ func writeEntry(t *testing.T, projectDir string, completedAt time.Time, success 
 	if err != nil {
 		t.Fatalf("open log: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if _, err := f.Write(append(data, '\n')); err != nil {
 		t.Fatalf("write log: %v", err)
 	}

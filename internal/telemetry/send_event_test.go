@@ -42,8 +42,8 @@ func TestSendEventNoOpWhenDisabled(t *testing.T) {
 func TestSendEventPayloadShape(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
-	os.Unsetenv("NSELF_TELEMETRY")
-	os.Unsetenv("NSELF_TELEMETRY_OPT_OUT")
+	_ = os.Unsetenv("NSELF_TELEMETRY")
+	_ = os.Unsetenv("NSELF_TELEMETRY_OPT_OUT")
 
 	type received struct {
 		InstallID  string         `json:"install_id"`
@@ -87,7 +87,7 @@ func TestSendEventPayloadShape(t *testing.T) {
 	if err != nil {
 		t.Fatalf("do: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	select {
 	case got := <-done:
@@ -113,8 +113,8 @@ func TestSendEventPayloadShape(t *testing.T) {
 func TestSendEventNetworkFailSilent(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
-	os.Unsetenv("NSELF_TELEMETRY")
-	os.Unsetenv("NSELF_TELEMETRY_OPT_OUT")
+	_ = os.Unsetenv("NSELF_TELEMETRY")
+	_ = os.Unsetenv("NSELF_TELEMETRY_OPT_OUT")
 
 	// Start and immediately close a server — connections refused.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))

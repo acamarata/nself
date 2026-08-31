@@ -157,14 +157,14 @@ func runConfigImport(cmd *cobra.Command, args []string) error {
 	sort.Strings(conflicts)
 
 	if len(conflicts) > 0 && !force {
-		fmt.Fprintf(cmd.ErrOrStderr(), "The following keys in %s will be overwritten:\n", filepath.Base(envFile))
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "The following keys in %s will be overwritten:\n", filepath.Base(envFile))
 		for _, k := range conflicts {
-			fmt.Fprintf(cmd.ErrOrStderr(), "  %s: %s -> %s\n", k, maskValue(k, current[k], false), maskValue(k, incoming[k], false))
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "  %s: %s -> %s\n", k, maskValue(k, current[k], false), maskValue(k, incoming[k], false))
 		}
-		fmt.Fprint(cmd.ErrOrStderr(), "Continue? [y/N] ")
+		_, _ = fmt.Fprint(cmd.ErrOrStderr(), "Continue? [y/N] ")
 		var response string
 		if _, scanErr := fmt.Scanln(&response); scanErr != nil || strings.ToLower(strings.TrimSpace(response)) != "y" {
-			fmt.Fprintln(cmd.ErrOrStderr(), "Import cancelled.")
+			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "Import cancelled.")
 			return nil
 		}
 	}

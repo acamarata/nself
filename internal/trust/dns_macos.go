@@ -153,7 +153,7 @@ func configureDnsmasqConf() error {
 	if err != nil {
 		return fmt.Errorf("opening dnsmasq.conf: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	_, err = fmt.Fprintf(f, "\n# nself: wildcard .local DNS resolution\n%s\n", dnsmasqConfLine)
 	if err != nil {

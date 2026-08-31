@@ -114,7 +114,7 @@ func resolveDebugPort(manual int) (int, error) {
 	for port := 2345; port <= 2399; port++ {
 		ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 		if err == nil {
-			ln.Close()
+			_ = ln.Close()
 			return port, nil
 		}
 	}

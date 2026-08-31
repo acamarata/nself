@@ -113,7 +113,7 @@ func (g *Generator) Generate(ctx context.Context, prompt string, deltas []Schema
 	if err != nil {
 		return nil, fmt.Errorf("ai generate call: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		msg, _ := io.ReadAll(resp.Body)

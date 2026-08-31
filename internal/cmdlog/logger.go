@@ -89,7 +89,7 @@ func (l *Logger) write(entry Entry) error {
 	if err != nil {
 		return fmt.Errorf("cmdlog: open %s: %w", l.path, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	_, err = f.Write(line)
 	return err

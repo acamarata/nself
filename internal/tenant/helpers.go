@@ -66,7 +66,7 @@ func openTenantDB(ctx context.Context, cfg *config.Config) (*sql.DB, error) {
 		return nil, fmt.Errorf("open tenant db: %w", err)
 	}
 	if err := db.PingContext(ctx); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("connect to tenant db: %w (is the postgres container running?)", err)
 	}
 	return db, nil

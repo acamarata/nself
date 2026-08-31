@@ -21,9 +21,9 @@ func metadataResponse(schemas []map[string]interface{}) []byte {
 }
 
 func TestCheckOrphanRemoteSchemas_NoHasuraURL(t *testing.T) {
-	os.Unsetenv("NSELF_HASURA_GRAPHQL_URL")
-	os.Unsetenv("HASURA_GRAPHQL_URL")
-	os.Unsetenv("HASURA_GRAPHQL_ADMIN_SECRET")
+	_ = os.Unsetenv("NSELF_HASURA_GRAPHQL_URL")
+	_ = os.Unsetenv("HASURA_GRAPHQL_URL")
+	_ = os.Unsetenv("HASURA_GRAPHQL_ADMIN_SECRET")
 
 	result := CheckOrphanRemoteSchemas(context.Background())
 	if result.Status != "skip" {
@@ -32,9 +32,9 @@ func TestCheckOrphanRemoteSchemas_NoHasuraURL(t *testing.T) {
 }
 
 func TestCheckOrphanRemoteSchemas_NoAdminSecret(t *testing.T) {
-	os.Setenv("HASURA_GRAPHQL_URL", "http://localhost:8080")
-	defer os.Unsetenv("HASURA_GRAPHQL_URL")
-	os.Unsetenv("HASURA_GRAPHQL_ADMIN_SECRET")
+	_ = os.Setenv("HASURA_GRAPHQL_URL", "http://localhost:8080")
+	defer func() { _ = os.Unsetenv("HASURA_GRAPHQL_URL") }()
+	_ = os.Unsetenv("HASURA_GRAPHQL_ADMIN_SECRET")
 
 	result := CheckOrphanRemoteSchemas(context.Background())
 	if result.Status != "skip" {
@@ -43,10 +43,10 @@ func TestCheckOrphanRemoteSchemas_NoAdminSecret(t *testing.T) {
 }
 
 func TestCheckOrphanRemoteSchemas_HasuraUnreachable(t *testing.T) {
-	os.Setenv("HASURA_GRAPHQL_URL", "http://127.0.0.1:19999") // nothing listening
-	defer os.Unsetenv("HASURA_GRAPHQL_URL")
-	os.Setenv("HASURA_GRAPHQL_ADMIN_SECRET", "test-secret")
-	defer os.Unsetenv("HASURA_GRAPHQL_ADMIN_SECRET")
+	_ = os.Setenv("HASURA_GRAPHQL_URL", "http://127.0.0.1:19999") // nothing listening
+	defer func() { _ = os.Unsetenv("HASURA_GRAPHQL_URL") }()
+	_ = os.Setenv("HASURA_GRAPHQL_ADMIN_SECRET", "test-secret")
+	defer func() { _ = os.Unsetenv("HASURA_GRAPHQL_ADMIN_SECRET") }()
 
 	result := CheckOrphanRemoteSchemas(context.Background())
 	if result.Status != "warn" {
@@ -57,14 +57,14 @@ func TestCheckOrphanRemoteSchemas_HasuraUnreachable(t *testing.T) {
 func TestCheckOrphanRemoteSchemas_NoRemoteSchemas(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(metadataResponse(nil))
+		_, _ = w.Write(metadataResponse(nil))
 	}))
 	defer srv.Close()
 
-	os.Setenv("HASURA_GRAPHQL_URL", srv.URL)
-	defer os.Unsetenv("HASURA_GRAPHQL_URL")
-	os.Setenv("HASURA_GRAPHQL_ADMIN_SECRET", "test-secret")
-	defer os.Unsetenv("HASURA_GRAPHQL_ADMIN_SECRET")
+	_ = os.Setenv("HASURA_GRAPHQL_URL", srv.URL)
+	defer func() { _ = os.Unsetenv("HASURA_GRAPHQL_URL") }()
+	_ = os.Setenv("HASURA_GRAPHQL_ADMIN_SECRET", "test-secret")
+	defer func() { _ = os.Unsetenv("HASURA_GRAPHQL_ADMIN_SECRET") }()
 
 	result := CheckOrphanRemoteSchemas(context.Background())
 	if result.Status != "pass" {
@@ -85,18 +85,18 @@ func TestCheckOrphanRemoteSchemas_AllLoaded(t *testing.T) {
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(metadataResponse(schemas))
+		_, _ = w.Write(metadataResponse(schemas))
 	}))
 	defer srv.Close()
 
-	os.Setenv("HASURA_GRAPHQL_URL", srv.URL)
-	defer os.Unsetenv("HASURA_GRAPHQL_URL")
-	os.Setenv("HASURA_GRAPHQL_ADMIN_SECRET", "test-secret")
-	defer os.Unsetenv("HASURA_GRAPHQL_ADMIN_SECRET")
+	_ = os.Setenv("HASURA_GRAPHQL_URL", srv.URL)
+	defer func() { _ = os.Unsetenv("HASURA_GRAPHQL_URL") }()
+	_ = os.Setenv("HASURA_GRAPHQL_ADMIN_SECRET", "test-secret")
+	defer func() { _ = os.Unsetenv("HASURA_GRAPHQL_ADMIN_SECRET") }()
 
 	// Simulate both plugins loaded via NSELF_PLUGINS_LOADED.
-	os.Setenv("NSELF_PLUGINS_LOADED", "ai,stripe")
-	defer os.Unsetenv("NSELF_PLUGINS_LOADED")
+	_ = os.Setenv("NSELF_PLUGINS_LOADED", "ai,stripe")
+	defer func() { _ = os.Unsetenv("NSELF_PLUGINS_LOADED") }()
 
 	result := CheckOrphanRemoteSchemas(context.Background())
 	if result.Status != "pass" {
@@ -118,18 +118,18 @@ func TestCheckOrphanRemoteSchemas_OrphanDetected(t *testing.T) {
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(metadataResponse(schemas))
+		_, _ = w.Write(metadataResponse(schemas))
 	}))
 	defer srv.Close()
 
-	os.Setenv("HASURA_GRAPHQL_URL", srv.URL)
-	defer os.Unsetenv("HASURA_GRAPHQL_URL")
-	os.Setenv("HASURA_GRAPHQL_ADMIN_SECRET", "test-secret")
-	defer os.Unsetenv("HASURA_GRAPHQL_ADMIN_SECRET")
+	_ = os.Setenv("HASURA_GRAPHQL_URL", srv.URL)
+	defer func() { _ = os.Unsetenv("HASURA_GRAPHQL_URL") }()
+	_ = os.Setenv("HASURA_GRAPHQL_ADMIN_SECRET", "test-secret")
+	defer func() { _ = os.Unsetenv("HASURA_GRAPHQL_ADMIN_SECRET") }()
 
 	// Only ai is loaded; stripe was uninstalled.
-	os.Setenv("NSELF_PLUGINS_LOADED", "ai")
-	defer os.Unsetenv("NSELF_PLUGINS_LOADED")
+	_ = os.Setenv("NSELF_PLUGINS_LOADED", "ai")
+	defer func() { _ = os.Unsetenv("NSELF_PLUGINS_LOADED") }()
 
 	result := CheckOrphanRemoteSchemas(context.Background())
 	if result.Status != "warn" {
@@ -153,18 +153,18 @@ func TestCheckOrphanRemoteSchemas_URLBasedMatch(t *testing.T) {
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(metadataResponse(schemas))
+		_, _ = w.Write(metadataResponse(schemas))
 	}))
 	defer srv.Close()
 
-	os.Setenv("HASURA_GRAPHQL_URL", srv.URL)
-	defer os.Unsetenv("HASURA_GRAPHQL_URL")
-	os.Setenv("HASURA_GRAPHQL_ADMIN_SECRET", "test-secret")
-	defer os.Unsetenv("HASURA_GRAPHQL_ADMIN_SECRET")
+	_ = os.Setenv("HASURA_GRAPHQL_URL", srv.URL)
+	defer func() { _ = os.Unsetenv("HASURA_GRAPHQL_URL") }()
+	_ = os.Setenv("HASURA_GRAPHQL_ADMIN_SECRET", "test-secret")
+	defer func() { _ = os.Unsetenv("HASURA_GRAPHQL_ADMIN_SECRET") }()
 
 	// Plugin URL env var present → plugin is loaded.
-	os.Setenv("PLUGIN_GEOCODING_INTERNAL_URL", pluginURL)
-	defer os.Unsetenv("PLUGIN_GEOCODING_INTERNAL_URL")
+	_ = os.Setenv("PLUGIN_GEOCODING_INTERNAL_URL", pluginURL)
+	defer func() { _ = os.Unsetenv("PLUGIN_GEOCODING_INTERNAL_URL") }()
 
 	result := CheckOrphanRemoteSchemas(context.Background())
 	if result.Status != "pass" {
@@ -173,11 +173,11 @@ func TestCheckOrphanRemoteSchemas_URLBasedMatch(t *testing.T) {
 }
 
 func TestResolveLoadedPlugins_MultipleSourcess(t *testing.T) {
-	os.Unsetenv("NSELF_PLUGINS_LOADED")
-	os.Setenv("NSELF_AI_LOADED", "1")
-	defer os.Unsetenv("NSELF_AI_LOADED")
-	os.Setenv("PLUGIN_STRIPE_INTERNAL_URL", "http://plugin-stripe:4001")
-	defer os.Unsetenv("PLUGIN_STRIPE_INTERNAL_URL")
+	_ = os.Unsetenv("NSELF_PLUGINS_LOADED")
+	_ = os.Setenv("NSELF_AI_LOADED", "1")
+	defer func() { _ = os.Unsetenv("NSELF_AI_LOADED") }()
+	_ = os.Setenv("PLUGIN_STRIPE_INTERNAL_URL", "http://plugin-stripe:4001")
+	defer func() { _ = os.Unsetenv("PLUGIN_STRIPE_INTERNAL_URL") }()
 
 	loaded := resolveLoadedPlugins()
 	if !loaded["ai"] {

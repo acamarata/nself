@@ -39,7 +39,7 @@ func GetDevices(ctx context.Context, accessToken string) ([]DeviceEntry, error) 
 	if err != nil {
 		return nil, fmt.Errorf("getting devices: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, parseAPIError(resp)
 	}
@@ -66,7 +66,7 @@ func RevokeDevice(ctx context.Context, accessToken, deviceID string) error {
 	if err != nil {
 		return fmt.Errorf("revoking device: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		return parseAPIError(resp)
 	}
@@ -90,7 +90,7 @@ func TransferLicense(ctx context.Context, accessToken, licenseID, toEmail string
 	if err != nil {
 		return fmt.Errorf("transferring license: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return parseAPIError(resp)
 	}

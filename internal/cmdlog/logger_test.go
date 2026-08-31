@@ -120,7 +120,7 @@ func TestRotation(t *testing.T) {
 	// Instead, test the rotation mechanics directly:
 	l.mu.Lock()
 	// Create a fake .1 file and verify shift works
-	os.WriteFile(logPath+".1", []byte("old"), 0644)
+	_ = os.WriteFile(logPath+".1", []byte("old"), 0644)
 	l.mu.Unlock()
 
 	// Verify .1 exists

@@ -77,7 +77,7 @@ func (b *PGSocketBridge) Listen(ctx context.Context, sockPath string, runtime *E
 		return fmt.Errorf("embedded/bridge: listen on %s: %w", sockPath, err)
 	}
 	if err := os.Chmod(sockPath, 0o660); err != nil {
-		ln.Close()
+		_ = ln.Close()
 		return fmt.Errorf("embedded/bridge: chmod socket: %w", err)
 	}
 
@@ -128,7 +128,7 @@ func (b *PGSocketBridge) acceptLoop(ctx context.Context) {
 // Postgres simple-query (Q) messages. Extended-query protocol (P/B/E) flow is
 // passed through unmodified; pglite itself will reject unsupported commands.
 func (b *PGSocketBridge) handleConn(ctx context.Context, client net.Conn) {
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	b.mu.Lock()
 	rt := b.runtime
@@ -141,7 +141,7 @@ func (b *PGSocketBridge) handleConn(ctx context.Context, client net.Conn) {
 		// Cannot reach pglite — close the client connection.
 		return
 	}
-	defer backend.Close()
+	defer func() { _ = backend.Close() }()
 
 	// Bidirectional copy with interception on the client→backend direction.
 	var wg sync.WaitGroup

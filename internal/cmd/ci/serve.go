@@ -153,11 +153,11 @@ func handleHealthz(w http.ResponseWriter, _ *http.Request) {
 // handleInfo returns a plaintext info page at /.
 func handleInfo(w http.ResponseWriter, _ *http.Request, cfg ServeConfig) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	fmt.Fprintf(w, "nself-ci-serve\n")
-	fmt.Fprintf(w, "  port        : 3845\n")
-	fmt.Fprintf(w, "  concurrency : %d\n", cfg.Concurrency)
-	fmt.Fprintf(w, "  job_timeout : %ds\n", cfg.JobTimeout)
-	fmt.Fprintf(w, "  workdir     : %s\n", cfg.WorkDir)
-	fmt.Fprintf(w, "  /healthz    : health probe\n")
-	fmt.Fprintf(w, "  POST /      : GitHub webhook (push, pull_request)\n")
+	_, _ = fmt.Fprintf(w, "nself-ci-serve\n")
+	_, _ = fmt.Fprintf(w, "  port        : 3845\n")
+	_, _ = fmt.Fprintf(w, "  concurrency : %d\n", cfg.Concurrency)
+	_, _ = fmt.Fprintf(w, "  job_timeout : %ds\n", cfg.JobTimeout)
+	_, _ = fmt.Fprintf(w, "  workdir     : %s\n", cfg.WorkDir)
+	_, _ = fmt.Fprintf(w, "  /healthz    : health probe\n")
+	_, _ = fmt.Fprintf(w, "  POST /      : GitHub webhook (push, pull_request)\n")
 }

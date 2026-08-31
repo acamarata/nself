@@ -98,7 +98,7 @@ func scanFile(path string) ([]invocation, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var out []invocation
 	scanner := bufio.NewScanner(f)

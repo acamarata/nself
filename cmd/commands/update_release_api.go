@@ -40,7 +40,7 @@ func fetchReleaseFromURL(apiURL string) (tag string, htmlURL string, err error) 
 	if err != nil {
 		return "", "", fmt.Errorf("HTTP request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", "", fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
@@ -95,7 +95,7 @@ func fetchMigrationGuideURL(currentVersion string) string {
 	if err != nil {
 		return ""
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return ""
 	}

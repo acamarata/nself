@@ -10,28 +10,28 @@ import (
 )
 
 func TestEnabled_Default(t *testing.T) {
-	os.Unsetenv("COST_ALERT_ENABLED")
+	_ = os.Unsetenv("COST_ALERT_ENABLED")
 	if Enabled() {
 		t.Error("expected Enabled() to return false by default")
 	}
 }
 
 func TestEnabled_True(t *testing.T) {
-	os.Setenv("COST_ALERT_ENABLED", "true")
-	defer os.Unsetenv("COST_ALERT_ENABLED")
+	_ = os.Setenv("COST_ALERT_ENABLED", "true")
+	defer func() { _ = os.Unsetenv("COST_ALERT_ENABLED") }()
 	if !Enabled() {
 		t.Error("expected Enabled() to return true when env is 'true'")
 	}
 }
 
 func TestLoadBudgetFromEnv(t *testing.T) {
-	os.Setenv("COST_BUDGET_AI_DAILY_USD", "5.00")
-	os.Setenv("COST_BUDGET_MEDIA_DAILY_USD", "2.50")
-	os.Setenv("COST_BUDGET_TOTAL_DAILY_USD", "20.00")
+	_ = os.Setenv("COST_BUDGET_AI_DAILY_USD", "5.00")
+	_ = os.Setenv("COST_BUDGET_MEDIA_DAILY_USD", "2.50")
+	_ = os.Setenv("COST_BUDGET_TOTAL_DAILY_USD", "20.00")
 	defer func() {
-		os.Unsetenv("COST_BUDGET_AI_DAILY_USD")
-		os.Unsetenv("COST_BUDGET_MEDIA_DAILY_USD")
-		os.Unsetenv("COST_BUDGET_TOTAL_DAILY_USD")
+		_ = os.Unsetenv("COST_BUDGET_AI_DAILY_USD")
+		_ = os.Unsetenv("COST_BUDGET_MEDIA_DAILY_USD")
+		_ = os.Unsetenv("COST_BUDGET_TOTAL_DAILY_USD")
 	}()
 
 	b := LoadBudgetFromEnv()
@@ -61,7 +61,7 @@ func TestFormatAlert(t *testing.T) {
 }
 
 func TestPostSlack_NoURL(t *testing.T) {
-	os.Unsetenv("SLACK_WEBHOOK_URL")
+	_ = os.Unsetenv("SLACK_WEBHOOK_URL")
 	a := New(nil, Budget{})
 	// Should not error when URL is unset
 	if err := a.postSlack(context.Background(), "test message"); err != nil {
@@ -77,8 +77,8 @@ func TestPostSlack_Success(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	os.Setenv("SLACK_WEBHOOK_URL", ts.URL)
-	defer os.Unsetenv("SLACK_WEBHOOK_URL")
+	_ = os.Setenv("SLACK_WEBHOOK_URL", ts.URL)
+	defer func() { _ = os.Unsetenv("SLACK_WEBHOOK_URL") }()
 
 	a := &Alerter{HTTPClient: ts.Client()}
 	if err := a.postSlack(context.Background(), "budget exceeded"); err != nil {
@@ -90,7 +90,7 @@ func TestPostSlack_Success(t *testing.T) {
 }
 
 func TestCheckAndAlert_Disabled(t *testing.T) {
-	os.Unsetenv("COST_ALERT_ENABLED")
+	_ = os.Unsetenv("COST_ALERT_ENABLED")
 	a := &Alerter{}
 	// Should return nil without touching DB
 	if err := a.CheckAndAlert(context.Background()); err != nil {

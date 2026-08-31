@@ -53,7 +53,7 @@ func printEnvOrderSummary(cmd *cobra.Command, report *migratebash.EnvOrderReport
 	}
 
 	if manual := report.ManualReviewCount(); manual > 0 {
-		fmt.Fprintf(cmd.ErrOrStderr(), "%s %s\n\n", ui.C(ui.Yellow, ui.IconWarning), ui.C(ui.Bold, fmt.Sprintf("%d variable(s) need your review:", manual)))
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "%s %s\n\n", ui.C(ui.Yellow, ui.IconWarning), ui.C(ui.Bold, fmt.Sprintf("%d variable(s) need your review:", manual)))
 		for _, c := range report.Changes {
 			if c.Action != migratebash.ActionManualReview {
 				continue

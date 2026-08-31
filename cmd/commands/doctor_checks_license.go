@@ -130,7 +130,7 @@ func checkLicenseMigrationRate(verbose bool) doctorCheckResult {
 		}
 		return doctorCheckResult{Name: name, Status: "pass", Message: msg}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == 401 || resp.StatusCode == 403 {
 		// Endpoint exists but requires admin auth — skip (not an error for end-user).

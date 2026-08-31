@@ -65,7 +65,7 @@ func controllerEnabled() bool {
 // assertControllerEnabled prints the 503 message and returns false when the flag is off.
 func assertControllerEnabled(cmd *cobra.Command) bool {
 	if !controllerEnabled() {
-		fmt.Fprintln(cmd.ErrOrStderr(),
+		_, _ = fmt.Fprintln(cmd.ErrOrStderr(),
 			"503 Multi-tenant controller not enabled.\n"+
 				"Set NSELF_FLAG_MULTI_TENANT_CONTROLLER=true to enable.")
 		return false
@@ -96,7 +96,7 @@ func doControllerRequest(method, path string, body interface{}) ([]byte, int, er
 	if err != nil {
 		return nil, 0, fmt.Errorf("controller request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, _ := io.ReadAll(resp.Body)
 	return respBody, resp.StatusCode, nil

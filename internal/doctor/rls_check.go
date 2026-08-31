@@ -73,7 +73,7 @@ func CheckRLSEnforcement(ctx context.Context, strict bool) []CheckResult {
 			Message: fmt.Sprintf("cannot open DB for RLS check: %v", err),
 		}}
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Set a short timeout — this is a diagnostic check.
 	checkCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
@@ -190,7 +190,7 @@ func queryNPTables(ctx context.Context, db *sql.DB) ([]rlsTableInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("pg_class query: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var tables []rlsTableInfo
 	for rows.Next() {

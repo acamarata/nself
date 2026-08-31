@@ -260,7 +260,7 @@ func captureDoctorStdout(t *testing.T, f func() error) (string, error) {
 	}()
 
 	ferr := f()
-	w.Close()
+	_ = w.Close()
 	out := <-done
 	return out, ferr
 }

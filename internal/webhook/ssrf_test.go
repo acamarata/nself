@@ -174,8 +174,8 @@ func TestSSRFGuardInvariant(t *testing.T) {
 	// Verify SSRF_ALLOWED_HOSTS is not set from environment, so our test is clean.
 	// This test just ensures the file is exercised by go test.
 	saved := os.Getenv("SSRF_ALLOWED_HOSTS")
-	os.Unsetenv("SSRF_ALLOWED_HOSTS")
-	defer os.Setenv("SSRF_ALLOWED_HOSTS", saved)
+	_ = os.Unsetenv("SSRF_ALLOWED_HOSTS")
+	defer func() { _ = os.Setenv("SSRF_ALLOWED_HOSTS", saved) }()
 
 	// A public HTTPS URL with no private IP should pass validation (DNS may fail in CI).
 	err := ValidateWebhookURL("https://hooks.example.com/webhook")

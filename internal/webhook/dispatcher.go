@@ -194,7 +194,7 @@ func (d *Dispatcher) dispatch(ctx context.Context, del Delivery) {
 		d.handleFailure(ctx, del, fmt.Sprintf("POST: %v", err), circ)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		// Success.

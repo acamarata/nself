@@ -42,11 +42,11 @@ var projectListCmd = &cobra.Command{
 		}
 
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-		fmt.Fprintf(w, "SLUG\tDOMAIN\tSTATUS\tCREATED\n")
+		_, _ = fmt.Fprintf(w, "SLUG\tDOMAIN\tSTATUS\tCREATED\n")
 		for _, p := range projects {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", p.Slug, p.Domain, p.Status, p.CreatedAt)
+			_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", p.Slug, p.Domain, p.Status, p.CreatedAt)
 		}
-		w.Flush()
+		_ = w.Flush()
 		return nil
 	},
 }
@@ -72,7 +72,7 @@ var projectStatusCmd = &cobra.Command{
 		if code != http.StatusOK {
 			return fmt.Errorf("status failed (%d): %s", code, body)
 		}
-		fmt.Fprintln(cmd.OutOrStdout(), string(body))
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(body))
 		return nil
 	},
 }
@@ -91,8 +91,8 @@ var projectMigrateCmd = &cobra.Command{
 		if projectMigrateFlags.Slug == "" {
 			return fmt.Errorf("--slug is required")
 		}
-		fmt.Fprintf(cmd.OutOrStdout(), "Migration for project %q is handled by 'nself deploy' targeting the project schema.\n", projectMigrateFlags.Slug)
-		fmt.Fprintln(cmd.OutOrStdout(), "Use: NSELF_PROJECT_SLUG="+projectMigrateFlags.Slug+" nself deploy")
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Migration for project %q is handled by 'nself deploy' targeting the project schema.\n", projectMigrateFlags.Slug)
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Use: NSELF_PROJECT_SLUG="+projectMigrateFlags.Slug+" nself deploy")
 		return nil
 	},
 }
@@ -118,7 +118,7 @@ var projectShellCmd = &cobra.Command{
 		schemaName := "project_" + projectShellFlags.Slug
 		roleName := "nself_project_" + projectShellFlags.Slug
 
-		fmt.Fprintf(cmd.OutOrStdout(), "Opening psql as role %s (schema: %s)...\n", roleName, schemaName)
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Opening psql as role %s (schema: %s)...\n", roleName, schemaName)
 		c := exec.Command("psql",
 			"-U", roleName,
 			"-d", "nself",
@@ -145,8 +145,8 @@ var projectRotateCredsCmd = &cobra.Command{
 		if projectRotateCredsFlags.Slug == "" {
 			return fmt.Errorf("--slug is required")
 		}
-		fmt.Fprintln(cmd.OutOrStdout(), "Credential rotation is dispatched to the controller daemon.")
-		fmt.Fprintln(cmd.OutOrStdout(), "This feature is available in the controller HTTP API: POST /projects/"+projectRotateCredsFlags.Slug+"/rotate-credentials")
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Credential rotation is dispatched to the controller daemon.")
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "This feature is available in the controller HTTP API: POST /projects/"+projectRotateCredsFlags.Slug+"/rotate-credentials")
 		return nil
 	},
 }

@@ -202,7 +202,7 @@ func validateLicenseRemoteWithEntitlements(ctx context.Context, key string, ping
 	if err != nil {
 		return false, nil, fmt.Errorf("license validation request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	switch resp.StatusCode {
 	case http.StatusOK:

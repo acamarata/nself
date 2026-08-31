@@ -247,7 +247,7 @@ func init() {
 	// service add flags
 	serviceAddCmd.Flags().String("template", "go", "Service template: go, node, python, static, rust, other")
 	serviceAddCmd.Flags().String("lang", "", "Alias for --template (deprecated, use --template)")
-	serviceAddCmd.Flags().MarkHidden("lang")
+	_ = serviceAddCmd.Flags().MarkHidden("lang")
 	serviceAddCmd.Flags().Bool("force", false, "Overwrite existing service directory")
 	serviceAddCmd.Flags().Bool("dry-run", false, "Print what would be done without writing files")
 

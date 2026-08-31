@@ -42,7 +42,7 @@ func TestInstall_MetaBundleNotInstallable(t *testing.T) {
 
 func TestInstall_DryRunWithMockedRegistry(t *testing.T) {
 	dir := setupOfflineRegistry(t, mockNsentryRegistry())
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	var buf bytes.Buffer
 	res, err := Install(context.Background(), "nsentry", InstallOpts{
@@ -69,7 +69,7 @@ func TestInstall_DryRunWithMockedRegistry(t *testing.T) {
 
 func TestInstall_AtomicRollbackOnFailure(t *testing.T) {
 	dir := setupOfflineRegistry(t, mockNsentryRegistry())
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	pluginDir := t.TempDir()
 	var buf bytes.Buffer
@@ -126,7 +126,7 @@ func TestInstall_AtomicRollbackOnFailure(t *testing.T) {
 // is always enforced.
 func TestInstall_ForceStillValidatesLicense(t *testing.T) {
 	dir := setupOfflineRegistry(t, mockNsentryRegistry())
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	pluginDir := t.TempDir()
 	var buf bytes.Buffer
@@ -170,7 +170,7 @@ func TestInstall_ForceStillValidatesLicense(t *testing.T) {
 
 func TestInstall_LicenseFailWithoutForce(t *testing.T) {
 	dir := setupOfflineRegistry(t, mockNsentryRegistry())
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	pluginDir := t.TempDir()
 	var buf bytes.Buffer
@@ -196,7 +196,7 @@ func TestInstall_LicenseFailWithoutForce(t *testing.T) {
 func TestInstall_StrictModeMissingPlugin(t *testing.T) {
 	// Mock registry has only one plugin; bundle expects 13. Strict mode → error.
 	dir := setupOfflineRegistry(t, mockPartialNsentryRegistry())
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	var buf bytes.Buffer
 	_, err := Install(context.Background(), "nsentry", InstallOpts{

@@ -35,7 +35,7 @@ func TestDownloadAndVerify_HappyPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DownloadAndVerify returned unexpected error: %v", err)
 	}
-	defer os.Remove(tmpPath)
+	defer func() { _ = os.Remove(tmpPath) }()
 
 	if tmpPath == "" {
 		t.Fatal("DownloadAndVerify returned empty path on success")
@@ -65,14 +65,14 @@ func TestDownloadAndVerify_Mismatch(t *testing.T) {
 
 	tmpPath, err := DownloadAndVerify(context.Background(), srv.URL, wrongSHA)
 	if err == nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		t.Fatal("DownloadAndVerify: expected checksum mismatch error, got nil")
 	}
 
 	// Temp file must not remain on disk after a mismatch.
 	if tmpPath != "" {
 		if _, statErr := os.Stat(tmpPath); statErr == nil {
-			os.Remove(tmpPath)
+			_ = os.Remove(tmpPath)
 			t.Errorf("DownloadAndVerify left temp file %q behind on mismatch", tmpPath)
 		}
 	}
@@ -133,7 +133,7 @@ func TestDownloadAndVerify_TempDirPerms(t *testing.T) {
 		t.Fatalf("DownloadAndVerify returned unexpected error: %v", err)
 	}
 	dir := filepath.Dir(tmpPath)
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	// Directory must be 0700 (owner-only).
 	dirInfo, err := os.Stat(dir)
@@ -172,14 +172,14 @@ func TestDownloadAndVerify_ContextCancel(t *testing.T) {
 	tmpPath, err := DownloadAndVerify(ctx, srv.URL, sha256Hex([]byte("any")))
 	if err == nil {
 		if tmpPath != "" {
-			os.RemoveAll(filepath.Dir(tmpPath))
+			_ = os.RemoveAll(filepath.Dir(tmpPath))
 		}
 		t.Fatal("DownloadAndVerify: expected error for cancelled context, got nil")
 	}
 	// No temp file should remain.
 	if tmpPath != "" {
 		if _, statErr := os.Stat(tmpPath); statErr == nil {
-			os.RemoveAll(filepath.Dir(tmpPath))
+			_ = os.RemoveAll(filepath.Dir(tmpPath))
 			t.Errorf("DownloadAndVerify left temp file %q behind on context cancel", tmpPath)
 		}
 	}
@@ -207,7 +207,7 @@ func TestDownloadAndVerify_LimitReaderCap(t *testing.T) {
 	tmpPath, err := DownloadAndVerify(context.Background(), srv.URL, correctSHA)
 	if err == nil {
 		if tmpPath != "" {
-			os.RemoveAll(filepath.Dir(tmpPath))
+			_ = os.RemoveAll(filepath.Dir(tmpPath))
 		}
 		t.Fatal("DownloadAndVerify: expected checksum mismatch for body > 2 MiB cap, got nil")
 	}
@@ -222,7 +222,7 @@ func TestDownloadAndVerify_LimitReaderCap(t *testing.T) {
 	// No temp artefacts should remain.
 	if tmpPath != "" {
 		if _, statErr := os.Stat(tmpPath); statErr == nil {
-			os.RemoveAll(filepath.Dir(tmpPath))
+			_ = os.RemoveAll(filepath.Dir(tmpPath))
 			t.Errorf("DownloadAndVerify left temp file %q behind after mismatch", tmpPath)
 		}
 	}

@@ -47,7 +47,7 @@ func TestWrite_CreatesFileWith0600(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open audit.log: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	sc := bufio.NewScanner(f)
 	if !sc.Scan() {
@@ -93,7 +93,7 @@ func TestWrite_AppendsMultipleEntries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	lineCount := 0
 	sc := bufio.NewScanner(f)

@@ -443,14 +443,14 @@ func captureStdout(t *testing.T, fn func() error) (string, error) {
 	done := make(chan error, 1)
 	go func() {
 		_, copyErr := io.Copy(&buf, r)
-		r.Close()
+		_ = r.Close()
 		done <- copyErr
 	}()
 
 	old := os.Stdout
 	os.Stdout = w
 	fnErr := fn()
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	if copyErr := <-done; copyErr != nil {

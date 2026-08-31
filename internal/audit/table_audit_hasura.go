@@ -45,7 +45,7 @@ func auditTable(ctx context.Context, db *sql.DB, table string) (TableAuditResult
 	if err != nil {
 		return result, fmt.Errorf("aggregate %s by source_account_id: %w", table, err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	result.Accounts = make(map[string]int64)
 	for rows.Next() {

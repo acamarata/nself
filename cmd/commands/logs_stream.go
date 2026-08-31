@@ -48,10 +48,10 @@ func streamFilteredLogs(ctx context.Context, workdir string, composeArgs []strin
 		}
 		if opts.JSON {
 			jsonLine := logLineToJSON(filtered)
-			fmt.Fprintln(w, jsonLine)
+			_, _ = fmt.Fprintln(w, jsonLine)
 		} else {
 			formatted := formatLogLine(filtered, "", opts)
-			fmt.Fprintln(w, formatted)
+			_, _ = fmt.Fprintln(w, formatted)
 		}
 	}
 

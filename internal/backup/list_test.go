@@ -53,7 +53,7 @@ func TestValidateBackupPath_AbsoluteUserPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(backupDir)
+	defer func() { _ = os.RemoveAll(backupDir) }()
 
 	absPath := filepath.Join(backupDir, "subdir", "file.dump")
 	got, err := ValidateBackupPath(backupDir, absPath)
@@ -75,7 +75,7 @@ func TestValidateBackupPath_DotDotMiddle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(backupDir)
+	defer func() { _ = os.RemoveAll(backupDir) }()
 
 	// Create the "valid" subdirectory so the traversal starts realistically.
 	os.MkdirAll(filepath.Join(backupDir, "valid"), 0755) //nolint:errcheck
@@ -93,7 +93,7 @@ func TestValidateBackupPath_NestedValid(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(backupDir)
+	defer func() { _ = os.RemoveAll(backupDir) }()
 
 	os.MkdirAll(filepath.Join(backupDir, "2026", "04"), 0755) //nolint:errcheck
 
@@ -113,7 +113,7 @@ func TestValidateBackupPath_EmptyUserPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(backupDir)
+	defer func() { _ = os.RemoveAll(backupDir) }()
 
 	// Empty path resolves to backupDir — this is the base, which is allowed.
 	_, err = ValidateBackupPath(backupDir, "")

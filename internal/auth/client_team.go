@@ -36,7 +36,7 @@ func GetTeamMembers(ctx context.Context, accessToken string) ([]TeamMember, erro
 	if err != nil {
 		return nil, fmt.Errorf("getting team: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, parseAPIError(resp)
@@ -66,7 +66,7 @@ func InviteTeamMember(ctx context.Context, accessToken, email string) error {
 	if err != nil {
 		return fmt.Errorf("inviting team member: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return parseAPIError(resp)
 	}
@@ -86,7 +86,7 @@ func RemoveTeamMember(ctx context.Context, accessToken, email string) error {
 	if err != nil {
 		return fmt.Errorf("removing team member: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		return parseAPIError(resp)
 	}
@@ -108,7 +108,7 @@ func SetTeamMemberRole(ctx context.Context, accessToken, email, role string) err
 	if err != nil {
 		return fmt.Errorf("setting team member role: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return parseAPIError(resp)
 	}
@@ -130,7 +130,7 @@ func ActivateLicense(ctx context.Context, accessToken, licenseID string) error {
 	if err != nil {
 		return fmt.Errorf("activating license: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return parseAPIError(resp)
 	}

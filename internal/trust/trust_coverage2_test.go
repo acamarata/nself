@@ -83,7 +83,7 @@ func TestConfigureDnsmasqConf_SyntheticAppend(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, _ = f.WriteString("\n# nself: wildcard .local DNS resolution\n" + dnsmasqConfLine + "\n")
-	f.Close()
+	_ = f.Close()
 
 	data, err := os.ReadFile(confPath)
 	if err != nil {

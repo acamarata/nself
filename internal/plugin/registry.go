@@ -161,7 +161,7 @@ func (c *registryHTTPClient) fetchFromURL(ctx context.Context, url string) (*Reg
 	if err != nil {
 		return nil, fmt.Errorf("HTTP GET %s: %w", url, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("HTTP GET %s: status %d", url, resp.StatusCode)
