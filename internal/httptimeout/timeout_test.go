@@ -1,6 +1,8 @@
 package httptimeout
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 )
@@ -103,5 +105,48 @@ func TestEnvDurationCloudOverride(t *testing.T) {
 	got = envDuration("NSELF_HTTP_TIMEOUT_CLOUD_TEST", 30*time.Second)
 	if got != 45*time.Second {
 		t.Fatalf("after set: got %v, want 45s", got)
+	}
+}
+
+// TestScopedClientHangingServerTimesOut is the regression guard for
+// siege-security-http-defaultclient-no-timeout (Finding #15, reopened
+// 2026-08-31): it proves a client built by this package genuinely aborts a
+// request against a server that never responds, instead of hanging
+// indefinitely the way http.DefaultClient.Do would with a zero Timeout. This
+// covers every call site migrated onto Default/Installer (both share this
+// same *http.Client construction path via WithTimeout), including
+// internal/plugin/verify/verify_sbom.go, whose fixed download URL is not
+// independently overridable for a direct per-site test.
+func TestScopedClientHangingServerTimesOut(t *testing.T) {
+	block := make(chan struct{})
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-block // hang until the test closes this channel
+	}))
+	// Close block before srv.Close() (LIFO defer order) so Close() doesn't
+	// deadlock waiting for the still-blocked in-flight handler.
+	defer srv.Close()
+	defer close(block)
+
+	client := WithTimeout(1 * time.Second)
+
+	start := time.Now()
+	_, err := client.Do(func() *http.Request {
+		req, rerr := http.NewRequest(http.MethodGet, srv.URL, nil)
+		if rerr != nil {
+			t.Fatalf("build request: %v", rerr)
+		}
+		return req
+	}())
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected an error from a hanging server, got nil")
+	}
+	if elapsed < 900*time.Millisecond {
+		t.Fatalf("client.Do returned too fast (%v) — hang simulation may not have engaged the request", elapsed)
+	}
+	if elapsed > 5*time.Second {
+		t.Fatalf("client.Do took %v — did not respect its 1s Timeout", elapsed)
 	}
 }
