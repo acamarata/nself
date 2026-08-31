@@ -183,77 +183,83 @@ func CheckMigrationIdempotency(sqlContent string) (bool, []string) {
 	return len(issues) == 0, issues
 }
 
+// idempotencyRewrite describes one guard insertion performed by
+// GenerateIdempotentVersion.
+//
+// Purpose: add a missing IF [NOT] EXISTS guard to a statement.
+// Inputs:  head matches the statement keyword up to the point the guard would
+//
+//	go; guard tests the text that follows; insert is the guard text.
+//
+// Outputs: rewritten SQL plus a human-readable change description.
+// Constraints: Go's regexp is RE2 and has NO lookahead. These rewrites
+//
+//	previously used `(?!...)` inside regexp.MustCompile calls in the
+//	function body, so every call to GenerateIdempotentVersion panicked
+//	at runtime rather than failing to build — the same defect already
+//	fixed in CheckMigrationIdempotency, in the same file, which was
+//	repaired without noticing this second set. Compiling at package
+//	scope means a malformed pattern now panics at init, where any test
+//	run catches it.
+type idempotencyRewrite struct {
+	head   *regexp.Regexp
+	guard  *regexp.Regexp
+	insert string
+	change string
+}
+
+var idempotencyRewrites = []idempotencyRewrite{
+	{
+		head:   regexp.MustCompile(`(?i)CREATE\s+TABLE\s+`),
+		guard:  regexp.MustCompile(`(?i)^IF\s+NOT\s+EXISTS\b`),
+		insert: "IF NOT EXISTS ",
+		change: "Added IF NOT EXISTS to CREATE TABLE",
+	},
+	{
+		head:   regexp.MustCompile(`(?i)CREATE\s+(?:UNIQUE\s+)?INDEX\s+`),
+		guard:  regexp.MustCompile(`(?i)^(?:CONCURRENTLY\s+)?IF\s+NOT\s+EXISTS\b`),
+		insert: "IF NOT EXISTS ",
+		change: "Added IF NOT EXISTS to CREATE INDEX",
+	},
+	{
+		head:   regexp.MustCompile(`(?i)DROP\s+TABLE\s+`),
+		guard:  regexp.MustCompile(`(?i)^IF\s+EXISTS\b`),
+		insert: "IF EXISTS ",
+		change: "Added IF EXISTS to DROP TABLE",
+	},
+	{
+		head:   regexp.MustCompile(`(?i)DROP\s+INDEX\s+`),
+		guard:  regexp.MustCompile(`(?i)^IF\s+EXISTS\b`),
+		insert: "IF EXISTS ",
+		change: "Added IF EXISTS to DROP INDEX",
+	},
+	{
+		head:   regexp.MustCompile(`(?i)ADD\s+COLUMN\s+`),
+		guard:  regexp.MustCompile(`(?i)^IF\s+NOT\s+EXISTS\b`),
+		insert: "IF NOT EXISTS ",
+		change: "Added IF NOT EXISTS to ADD COLUMN",
+	},
+}
+
 // GenerateIdempotentVersion takes migration SQL and attempts to convert it to
 // an idempotent form by adding IF NOT EXISTS clauses where missing.
 // Returns the converted SQL and a list of conversions made.
 func GenerateIdempotentVersion(sqlContent string) (converted string, changes []string) {
 	converted = sqlContent
-
-	// CREATE TABLE -> CREATE TABLE IF NOT EXISTS
-	reCreateTable := regexp.MustCompile(`(?i)(CREATE\s+TABLE\s+)(?i:IF\s+NOT\s+EXISTS\s+)?`)
-	if reCreateTable.MatchString(converted) {
-		newSQL := regexp.MustCompile(`(?i)(CREATE\s+TABLE\s+)(?!IF\s+NOT\s+EXISTS)`).
-			ReplaceAllStringFunc(converted, func(m string) string {
-				return regexp.MustCompile(`(?i)(CREATE\s+TABLE\s+)`).
-					ReplaceAllString(m, "${1}IF NOT EXISTS ")
-			})
-		if newSQL != converted {
-			converted = newSQL
-			changes = append(changes, "Added IF NOT EXISTS to CREATE TABLE")
-		}
-	}
-
-	// CREATE INDEX -> CREATE INDEX IF NOT EXISTS
-	{
-		re := regexp.MustCompile(`(?i)(CREATE\s+(?:UNIQUE\s+)?INDEX\s+)(?!IF\s+NOT\s+EXISTS)`)
-		newSQL := re.ReplaceAllStringFunc(converted, func(m string) string {
-			re2 := regexp.MustCompile(`(?i)(CREATE\s+(?:UNIQUE\s+)?INDEX\s+)`)
-			return re2.ReplaceAllString(m, "${1}IF NOT EXISTS ")
+	for _, r := range idempotencyRewrites {
+		newSQL := r.head.ReplaceAllStringFunc(converted, func(m string) string {
+			// The head match ends just before whatever follows the statement
+			// keyword. Only insert the guard when it is not already there.
+			rest := converted[strings.Index(converted, m)+len(m):]
+			if r.guard.MatchString(strings.TrimLeft(rest, " \t")) {
+				return m
+			}
+			return m + r.insert
 		})
 		if newSQL != converted {
 			converted = newSQL
-			changes = append(changes, "Added IF NOT EXISTS to CREATE INDEX")
+			changes = append(changes, r.change)
 		}
 	}
-
-	// DROP TABLE -> DROP TABLE IF EXISTS
-	{
-		re := regexp.MustCompile(`(?i)(DROP\s+TABLE\s+)(?!IF\s+EXISTS)`)
-		newSQL := re.ReplaceAllStringFunc(converted, func(m string) string {
-			re2 := regexp.MustCompile(`(?i)(DROP\s+TABLE\s+)`)
-			return re2.ReplaceAllString(m, "${1}IF EXISTS ")
-		})
-		if newSQL != converted {
-			converted = newSQL
-			changes = append(changes, "Added IF EXISTS to DROP TABLE")
-		}
-	}
-
-	// DROP INDEX -> DROP INDEX IF EXISTS
-	{
-		re := regexp.MustCompile(`(?i)(DROP\s+INDEX\s+)(?!IF\s+EXISTS)`)
-		newSQL := re.ReplaceAllStringFunc(converted, func(m string) string {
-			re2 := regexp.MustCompile(`(?i)(DROP\s+INDEX\s+)`)
-			return re2.ReplaceAllString(m, "${1}IF EXISTS ")
-		})
-		if newSQL != converted {
-			converted = newSQL
-			changes = append(changes, "Added IF EXISTS to DROP INDEX")
-		}
-	}
-
-	// ALTER TABLE ... ADD COLUMN -> ADD COLUMN IF NOT EXISTS (best effort)
-	{
-		re := regexp.MustCompile(`(?i)(ADD\s+COLUMN\s+)(?!IF\s+NOT\s+EXISTS)`)
-		newSQL := re.ReplaceAllStringFunc(converted, func(m string) string {
-			re2 := regexp.MustCompile(`(?i)(ADD\s+COLUMN\s+)`)
-			return re2.ReplaceAllString(m, "${1}IF NOT EXISTS ")
-		})
-		if newSQL != converted {
-			converted = newSQL
-			changes = append(changes, "Added IF NOT EXISTS to ADD COLUMN")
-		}
-	}
-
 	return converted, changes
 }

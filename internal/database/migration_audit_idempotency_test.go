@@ -94,3 +94,60 @@ func TestCheckMigrationIdempotency_GuardedElsewhereStillFlagged(t *testing.T) {
 		t.Errorf("issues = %v, want exactly one", issues)
 	}
 }
+
+// TestGenerateIdempotentVersion_DoesNotPanic covers the SECOND set of lookahead
+// regexes in this file. The first fix (cli#317) repaired
+// CheckMigrationIdempotency's five rules and missed the five in
+// GenerateIdempotentVersion, which panicked identically — same file, same
+// defect, same commit that claimed to fix it. staticcheck kept reporting SA1000
+// here after that PR merged, which is how it was caught.
+func TestGenerateIdempotentVersion_DoesNotPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("GenerateIdempotentVersion panicked: %v", r)
+		}
+	}()
+	GenerateIdempotentVersion("CREATE TABLE users (id int);")
+}
+
+func TestGenerateIdempotentVersion_AddsMissingGuards(t *testing.T) {
+	cases := []struct{ name, in, want string }{
+		{"create table", "CREATE TABLE users (id int);", "CREATE TABLE IF NOT EXISTS users (id int);"},
+		{"create index", "CREATE INDEX i ON t(c);", "CREATE INDEX IF NOT EXISTS i ON t(c);"},
+		{"unique index", "CREATE UNIQUE INDEX i ON t(c);", "CREATE UNIQUE INDEX IF NOT EXISTS i ON t(c);"},
+		{"drop table", "DROP TABLE users;", "DROP TABLE IF EXISTS users;"},
+		{"drop index", "DROP INDEX i;", "DROP INDEX IF EXISTS i;"},
+		{"add column", "ALTER TABLE t ADD COLUMN c int;", "ALTER TABLE t ADD COLUMN IF NOT EXISTS c int;"},
+	}
+	for _, c := range cases {
+		got, changes := GenerateIdempotentVersion(c.in)
+		if got != c.want {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
+		if len(changes) == 0 {
+			t.Errorf("%s: no change recorded", c.name)
+		}
+	}
+}
+
+// TestGenerateIdempotentVersion_LeavesGuardedStatementsAlone is the one that
+// matters for correctness: double-inserting a guard produces invalid SQL, and
+// avoiding that is exactly what the lookahead was there to do.
+func TestGenerateIdempotentVersion_LeavesGuardedStatementsAlone(t *testing.T) {
+	for _, sql := range []string{
+		"CREATE TABLE IF NOT EXISTS users (id int);",
+		"CREATE INDEX IF NOT EXISTS i ON t(c);",
+		"CREATE INDEX CONCURRENTLY IF NOT EXISTS i ON t(c);",
+		"DROP TABLE IF EXISTS users;",
+		"DROP INDEX IF EXISTS i;",
+		"ALTER TABLE t ADD COLUMN IF NOT EXISTS c int;",
+	} {
+		got, changes := GenerateIdempotentVersion(sql)
+		if got != sql {
+			t.Errorf("rewrote an already-guarded statement:\n  in:  %s\n  out: %s", sql, got)
+		}
+		if len(changes) != 0 {
+			t.Errorf("%s: reported changes %v on already-guarded SQL", sql, changes)
+		}
+	}
+}
