@@ -37,6 +37,32 @@ jobs:
       - name: workflow YAML lint
         run: bash scripts/ci/workflow-lint.sh
 
+  golangci-lint:
+    # P6-E2-W1-S1-T4: the PRI's Dev Env Quick Ref lint contract lists
+    # `golangci-lint run` alongside gofmt/vet, but no CI job ever enforced it.
+    # Pinned to a released tag (never @latest), matching the repo's existing
+    # tool-pinning discipline (see 2451d9bd "pin govulncheck and go-licenses
+    # instead of installing @latest").
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GOFLAGS: -mod=vendor
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9.3.0
+        with:
+          version: v2.13.2
+          args: --timeout=10m
+
   ci:
     name: Vet, Build & Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

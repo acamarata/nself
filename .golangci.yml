@@ -1,0 +1,23 @@
+version: "2"
+# Minimal config: default linter set plus the ones the PRI lint contract
+# names explicitly (govet, unused, staticcheck are linters; gofmt is a v2
+# "formatter" and is configured separately below). gofmt/govet are already
+# enforced as dedicated CI steps (scripts/ci/gofmt-check.sh, go vet) but are
+# listed here too so `golangci-lint run` alone is a complete gate.
+linters:
+  default: standard
+  enable:
+    - govet
+    - unused
+    - staticcheck
+  exclusions:
+    paths:
+      - vendor
+      - testdata
+formatters:
+  enable:
+    - gofmt
+  exclusions:
+    paths:
+      - vendor
+      - testdata
