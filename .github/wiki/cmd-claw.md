@@ -7,8 +7,7 @@
 ## This command moved
 
 `claw` was extracted from the core binary into the `claw-cli` plugin as part
-of [CLI-R11](https://github.com/nself-org/cli/blob/main/.claude) (the
-thin-core extraction). The command surface is unchanged — only where the
+of CLI-R11 (the thin-core extraction). The command surface is unchanged — only where the
 code lives changed. The plugin's registry name is `claw-cli`, not `claw`
 — that name is already taken by the paid ɳClaw backend service plugin this
 CLI talks to — but the command itself is still invoked as `nself claw ...`.
@@ -22,10 +21,12 @@ nself claw chat
 nself claw pair
 ```
 
-Until it is installed, `nself claw ...` prints an install hint. Note the
-hint text says `nself install claw` (a known cosmetic gap in the generic
-plugin-proxy fallback message, not this plugin's naming) — the correct
-command is `nself install claw-cli`. Full documentation (flags, exit codes,
+Until it is installed, `nself claw ...` prints an install hint naming
+`claw-cli` correctly (verified live 2026-08-31: `cmd/commands/dispatch.go`'s
+`relocatedCommand()` and `internal/plugin/router.go`'s
+`ProxyCommandWithHint()` resolve the hint through the deprecation registry
+rather than deriving it from the command name, so it never suggests the
+wrong `nself install claw`). Full documentation (flags, exit codes,
 examples) now lives with the plugin:
 https://github.com/nself-org/plugins/tree/main/free/claw-cli
 
