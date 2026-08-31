@@ -160,7 +160,7 @@ func setupRawDnsmasqLinux() error {
 	if err != nil {
 		return fmt.Errorf("opening %s: %w", confPath, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if _, err := fmt.Fprintf(f, "\n# nself: wildcard .local DNS resolution\n%s\n", dnsmasqConfLine); err != nil {
 		return fmt.Errorf("writing to %s: %w", confPath, err)
