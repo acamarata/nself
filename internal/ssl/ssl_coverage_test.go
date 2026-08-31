@@ -18,7 +18,7 @@ import (
 	"github.com/nself-org/cli/internal/config"
 )
 
-// ─── domainToDirName ────────────────────────────────────────────────────────
+// ─── DomainToDirName ────────────────────────────────────────────────────────
 
 func TestDomainToDirName_Basic(t *testing.T) {
 	cases := []struct{ in, want string }{
@@ -29,9 +29,9 @@ func TestDomainToDirName_Basic(t *testing.T) {
 		{"a.b.c.d", "a-b-c-d"},
 	}
 	for _, c := range cases {
-		got := domainToDirName(c.in)
+		got := DomainToDirName(c.in)
 		if got != c.want {
-			t.Errorf("domainToDirName(%q) = %q, want %q", c.in, got, c.want)
+			t.Errorf("DomainToDirName(%q) = %q, want %q", c.in, got, c.want)
 		}
 	}
 }

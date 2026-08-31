@@ -17,7 +17,7 @@ nself ssl <subcommand> [flags]
 
 Use `nself ssl setup` to provision wildcard certificates via DNS-01 challenge for the configured base domain. Use `nself ssl add` to provision a certificate for a single external custom domain and generate the corresponding nginx server block automatically.
 
-Certificates written by `ssl setup` and `ssl add` land in `ssl/{domain}/` inside the project directory, which nginx reads via its `./ssl:/etc/nginx/ssl:ro` volume mount.
+Certificates written by `ssl setup` and `ssl add` land in `ssl/certificates/{domain-safe}/` inside the project directory (dots and colons in the domain are replaced with dashes, e.g. `custom.example.com` -> `custom-example-com`), which nginx reads via its `./ssl:/etc/nginx/ssl:ro` volume mount.
 
 ## nself ssl setup
 
@@ -54,7 +54,7 @@ nself ssl setup --provider cloudflare --staging
 
 Provisions an SSL certificate for a single custom domain via HTTP-01 challenge (no DNS provider needed). After certbot succeeds, writes an nginx server block to `nginx/conf.d/custom-{domain}.conf` and reloads nginx.
 
-Certificates are stored in `ssl/{domain}/` so nginx can read them at `/etc/nginx/ssl/{domain}/` inside the container.
+Certificates are stored in `ssl/certificates/{domain-safe}/` (domain with dots/colons replaced by dashes) so nginx can read them at `/etc/nginx/ssl/certificates/{domain-safe}/` inside the container.
 
 ```
 nself ssl add <domain> [flags]
