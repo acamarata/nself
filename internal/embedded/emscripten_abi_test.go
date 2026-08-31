@@ -43,7 +43,7 @@ func newTestLinkerWithABI(t *testing.T) (*wasmtime.Linker, *wasmtime.Store, *was
 	if err := linker.DefineWasi(); err != nil {
 		t.Fatalf("DefineWasi: %v", err)
 	}
-	if err := defineEmscriptenABI(linker, store); err != nil {
+	if _, err := defineEmscriptenABI(linker, store); err != nil {
 		t.Fatalf("defineEmscriptenABI: %v", err)
 	}
 
@@ -62,7 +62,7 @@ func TestDefineEmscriptenABI_NoError(t *testing.T) {
 	if err := linker.DefineWasi(); err != nil {
 		t.Fatalf("DefineWasi: %v", err)
 	}
-	if err := defineEmscriptenABI(linker, store); err != nil {
+	if _, err := defineEmscriptenABI(linker, store); err != nil {
 		t.Errorf("defineEmscriptenABI returned unexpected error: %v", err)
 	}
 }

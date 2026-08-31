@@ -10,6 +10,7 @@ package commands
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/nself-org/cli/internal/access"
 	"github.com/nself-org/cli/internal/ui"
@@ -61,6 +62,8 @@ func runAccessGrant(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	warnHetznerMismatch(cmd, t)
+
 	if result.AlreadyGranted {
 		ui.Success(fmt.Sprintf("%s already has this exact key granted (%s)", user, result.Fingerprint))
 		return nil
@@ -81,4 +84,23 @@ func runAccessGrant(cmd *cobra.Command, args []string) error {
 		ui.Info("Expires: " + expires.Format("2006-01-02"))
 	}
 	return nil
+}
+
+// warnHetznerMismatch runs the best-effort Hetzner-project-vs-running-server
+// key check (issue #238) after a grant and prints one ui.Warn per mismatch.
+// It is silent (not a command failure) when HETZNER_NSELF_TOKEN is unset or
+// the API call fails — this is an advisory check, never a gate on grant.
+func warnHetznerMismatch(cmd *cobra.Command, t access.Transport) {
+	token := os.Getenv("HETZNER_NSELF_TOKEN")
+	if token == "" {
+		return
+	}
+	warnings, err := access.HetznerMismatchWarnings(cmd.Context(), token, t)
+	if err != nil {
+		ui.Info("Hetzner project-key mismatch check skipped: " + err.Error())
+		return
+	}
+	for _, w := range warnings {
+		ui.Warn(w)
+	}
 }

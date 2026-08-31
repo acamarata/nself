@@ -55,24 +55,30 @@ const enosys = int32(-38)
 //	4d-4f. defineEmscriptenTimeEventNetFuncs (time, event loop, network stubs)
 //	4g. defineEmscriptenSyscallStubs (__syscall_* stubs)
 //	4h. defineEmscriptenInvokeTrampolines (invoke_* trampolines)
-func defineEmscriptenABI(linker *wasmtime.Linker, store *wasmtime.Store) error {
+//
+// It returns the created env::memory object so the caller can also bind
+// definePGWasi's wasi_snapshot_preview1 shim (pg_wasi.go) to the same
+// linear memory — pglite has exactly one memory in the whole instantiation,
+// and the WASI functions must read/write through the identical object the
+// guest code addresses.
+func defineEmscriptenABI(linker *wasmtime.Linker, store *wasmtime.Store) (*wasmtime.Memory, error) {
 	mem, err := defineEmscriptenGlobalsMemoryTable(linker, store)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := defineEmscriptenRuntimeFuncs(linker, store, mem); err != nil {
-		return err
+		return nil, err
 	}
 	if err := defineEmscriptenTimeEventNetFuncs(linker, store); err != nil {
-		return err
+		return nil, err
 	}
 	if err := defineEmscriptenSyscallStubs(linker, store); err != nil {
-		return err
+		return nil, err
 	}
 	if err := defineEmscriptenInvokeTrampolines(linker, store); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return mem, nil
 }
 
 // defineGOTNamespaces registers all imports from the GOT.mem and GOT.func

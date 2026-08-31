@@ -34,9 +34,26 @@ func shortIntegTempDir(t *testing.T) string {
 }
 
 // quarantined reports whether the embedded-PG integration tests should be
-// skipped. pglite v0.2.17 is an Emscripten SIDE_MODULE whose GOT.mem/GOT.func
-// relocations are never applied host-side, so it traps with an out-of-bounds
-// access before Postgres starts. These tests have never passed on main.
+// skipped. These tests have never passed on main.
+//
+// Status as of P6-E11-W2-S1-T5 (2026-08-31): the originally diagnosed
+// SIDE_MODULE relocation gap (GOT.mem/GOT.func never relocated, then
+// wasmtime's linker.DefineWasi() failing with "missing required memory
+// export" because pglite imports env::memory instead of exporting it) is
+// FIXED — dylink.go + emscripten_abi.go + pg_wasi.go now relocate GOT.mem
+// and bind a from-scratch WASI preview1 shim directly to the host-owned
+// memory. Boot now proceeds substantially further before trapping.
+//
+// The current blocker is different and deeper: pglite/Postgres's own
+// startup calls __syscall_pipe (Postgres's latch.c self-pipe trick), which
+// emscripten_abi_syscalls.go permanently stubs to ENOSYS along with every
+// other __syscall_* import. Postgres's init treats that failure as fatal
+// and aborts (wasm `unreachable`). Fixing this requires real syscall
+// emulation (pipe/fcntl/dup/poll at minimum, likely more downstream for
+// real file I/O against the data directory) — a materially larger, separate
+// body of work from the WASI-memory-export fix this ticket closed. See the
+// completion note on issue #231 for the full repro and function-index
+// evidence.
 //
 // Tracked in https://github.com/nself-org/cli/issues/231. Removing this skip is
 // part of closing that issue. Set EMBEDDED_PG_WASM_FIXED=1 to run them while

@@ -58,16 +58,16 @@ func (r *EmbeddedPGRuntime) boot(ctx context.Context) error {
 	r.store = store
 
 	linker := wasmtime.NewLinker(r.engine)
-	if err := linker.DefineWasi(); err != nil {
-		return fmt.Errorf("embedded/runtime: define WASI: %w", err)
-	}
 
 	// pglite v0.2.17 is compiled with Emscripten and requires all 113 env::
-	// host imports to be defined before instantiation. DefineWasi() only covers
-	// WASI preview-1; defineEmscriptenABI defines the remaining Emscripten
-	// symbols (env::exit, invoke_* trampolines, __syscall_* stubs, globals,
-	// memory, and the indirect function table).
-	if err := defineEmscriptenABI(linker, store); err != nil {
+	// host imports to be defined before instantiation, PLUS 12
+	// wasi_snapshot_preview1 imports (defined below by definePGWasi, not
+	// wasmtime's own linker.DefineWasi()). defineEmscriptenABI defines
+	// env::exit, invoke_* trampolines, __syscall_* stubs, globals, memory,
+	// and the indirect function table, and returns the created env::memory
+	// object so definePGWasi can bind to the exact same linear memory.
+	mem, err := defineEmscriptenABI(linker, store)
+	if err != nil {
 		return fmt.Errorf("embedded/runtime: Emscripten ABI: %w", err)
 	}
 
@@ -86,15 +86,29 @@ func (r *EmbeddedPGRuntime) boot(ctx context.Context) error {
 		return fmt.Errorf("embedded/runtime: GOT namespaces: %w", err)
 	}
 
+	// wasmtime's linker.DefineWasi() resolves guest memory via the
+	// INSTANCE's exported "memory" — pglite is a SIDE_MODULE that imports
+	// env::memory and exports nothing named "memory", so DefineWasi()'s
+	// functions trap with "missing required memory export" on first call
+	// (see pg_wasi.go header for the full diagnosis). definePGWasi replaces
+	// it entirely, binding the 12 wasi_snapshot_preview1 functions pglite
+	// actually imports directly to mem.
+	stdoutLog, err := os.OpenFile(filepath.Join(r.runtimeDir, "pglite-stdout.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	if err != nil {
+		return fmt.Errorf("embedded/runtime: open stdout log: %w", err)
+	}
+	r.stdoutLog = stdoutLog
+	stderrLog, err := os.OpenFile(filepath.Join(r.runtimeDir, "pglite-stderr.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	if err != nil {
+		return fmt.Errorf("embedded/runtime: open stderr log: %w", err)
+	}
+	r.stderrLog = stderrLog
+
+	if err := definePGWasi(linker, store, mem, stdoutLog, stderrLog); err != nil {
+		return fmt.Errorf("embedded/runtime: WASI: %w", err)
+	}
+
 	r.linker = linker
-
-	// Configure WASI: preopened filesystem, environment.
-	wasiCfg := wasmtime.NewWasiConfig()
-	_ = wasiCfg.SetStdoutFile(filepath.Join(r.runtimeDir, "pglite-stdout.log"))
-	_ = wasiCfg.SetStderrFile(filepath.Join(r.runtimeDir, "pglite-stderr.log"))
-	_ = wasiCfg.PreopenDir(filepath.Join(r.runtimeDir, wasmPreopenDir), "/data")
-
-	store.SetWasi(wasiCfg)
 
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("embedded/runtime: context expired before instantiate: %w", err)
@@ -243,6 +257,13 @@ func (r *EmbeddedPGRuntime) Stop() error {
 	r.stopped = true
 
 	_ = os.Remove(r.sockPath)
+
+	if r.stdoutLog != nil {
+		_ = r.stdoutLog.Close()
+	}
+	if r.stderrLog != nil {
+		_ = r.stderrLog.Close()
+	}
 
 	// wasmtime does not have a graceful shutdown path for an instantiated WASM
 	// module. The goroutine running _start will be abandoned; the process will

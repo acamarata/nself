@@ -243,6 +243,7 @@ This registers a Node.js service named `ping_api` accessible at `ping.{BASE_DOMA
 | Variable | Type | Default | Required | Description |
 |---|---|---|---|---|
 | `NSELF_DEPLOY_KEY_PATH` | string | *(empty)* | No | Path to the SSH private key used for remote deploys. Overrides `NSELF_DEPLOY_SSH_KEY` when set. Example: `~/.ssh/nself_deploy_ed25519`. |
+| `HETZNER_NSELF_TOKEN` | string | *(empty)* | No | Hetzner Cloud API token. When set, `nself access grant` calls the Hetzner Cloud API after a successful grant and warns about any SSH key registered at the Hetzner project level that is absent from the target server's `authorized_keys` — a key added to the project believing it grants access everywhere does nothing for an already-running server. Unset skips the check entirely; it is never required for `nself access` itself to work. |
 
 ---
 
