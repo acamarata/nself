@@ -4,22 +4,18 @@ package commands
 // are the cobra command/args (target, strategy, flags); outputs are deploy step
 // results printed as text or JSON, or a non-nil error on failure.
 // Constraints: split out of deploy.go (CLI-R12) as a pure move, no behavior change.
-// This file is a CLI-R12 justified exception: runDeploy is a single ~374-line
-// function with no internal phase boundaries, so it cannot be brought under the
-// 300-line cap by moving code, doing so would require extracting phases from a
-// production deploy path, which is a refactor, not a move.
+// The blue/green canary path and the T05 control-plane pipeline path (both
+// terminal, self-contained branches of runDeploy) were further extracted to
+// deploy_run_bluegreen.go and deploy_run_pipeline.go for 300-line compliance
+// (T-P6-E2-W1-S1-T3), superseding the prior CLI-R12 "cannot be split" note.
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/nself-org/cli/internal/controlplane"
-	"github.com/nself-org/cli/internal/deploy/bluegreen"
 	"github.com/nself-org/cli/internal/maintenance"
 	"github.com/nself-org/cli/internal/ui"
 
@@ -90,44 +86,13 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Blue/green canary path (Y17 — blue_green_deploy feature flag).
-	// When --canary N is passed and the flag is ON, route to the bluegreen package.
-	// The feature flag check is intentionally lightweight: the env var
-	// NSELF_FEATURE_BLUE_GREEN_DEPLOY=true mirrors what the feature-flags plugin
-	// would return (nself flags list | grep blue_green_deploy). In production the
-	// flag plugin is the authoritative source; the env var is the fallback for
-	// environments without the flags plugin running.
-	bgEnabled := os.Getenv("NSELF_FEATURE_BLUE_GREEN_DEPLOY") == "true"
-	if (canaryPct > 0 || skipCanary) && bgEnabled {
-		if !jsonOut {
-			label := fmt.Sprintf("canary=%d%% skip-canary=%v force-migration=%v dry-run=%v", canaryPct, skipCanary, forceMigration, dryRun)
-			ui.CommandHeader(fmt.Sprintf("nself deploy %s (blue/green)", target), label)
-		}
-		if target == "prod" && !dryRun && !force {
-			return fmt.Errorf("production blue/green deploy requires --force. Re-run with --force once ready")
-		}
-		cfg := bluegreen.DeployConfig{
-			ProjectRoot:    workdir,
-			CanaryPercent:  canaryPct,
-			SkipCanary:     skipCanary,
-			ForceMigration: forceMigration,
-			DryRun:         dryRun,
-		}
-		result := bluegreen.Deploy(cmd.Context(), cfg)
-		if jsonOut {
-			b, _ := json.MarshalIndent(result, "", "  ")
-			fmt.Println(string(b))
-		} else if result.RolledBack {
-			ui.Error("Canary auto-rolled back: " + result.Error)
-		} else if !result.Success {
-			ui.Error("Blue/green deploy failed: " + result.Error)
-		} else {
-			ui.Success(fmt.Sprintf("Blue/green deploy complete in %s", result.Duration.Round(time.Millisecond)))
-		}
-		if !result.Success {
-			return fmt.Errorf("%s", result.Error)
-		}
-		return nil
+	// Blue/green canary path (Y17 — blue_green_deploy feature flag) and the T05
+	// control-plane pipeline path are extracted to deploy_run_bluegreen.go and
+	// deploy_run_pipeline.go (T-P6-E2-W1-S1-T3) for 300-line compliance. Each
+	// returns handled=false to fall through to the next path unchanged when it
+	// doesn't apply, preserving the original branch order exactly.
+	if handled, bgErr := runDeployBlueGreenCanary(cmd, target, workdir, canaryPct, skipCanary, forceMigration, dryRun, force, jsonOut); handled {
+		return bgErr
 	}
 
 	if !jsonOut {
@@ -139,105 +104,8 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("production deploy requires --force (or --dry-run). Re-run with --force once ready")
 	}
 
-	// T05: Control-plane pipeline path.
-	// Active when .nself/control-plane.yaml exists OR when --server is specified.
-	// When neither condition is true the legacy single-host path runs unchanged
-	// (back-compat byte-identical guarantee per sprint spec).
-	cpYamlPath := filepath.Join(workdir, ".nself", "control-plane.yaml")
-	_, cpYamlErr := os.Stat(cpYamlPath)
-	usePipeline := cpYamlErr == nil || serverFilter != ""
-
-	if usePipeline {
-		inv, loadErr := controlplane.Load(workdir)
-		if loadErr != nil {
-			return fmt.Errorf("deploy: load inventory: %w", loadErr)
-		}
-
-		// Apply server filter: remove all servers that do not match the requested name.
-		if serverFilter != "" {
-			inv = filterInventoryByServer(inv, serverFilter)
-			if totalServers(inv) == 0 {
-				return fmt.Errorf("deploy: --server %q not found in inventory", serverFilter)
-			}
-		}
-
-		// --dry-run: print topology plan and exit without executing.
-		if dryRun {
-			prober := controlplane.NewSSHProber(workdir, false)
-			statuses := controlplane.Resolve(inv, prober)
-			if !jsonOut {
-				fmt.Printf("  [dry-run] Topology plan for target %q:\n", target)
-				for _, ts := range statuses {
-					if ts.Capability == controlplane.CapHidden {
-						continue
-					}
-					fmt.Printf("    %s/%s role=%-15s capability=%s", ts.Env, ts.Server, "", string(ts.Capability))
-					if ts.Reason != "" {
-						fmt.Printf(" reason=%q", ts.Reason)
-					}
-					fmt.Println()
-				}
-			} else {
-				type dryRow struct {
-					Env        string `json:"env"`
-					Server     string `json:"server"`
-					Capability string `json:"capability"`
-					Reason     string `json:"reason,omitempty"`
-				}
-				var rows []dryRow
-				for _, ts := range statuses {
-					if ts.Capability == controlplane.CapHidden {
-						continue
-					}
-					rows = append(rows, dryRow{Env: ts.Env, Server: ts.Server, Capability: string(ts.Capability), Reason: ts.Reason})
-				}
-				b, _ := json.MarshalIndent(map[string]interface{}{"dry_run": true, "topology": rows}, "", "  ")
-				fmt.Println(string(b))
-			}
-			return nil
-		}
-
-		// Execute via topology-aware pipeline.
-		prober := controlplane.NewSSHProber(workdir, false)
-		composePath := filepath.Join(workdir, "docker-compose.yml")
-
-		if !jsonOut {
-			ui.CommandHeader(fmt.Sprintf("nself deploy %s (pipeline)", target), fmt.Sprintf("strategy=%s server=%s", strategy, serverFilter))
-		}
-
-		result, pipeErr := controlplane.Run(cmd.Context(), inv, prober, composePath)
-		if pipeErr != nil {
-			return fmt.Errorf("deploy pipeline: %w", pipeErr)
-		}
-
-		// Primary-skip gate: non-zero exit when primary was skipped.
-		if result.PrimarySkipped {
-			if !jsonOut {
-				ui.Warn("Primary server was skipped (read-only capability) — deploy incomplete")
-			} else {
-				b, _ := json.MarshalIndent(result.Servers, "", "  ")
-				fmt.Println(string(b))
-			}
-			return fmt.Errorf("deploy: primary server skipped (read-only capability); re-run once SSH access is restored")
-		}
-
-		if jsonOut {
-			b, _ := json.MarshalIndent(result.Servers, "", "  ")
-			fmt.Println(string(b))
-		} else {
-			for _, sr := range result.Servers {
-				switch sr.Status {
-				case "ok":
-					ui.Success(fmt.Sprintf("  [ok] %s/%s", sr.Env, sr.Server))
-				case "skipped":
-					ui.Warn(fmt.Sprintf("  [skipped] %s/%s (read-only)", sr.Env, sr.Server))
-				case "failed":
-					ui.Error(fmt.Sprintf("  [failed] %s/%s: %v", sr.Env, sr.Server, sr.Err))
-				}
-			}
-			ui.Success(fmt.Sprintf("Deploy %s (pipeline) complete", target))
-		}
-		return nil
+	if handled, pipeErr := runDeployControlPlanePipeline(cmd, workdir, target, strategy, serverFilter, dryRun, jsonOut); handled {
+		return pipeErr
 	}
 
 	steps := []deployStep{}
