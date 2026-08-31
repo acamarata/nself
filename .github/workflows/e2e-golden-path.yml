@@ -174,7 +174,7 @@ jobs:
       # default branch.
       - name: Upload archived result
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: golden-path-result-${{ github.run_id }}
           path: .github/golden-path-results/
