@@ -6,20 +6,6 @@ import (
 	"time"
 )
 
-// goroutineDelta returns the number of goroutines before and after calling fn,
-// plus the delta. Positive delta means fn leaked goroutines.
-func goroutineDelta(fn func()) (before, after, delta int) {
-	// Allow existing goroutines to settle.
-	runtime.Gosched()
-	before = runtime.NumGoroutine()
-	fn()
-	// Give background goroutines a chance to start (if any).
-	time.Sleep(5 * time.Millisecond)
-	after = runtime.NumGoroutine()
-	delta = after - before
-	return
-}
-
 // TestSpinner_NoGoroutineLeak verifies that creating a Spinner, calling Start
 // and Stop, does not permanently increase the goroutine count.
 //

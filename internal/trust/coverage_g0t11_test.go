@@ -11,7 +11,6 @@
 package trust
 
 import (
-	"os"
 	"runtime"
 	"testing"
 )
@@ -199,13 +198,6 @@ func TestSetupLinux_NoSkipsViaSetupForceLinux(t *testing.T) {
 			t.Fatal("result must not be nil")
 		}
 	})
-}
-
-// readSmallFile reads a file fully. Used by darwin-gated tests in
-// coverage_g0t11_darwin_test.go.
-func readSmallFile(path string) (string, error) {
-	data, err := os.ReadFile(path)
-	return string(data), err
 }
 
 // countOccurrences returns the number of times needle appears in haystack.

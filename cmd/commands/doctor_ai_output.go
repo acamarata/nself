@@ -10,12 +10,9 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
-	"runtime"
 	"strings"
 	"time"
 
-	"github.com/nself-org/cli/internal/installer"
 	"github.com/nself-org/cli/internal/plugin"
 	"github.com/nself-org/cli/internal/ui"
 )
@@ -117,21 +114,4 @@ func summaryStatus(results []wizardStepResult) string {
 		return "fail"
 	}
 	return "ok"
-}
-
-// getTotalMemoryMB is defined in doctor_sysinfo_*.go (platform-specific).
-// We use exec as a fallback if the function isn't available.
-func getTotalMemoryMBFallback() (int, error) {
-	switch runtime.GOOS {
-	case "darwin":
-		out, err := exec.Command("sysctl", "-n", "hw.memsize").Output()
-		if err != nil {
-			return 0, err
-		}
-		var bytes int64
-		_, _ = fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &bytes)
-		return int(bytes / 1024 / 1024), nil
-	default:
-		return installer.MemAvailableMB()
-	}
 }
