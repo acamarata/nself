@@ -12,8 +12,29 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/nself-org/cli/internal/bundle"
 	"github.com/nself-org/cli/internal/config"
 )
+
+// fixtureBundlesJSON seeds internal/bundle's resolver so this package's
+// tests are deterministic and offline — no network dependency on
+// plugins.nself.org. Mirrors real bundles.json's "sentry" membership
+// exactly (14 plugins, including nself-stripe per ADR-P6-03 Ruling 2) so
+// TestLoadProjectManifest_FlatPluginsAndBundleExpansion's expected count
+// stays honest against the real source of truth, not a stale hand copy.
+const fixtureBundlesJSON = `{
+  "schema_version": "2.0.0",
+  "bundles": {
+    "sentry": {"display": "ɳSentry", "tier": "paid", "price_monthly": 0.99, "price_yearly": 9.99, "plugins": ["nself-alert-router","nself-anomaly","nself-audit","nself-crash","nself-cron-monitor","nself-errors","nself-incident-mgmt","nself-oncall","nself-rum","nself-slo-tracker","nself-status-page","nself-stripe","nself-synthetic-monitor","nself-uptime-monitor"]}
+  }
+}`
+
+func TestMain(m *testing.M) {
+	if err := bundle.LoadBytes([]byte(fixtureBundlesJSON)); err != nil {
+		panic("seeding bundle fixture: " + err.Error())
+	}
+	os.Exit(m.Run())
+}
 
 // writeTestPlugin scaffolds a fake installed plugin with a plugin.json and,
 // when withCompose is true, a docker-compose.plugin.yml fragment.
@@ -94,15 +115,16 @@ plugins:
 		t.Fatal(err)
 	}
 	got := m.DeclaredPlugins()
-	// cron + the 13 nsentry bundle plugins.
-	if len(got) != 14 {
-		t.Fatalf("expected 14 declared plugins (cron + 13 nsentry), got %d: %v", len(got), got)
+	// cron + the 14 sentry bundle plugins (bundles.json/ADR-P6-03 — includes
+	// nself-stripe, which the pre-ADR hardcoded 13-plugin list omitted).
+	if len(got) != 15 {
+		t.Fatalf("expected 15 declared plugins (cron + 14 sentry), got %d: %v", len(got), got)
 	}
 	set := make(map[string]bool, len(got))
 	for _, p := range got {
 		set[p] = true
 	}
-	for _, want := range []string{"cron", "nself-uptime-monitor", "nself-status-page", "nself-errors", "nself-audit"} {
+	for _, want := range []string{"cron", "nself-uptime-monitor", "nself-status-page", "nself-errors", "nself-audit", "nself-stripe"} {
 		if !set[want] {
 			t.Errorf("declared plugins missing %q: %v", want, got)
 		}

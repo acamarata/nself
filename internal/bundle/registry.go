@@ -20,7 +20,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -108,6 +107,29 @@ func Load(ctx context.Context) error {
 	}
 	setState(buildBundleMap(cached.Doc))
 	return nil
+}
+
+// EnsureLoaded populates the resolver if it has not been loaded yet in this
+// process — a no-op once Load/LoadBytes has already succeeded once. This is
+// the safety net for callers OUTSIDE the `nself bundle` command family
+// (which eagerly calls Load in its PersistentPreRunE): `nself build`,
+// `start`, `restart`, `stop`, `ops`, and `status` all reach bundle expansion
+// via internal/build's manifest loader without ever running through that
+// PreRunE, so without this, a manifest's `bundles:` entries would silently
+// expand to nothing in every one of those commands (P6-E4-W3-S3-T10 CI
+// regression: TestLoadProjectManifest_FlatPluginsAndBundleExpansion).
+// Deliberately NOT a refresh-on-every-call: once state is non-nil, this
+// returns immediately, matching Load's own "eager once, not lazy-per-Get"
+// design intent, just anchored at the first real caller in a process
+// instead of assuming that caller is always the bundle subcommand tree.
+func EnsureLoaded(ctx context.Context) error {
+	stateMu.RLock()
+	loaded := state != nil
+	stateMu.RUnlock()
+	if loaded {
+		return nil
+	}
+	return Load(ctx)
 }
 
 // LoadBytes parses and validates a raw bundles.json payload and installs it
@@ -200,80 +222,4 @@ func fetchBundlesJSON(ctx context.Context, url string) ([]byte, error) {
 		return nil, fmt.Errorf("unexpected status %d from %s", resp.StatusCode, url)
 	}
 	return io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-}
-
-// bundlesCachePath returns the on-disk cache location, honoring
-// NSELF_BUNDLES_CACHE_PATH (mirrors license.CachePath's LICENSE_CACHE_PATH
-// override convention).
-func bundlesCachePath() (string, error) {
-	if p := os.Getenv("NSELF_BUNDLES_CACHE_PATH"); p != "" {
-		return p, nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("determining home directory: %w", err)
-	}
-	return filepath.Join(home, ".cache", "nself", bundlesCacheFileName), nil
-}
-
-// writeBundlesCache atomically writes a freshly fetched bundles.json payload
-// to the local cache (tmpfile + rename, matching license.WriteCache).
-func writeBundlesCache(rawDoc []byte) error {
-	var doc bundlesDoc
-	if err := json.Unmarshal(rawDoc, &doc); err != nil {
-		return err
-	}
-	entry := cachedBundlesDoc{FetchedAt: time.Now().Unix(), Doc: doc}
-	data, err := json.MarshalIndent(entry, "", "  ")
-	if err != nil {
-		return err
-	}
-	path, err := bundlesCachePath()
-	if err != nil {
-		return err
-	}
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return fmt.Errorf("creating bundles cache directory: %w", err)
-	}
-	tmp, err := os.CreateTemp(dir, ".bundles.json.tmp.*")
-	if err != nil {
-		return err
-	}
-	tmpPath := tmp.Name()
-	if _, err := tmp.Write(data); err != nil {
-		_ = tmp.Close()
-		_ = os.Remove(tmpPath)
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		_ = os.Remove(tmpPath)
-		return err
-	}
-	if err := os.Chmod(tmpPath, 0o600); err != nil {
-		_ = os.Remove(tmpPath)
-		return err
-	}
-	return os.Rename(tmpPath, path)
-}
-
-// readBundlesCache reads the last-known-good cached bundles.json. Returns
-// nil, nil if no cache file exists.
-func readBundlesCache() (*cachedBundlesDoc, error) {
-	path, err := bundlesCachePath()
-	if err != nil {
-		return nil, err
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("reading bundles cache: %w", err)
-	}
-	var entry cachedBundlesDoc
-	if err := json.Unmarshal(data, &entry); err != nil {
-		return nil, fmt.Errorf("parsing bundles cache: %w", err)
-	}
-	return &entry, nil
 }
