@@ -1,100 +1,22 @@
 package commands
 
 import (
+	"context"
 	"fmt"
+
+	"github.com/nself-org/cli/internal/bundle"
 
 	"github.com/spf13/cobra"
 )
 
-// Bundle describes a canonical nSelf plugin bundle.
-type Bundle struct {
-	Name        string
-	Price       string
-	Description string
-	Plugins     []string
-}
-
-// bundleSlugAliases maps informal/marketing slugs to their canonical bundle
-// slug for user-facing lookups (info). Kept in sync with
-// internal/bundle.bundleAliases; aliases never appear in listings.
-var bundleSlugAliases = map[string]string{
-	"sentry": "nsentry",
-}
-
-// canonicalBundles is the authoritative bundle membership map (mirrors F06-BUNDLE-INVENTORY.md).
-// Keys are the system names used as CLI arguments.
-var canonicalBundles = map[string]Bundle{
-	"nclaw": {
-		Name:  "ɳClaw",
-		Price: "$0.99/mo or $9.99/yr",
-		Plugins: []string{
-			"ai", "claw", "claw-web", "mux", "voice", "browser",
-			"google", "notify", "cron", "claw-budget", "claw-news",
-			"mcp", "knowledge-base",
-		},
-	},
-	"nchat": {
-		Name:  "ɳChat",
-		Price: "$0.99/mo or $9.99/yr",
-		Plugins: []string{
-			"chat", "livekit", "recording", "moderation", "bots", "realtime", "auth",
-			"support",
-		},
-	},
-	"nfamily": {
-		Name:  "ɳFamily",
-		Price: "$0.99/mo or $9.99/yr",
-		Plugins: []string{
-			"social", "photos", "activity-feed", "moderation", "realtime", "cms", "chat",
-			"geolocation", "calendar",
-		},
-	},
-	"ntv": {
-		Name:  "ɳTV",
-		Price: "$0.99/mo or $9.99/yr",
-		Plugins: []string{
-			"media-processing", "streaming", "epg", "tmdb", "podcast", "recording",
-			"game-metadata", "file-processing", "subtitle-manager", "vpn", "stream-gateway",
-		},
-	},
-	"clawde": {
-		Name:  "ClawDE",
-		Price: "$0.99/mo or $9.99/yr",
-		Plugins: []string{
-			"claw", "ai", "realtime", "auth", "notify", "cms",
-			"mcp", "knowledge-base",
-		},
-	},
-	"nsentry": {
-		Name:  "ɳSentry",
-		Price: "$0.99/mo or $9.99/yr",
-		Plugins: []string{
-			"nself-uptime-monitor", "nself-status-page", "nself-incident-mgmt",
-			"nself-alert-router", "nself-slo-tracker", "nself-synthetic-monitor",
-			"nself-rum", "nself-errors", "nself-cron-monitor", "nself-oncall",
-			"nself-crash", "nself-anomaly", "nself-audit",
-		},
-	},
-	"nself-plus": {
-		Name:        "ɳSelf+",
-		Price:       "$3.99/mo or $39.99/yr",
-		Description: "All 6 paid bundles + all apps + support",
-		Plugins:     nil, // meta-bundle — no individual plugin list
-	},
-	"ntask": {
-		Name:        "ɳTask",
-		Price:       "FREE",
-		Description: "Free bundle — uses free plugins only",
-		Plugins:     []string{"(free plugins only — see: nself plugin list)"},
-	},
-}
-
-// bundleDisplayOrder sets the print order for bundle list.
-var bundleDisplayOrder = []string{
-	"nclaw", "nchat", "nfamily", "ntv", "clawde", "nsentry", "ntask", "nself-plus",
-}
-
 // ── Parent command ──────────────────────────────────────────────────
+//
+// Bundle membership (name/price/plugins) is resolved from bundles.json via
+// internal/bundle — NEVER hand-maintained here. Every subcommand below reads
+// through internal/bundle.Get/Names/All so there is exactly one bundle map
+// in the CLI (P6-E4-W3-S3-T10; a second hand-copied map here previously
+// diverged from internal/bundle's, the same drift shape that caused 68 paid
+// plugins to 404 in the license allowlist bug).
 
 var bundleCmd = &cobra.Command{
 	Use:   "bundle",
@@ -104,6 +26,16 @@ var bundleCmd = &cobra.Command{
 Subcommands:
   list         List all available bundles with pricing
   info <name>  Show bundle details, plugins, and license status`,
+	// PersistentPreRunE eager-fetches+validates bundles.json once per command
+	// invocation (no lazy-init on first Get/All access), backed by cache
+	// fallback on fetch failure. See internal/bundle/registry.go.
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		return bundle.Load(ctx)
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return cmd.Help()

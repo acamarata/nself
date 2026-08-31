@@ -2,7 +2,8 @@ package commands
 
 // Purpose: the bundleListRow type and runBundleList, the RunE for "nself
 // bundle list". Inputs are the cobra command/args; outputs are a printed
-// table or JSON of canonical bundles.
+// table or JSON of canonical bundles resolved from bundles.json via
+// internal/bundle (P6-E4-W3-S3-T10 — no local bundle map here).
 // Constraints: split out of bundle.go (CLI-R12) as a pure move, no behavior change.
 
 import (
@@ -10,6 +11,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/nself-org/cli/internal/bundle"
 	"github.com/nself-org/cli/internal/plugin"
 
 	"github.com/spf13/cobra"
@@ -42,18 +44,11 @@ func runBundleList(cmd *cobra.Command, _ []string) error {
 		installedSet[strings.ToLower(p.Name)] = true
 	}
 
-	for _, key := range bundleDisplayOrder {
-		b, ok := canonicalBundles[key]
-		if !ok {
-			continue
-		}
-
+	for _, b := range bundle.All() {
 		status := "active"
-		switch key {
-		case "ntask":
+		switch b.Slug {
+		case "task":
 			status = "free"
-		case "nsentry", "nfamily", "clawde":
-			status = "planned"
 		}
 
 		// Count how many bundle plugins are installed.
@@ -75,7 +70,7 @@ func runBundleList(cmd *cobra.Command, _ []string) error {
 		}
 
 		rows = append(rows, bundleListRow{
-			Slug:        key,
+			Slug:        b.Slug,
 			Name:        b.Name,
 			Price:       b.Price,
 			PluginCount: len(b.Plugins),
@@ -100,7 +95,7 @@ func runBundleList(cmd *cobra.Command, _ []string) error {
 			pluginCount = fmt.Sprintf("  (%d plugins)", r.PluginCount)
 		}
 
-		b := canonicalBundles[r.Slug]
+		b, _ := bundle.Get(r.Slug)
 		desc := b.Description
 		if desc == "" && len(b.Plugins) > 0 {
 			preview := b.Plugins

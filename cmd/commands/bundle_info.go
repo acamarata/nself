@@ -3,15 +3,17 @@ package commands
 // Purpose: the "nself bundle info" subcommand, its RunE, and the license/
 // plugin-install status helpers it uses (resolveBundleLicenseStatus,
 // checkPluginInstalled). Inputs are the cobra command/args or a bundle/plugin
-// key; outputs are printed bundle info or a status string/bool.
+// key; outputs are printed bundle info or a status string/bool. Bundle
+// membership is resolved from bundles.json via internal/bundle
+// (P6-E4-W3-S3-T10 — no local bundle map here).
 // Constraints: split out of bundle.go (CLI-R12) as a pure move, no behavior change.
 
 import (
 	"encoding/json"
 	"fmt"
-	"sort"
 	"strings"
 
+	"github.com/nself-org/cli/internal/bundle"
 	"github.com/nself-org/cli/internal/license"
 	"github.com/nself-org/cli/internal/plugin"
 
@@ -35,8 +37,10 @@ var bundleInfoCmd = &cobra.Command{
 	Short: "Show bundle details, plugins, and license status",
 	Long: `Display the full plugin membership, pricing, and your current license status for a bundle.
 
+Both short (claw) and legacy n-prefixed (nclaw) slugs are accepted.
+
 Examples:
-  nself bundle info nclaw
+  nself bundle info claw
   nself bundle info nclaw --json
   nself bundle info nself-plus`,
 	Args: cobra.ExactArgs(1),
@@ -45,34 +49,26 @@ Examples:
 
 func runBundleInfo(cmd *cobra.Command, args []string) error {
 	key := strings.ToLower(strings.TrimSpace(args[0]))
-	// Resolve informal slug aliases (e.g. "sentry" -> "nsentry") the same way
-	// internal/bundle.Get does, so info/install/remove behave consistently.
-	// Aliases never appear in listings or error hints.
-	if canonical, ok := bundleSlugAliases[key]; ok {
-		key = canonical
-	}
-	b, ok := canonicalBundles[key]
+
+	b, ok := bundle.Get(key)
 	if !ok {
-		// Collect valid names for the error hint.
-		var names []string
-		for k := range canonicalBundles {
-			names = append(names, k)
-		}
-		sort.Strings(names)
-		return fmt.Errorf("bundle not found: %q\n\nRun 'nself bundle list' for available bundles.\nAvailable: %s", key, strings.Join(names, ", "))
+		return fmt.Errorf("bundle not found: %q\n\nRun 'nself bundle list' for available bundles.\nAvailable: %s", key, strings.Join(bundle.Names(), ", "))
 	}
+	// Report under the bundle's own canonical slug so both alias forms
+	// (nclaw / claw) print identical output, per acceptance criteria.
+	slug := b.Slug
 
 	asJSON := false
 	if cmd != nil {
 		asJSON, _ = cmd.Flags().GetBool("json")
 	}
 
-	licenseStatus := resolveBundleLicenseStatus(key)
+	licenseStatus := resolveBundleLicenseStatus(slug)
 
 	// Build install hint string.
 	var installHint string
-	switch key {
-	case "ntask":
+	switch slug {
+	case "task":
 		installHint = "nself plugin install <plugin-name>  (no license required)"
 	case "nself-plus":
 		installHint = "nself license set <key>  |  Buy: https://nself.org/pricing"
@@ -90,7 +86,7 @@ func runBundleInfo(cmd *cobra.Command, args []string) error {
 			plugins = []string{}
 		}
 		row := bundleInfoJSON{
-			Slug:          key,
+			Slug:          slug,
 			Name:          b.Name,
 			Price:         b.Price,
 			Description:   b.Description,
@@ -104,7 +100,7 @@ func runBundleInfo(cmd *cobra.Command, args []string) error {
 		return enc.Encode(row)
 	}
 
-	fmt.Printf("Bundle: %s (%s)\n", b.Name, key)
+	fmt.Printf("Bundle: %s (%s)\n", b.Name, slug)
 	fmt.Printf("Price:  %s\n", b.Price)
 	if b.Description != "" {
 		fmt.Printf("Note:   %s\n", b.Description)
@@ -115,8 +111,8 @@ func runBundleInfo(cmd *cobra.Command, args []string) error {
 
 	// ── Plugin membership ──────────────────────────────────────────
 	fmt.Println()
-	if key == "nself-plus" {
-		fmt.Println("Includes all 6 paid bundles (nclaw, nchat, nfamily, ntv, clawde, nsentry)")
+	if slug == "nself-plus" {
+		fmt.Println("Includes every paid bundle (claw, chat, family, tv, clawde, sentry)")
 		fmt.Println("+ all nSelf apps + support via chat.nself.org or the nChat app")
 	} else if b.Plugins != nil {
 		fmt.Printf("Plugins (%d):\n", len(b.Plugins))
@@ -142,9 +138,10 @@ func runBundleInfo(cmd *cobra.Command, args []string) error {
 // ── Helpers ─────────────────────────────────────────────────────────
 
 // resolveBundleLicenseStatus returns a human-readable license status string
-// for the given bundle key. Reads the local license cache — no network call.
-func resolveBundleLicenseStatus(bundleKey string) string {
-	if bundleKey == "ntask" {
+// for the given canonical bundle slug. Reads the local license cache — no
+// network call.
+func resolveBundleLicenseStatus(bundleSlug string) string {
+	if bundleSlug == "task" {
 		return "active (free)"
 	}
 
@@ -163,7 +160,7 @@ func resolveBundleLicenseStatus(bundleKey string) string {
 	// Check if the specific bundle is in PluginsAllowed.
 	// The license server populates PluginsAllowed with all plugin names
 	// included in the licensed bundle(s).
-	b, ok := canonicalBundles[bundleKey]
+	b, ok := bundle.Get(bundleSlug)
 	if ok && len(b.Plugins) > 0 {
 		for _, allowed := range cache.PluginsAllowed {
 			for _, bp := range b.Plugins {
