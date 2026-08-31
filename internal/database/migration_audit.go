@@ -112,59 +112,75 @@ func AuditMigrations(ctx context.Context, cfg *config.Config) ([]MigrationAuditR
 	return results, nil
 }
 
+// idempotencyRule describes one non-idempotent SQL shape.
+//
+// Purpose: flag a statement that would fail on re-run because it lacks its
+//
+//	IF [NOT] EXISTS guard.
+//
+// Inputs:  trigger matches the statement head and captures the text that
+//
+//	follows it; guard is applied to that captured text.
+//
+// Outputs: a match with a guard that does NOT fire is reported as an issue.
+// Constraints: Go's regexp is RE2 and has NO lookahead. These rules previously
+//
+//	used `(?!...)`, which regexp.MustCompile rejects — and because the
+//	patterns were compiled inside the function body rather than at
+//	package scope, every call to CheckMigrationIdempotency panicked at
+//	runtime instead of failing to build. `nself db audit` therefore
+//	crashed on every invocation, and no test covered it. Compiling at
+//	package scope means a malformed pattern now panics at init, where
+//	any test run catches it immediately.
+type idempotencyRule struct {
+	trigger *regexp.Regexp
+	guard   *regexp.Regexp
+	message string
+}
+
+var nonIdempotentRules = []idempotencyRule{
+	{
+		trigger: regexp.MustCompile(`(?i)\bCREATE\s+TABLE\s+(.*)`),
+		guard:   regexp.MustCompile(`(?i)^IF\s+NOT\s+EXISTS\b`),
+		message: "Non-idempotent: CREATE TABLE (missing IF NOT EXISTS)",
+	},
+	{
+		trigger: regexp.MustCompile(`(?i)\bCREATE\s+(?:UNIQUE\s+)?INDEX\s+(.*)`),
+		guard:   regexp.MustCompile(`(?i)^(?:CONCURRENTLY\s+)?IF\s+NOT\s+EXISTS\b`),
+		message: "Non-idempotent: CREATE INDEX (missing IF NOT EXISTS)",
+	},
+	{
+		trigger: regexp.MustCompile(`(?i)\bALTER\s+TABLE\s+\S+\s+ADD\s+COLUMN\s+(.*)`),
+		guard:   regexp.MustCompile(`(?i)^IF\s+NOT\s+EXISTS\b`),
+		message: "Non-idempotent: ALTER TABLE ... ADD COLUMN (missing IF NOT EXISTS)",
+	},
+	{
+		trigger: regexp.MustCompile(`(?i)\bDROP\s+TABLE\s+(.*)`),
+		guard:   regexp.MustCompile(`(?i)^IF\s+EXISTS\b`),
+		message: "Non-idempotent: DROP TABLE (missing IF EXISTS)",
+	},
+	{
+		trigger: regexp.MustCompile(`(?i)\bDROP\s+(?:INDEX|COLUMN)\s+(.*)`),
+		guard:   regexp.MustCompile(`(?i)^IF\s+EXISTS\b`),
+		message: "Non-idempotent: DROP INDEX/COLUMN (missing IF EXISTS)",
+	},
+}
+
 // CheckMigrationIdempotency analyzes SQL content for idempotent patterns.
 // Returns true if the migration appears safe to re-run.
 // Idempotent indicators: IF NOT EXISTS, IF EXISTS, CREATE OR REPLACE
 // Non-idempotent: bare CREATE TABLE, ALTER TABLE ... ADD COLUMN without IF NOT EXISTS
 func CheckMigrationIdempotency(sqlContent string) (bool, []string) {
-	upper := strings.ToUpper(sqlContent)
-
-	// Non-idempotent patterns (case-insensitive).
-	nonIdempotentPatterns := []struct {
-		re      *regexp.Regexp
-		message string
-	}{
-		{
-			re:      regexp.MustCompile(`(?i)\bCREATE\s+TABLE\s+(?!IF\s+NOT\s+EXISTS)`),
-			message: "Non-idempotent: CREATE TABLE (missing IF NOT EXISTS)",
-		},
-		{
-			re:      regexp.MustCompile(`(?i)\bCREATE\s+(?:UNIQUE\s+)?INDEX\s+(?!IF\s+NOT\s+EXISTS)(?!CONCURRENTLY\s+IF\s+NOT\s+EXISTS)`),
-			message: "Non-idempotent: CREATE INDEX (missing IF NOT EXISTS)",
-		},
-		{
-			re:      regexp.MustCompile(`(?i)\bALTER\s+TABLE\s+\S+\s+ADD\s+COLUMN\s+(?!IF\s+NOT\s+EXISTS)`),
-			message: "Non-idempotent: ALTER TABLE ... ADD COLUMN (missing IF NOT EXISTS)",
-		},
-		{
-			re:      regexp.MustCompile(`(?i)\bDROP\s+TABLE\s+(?!IF\s+EXISTS)`),
-			message: "Non-idempotent: DROP TABLE (missing IF EXISTS)",
-		},
-		{
-			re:      regexp.MustCompile(`(?i)\bDROP\s+(?:INDEX|COLUMN)\s+(?!IF\s+EXISTS)`),
-			message: "Non-idempotent: DROP INDEX/COLUMN (missing IF EXISTS)",
-		},
-	}
-
-	// Check whether any idempotent patterns are present.
-	hasIdempotentGuard := strings.Contains(upper, "IF NOT EXISTS") ||
-		strings.Contains(upper, "IF EXISTS") ||
-		strings.Contains(upper, "CREATE OR REPLACE")
-
 	var issues []string
-	for _, p := range nonIdempotentPatterns {
-		if p.re.MatchString(sqlContent) {
-			issues = append(issues, p.message)
+	for _, rule := range nonIdempotentRules {
+		for _, m := range rule.trigger.FindAllStringSubmatch(sqlContent, -1) {
+			if !rule.guard.MatchString(strings.TrimLeft(m[1], " \t")) {
+				issues = append(issues, rule.message)
+				break
+			}
 		}
 	}
-
-	// Considered idempotent only if no non-idempotent patterns are found.
-	idempotent := len(issues) == 0 || hasIdempotentGuard && len(issues) == 0
-	if len(issues) == 0 {
-		idempotent = true
-	}
-
-	return idempotent, issues
+	return len(issues) == 0, issues
 }
 
 // GenerateIdempotentVersion takes migration SQL and attempts to convert it to
