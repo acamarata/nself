@@ -80,6 +80,11 @@ var knownEnvVarsStorage = []string{
 	"NSELF_ADMIN_ENABLED",
 	"NSELF_ADMIN_VERSION",
 	"NSELF_ADMIN_PORT",
+	// Bare ADMIN_ENABLED is a distinct, non-NSELF_-prefixed form also written
+	// by internal/setup/setup_env_files.go (gap #4,
+	// msg-2026-04-30-env-var-warnings-on-build.md) — both forms exist in the
+	// codebase and must both be recognized.
+	"ADMIN_ENABLED",
 	"NSELF_ADMIN_ROUTE",
 	"NSELF_ADMIN_DEV",
 	"NSELF_ADMIN_DEV_PORT",

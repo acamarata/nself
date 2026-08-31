@@ -44,8 +44,16 @@ Theme 25 mandates 5 columns on every np_* table:
 
 Subcommands:
   scan   Report missing columns per table
-  fix    Generate migration SQL to add missing columns`,
+  fix    Generate migration SQL to add missing columns
+
+Flags:
+  --metadata  Detect Hasura METADATA drift instead (permissions, relationships,
+              table tracking) against a live instance — see 'nself db drift --metadata'`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		metadata, _ := cmd.Flags().GetBool("metadata")
+		if metadata {
+			return runDBDriftMetadata(cmd, args)
+		}
 		return cmd.Help()
 	},
 }
@@ -75,6 +83,8 @@ func init() {
 
 	dbDriftScanCmd.Flags().String("schema", "", "Filter to specific schema")
 	dbDriftFixCmd.Flags().Bool("all", false, "Fix drift on all drifted tables")
+	dbDriftCmd.Flags().Bool("metadata", false, "Detect Hasura metadata drift (permissions, relationships, table tracking) instead of column drift")
+	dbDriftCmd.Flags().String("env", "", "Project directory to read hasura/metadata/** from (default: current directory)")
 
 	dbDriftCmd.AddCommand(dbDriftScanCmd)
 	dbDriftCmd.AddCommand(dbDriftFixCmd)

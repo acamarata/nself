@@ -36,6 +36,12 @@ var knownEnvVarsCore = []string{
 	"POSTGRES_EXPOSE_PORT",
 	"POSTGRES_MEM_LIMIT",
 	"POSTGRES_CPU_LIMIT",
+	// pgvector extension toggles, written by internal/setup/setup_env_files.go
+	// (gap #4, msg-2026-04-30-env-var-warnings-on-build.md).
+	"PGVECTOR_ENABLED",
+	"PGVECTOR_DIMENSIONS",
+	"PGVECTOR_HNSW_M",
+	"PGVECTOR_HNSW_EF_CONSTRUCTION",
 
 	// Hasura
 	"HASURA_VERSION",
@@ -71,6 +77,11 @@ var knownEnvVarsCore = []string{
 	"ACTION_HANDLER_URL",
 
 	// Auth
+	// AUTH_ENABLED is written by internal/setup/setup_env_files.go (gap #4,
+	// msg-2026-04-30-env-var-warnings-on-build.md) but has no AuthConfig
+	// struct field — it toggles whether the auth service is generated at all,
+	// checked ahead of the per-field AuthConfig parse.
+	"AUTH_ENABLED",
 	"AUTH_VERSION",
 	"AUTH_PORT",
 	"AUTH_CLIENT_URL",
