@@ -39,9 +39,29 @@ func quoteIdent(s string) string {
 	return `"` + strings.ReplaceAll(s, `"`, `""`) + `"`
 }
 
+// postgresContainer returns the Postgres container name for the project.
+//
+// Purpose: address the container that `nself build` actually generates.
+// Inputs:  the loaded project config.
+// Outputs: "<project>_postgres".
+// Constraints: this MUST match the `container_name:` that nself build writes.
+//
+//	nself build emits `container_name: ${PROJECT_NAME}_postgres`, which
+//	overrides Docker Compose's default `<project>-postgres-1` naming. These
+//	two call sites used the Compose default, so every `docker exec` here hit
+//	"No such container" and `nself plugin install` failed for EVERY
+//	schema-bearing plugin on EVERY project. The rest of the CLI already spells
+//	it correctly in eight places (internal/database/helpers.go,
+//	internal/tenant/*.go, internal/database/backup.go) — this file was the
+//	odd one out.
+
+func postgresContainer(cfg *config.Config) string {
+	return cfg.ProjectName + "_postgres"
+}
+
 // execPSQL runs a SQL statement inside the Postgres container via docker exec.
 func execPSQL(ctx context.Context, cfg *config.Config, sql string) error {
-	containerName := cfg.ProjectName + "-postgres-1"
+	containerName := postgresContainer(cfg)
 	cmd := exec.CommandContext(ctx, "docker", "exec", containerName,
 		"psql", "-U", cfg.Postgres.User, "-d", cfg.Postgres.DB,
 		"-c", sql,
@@ -56,7 +76,7 @@ func execPSQL(ctx context.Context, cfg *config.Config, sql string) error {
 // queryPSQL runs a SQL query and returns the trimmed stdout. It uses -tA
 // (tuples-only, unaligned) so the result contains only raw values.
 func queryPSQL(ctx context.Context, cfg *config.Config, sql string) (string, error) {
-	containerName := cfg.ProjectName + "-postgres-1"
+	containerName := postgresContainer(cfg)
 	cmd := exec.CommandContext(ctx, "docker", "exec", containerName,
 		"psql", "-U", cfg.Postgres.User, "-d", cfg.Postgres.DB,
 		"-tA", "-c", sql,
