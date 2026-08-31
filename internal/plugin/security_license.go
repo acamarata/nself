@@ -141,9 +141,9 @@ func CheckEOLBlock(ctx context.Context, name string, allowEOL bool) error {
 	}
 	if manifest.PublishStatus == "eol" && !allowEOL {
 		return fmt.Errorf(
-			"plugin %q has reached end-of-life and cannot be installed.\n"+
-				"Use --allow-eol to override (not recommended).\n"+
-				"Run 'nself plugin info %s' for details.",
+			"plugin %q has reached end-of-life and cannot be installed\n"+
+				"use --allow-eol to override (not recommended)\n"+
+				"run 'nself plugin info %s' for details",
 			name, name,
 		)
 	}

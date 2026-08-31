@@ -50,7 +50,7 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	switch manifest.PublishStatus {
 	case "planned":
 		return fmt.Errorf(
-			"plugin %q is not yet available — coming soon.\nSee https://nself.org/plugins/%s for the release timeline.\nRun 'nself plugin list' to see available plugins.",
+			"plugin %q is not yet available — coming soon\nsee https://nself.org/plugins/%s for the release timeline\nrun 'nself plugin list' to see available plugins",
 			name, name,
 		)
 	case "experimental":

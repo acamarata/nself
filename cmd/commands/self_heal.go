@@ -69,7 +69,7 @@ func runSelfHealJWT(dryRun bool, toFile string, noPrint bool) error {
 	windowDays := auth.RotationWindowDays()
 
 	if dryRun {
-		ui.Info(fmt.Sprintf("Would rotate HASURA_GRAPHQL_JWT_SECRET"))
+		ui.Info("Would rotate HASURA_GRAPHQL_JWT_SECRET")
 		ui.Info(fmt.Sprintf("  Rotation log: %s", logPath))
 		ui.Info(fmt.Sprintf("  Rotation window: %d days", windowDays))
 		ui.Info("No changes made (--dry-run)")

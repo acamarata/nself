@@ -75,10 +75,10 @@ func checkStage3FirstUse(skip bool, s1 StageResult) StageResult {
 	}
 	daysAgo := int(time.Since(t).Hours() / 24)
 	var durationStr string
-	switch {
-	case daysAgo == 0:
+	switch daysAgo {
+	case 0:
 		durationStr = "today"
-	case daysAgo == 1:
+	case 1:
 		durationStr = "1 day ago"
 	default:
 		durationStr = fmt.Sprintf("%d days ago", daysAgo)

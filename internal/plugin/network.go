@@ -26,7 +26,7 @@ func ValidateNetworkAccess(ctx context.Context, registryURL string) error {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("cannot reach plugin registry %s: %w\nCheck your network connection or set NSELF_PLUGIN_REGISTRY to a local mirror.", registryURL, err)
+		return fmt.Errorf("cannot reach plugin registry %s: %w\ncheck your network connection or set NSELF_PLUGIN_REGISTRY to a local mirror", registryURL, err)
 	}
 	_ = resp.Body.Close()
 	return nil

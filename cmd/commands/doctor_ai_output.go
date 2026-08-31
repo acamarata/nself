@@ -71,11 +71,12 @@ func printWizardBanner(results []wizardStepResult, elapsed time.Duration) {
 
 	fmt.Println()
 	overall := summaryStatus(results)
-	if overall == "ok" {
+	switch overall {
+	case "ok":
 		ui.Success(fmt.Sprintf("Setup complete in %s", elapsed))
-	} else if overall == "partial" {
+	case "partial":
 		ui.Warn(fmt.Sprintf("Setup partially complete in %s", elapsed))
-	} else {
+	default:
 		ui.Error(fmt.Sprintf("Setup failed after %s", elapsed))
 	}
 

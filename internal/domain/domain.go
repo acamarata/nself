@@ -66,11 +66,11 @@ func NginxServerBlock(domain, upstream, sslDir string, hasSSL bool) string {
 		sb.WriteString("    listen [::]:80;\n")
 	}
 
-	sb.WriteString(fmt.Sprintf("    server_name %s;\n", domain))
+	fmt.Fprintf(&sb, "    server_name %s;\n", domain)
 
 	if hasSSL {
-		sb.WriteString(fmt.Sprintf("\n    ssl_certificate /etc/letsencrypt/live/%s/fullchain.pem;\n", domain))
-		sb.WriteString(fmt.Sprintf("    ssl_certificate_key /etc/letsencrypt/live/%s/privkey.pem;\n", domain))
+		fmt.Fprintf(&sb, "\n    ssl_certificate /etc/letsencrypt/live/%s/fullchain.pem;\n", domain)
+		fmt.Fprintf(&sb, "    ssl_certificate_key /etc/letsencrypt/live/%s/privkey.pem;\n", domain)
 		sb.WriteString("\n    add_header Strict-Transport-Security \"max-age=31536000; includeSubDomains; preload\" always;\n")
 	}
 

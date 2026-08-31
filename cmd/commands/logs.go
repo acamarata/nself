@@ -155,9 +155,7 @@ func runLogs(cmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		targetServices = append(targetServices, args[0])
 	}
-	for _, svc := range targetServices {
-		composeArgs = append(composeArgs, svc)
-	}
+	composeArgs = append(composeArgs, targetServices...)
 
 	rawCwd, err := os.Getwd()
 	if err != nil {

@@ -183,7 +183,7 @@ func runInitMarketplaceTemplate(slug, destDir string, force, quiet bool) error {
 		got := hex.EncodeToString(h.Sum(nil))
 		if got != t.TarballSHA256 {
 			return fmt.Errorf(
-				"SHA256 mismatch for template %q\n  expected: %s\n  got:      %s\nThe download may be corrupted or tampered with.",
+				"SHA256 mismatch for template %q\n  expected: %s\n  got:      %s\nthe download may be corrupted or tampered with",
 				slug, t.TarballSHA256, got,
 			)
 		}

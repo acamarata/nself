@@ -170,8 +170,8 @@ func GenerateRemediationSQL(report *LintRLSReport) string {
 		qTable := quoteIdent(t.Table)
 		sb.WriteString("-- Remediation for " + t.Schema + "." + t.Table + "\n")
 		if !t.HasRLS {
-			sb.WriteString(fmt.Sprintf("ALTER TABLE %s.%s ENABLE ROW LEVEL SECURITY;\n", qSchema, qTable))
-			sb.WriteString(fmt.Sprintf("ALTER TABLE %s.%s FORCE ROW LEVEL SECURITY;\n", qSchema, qTable))
+			fmt.Fprintf(&sb, "ALTER TABLE %s.%s ENABLE ROW LEVEL SECURITY;\n", qSchema, qTable)
+			fmt.Fprintf(&sb, "ALTER TABLE %s.%s FORCE ROW LEVEL SECURITY;\n", qSchema, qTable)
 		}
 		if !t.HasPolicy {
 			idCol := "tenant_id"
@@ -190,20 +190,14 @@ func GenerateRemediationSQL(report *LintRLSReport) string {
 			policyOwner := quoteIdent(safeName + "_owner")
 			policyAdmin := quoteIdent(safeName + "_admin")
 			if idCol == "tenant_id" {
-				sb.WriteString(fmt.Sprintf(
-					"CREATE POLICY %s ON %s.%s USING (%s = (current_setting('%s', true)::jsonb->>'x-hasura-tenant-id')::uuid) WITH CHECK (%s = (current_setting('%s', true)::jsonb->>'x-hasura-tenant-id')::uuid);\n",
-					policyOwner, qSchema, qTable, qIDCol, setting, qIDCol, setting,
-				))
+				fmt.Fprintf(&sb, "CREATE POLICY %s ON %s.%s USING (%s = (current_setting('%s', true)::jsonb->>'x-hasura-tenant-id')::uuid) WITH CHECK (%s = (current_setting('%s', true)::jsonb->>'x-hasura-tenant-id')::uuid);\n",
+					policyOwner, qSchema, qTable, qIDCol, setting, qIDCol, setting)
 			} else {
-				sb.WriteString(fmt.Sprintf(
-					"CREATE POLICY %s ON %s.%s USING (%s = current_setting('hasura.user.id', true)::uuid) WITH CHECK (%s = current_setting('hasura.user.id', true)::uuid);\n",
-					policyOwner, qSchema, qTable, qIDCol, qIDCol,
-				))
+				fmt.Fprintf(&sb, "CREATE POLICY %s ON %s.%s USING (%s = current_setting('hasura.user.id', true)::uuid) WITH CHECK (%s = current_setting('hasura.user.id', true)::uuid);\n",
+					policyOwner, qSchema, qTable, qIDCol, qIDCol)
 			}
-			sb.WriteString(fmt.Sprintf(
-				"CREATE POLICY %s ON %s.%s FOR ALL TO nself_admin USING (true) WITH CHECK (true);\n",
-				policyAdmin, qSchema, qTable,
-			))
+			fmt.Fprintf(&sb, "CREATE POLICY %s ON %s.%s FOR ALL TO nself_admin USING (true) WITH CHECK (true);\n",
+				policyAdmin, qSchema, qTable)
 		}
 		sb.WriteString("\n")
 	}

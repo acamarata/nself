@@ -94,13 +94,13 @@ func GetHealthStatus(ctx context.Context, name string) (string, error) {
 				return "not_found", nil
 			}
 			if strings.Contains(stderr, "Cannot connect to the Docker daemon") {
-				return "", fmt.Errorf("Docker is not running — start Docker Desktop or run: systemctl start docker")
+				return "", fmt.Errorf("docker is not running — start Docker Desktop or run: systemctl start docker")
 			}
 			return "", fmt.Errorf("docker inspect health for %q: %s", name, stderr)
 		}
 		// Handle cases where docker is not installed or the daemon error appears outside stderr.
 		if strings.Contains(err.Error(), "Cannot connect to the Docker daemon") {
-			return "", fmt.Errorf("Docker is not running — start Docker Desktop or run: systemctl start docker")
+			return "", fmt.Errorf("docker is not running — start Docker Desktop or run: systemctl start docker")
 		}
 		return "", fmt.Errorf("docker inspect health for %q: %w", name, err)
 	}

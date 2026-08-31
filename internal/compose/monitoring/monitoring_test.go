@@ -73,7 +73,7 @@ func TestRenderPrometheusYAMLStableOrder(t *testing.T) {
 	idxAlpha := strings.Index(string(out1), "job_name: alpha")
 	idxMu := strings.Index(string(out1), "job_name: mu")
 	idxZeta := strings.Index(string(out1), "job_name: zeta")
-	if !(idxAlpha < idxMu && idxMu < idxZeta) {
+	if idxAlpha >= idxMu || idxMu >= idxZeta {
 		t.Fatalf("targets not in alpha order: alpha=%d mu=%d zeta=%d", idxAlpha, idxMu, idxZeta)
 	}
 }

@@ -52,40 +52,44 @@ func RunFunnel() FunnelReport {
 	// Stage 2 — Activation
 	s2 := checkStage2Activation(skipping)
 	report.Stages = append(report.Stages, s2)
-	if s2.Status == StatusPass {
+	switch s2.Status {
+	case StatusPass:
 		report.Position = 2
 		emitTelemetry(2, "onboard.activation", s2.Metadata)
-	} else if s2.Status == StatusFail {
+	case StatusFail:
 		skipping = true
 	}
 
 	// Stage 3 — First-use
 	s3 := checkStage3FirstUse(skipping, s1)
 	report.Stages = append(report.Stages, s3)
-	if s3.Status == StatusPass {
+	switch s3.Status {
+	case StatusPass:
 		report.Position = 3
 		emitTelemetry(3, "onboard.first_use", s3.Metadata)
-	} else if s3.Status == StatusFail {
+	case StatusFail:
 		skipping = true
 	}
 
 	// Stage 4 — First-plugin
 	s4 := checkStage4FirstPlugin(skipping)
 	report.Stages = append(report.Stages, s4)
-	if s4.Status == StatusPass {
+	switch s4.Status {
+	case StatusPass:
 		report.Position = 4
 		emitTelemetry(4, "onboard.first_plugin", s4.Metadata)
-	} else if s4.Status == StatusFail {
+	case StatusFail:
 		skipping = true
 	}
 
 	// Stage 5 — First-value
 	s5 := checkStage5FirstValue(skipping)
 	report.Stages = append(report.Stages, s5)
-	if s5.Status == StatusPass {
+	switch s5.Status {
+	case StatusPass:
 		report.Position = 5
 		emitTelemetry(5, "onboard.first_value", s5.Metadata)
-	} else if s5.Status == StatusFail {
+	case StatusFail:
 		skipping = true
 	}
 

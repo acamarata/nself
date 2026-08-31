@@ -28,7 +28,7 @@ func TestServiceOrder(t *testing.T) {
 	yaml := string(data)
 
 	// minio MUST be present in the yaml
-	if strings.Index(yaml, "\n    minio:") < 0 {
+	if !strings.Contains(yaml, "\n    minio:") {
 		t.Fatal("minio not found in yaml")
 	}
 

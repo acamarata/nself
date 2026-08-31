@@ -248,8 +248,8 @@ func runPITRRestore(cmd *cobra.Command, _ []string) error {
 	if os.Getenv("NSELF_PITR_EXPERIMENTAL") != "1" {
 		return fmt.Errorf(
 			"nself pitr restore is not yet production-ready: remote backup fetch " +
-				"and data-directory replacement are still being implemented. " +
-				"Set NSELF_PITR_EXPERIMENTAL=1 to run anyway (at your own risk).",
+				"and data-directory replacement are still being implemented; " +
+				"set NSELF_PITR_EXPERIMENTAL=1 to run anyway (at your own risk)",
 		)
 	}
 

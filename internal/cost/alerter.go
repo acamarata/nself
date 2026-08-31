@@ -151,8 +151,8 @@ func (a *Alerter) formatAlert(service string, budget, actual float64) string {
 		channel = "#nself-alerts"
 	}
 	return fmt.Sprintf(
-		"[nSelf Alert] Daily AI cost exceeded budget\nService:  %s\nBudget:   $%.2f/day\nActual:   $%.2f (as of %s UTC)\nAction:   Check /ai/usage or reduce sampling rate",
-		service, budget, actual,
+		"[nSelf Alert] Daily AI cost exceeded budget\nChannel:  %s\nService:  %s\nBudget:   $%.2f/day\nActual:   $%.2f (as of %s UTC)\nAction:   Check /ai/usage or reduce sampling rate",
+		channel, service, budget, actual,
 		time.Now().UTC().Format("15:04"),
 	)
 }
@@ -181,7 +181,7 @@ func (a *Alerter) postSlack(ctx context.Context, message string) error {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 300 {
-		return fmt.Errorf("Slack webhook returned HTTP %d", resp.StatusCode)
+		return fmt.Errorf("slack webhook returned HTTP %d", resp.StatusCode)
 	}
 	return nil
 }

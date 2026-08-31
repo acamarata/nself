@@ -59,7 +59,7 @@ func CheckCIToken(projectDir string) CheckResult {
 				"The version-lockstep CI workflow (version-lockstep.yml) requires a GitHub token "+
 				"with contents:read on nself-org/admin and nself-org/homebrew-nself. "+
 				"Set NSELF_CI_TOKEN via GitHub Actions secret or .env.secrets.", ciTokenEnvKey),
-			FixCmd: fmt.Sprintf("gh secret set NSELF_CI_TOKEN --repo nself-org/cli --body '<token>'"),
+			FixCmd: "gh secret set NSELF_CI_TOKEN --repo nself-org/cli --body '<token>'",
 		}
 	}
 

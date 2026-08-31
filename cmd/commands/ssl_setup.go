@@ -121,12 +121,13 @@ func runSSLSetup(cmd *cobra.Command, args []string) error {
 
 	// Provider credentials file (certbot convention).
 	credFile := fmt.Sprintf("/etc/letsencrypt/%s.ini", provider)
-	if provider == "cloudflare" {
+	switch provider {
+	case "cloudflare":
 		certArgs = append(certArgs, "--dns-cloudflare-credentials", credFile)
-	} else if provider == "route53" {
+	case "route53":
 		// route53 uses AWS env vars, no credentials flag needed.
 		_ = credFile
-	} else if provider == "digitalocean" {
+	case "digitalocean":
 		certArgs = append(certArgs, "--dns-digitalocean-credentials", credFile)
 	}
 

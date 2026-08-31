@@ -151,7 +151,7 @@ func tryRemote(ctx context.Context, key string, opts *ValidatorOptions) (*Valida
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	var doer HTTPDoer = opts.HTTPClient
+	var doer = opts.HTTPClient
 	if doer == nil {
 		doer = &http.Client{Timeout: 30 * time.Second}
 	}

@@ -72,7 +72,7 @@ func checkRemoteVersionDrift(ctx context.Context, rt dbRemoteTarget, sshFlagArgs
 	}
 
 	return fmt.Errorf(
-		"version drift: local nself is v%s but %s (env=%s) runs v%s — remote 'nself %s' output cannot be trusted across versions. Upgrade the remote CLI to v%s (e.g. ssh %s 'nself update'), or pass --allow-version-drift to run anyway.",
+		"version drift: local nself is v%s but %s (env=%s) runs v%s — remote 'nself %s' output cannot be trusted across versions; upgrade the remote CLI to v%s (e.g. ssh %s 'nself update'), or pass --allow-version-drift to run anyway",
 		localVersion, rt.SSHTarget, rt.EnvName, remoteVersion, subCmd, localVersion, rt.SSHTarget,
 	)
 }

@@ -58,6 +58,20 @@ func TestFormatAlert(t *testing.T) {
 	if !strings.Contains(msg, "ai plugin") {
 		t.Errorf("expected service name in message, got: %s", msg)
 	}
+	// SLACK_ALERT_CHANNEL is documented as "embedded in message" — it must
+	// actually appear, defaulting to #nself-alerts when unset.
+	if !strings.Contains(msg, "#nself-alerts") {
+		t.Errorf("expected default channel in message, got: %s", msg)
+	}
+}
+
+func TestFormatAlert_CustomChannel(t *testing.T) {
+	t.Setenv("SLACK_ALERT_CHANNEL", "#custom-alerts")
+	a := &Alerter{}
+	msg := a.formatAlert("ai plugin", 5.00, 7.23)
+	if !strings.Contains(msg, "#custom-alerts") {
+		t.Errorf("expected custom channel in message, got: %s", msg)
+	}
 }
 
 func TestPostSlack_NoURL(t *testing.T) {

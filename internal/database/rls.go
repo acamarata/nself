@@ -149,49 +149,33 @@ func ApplyDefaultRLSPolicies(ctx context.Context, cfg *config.Config, schema, ta
 		table + "_update_own",
 		table + "_delete_own",
 	} {
-		sb.WriteString(fmt.Sprintf("DROP POLICY IF EXISTS %q ON %s;\n", pol, quoted))
+		fmt.Fprintf(&sb, "DROP POLICY IF EXISTS %q ON %s;\n", pol, quoted)
 	}
 
 	if hasUserID {
 		// User-scoped predicate: owner check OR admin bypass.
 		userPredicate := `(current_setting('hasura.user', true))::uuid = user_id OR current_setting('hasura.role', true) = 'admin'`
 
-		sb.WriteString(fmt.Sprintf(
-			"CREATE POLICY %q ON %s FOR SELECT USING (%s);\n",
-			table+"_select_own", quoted, userPredicate,
-		))
-		sb.WriteString(fmt.Sprintf(
-			"CREATE POLICY %q ON %s FOR INSERT WITH CHECK (%s);\n",
-			table+"_insert_own", quoted, userPredicate,
-		))
-		sb.WriteString(fmt.Sprintf(
-			"CREATE POLICY %q ON %s FOR UPDATE USING (%s) WITH CHECK (%s);\n",
-			table+"_update_own", quoted, userPredicate, userPredicate,
-		))
-		sb.WriteString(fmt.Sprintf(
-			"CREATE POLICY %q ON %s FOR DELETE USING (%s);\n",
-			table+"_delete_own", quoted, userPredicate,
-		))
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR SELECT USING (%s);\n",
+			table+"_select_own", quoted, userPredicate)
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR INSERT WITH CHECK (%s);\n",
+			table+"_insert_own", quoted, userPredicate)
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR UPDATE USING (%s) WITH CHECK (%s);\n",
+			table+"_update_own", quoted, userPredicate, userPredicate)
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR DELETE USING (%s);\n",
+			table+"_delete_own", quoted, userPredicate)
 	} else {
 		// No user_id column: admin-only access for all operations.
 		adminPredicate := `current_setting('hasura.role', true) = 'admin'`
 
-		sb.WriteString(fmt.Sprintf(
-			"CREATE POLICY %q ON %s FOR SELECT USING (%s);\n",
-			table+"_select_own", quoted, adminPredicate,
-		))
-		sb.WriteString(fmt.Sprintf(
-			"CREATE POLICY %q ON %s FOR INSERT WITH CHECK (%s);\n",
-			table+"_insert_own", quoted, adminPredicate,
-		))
-		sb.WriteString(fmt.Sprintf(
-			"CREATE POLICY %q ON %s FOR UPDATE USING (%s) WITH CHECK (%s);\n",
-			table+"_update_own", quoted, adminPredicate, adminPredicate,
-		))
-		sb.WriteString(fmt.Sprintf(
-			"CREATE POLICY %q ON %s FOR DELETE USING (%s);\n",
-			table+"_delete_own", quoted, adminPredicate,
-		))
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR SELECT USING (%s);\n",
+			table+"_select_own", quoted, adminPredicate)
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR INSERT WITH CHECK (%s);\n",
+			table+"_insert_own", quoted, adminPredicate)
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR UPDATE USING (%s) WITH CHECK (%s);\n",
+			table+"_update_own", quoted, adminPredicate, adminPredicate)
+		fmt.Fprintf(&sb, "CREATE POLICY %q ON %s FOR DELETE USING (%s);\n",
+			table+"_delete_own", quoted, adminPredicate)
 	}
 
 	slog.InfoContext(ctx, "rls_policies_apply",

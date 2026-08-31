@@ -99,9 +99,9 @@ func BillingReport(ctx context.Context, cfg *config.Config, opts BillingReportOp
 
 	// Format as table.
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("%-20s %-12s %-25s %15s\n", "TENANT", "PLAN", "METRIC", "TOTAL"))
+	fmt.Fprintf(&sb, "%-20s %-12s %-25s %15s\n", "TENANT", "PLAN", "METRIC", "TOTAL")
 	for _, r := range rows {
-		sb.WriteString(fmt.Sprintf("%-20s %-12s %-25s %15.2f\n", r.Slug, r.Plan, r.Metric, r.Total))
+		fmt.Fprintf(&sb, "%-20s %-12s %-25s %15.2f\n", r.Slug, r.Plan, r.Metric, r.Total)
 	}
 	return sb.String(), nil
 }

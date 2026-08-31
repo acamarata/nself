@@ -181,18 +181,18 @@ func GenerateNginxUpstream(cfg DeployConfig, canaryPercent int) string {
 	sb.WriteString("upstream nself_api {\n")
 
 	if blueWeight > 0 {
-		sb.WriteString(fmt.Sprintf("    server 127.0.0.1:%d weight=%d;   # blue\n", blueBase, blueWeight))
+		fmt.Fprintf(&sb, "    server 127.0.0.1:%d weight=%d;   # blue\n", blueBase, blueWeight)
 	}
 	if greenWeight > 0 {
-		sb.WriteString(fmt.Sprintf("    server 127.0.0.1:%d weight=%d;   # green (%d%% canary)\n", greenBase, greenWeight, canaryPercent))
+		fmt.Fprintf(&sb, "    server 127.0.0.1:%d weight=%d;   # green (%d%% canary)\n", greenBase, greenWeight, canaryPercent)
 	}
 
 	// When one side has 0 weight, still include it as backup to avoid nginx config errors.
 	if blueWeight == 0 {
-		sb.WriteString(fmt.Sprintf("    server 127.0.0.1:%d weight=0 backup;   # blue (idle)\n", blueBase))
+		fmt.Fprintf(&sb, "    server 127.0.0.1:%d weight=0 backup;   # blue (idle)\n", blueBase)
 	}
 	if greenWeight == 0 {
-		sb.WriteString(fmt.Sprintf("    server 127.0.0.1:%d weight=0 backup;   # green (idle)\n", greenBase))
+		fmt.Fprintf(&sb, "    server 127.0.0.1:%d weight=0 backup;   # green (idle)\n", greenBase)
 	}
 
 	sb.WriteString("}\n")
