@@ -106,6 +106,53 @@ func TestTemplateSecrets_NoLiteralSecretsInGeneratedCompose(t *testing.T) {
 	}
 }
 
+// TestTemplateSecrets_CommandAndHealthcheckLiteralsRewritten is the P6-E2-
+// W2-S3-T9 finding: Redis embeds REDIS_PASSWORD in its `command:` string
+// (--requirepass) and healthcheck `test:` args, and Typesense embeds
+// TYPESENSE_API_KEY in its `command:` string (--api-key=) and healthcheck
+// header — none of these are "KEY: value" env lines or URL credential
+// positions, so Phases A/B never touched them and a real `nself build`
+// leaked both literally despite REDIS_PASSWORD being in SecretEnvMap and
+// LiteralSecretLeaks correctly warning. Phase C must catch both.
+func TestTemplateSecrets_CommandAndHealthcheckLiteralsRewritten(t *testing.T) {
+	cfg := secretTestConfig()
+	cfg.Redis.Enabled = true
+	cfg.Redis.Password = "redis-pass-K9m3Bq7Wz2"
+	cfg.Search.Enabled = true
+	cfg.Search.Engine = "typesense"
+	cfg.Search.Typesense.APIKey = "typesense-key-Vb4Xr8Nq1L"
+
+	raw, err := compose.NewGenerator(cfg).Generate()
+	if err != nil {
+		t.Fatalf("compose generation failed: %v", err)
+	}
+
+	secrets := SecretEnvMap(cfg)
+	if _, ok := secrets["TYPESENSE_API_KEY"]; !ok {
+		t.Fatal("SecretEnvMap must cover TYPESENSE_API_KEY")
+	}
+
+	templated := TemplateSecrets(raw, secrets)
+	doc := string(templated)
+
+	for _, literal := range []string{cfg.Redis.Password, cfg.Search.Typesense.APIKey} {
+		if strings.Contains(doc, literal) {
+			t.Errorf("literal secret %q still present in generated compose (command/healthcheck leak):\n%s", literal, doc)
+		}
+	}
+	if leaks := LiteralSecretLeaks(templated, secrets); len(leaks) != 0 {
+		t.Errorf("LiteralSecretLeaks reported %v, want none", leaks)
+	}
+	for _, ref := range []string{
+		"--requirepass ${REDIS_PASSWORD}",
+		"--api-key=${TYPESENSE_API_KEY}",
+	} {
+		if !strings.Contains(doc, ref) {
+			t.Errorf("expected templated reference %q in generated compose:\n%s", ref, doc)
+		}
+	}
+}
+
 // TestTemplateSecrets_AliasKeyLeftAloneWhenValueDiffers ensures alias env keys
 // carrying an independent value are never clobbered.
 func TestTemplateSecrets_AliasKeyLeftAloneWhenValueDiffers(t *testing.T) {
