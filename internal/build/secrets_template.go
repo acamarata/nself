@@ -60,6 +60,7 @@ func SecretEnvMap(cfg *config.Config) map[string]string {
 	add("GRAFANA_ADMIN_PASSWORD", cfg.Monitoring.GrafanaAdminPassword)
 	add("SEARCH_API_KEY", cfg.Search.APIKey)
 	add("MEILISEARCH_MASTER_KEY", cfg.Search.MeiliSearch.MasterKey)
+	add("TYPESENSE_API_KEY", cfg.Search.Typesense.APIKey)
 
 	return m
 }
@@ -135,6 +136,24 @@ func TemplateSecrets(composeYAML []byte, secrets map[string]string) []byte {
 			continue
 		}
 		out = strings.ReplaceAll(out, ":"+val+"@", ":${"+key+"}@")
+	}
+
+	// Phase C: any other literal occurrence — service generators sometimes
+	// embed a secret in a `command:` string or a healthcheck `test:` argument
+	// (e.g. Redis's `--requirepass <pw>`, Typesense's `--api-key=<key>` and
+	// its healthcheck header) rather than a plain "KEY: value" env line or a
+	// URL credential position, so Phases A/B never see them. Safe to replace
+	// unconditionally for values that need no percent-encoding — those are
+	// exactly the values compose interpolation can substitute verbatim
+	// anywhere. Percent-encoding-sensitive values are left literal
+	// everywhere (same rationale as Phase B) and still caught by
+	// LiteralSecretLeaks as a defense-in-depth warning.
+	for _, key := range keys {
+		val := secrets[key]
+		if len(val) < 8 || url.PathEscape(val) != val {
+			continue
+		}
+		out = strings.ReplaceAll(out, val, "${"+key+"}")
 	}
 
 	return []byte(out)
