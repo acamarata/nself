@@ -9,7 +9,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -33,6 +32,11 @@ func runConfigSet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("getting working directory: %w", err)
+	}
+
 	projectDir, err := resolveProjectDir()
 	if err != nil {
 		return err
@@ -47,10 +51,21 @@ func runConfigSet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// FindNSelfRoot's monorepo convenience silently resolves to a
+	// `.backend/` project root above cwd when one exists — fine for reads,
+	// but a write with no indication of where it actually landed is
+	// dangerous: a user working in a nested app dir sees "Added KEY to
+	// .env" with no signal the file is two directories up. Surface the
+	// redirection explicitly whenever it happens; this does not change
+	// where the write lands, only what gets printed.
+	if projectDir != cwd {
+		ui.Info(fmt.Sprintf("Using monorepo backend at %s (found via .backend/ in a parent directory)", projectDir))
+	}
+
 	if updated {
-		ui.Success(fmt.Sprintf("Updated %s in %s", key, filepath.Base(envFile)))
+		ui.Success(fmt.Sprintf("Updated %s in %s", key, envFile))
 	} else {
-		ui.Success(fmt.Sprintf("Added %s to %s", key, filepath.Base(envFile)))
+		ui.Success(fmt.Sprintf("Added %s to %s", key, envFile))
 	}
 	return nil
 }
