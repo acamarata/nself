@@ -84,3 +84,31 @@ func TestFindDnsmasqConfReal_FallbackPath(t *testing.T) {
 		t.Error("findDnsmasqConfReal must return non-empty path")
 	}
 }
+
+// countOccurrences returns the number of times needle appears in haystack.
+func countOccurrences(haystack, needle string) int {
+	if needle == "" {
+		return 0
+	}
+	count := 0
+	pos := 0
+	for {
+		idx := indexOf(haystack[pos:], needle)
+		if idx < 0 {
+			break
+		}
+		count++
+		pos += idx + len(needle)
+	}
+	return count
+}
+
+// indexOf returns the first index of needle in haystack, or -1.
+func indexOf(haystack, needle string) int {
+	for i := 0; i+len(needle) <= len(haystack); i++ {
+		if haystack[i:i+len(needle)] == needle {
+			return i
+		}
+	}
+	return -1
+}

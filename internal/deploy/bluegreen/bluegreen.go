@@ -216,7 +216,6 @@ func Deploy(ctx context.Context, cfg DeployConfig) DeployResult {
 	// Step 5: Canary traffic split.
 	canaryPct := cfg.CanaryPercent
 	if cfg.SkipCanary || canaryPct == 0 {
-		canaryPct = 0
 		addStep("Canary traffic split", "skipped")
 	} else {
 		if err := setNginxWeights(cfg, canaryPct); err != nil {

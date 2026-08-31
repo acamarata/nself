@@ -146,13 +146,9 @@ func (a *Alerter) queryDailyCosts(ctx context.Context) (map[string]float64, erro
 
 // formatAlert returns a Slack-formatted alert message.
 func (a *Alerter) formatAlert(service string, budget, actual float64) string {
-	channel := os.Getenv("SLACK_ALERT_CHANNEL")
-	if channel == "" {
-		channel = "#nself-alerts"
-	}
 	return fmt.Sprintf(
-		"[nSelf Alert] Daily AI cost exceeded budget\nChannel:  %s\nService:  %s\nBudget:   $%.2f/day\nActual:   $%.2f (as of %s UTC)\nAction:   Check /ai/usage or reduce sampling rate",
-		channel, service, budget, actual,
+		"[nSelf Alert] Daily AI cost exceeded budget\nService:  %s\nBudget:   $%.2f/day\nActual:   $%.2f (as of %s UTC)\nAction:   Check /ai/usage or reduce sampling rate",
+		service, budget, actual,
 		time.Now().UTC().Format("15:04"),
 	)
 }
@@ -164,9 +160,25 @@ func (a *Alerter) postSlack(ctx context.Context, message string) error {
 		a.Log.Info("SLACK_WEBHOOK_URL not set, skipping Slack notification")
 		return nil
 	}
+	// SLACK_ALERT_CHANNEL overrides the webhook's default channel. This lookup
+	// used to sit in formatAlert, where its result was computed and then never
+	// referenced — so the variable was configured, documented and dead, and
+	// every alert went wherever the webhook pointed regardless of the setting.
+	//
+	// CAVEAT worth knowing before relying on this: the "channel" field routes
+	// for a LEGACY incoming webhook. A modern Slack-app webhook is bound to one
+	// channel and ignores the override, so the alert still lands wherever the
+	// app was installed. Putting the name in the message body instead would
+	// satisfy a test while routing nothing, which is the bug this replaces — so
+	// the field is set here, and this note records that it is not a guarantee.
+	channel := os.Getenv("SLACK_ALERT_CHANNEL")
+	if channel == "" {
+		channel = "#nself-alerts"
+	}
+
 	escaped := strings.ReplaceAll(message, `"`, `\"`)
 	escaped = strings.ReplaceAll(escaped, "\n", `\n`)
-	payload := fmt.Sprintf(`{"text": "%s"}`, escaped)
+	payload := fmt.Sprintf(`{"channel": "%s", "text": "%s"}`, channel, escaped)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, webhookURL, strings.NewReader(payload))
 	if err != nil {

@@ -87,27 +87,3 @@ func dryRunDeploy(cfg DeployConfig, start time.Time) DeployResult {
 		CanaryPercent: cfg.CanaryPercent,
 	}
 }
-
-// resolveProjectDir is a helper used by the cmd layer to locate the project root.
-// It is unexported here; the cmd layer calls config.FindNSelfRoot instead.
-func resolveProjectDir() (string, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("getting working directory: %w", err)
-	}
-	// Walk up looking for docker-compose.yml or .nself/.
-	dir := cwd
-	for {
-		if _, err := os.Stat(filepath.Join(dir, ".nself")); err == nil {
-			return dir, nil
-		}
-		if _, err := os.Stat(filepath.Join(dir, "docker-compose.yml")); err == nil {
-			return dir, nil
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "", fmt.Errorf("cannot locate nSelf project root")
-		}
-		dir = parent
-	}
-}

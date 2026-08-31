@@ -2,6 +2,7 @@ package cost
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -58,19 +59,43 @@ func TestFormatAlert(t *testing.T) {
 	if !strings.Contains(msg, "ai plugin") {
 		t.Errorf("expected service name in message, got: %s", msg)
 	}
-	// SLACK_ALERT_CHANNEL is documented as "embedded in message" — it must
-	// actually appear, defaulting to #nself-alerts when unset.
-	if !strings.Contains(msg, "#nself-alerts") {
-		t.Errorf("expected default channel in message, got: %s", msg)
-	}
 }
 
-func TestFormatAlert_CustomChannel(t *testing.T) {
-	t.Setenv("SLACK_ALERT_CHANNEL", "#custom-alerts")
-	a := &Alerter{}
-	msg := a.formatAlert("ai plugin", 5.00, 7.23)
-	if !strings.Contains(msg, "#custom-alerts") {
-		t.Errorf("expected custom channel in message, got: %s", msg)
+// TestPostSlack_RoutesToConfiguredChannel asserts the WIRE FORMAT rather than
+// the message prose. SLACK_ALERT_CHANNEL names a destination, so putting the
+// value in the payload's "channel" field is what can actually route the alert;
+// printing it as a line of body text would satisfy a string assertion while
+// still sending every alert wherever the webhook points, which is the bug this
+// replaces. See the caveat in postSlack about app-scoped webhooks.
+func TestPostSlack_RoutesToConfiguredChannel(t *testing.T) {
+	for _, c := range []struct{ name, env, want string }{
+		{"default when unset", "", "#nself-alerts"},
+		{"custom when set", "#custom-alerts", "#custom-alerts"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if c.env == "" {
+				t.Setenv("SLACK_ALERT_CHANNEL", "")
+			} else {
+				t.Setenv("SLACK_ALERT_CHANNEL", c.env)
+			}
+
+			var body string
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				b, _ := io.ReadAll(r.Body)
+				body = string(b)
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer ts.Close()
+			t.Setenv("SLACK_WEBHOOK_URL", ts.URL)
+
+			a := New(nil, Budget{})
+			if err := a.postSlack(context.Background(), "budget exceeded"); err != nil {
+				t.Fatalf("postSlack: %v", err)
+			}
+			if !strings.Contains(body, `"channel": "`+c.want+`"`) {
+				t.Errorf("payload did not route to %s; got %s", c.want, body)
+			}
+		})
 	}
 }
 

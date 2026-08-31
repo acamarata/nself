@@ -12,6 +12,16 @@ import (
 	"time"
 )
 
+// pfTimeout is the timeout for pfctl operations.
+//
+// It lived in the untagged ports_common.go alongside pfAnchorPath and friends,
+// whose comments explain they sit there "so that tests on all platforms can
+// reference the constant". That rationale does not hold for pfTimeout: nothing
+// outside this darwin-only file ever referenced it, so on linux it was simply
+// dead and the unused linter said so. The three constants that ARE referenced
+// cross-platform stay where they are.
+const pfTimeout = 30 * time.Second
+
 // pfAnchorPath, launchDaemonPlistPath, pfTimeout, and launchDaemonPlistContent
 // are defined in ports_common.go (no build tag) so tests on all platforms can
 // reference them.

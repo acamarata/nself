@@ -11,7 +11,6 @@
 package trust
 
 import (
-	"os"
 	"runtime"
 	"testing"
 )
@@ -199,41 +198,6 @@ func TestSetupLinux_NoSkipsViaSetupForceLinux(t *testing.T) {
 			t.Fatal("result must not be nil")
 		}
 	})
-}
-
-// readSmallFile reads a file fully. Used by darwin-gated tests in
-// coverage_g0t11_darwin_test.go.
-func readSmallFile(path string) (string, error) {
-	data, err := os.ReadFile(path)
-	return string(data), err
-}
-
-// countOccurrences returns the number of times needle appears in haystack.
-func countOccurrences(haystack, needle string) int {
-	if needle == "" {
-		return 0
-	}
-	count := 0
-	pos := 0
-	for {
-		idx := indexOf(haystack[pos:], needle)
-		if idx < 0 {
-			break
-		}
-		count++
-		pos += idx + len(needle)
-	}
-	return count
-}
-
-// indexOf returns the first index of needle in haystack, or -1.
-func indexOf(haystack, needle string) int {
-	for i := 0; i+len(needle) <= len(haystack); i++ {
-		if haystack[i:i+len(needle)] == needle {
-			return i
-		}
-	}
-	return -1
 }
 
 // --- setupDarwin error-branch coverage via step seams ----------------------

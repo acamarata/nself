@@ -112,11 +112,6 @@ func NewClient(cfg Config) *Client {
 	}
 }
 
-// baseURL returns the PostgREST endpoint for the project.
-func (c *Client) baseURL() string {
-	return fmt.Sprintf("https://%s.supabase.co/rest/v1", c.cfg.ProjectRef)
-}
-
 // adminURL returns the Supabase Admin API base URL.
 func (c *Client) adminURL() string {
 	return fmt.Sprintf("https://%s.supabase.co", c.cfg.ProjectRef)

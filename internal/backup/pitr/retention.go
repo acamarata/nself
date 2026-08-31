@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -78,17 +79,50 @@ func PruneRetention(ctx context.Context, catalogPath string, opts PruneOptions) 
 		}
 	}
 
-	// Delete local base backup files. toDeleteLocal holds the same remote keys
-	// as toDeleteRemote for entries that also have a local copy; the local
-	// file is expected to live under LocalBaseBackupDir named by the remote
-	// key's basename (see PruneOptions.LocalBaseBackupDir).
+	// Delete local base-backup archives.
+	//
+	// This loop was missing: toDeleteLocal was populated and then never read,
+	// so LocalBaseBackupDir was a documented option that did nothing and local
+	// base backups grew without bound. Found by staticcheck SA4010.
+	//
+	// Only the basename is used, because a remote key carries prefixes that do
+	// not exist on disk. deleteLocalArchive refuses anything that would escape
+	// LocalBaseBackupDir, and a file that is already gone is not an error —
+	// pruning must stay idempotent, matching RemoteDeleteFn's contract.
 	for _, key := range toDeleteLocal {
-		localPath := filepath.Join(opts.LocalBaseBackupDir, filepath.Base(key))
-		if delErr := os.Remove(localPath); delErr != nil && !os.IsNotExist(delErr) {
-			// Log but don't abort — partial success is better than none.
-			fmt.Fprintf(os.Stderr, "warning: failed to delete local base backup %s: %v\n", localPath, delErr)
+		if delErr := deleteLocalArchive(opts.LocalBaseBackupDir, key); delErr != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to delete local base backup %s: %v\n", key, delErr)
 		}
 	}
 
 	return pruned, nil
+}
+
+// deleteLocalArchive removes one pruned base-backup archive from dir.
+//
+// Purpose: delete the on-disk counterpart of a pruned catalog entry.
+// Inputs:  dir, the configured LocalBaseBackupDir; key, the entry's remote key.
+// Outputs: nil when the file is deleted or already absent; an error otherwise.
+// Constraints: only the basename of key is honoured, and the resolved path must
+//
+//	stay inside dir — a key is catalog data, so it is not trusted to
+//	be a safe relative path. An empty dir disables deletion.
+func deleteLocalArchive(dir, key string) error {
+	if dir == "" {
+		return nil
+	}
+	base := filepath.Base(key)
+	if base == "." || base == string(filepath.Separator) || base == ".." {
+		return fmt.Errorf("refusing to delete unsafe archive name %q", key)
+	}
+	path := filepath.Join(dir, base)
+
+	cleanDir := filepath.Clean(dir) + string(filepath.Separator)
+	if !strings.HasPrefix(filepath.Clean(path)+string(filepath.Separator), cleanDir) {
+		return fmt.Errorf("refusing to delete %q outside %q", path, dir)
+	}
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }

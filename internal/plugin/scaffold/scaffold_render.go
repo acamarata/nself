@@ -27,21 +27,6 @@ func render(tmpl string, p Params) (string, error) {
 	return buf.String(), nil
 }
 
-// renderAny is like render but accepts any data value, not just Params.
-// Used when the template data is a struct that embeds Params with extra fields.
-// Returns an error if template parsing or execution fails.
-func renderAny(tmpl string, data any) (string, error) {
-	t, err := template.New("").Parse(tmpl)
-	if err != nil {
-		return "", fmt.Errorf("scaffold: template parse error: %w", err)
-	}
-	var buf strings.Builder
-	if err := t.Execute(&buf, data); err != nil {
-		return "", fmt.Errorf("scaffold: template execute error: %w", err)
-	}
-	return buf.String(), nil
-}
-
 // renderAnyErr is like renderAny but returns an error instead of panicking.
 // Used in paths where the caller can propagate the error (e.g. buildFiles).
 func renderAnyErr(tmpl string, data any) (string, error) {

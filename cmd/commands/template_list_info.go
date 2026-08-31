@@ -83,11 +83,6 @@ func runTemplateList(cmd *cobra.Command, args []string) error {
 	}
 
 	if asJSON {
-		// For JSON output, merge bundled + registry entries.
-		type combinedEntry struct {
-			Source string `json:"source"`
-			Name   string `json:"name"`
-		}
 		var combined []any
 		for _, n := range clone.All() {
 			m, _ := clone.GetManifest(n)

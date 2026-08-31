@@ -13,22 +13,9 @@ package commands
 
 import (
 	"encoding/json"
-	"io"
 	"regexp"
 	"strings"
 )
-
-// countWriter wraps an io.Writer and tracks total bytes written.
-type countWriter struct {
-	w     io.Writer
-	count int64
-}
-
-func (cw *countWriter) Write(p []byte) (n int, err error) {
-	n, err = cw.w.Write(p)
-	cw.count += int64(n)
-	return
-}
 
 // LogsOptions holds parsed flag values for log filtering and formatting.
 type LogsOptions struct {

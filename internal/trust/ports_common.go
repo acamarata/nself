@@ -1,7 +1,5 @@
 package trust
 
-import "time"
-
 // pfAnchorPath is the macOS pf anchor file path. Defined here (no build tag)
 // so that tests on all platforms can reference the constant.
 const pfAnchorPath = "/etc/pf.anchors/nself.local"
@@ -9,10 +7,6 @@ const pfAnchorPath = "/etc/pf.anchors/nself.local"
 // launchDaemonPlistPath is the macOS LaunchDaemon plist path. Defined here
 // (no build tag) so that tests on all platforms can reference the constant.
 const launchDaemonPlistPath = "/Library/LaunchDaemons/com.nself.portforward.plist"
-
-// pfTimeout is the timeout for pfctl operations. Defined here (no build tag)
-// so that tests on all platforms can reference the constant.
-const pfTimeout = 30 * time.Second
 
 // launchDaemonPlistContent is the plist XML written to launchDaemonPlistPath.
 // Defined here (no build tag) so that tests on all platforms can reference
