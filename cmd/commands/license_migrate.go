@@ -40,7 +40,7 @@ var (
 	migrateKeyFlag   string
 )
 
-type migrationInfo struct {
+type migrationInfo struct { //nolint:unused // kept: licence-migration path has no entry point; deleting hides the gap, see qa/bugs/declared-but-never-wired-symbols.md
 	Valid              bool     `json:"valid"`
 	Tier               string   `json:"tier"`
 	Product            string   `json:"product"`

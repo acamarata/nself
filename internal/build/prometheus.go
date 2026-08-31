@@ -124,7 +124,7 @@ func NSentryScrapeTargets(pluginDir string) []monitoring.ScrapeTarget {
 // Prometheus file_sd_configs path managed by the monitoring plugin.
 //
 // Callers must guarantee len(targets) > 0.
-func renderScrapeNSentryYAML(targets []monitoring.ScrapeTarget) ([]byte, error) {
+func renderScrapeNSentryYAML(targets []monitoring.ScrapeTarget) ([]byte, error) { //nolint:unused // kept: no build path renders an nSentry scrape target; see qa/bugs/declared-but-never-wired-symbols.md
 	cfg := &monitoring.PrometheusConfig{
 		ScrapeInterval:     "15s",
 		EvaluationInterval: "15s",

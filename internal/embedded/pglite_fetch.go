@@ -23,7 +23,7 @@ const (
 	// fallback URL maps it to the same pglite.wasm filename convention.
 	// Pattern: https://registry.npmjs.org/@electric-sql/pglite/-/pglite-<ver>.tgz
 	// We use the direct unpkg path which resolves the same content without tarball extraction.
-	pgliteFallbackBaseURL = "https://registry.npmjs.org/@electric-sql/pglite/-/pglite"
+	pgliteFallbackBaseURL = "https://registry.npmjs.org/@electric-sql/pglite/-/pglite" //nolint:unused // kept: pglite fallback URL never consulted; see qa/bugs/declared-but-never-wired-symbols.md
 
 	// cacheMaxAge is how long a cached WASM file is trusted without re-verifying
 	// its SHA-256 digest against the pinned value.

@@ -72,8 +72,14 @@ func startPostgresPhase(ctx context.Context, opts startOpts, cfg *config.Config,
 			return compose, nil, fmt.Errorf("embedded-pg: fetch wasm: %w", fetchErr)
 		}
 
-		epgCleanup, bridgeSockPath, epgErr := startEmbeddedPGRuntime(ctx, runtimeDir, wasmPath)
-		if epgErr != nil {
+		epgCleanup, bridgeSockPath, epgErr := startEmbeddedPGRuntime(ctx, runtimeDir, wasmPath) //nolint:staticcheck // SA4023: linux-only always-error by design, see below
+		// SA4023 on linux: startEmbeddedPGRuntime always returns a non-nil error
+		// there, because the wasmtime shim does not implement the ~113 Emscripten
+		// host imports pglite needs — the failure message below says exactly that.
+		// The check is correct and intentional; the runtime is EXPERIMENTAL and
+		// fails closed by design. Do not "simplify" this into an unconditional
+		// error path: the darwin build can succeed, so the branch is real there.
+		if epgErr != nil { //nolint:staticcheck // SA4023: always-true on linux by design, see above
 			epgSp.Fail(fmt.Sprintf("Embedded PG failed to start: %v", epgErr))
 			ui.UXError(
 				"Embedded PG start failed",

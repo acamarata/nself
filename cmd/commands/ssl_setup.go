@@ -52,7 +52,7 @@ func init() {
 }
 
 // certbotProviderPlugin maps provider names to certbot DNS plugin packages.
-var certbotProviderPlugin = map[string]string{
+var certbotProviderPlugin = map[string]string{ //nolint:unused // kept: certbot provider plugin never wired; see qa/bugs/declared-but-never-wired-symbols.md
 	"cloudflare":   "certbot-dns-cloudflare",
 	"route53":      "certbot-dns-route53",
 	"digitalocean": "certbot-dns-digitalocean",

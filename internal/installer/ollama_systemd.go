@@ -22,7 +22,7 @@ import (
 
 // ---- Helpers ----
 
-func systemctl(args ...string) error {
+func systemctl(args ...string) error { //nolint:unused // kept: Ollama service management is unreachable, no build tag; see qa/bugs/declared-but-never-wired-symbols.md
 	return systemctlContext(context.Background(), args...)
 }
 
@@ -33,7 +33,7 @@ func systemctlContext(ctx context.Context, args ...string) error {
 	return cmd.Run()
 }
 
-func systemctlActive(unit string) bool {
+func systemctlActive(unit string) bool { //nolint:unused // kept: Ollama service management is unreachable, no build tag; see qa/bugs/declared-but-never-wired-symbols.md
 	return systemctlActiveContext(context.Background(), unit)
 }
 
