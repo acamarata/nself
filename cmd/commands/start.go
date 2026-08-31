@@ -1,10 +1,8 @@
 package commands
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,9 +18,7 @@ import (
 	"github.com/nself-org/cli/internal/migration"
 	"github.com/nself-org/cli/internal/ports"
 	"github.com/nself-org/cli/internal/search"
-	"github.com/nself-org/cli/internal/ssl"
 	"github.com/nself-org/cli/internal/telemetry"
-	"github.com/nself-org/cli/internal/truststate"
 	"github.com/nself-org/cli/internal/ui"
 
 	"github.com/spf13/cobra"
@@ -141,118 +137,20 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	currentStep++
 	ui.Step(currentStep, totalSteps, "Loading configuration")
 
-	cfg, err := config.Load(projectDir)
+	// Config load/validate + env-overrides extracted to start_config.go
+	// (T-P6-E2-W1-S1-T3). opts is mutated in place (skipHealthChecks/timeout).
+	cfg, err := loadAndValidateStartConfig(cmd, &opts, projectDir)
 	if err != nil {
-		ui.UXError(
-			"Failed to load configuration",
-			err.Error(),
-			[]string{
-				"Check your .env file for syntax errors",
-				"Run 'nself init' to regenerate configuration",
-			},
-		)
-		return fmt.Errorf("loading config: %w", err)
+		return err
 	}
 
-	// Apply env-level overrides for skip-health-checks.
-	if cfg.SkipHealthChecks {
-		opts.skipHealthChecks = true
-	}
-	// Apply env-level timeout if flag was not explicitly set.
-	if !cmd.Flags().Changed("timeout") && !opts.quick && cfg.HealthCheckTimeout > 0 {
-		opts.timeout = cfg.HealthCheckTimeout
-		if opts.timeout < 30 {
-			opts.timeout = 30
-		}
-		if opts.timeout > 600 {
-			opts.timeout = 600
-		}
-	}
+	// DNS/BASE_DOMAIN/auto-trust/license/cert checks extracted to
+	// start_config.go (T-P6-E2-W1-S1-T3).
+	runPostConfigChecks(ctx, cmd, cfg, projectDir, opts.verbose)
 
-	// Validate config before proceeding. The auto-build path already runs
-	// validation inside build.Build(), but we must also validate here for
-	// the --skip-build path or when docker-compose.yml already exists.
-	if err := config.Validate(cfg); err != nil {
-		ui.UXError(
-			"Configuration validation failed",
-			err.Error(),
-			[]string{
-				"Review your .env file and fix the reported issues",
-				"Run 'nself build --check' to re-validate",
-			},
-		)
-		return fmt.Errorf("config validation failed: %w", err)
-	}
-
-	if opts.verbose {
-		ui.Info(fmt.Sprintf("Project: %s | Domain: %s | Env: %s", cfg.ProjectName, cfg.BaseDomain, cfg.Env))
-	}
-	ui.Success(fmt.Sprintf("Configuration loaded (%s)", cfg.Env))
-
-	// ── DNS resolution check ─────────────────────────────────────────────
-	dnsResolved := true
-	if cfg.BaseDomain != "" && cfg.BaseDomain != "localhost" && cfg.BaseDomain != "127.0.0.1" {
-		if _, err := net.LookupHost(cfg.BaseDomain); err != nil {
-			dnsResolved = false
-			ui.Warn(fmt.Sprintf("DNS not configured for %s — run 'nself dns-setup' or 'nself trust' to configure local DNS", cfg.BaseDomain))
-		}
-	}
-
-	// ── BASE_DOMAIN change detection ─────────────────────────────────────
-	if ts, err := truststate.Load(); err == nil {
-		if ts.TrustedDomain != "" && ts.TrustedDomain != cfg.BaseDomain {
-			ui.Warn(fmt.Sprintf("BASE_DOMAIN changed from %s to %s — SSL certificates need regeneration. Run 'nself trust' to reconfigure.", ts.TrustedDomain, cfg.BaseDomain))
-		}
-	}
-
-	// ── Auto-trust prompt ────────────────────────────────────────────────
-	if !dnsResolved {
-		if ts, _ := truststate.Load(); ts.TrustedDomain != cfg.BaseDomain && isTerminal() {
-			ui.Info("Would you like to run 'nself trust' now to configure local DNS? [Y/n]: ")
-			reader := bufio.NewReader(os.Stdin)
-			answer, _ := reader.ReadString('\n')
-			answer = strings.TrimSpace(answer)
-			if answer == "" || strings.ToLower(answer) == "y" || strings.ToLower(answer) == "yes" {
-				if err := runDNSSetup(cmd, nil); err != nil {
-					ui.Warn(fmt.Sprintf("DNS setup failed: %v", err))
-				} else {
-					_ = truststate.Save(truststate.TrustState{TrustedDomain: cfg.BaseDomain})
-				}
-			}
-		}
-	}
-
-	// ── License revalidation heartbeat ──────────────────────────────
-	// Soft check: warn on revoked/expired licenses but never block
-	// existing services from starting. Only new plugin installs are
-	// blocked by invalid licenses.
-	checkLicenseHeartbeat(ctx, cfg, opts.verbose)
-
-	// ── Cert expiry preflight ────────────────────────────────────────
-	certDirName := strings.ReplaceAll(cfg.BaseDomain, ".", "-")
-	certPath := filepath.Join(projectDir, "certificates", certDirName, "fullchain.pem")
-	if days, err := ssl.CheckCertExpiry(certPath); err != nil {
-		ui.Warn(fmt.Sprintf("TLS certificate issue: %v", err))
-	} else if days < 30 {
-		ui.Warn(fmt.Sprintf("TLS certificate expires in %d days — renew soon", days))
-	}
-
-	// ── Read compose manifest (needed for port-ownership check) ─────
-	// Read early — before the port check — so CheckAllPortsFiltered can
-	// query only nself's own containers and avoid flagging them as conflicts.
-	composeFiles, err := build.ReadComposeManifest(projectDir)
-	if err != nil {
-		if opts.verbose {
-			ui.Warn(fmt.Sprintf("Could not read compose manifest: %v (using defaults)", err))
-		}
-		composeFiles = nil
-	}
-
-	// --skip-plugins: keep only the first entry (base docker-compose.yml).
-	if opts.skipPlugins && len(composeFiles) > 1 {
-		ui.Info("Skipping plugin compose files (--skip-plugins)")
-		composeFiles = composeFiles[:1]
-	}
+	// Compose manifest read + --skip-plugins filter extracted to
+	// start_config.go (T-P6-E2-W1-S1-T3).
+	composeFiles := loadStartComposeFiles(projectDir, opts)
 
 	// ── Step 3: Port availability check ──────────────────────────────
 	currentStep++
