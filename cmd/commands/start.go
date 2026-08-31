@@ -60,8 +60,8 @@ func runStart(cmd *cobra.Command, _ []string) error {
 	showDormantBannersOnStart(opts.quiet)
 
 	cwd, startErr := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("getting working directory: %w", err)
+	if startErr != nil {
+		return fmt.Errorf("getting working directory: %w", startErr)
 	}
 
 	allowLegacy, _ := cmd.Flags().GetBool("allow-legacy")
