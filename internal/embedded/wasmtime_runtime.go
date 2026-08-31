@@ -61,6 +61,13 @@ type EmbeddedPGRuntime struct {
 	wasmPath   string // absolute path to pglite.wasm
 	sockPath   string // AF_UNIX socket path exposed to containers
 
+	// stdoutLog and stderrLog back definePGWasi's fd_write (pg_wasi.go) for
+	// fds 1 and 2. They must stay open for the runtime's whole lifetime —
+	// __main_argc_argv keeps running in a goroutine after boot() returns —
+	// so Stop closes them rather than boot deferring the close.
+	stdoutLog *os.File
+	stderrLog *os.File
+
 	started bool
 	stopped bool
 	err     error // sticky error from a failed Start
