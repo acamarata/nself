@@ -629,5 +629,93 @@ func TestValidator_StatusEnumStability(t *testing.T) {
 	}
 }
 
+// ============================================================================
+// BUILD-LEDGER Finding #14: FAIL-OPEN must consult the local revocation
+// cache (D3-T08's IsRecordRevoked) before granting CanProceed: true.
+// ============================================================================
+
+// seedRevocation writes a revocation cache entry directly (unsigned —
+// IsRecordRevoked's read path does not verify signatures; only the fetch
+// path does) matching the pattern used throughout revocation_test.go.
+func seedRevocation(t *testing.T, entries ...RevocationEntry) {
+	t.Helper()
+	cache := &RevocationCache{
+		List: RevocationList{
+			Kid:     "k",
+			Revoked: entries,
+		},
+		FetchedAt: time.Now().Unix(),
+	}
+	if err := WriteRevocationCache(cache); err != nil {
+		t.Fatalf("WriteRevocationCache: %v", err)
+	}
+}
+
+// THE NEGATIVE TEST the finding is explicit must exist: a license present
+// in the local revocation cache (keyed by KeyHash — the only stable
+// identifier available on the fail-open path) must be REJECTED even though
+// the remote validator is forced unreachable and the cache is well within
+// the soft TTL that would otherwise fail-open silently. A test that only
+// exercises the online path proves nothing per the bug file; this one
+// forces tryRemote down the transient-failure branch via errDoer so the
+// cache-only / fail-open code path is the one under test.
+func TestValidator_RevokedKeyHash_RemoteUnreachable_FailClosed(t *testing.T) {
+	redirectCache(t)     // CacheEntry (license.json)
+	withTempCachePath(t) // RevocationCache (revocation-cache.json) — separate file
+	ResetFailOpenWarning()
+
+	now := time.Date(2026, 4, 26, 12, 0, 0, 0, time.UTC)
+	key := "nself_pro_testkey1234567890abcdef12345"
+
+	// Cache is only 1 day old — comfortably within FailOpenSoftTTL, which
+	// would silently grant access if revocation were not consulted.
+	seedCache(t, makeEntry(now, 1*24*time.Hour, 30*24*time.Hour, key))
+	seedRevocation(t, RevocationEntry{Type: "key_hash", ID: HashKey(key)})
+
+	warnFn, _, _ := captureWarn()
+	// Remote path forced to fail — this is the fail-open-eligible branch,
+	// not the online path.
+	res, err := Validate(context.Background(), key, silentOpts(now, errDoer{err: errors.New("connection refused")}, warnFn))
+	if err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if res.Status != StatusFailClosed {
+		t.Errorf("status = %q, want %q (revoked license must not ride fail-open)", res.Status, StatusFailClosed)
+	}
+	if res.CanProceed {
+		t.Errorf("CanProceed = true, want false — revoked license granted access via fail-open")
+	}
+}
+
+// POSITIVE regression guard: a license absent from the revocation cache
+// (a non-matching key_hash entry is present, proving the check ran and
+// simply didn't match) must still fail-open exactly as before. This is the
+// "additive, not a behavior change" half of the acceptance criteria.
+func TestValidator_NonRevokedKeyHash_RemoteUnreachable_StillFailsOpen(t *testing.T) {
+	redirectCache(t)
+	withTempCachePath(t)
+	ResetFailOpenWarning()
+
+	now := time.Date(2026, 4, 26, 12, 0, 0, 0, time.UTC)
+	key := "nself_pro_testkey1234567890abcdef12345"
+
+	seedCache(t, makeEntry(now, 1*24*time.Hour, 30*24*time.Hour, key))
+	// A revocation list that exists and is checked, but names a different
+	// license entirely.
+	seedRevocation(t, RevocationEntry{Type: "key_hash", ID: "not-this-license"})
+
+	warnFn, _, _ := captureWarn()
+	res, err := Validate(context.Background(), key, silentOpts(now, errDoer{err: errors.New("connection refused")}, warnFn))
+	if err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if res.Status != StatusFailOpen {
+		t.Errorf("status = %q, want %q (non-revoked license must still fail-open)", res.Status, StatusFailOpen)
+	}
+	if !res.CanProceed {
+		t.Errorf("CanProceed = false, want true")
+	}
+}
+
 // _ = fmt.Sprintf placeholder retained in case future tests need it.
 var _ = fmt.Sprintf
