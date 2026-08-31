@@ -69,12 +69,18 @@ func Restore(ctx context.Context, cfg *config.Config, opts RestoreOptions) error
 	}
 
 	if restoreComponents["minio"] && cfg.Minio.Enabled {
+		//lint:ignore SA4023 restoreMinio always errors by design (these paths
+		// are not automated) so success is never silently implied; see its
+		// doc comment.
 		if err := restoreMinio(ctx, cfg, backupDir, opts.BackupID); err != nil {
 			slog.Warn("minio restore failed", "error", err)
 		}
 	}
 
 	if restoreComponents["metadata"] {
+		//lint:ignore SA4023 restoreMetadata always errors by design (these
+		// paths are not automated) so success is never silently implied; see
+		// its doc comment.
 		if err := restoreMetadata(ctx, cfg, backupDir, opts.BackupID); err != nil {
 			slog.Warn("metadata restore failed", "error", err)
 		}

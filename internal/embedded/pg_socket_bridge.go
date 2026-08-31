@@ -156,6 +156,10 @@ func (b *PGSocketBridge) handleConn(ctx context.Context, client net.Conn) {
 	// client → backend: intercept unsupported commands.
 	go func() {
 		defer wg.Done()
+		//lint:ignore SA4023 proxyClientToBackend's loop only exits via an
+		// error return (connection close/EOF is the normal exit path), so
+		// the error is intentionally discarded here rather than treated as
+		// a real failure.
 		if err := proxyClientToBackend(client, backend); err != nil {
 			// Connection closed or read error — normal EOF.
 		}

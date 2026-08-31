@@ -165,11 +165,7 @@ func containsLine(text, line string) bool {
 }
 
 func testSplitLines(s string) []string {
-	var lines []string
-	for _, l := range filepath.SplitList(s) {
-		lines = append(lines, l)
-	}
-	// filepath.SplitList uses OS path separator, not newline — use manual split.
+	// filepath.SplitList uses OS path separator, not newline — split manually.
 	var result []string
 	current := ""
 	for _, c := range s {
