@@ -52,7 +52,7 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself security` | advanced | yes | no | n/a | n/a (see below) |
 | `nself self-heal` | observe | yes | no | n/a | n/a (see below) |
 | `nself service` | config | yes | yes | n/a | n/a (see below) |
-| `nself start` | core | yes | yes | undocumented: AI_AUTO_INSTALL, NSELF_PROFILE, NSELF_SKIP_DB_INIT | n/a (see below) |
+| `nself start` | core | yes | yes | undocumented: NSELF_PROFILE, NSELF_SKIP_DB_INIT | n/a (see below) |
 | `nself status` | core | yes | yes | n/a | n/a (see below) |
 | `nself stop` | core | yes | yes | n/a | n/a (see below) |
 | `nself telemetry` | account | yes | no | undocumented: NSELF_TELEMETRY, NSELF_TELEMETRY_OPT_OUT | n/a (see below) |

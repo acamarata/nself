@@ -144,4 +144,25 @@ var knownEnvVarsOps = []string{
 	"NO_COLOR",
 	// Postgres internal port (documentation-only; always 5432).
 	"POSTGRES_INTERNAL_PORT",
+
+	// AI-tier config block, written to .env.secrets by internal/setup/envai.go
+	// (CLI-R18) — not read via a struct env tag, hence absent here until gap #4
+	// (msg-2026-04-30-env-var-warnings-on-build.md).
+	"AI_PROFILE",
+	"AI_AUTO_INSTALL",
+	"AI_DEFAULT_MODEL",
+	"AI_EMBEDDING_MODEL",
+	"AI_POOL_AUTO_PROVISION",
+	"AI_BACKGROUND_LOCAL_ONLY",
+	"AI_DAILY_BUDGET_USD",
+	"AI_MONTHLY_BUDGET_USD",
+	"AI_TIMEOUT_LOCAL_MS",
+	"AI_TIMEOUT_OAUTH_MS",
+	"AI_TIMEOUT_POOL_MS",
+	"AI_TIMEOUT_PAID_MS",
+	"AI_POOL_OAUTH_CLIENT_ID",
+	"AI_POOL_OAUTH_CLIENT_SECRET",
+	// KEK for OAuth/API-key encryption in the zero-config AI pool — see
+	// internal/setup/envai.go's anti-clobber guarantee.
+	"NSELF_MASTER_SECRET",
 }

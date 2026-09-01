@@ -615,6 +615,10 @@
         "hidden": false,
         "aliases": [
           "schema-drift"
+        ],
+        "flags": [
+          "--env",
+          "--metadata"
         ]
       },
       {
@@ -677,6 +681,16 @@
         "path": "nself db pitr",
         "short": "Point-in-time recovery: status, enable, test, restore",
         "hidden": false
+      },
+      {
+        "name": "reconcile",
+        "path": "nself db reconcile",
+        "short": "Push repo-declared Hasura metadata (permissions, relationships, table tracking) to a live instance",
+        "hidden": false,
+        "flags": [
+          "--apply",
+          "--env"
+        ]
       },
       {
         "name": "reset",
@@ -745,6 +759,15 @@
         "path": "nself db soft-delete",
         "short": "Manage soft-delete (deleted_at) patterns across tables",
         "hidden": false
+      },
+      {
+        "name": "verify",
+        "path": "nself db verify",
+        "short": "Verify what a Hasura role can actually reach via role-scoped introspection",
+        "hidden": false,
+        "flags": [
+          "--role"
+        ]
       },
       {
         "name": "verify-checksums",

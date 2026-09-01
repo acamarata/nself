@@ -246,6 +246,7 @@ Subcommands:
 - `migrate` — Manage database migrations
 - `pgbouncer` — PgBouncer connection pooler operations
 - `pitr` — Point-in-time recovery: status, enable, test, restore
+- `reconcile` — Push repo-declared Hasura metadata (permissions, relationships, table tracking) to a live instance
 - `reset` — Drop and recreate database (DESTRUCTIVE)
 - `reset-checksum` — Reset stored checksum for a migration (dangerous)
 - `restore` — Restore from backup
@@ -255,6 +256,7 @@ Subcommands:
 - `seed` — Database seeding: run, list, verify, graph
 - `shell` — Open psql interactive shell
 - `soft-delete` — Manage soft-delete (deleted_at) patterns across tables
+- `verify` — Verify what a Hasura role can actually reach via role-scoped introspection
 - `verify-checksums` — Verify migration file checksums against stored values
 
 Full page: [[cmd-db]]
