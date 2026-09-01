@@ -90,6 +90,15 @@ func MigrateUp(ctx context.Context, cfg *config.Config, plugin string) (int, err
 				return count, fmt.Errorf("record migration %s: %w", name, err)
 			}
 		} else {
+			// Dry-run parse/plan validation before the real, irreversible apply
+			// (msg-2026-07-02-nself-migration-ledger-pk-bug.md secondary finding):
+			// runs the exact statements inside BEGIN;...ROLLBACK; first, so an
+			// invalid construct like ADD CONSTRAINT IF NOT EXISTS surfaces here,
+			// not mid-batch during the real apply below.
+			if err := validateMigrationSQL(ctx, cfg, sqlContent); err != nil {
+				return count, fmt.Errorf("migration %s: %w", name, err)
+			}
+
 			// DEP-02: Set lock_timeout and statement_timeout at session start to prevent
 			// long-blocking schema changes from stalling production deployments.
 			// lock_timeout=5s aborts if the migration cannot acquire the lock quickly.

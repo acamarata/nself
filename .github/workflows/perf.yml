@@ -165,6 +165,9 @@ jobs:
         # below. If the GITHUB_TOKEN lacks pull-requests:write (e.g. fork PR,
         # or a restricted app token), the POST fails with 403; that should
         # NOT fail the whole check since the actual limits already passed.
+        # ACCEPTED: comment-posting failure is cosmetic, not a gate — the
+        # real pass/fail already happened above.
+        # Expiry: permanent
         if: github.event_name == 'pull_request'
         continue-on-error: true
         uses: actions/github-script@v9

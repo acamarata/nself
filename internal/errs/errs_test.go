@@ -45,6 +45,7 @@ func TestSentinelErrors_NonNil(t *testing.T) {
 		// Database
 		{"ErrDatabaseNotRunning", ErrDatabaseNotRunning},
 		{"ErrMigrationFailed", ErrMigrationFailed},
+		{"ErrMigrationValidationFailed", ErrMigrationValidationFailed},
 		{"ErrBackupFailed", ErrBackupFailed},
 		{"ErrBackupNotFound", ErrBackupNotFound},
 		{"ErrBackupVerifyFailed", ErrBackupVerifyFailed},

@@ -91,3 +91,45 @@ func TestKnownEnvVars_CoversRealWorldAppSurface(t *testing.T) {
 		t.Errorf("knownEnvVars is missing %d real-world app env vars (would trigger false 'unknown env var' warnings): %v", len(missing), missing)
 	}
 }
+
+// cliWriterEnvVars mirrors every var the CLI's own setup writers generate:
+// internal/setup/setup_env_files.go (PGVECTOR_* + bare ADMIN_ENABLED, distinct
+// from the already-known NSELF_ADMIN_ENABLED) and internal/setup/envai.go
+// (the AI_* family + NSELF_MASTER_SECRET). P6-E11-W2-S1-T4 flagged these
+// seven names as absent from knownEnvVars (2026-08-27), causing `nself build`
+// to warn "unknown env var — check spelling (ignored)" for config the CLI
+// itself generates. Verified 2026-08-31: all seven were already added to
+// knownEnvVars by the time this test was written; this is the regression
+// guard that would have caught the gap and prevents it recurring.
+var cliWriterEnvVars = []string{
+	// internal/setup/setup_env_files.go
+	"PGVECTOR_ENABLED", "PGVECTOR_DIMENSIONS", "PGVECTOR_HNSW_M",
+	"PGVECTOR_HNSW_EF_CONSTRUCTION", "ADMIN_ENABLED",
+	// internal/setup/envai.go
+	"AI_PROFILE", "AI_DEFAULT_MODEL", "AI_POOL_AUTO_PROVISION",
+	"AI_BACKGROUND_LOCAL_ONLY", "AI_DAILY_BUDGET_USD", "AI_TIMEOUT_LOCAL_MS",
+	"AI_TIMEOUT_OAUTH_MS", "AI_TIMEOUT_POOL_MS", "AI_TIMEOUT_PAID_MS",
+	"AI_POOL_OAUTH_CLIENT_ID", "AI_POOL_OAUTH_CLIENT_SECRET",
+	"NSELF_MASTER_SECRET",
+}
+
+// TestKnownEnvVars_CoversCLIWriterSurface verifies every var the CLI's own
+// setup_env_files.go/envai.go writers generate is present in knownEnvVars —
+// see cliWriterEnvVars' doc comment (P6-E11-W2-S1-T4).
+func TestKnownEnvVars_CoversCLIWriterSurface(t *testing.T) {
+	knownSet := make(map[string]bool, len(knownEnvVars))
+	for _, k := range knownEnvVars {
+		knownSet[k] = true
+	}
+
+	var missing []string
+	for _, v := range cliWriterEnvVars {
+		if !knownSet[v] {
+			missing = append(missing, v)
+		}
+	}
+
+	if len(missing) > 0 {
+		t.Errorf("knownEnvVars is missing %d CLI-writer env vars (would trigger false 'unknown env var' warnings on every `nself build`): %v", len(missing), missing)
+	}
+}
