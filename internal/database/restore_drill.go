@@ -184,17 +184,19 @@ func VerifyRestoredDatabase(ctx context.Context, cfg *config.Config, drillDB str
 	return tableCount, totalRows, nil
 }
 
-// verifyCriticalTables reports which entries of CriticalTables (drill.go) are
-// missing by name, in any schema, from drillDB. CriticalTables are
-// compile-time-constant literals defined in this package, not DB-sourced
-// input, so they are safe to place directly into a SQL literal list here —
-// SEC-SQL-01's "never interpolate DB-sourced identifiers without quoting"
-// concerns table_schema/table_name values read back FROM the database
-// (handled via format('%I.%I') in VerifyRestoredDatabase above), not our own
-// hardcoded constants.
+// verifyCriticalTables reports which entries of ResolveCriticalTables(cfg)
+// (drill.go — DefaultCriticalTables unless the project sets
+// BACKUP_CRITICAL_TABLES) are missing by name, in any schema, from drillDB.
+// The resolved names are project config, not DB-sourced input, so they are
+// safe to place directly into a SQL literal list here (properly
+// single-quote-escaped below) — SEC-SQL-01's "never interpolate DB-sourced
+// identifiers without quoting" concerns table_schema/table_name values read
+// back FROM the database (handled via format('%I.%I') in
+// VerifyRestoredDatabase above), not our own resolved string-literal values.
 func verifyCriticalTables(ctx context.Context, cfg *config.Config, drillDB string) ([]string, error) {
-	literals := make([]string, len(CriticalTables))
-	for i, name := range CriticalTables {
+	criticalTables := ResolveCriticalTables(cfg)
+	literals := make([]string, len(criticalTables))
+	for i, name := range criticalTables {
 		literals[i] = "'" + strings.ReplaceAll(name, "'", "''") + "'"
 	}
 	sqlText := fmt.Sprintf(
@@ -205,7 +207,7 @@ func verifyCriticalTables(ctx context.Context, cfg *config.Config, drillDB strin
 	if err != nil {
 		return nil, fmt.Errorf("query critical tables in %s: %w", drillDB, err)
 	}
-	present := make(map[string]bool, len(CriticalTables))
+	present := make(map[string]bool, len(criticalTables))
 	for _, line := range strings.Split(out, "\n") {
 		line = strings.TrimSpace(line)
 		if line != "" {
@@ -213,7 +215,7 @@ func verifyCriticalTables(ctx context.Context, cfg *config.Config, drillDB strin
 		}
 	}
 	var missing []string
-	for _, name := range CriticalTables {
+	for _, name := range criticalTables {
 		if !present[name] {
 			missing = append(missing, name)
 		}

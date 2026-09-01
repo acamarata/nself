@@ -29,6 +29,7 @@ var knownEnvVarsOps = []string{
 	"BACKUP_S3_SECRET_ACCESS_KEY",
 	"BACKUP_S3_REGION",
 	"BACKUP_S3_ENDPOINT",
+	"BACKUP_CRITICAL_TABLES",
 	// App-level backup credential/target aliases seen in real .env files
 	// (e.g. ntask). Not read by the CLI loader (app backup scripts use them).
 	"BACKUP_ACCESS_KEY",

@@ -80,6 +80,7 @@ func parseEnvOps(cfg *Config) {
 		S3SecretAccessKey:   os.Getenv("BACKUP_S3_SECRET_ACCESS_KEY"),
 		S3Region:            os.Getenv("BACKUP_S3_REGION"),
 		S3Endpoint:          os.Getenv("BACKUP_S3_ENDPOINT"),
+		CriticalTables:      os.Getenv("BACKUP_CRITICAL_TABLES"),
 	}
 
 	cfg.DR = DRConfig{

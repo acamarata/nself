@@ -101,9 +101,9 @@ func TestLastSuccessfulDrill_IgnoresFailures(t *testing.T) {
 	}
 }
 
-// TestCriticalTables_Stable: changing the canonical critical-table list is a
-// breaking change to the drill smoke suite. This test pins the list so any
-// modification is intentional + reviewed.
+// TestCriticalTables_Stable: changing the canonical default critical-table
+// list is a breaking change to the drill smoke suite. This test pins the
+// list so any modification is intentional + reviewed.
 func TestCriticalTables_Stable(t *testing.T) {
 	want := []string{
 		"np_users",
@@ -112,13 +112,59 @@ func TestCriticalTables_Stable(t *testing.T) {
 		"np_plugins",
 		"np_billing",
 	}
-	if len(CriticalTables) != len(want) {
-		t.Fatalf("CriticalTables length changed: want %d, got %d", len(want), len(CriticalTables))
+	if len(DefaultCriticalTables) != len(want) {
+		t.Fatalf("DefaultCriticalTables length changed: want %d, got %d", len(want), len(DefaultCriticalTables))
 	}
 	for i, name := range want {
-		if CriticalTables[i] != name {
-			t.Errorf("CriticalTables[%d]: want %q, got %q", i, name, CriticalTables[i])
+		if DefaultCriticalTables[i] != name {
+			t.Errorf("DefaultCriticalTables[%d]: want %q, got %q", i, name, DefaultCriticalTables[i])
 		}
+	}
+}
+
+// TestResolveCriticalTables_DefaultsWhenUnset covers the zero-config path:
+// no cfg, or a cfg with no BACKUP_CRITICAL_TABLES override, must return
+// DefaultCriticalTables unchanged — every np_-prefixed deployment (and every
+// other test in this file) depends on this staying true.
+func TestResolveCriticalTables_DefaultsWhenUnset(t *testing.T) {
+	if got := ResolveCriticalTables(nil); len(got) != len(DefaultCriticalTables) {
+		t.Fatalf("ResolveCriticalTables(nil) = %v, want %v", got, DefaultCriticalTables)
+	}
+	if got := ResolveCriticalTables(&config.Config{}); len(got) != len(DefaultCriticalTables) {
+		t.Fatalf("ResolveCriticalTables(empty cfg) = %v, want %v", got, DefaultCriticalTables)
+	}
+}
+
+// TestResolveCriticalTables_OverrideSplitsAndTrims proves the
+// BACKUP_CRITICAL_TABLES override (closes
+// .claude/qa/bugs/drill-critical-tables-naming.md option (c)) is parsed as a
+// comma-separated, whitespace-trimmed list — the unprefixed convention this
+// project's own staging nself_web_db actually uses.
+func TestResolveCriticalTables_OverrideSplitsAndTrims(t *testing.T) {
+	cfg := &config.Config{Backup: config.BackupConfig{
+		CriticalTables: "users, licenses,audit_logs ,plugins",
+	}}
+	got := ResolveCriticalTables(cfg)
+	want := []string{"users", "licenses", "audit_logs", "plugins"}
+	if len(got) != len(want) {
+		t.Fatalf("ResolveCriticalTables = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("ResolveCriticalTables[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
+// TestResolveCriticalTables_BlankOverrideFallsBackToDefault guards against a
+// set-but-empty/whitespace-only override silently producing a zero-length
+// critical-table list (which would make smokeCheck's table-count floor
+// trivially always pass).
+func TestResolveCriticalTables_BlankOverrideFallsBackToDefault(t *testing.T) {
+	cfg := &config.Config{Backup: config.BackupConfig{CriticalTables: "  , , "}}
+	got := ResolveCriticalTables(cfg)
+	if len(got) != len(DefaultCriticalTables) {
+		t.Fatalf("ResolveCriticalTables(blank override) = %v, want default %v", got, DefaultCriticalTables)
 	}
 }
 
@@ -132,10 +178,10 @@ func TestCriticalTables_Stable(t *testing.T) {
 func TestSmokeCheck_ZeroRowsFails(t *testing.T) {
 	sub := RestoreDrillResult{
 		Success:        true,
-		TablesVerified: 107, // well over len(CriticalTables) — the old gate's only check
+		TablesVerified: 107, // well over len(DefaultCriticalTables) — the old gate's only check
 		RowsVerified:   0,   // fresh-init / nothing-really-restored signal
 	}
-	if err := smokeCheck(sub); err == nil {
+	if err := smokeCheck(sub, DefaultCriticalTables); err == nil {
 		t.Fatalf("smokeCheck: want error for 0 rows observed across %d tables, got nil (hollow gate)", sub.TablesVerified)
 	}
 }
@@ -149,21 +195,21 @@ func TestSmokeCheck_RealDataPasses(t *testing.T) {
 		TablesVerified: 107,
 		RowsVerified:   4213,
 	}
-	if err := smokeCheck(sub); err != nil {
+	if err := smokeCheck(sub, DefaultCriticalTables); err != nil {
 		t.Errorf("smokeCheck: want nil for a real restore with rows observed, got %v", err)
 	}
 }
 
 // TestSmokeCheck_TooFewTablesFails preserves the pre-existing table-count
-// floor: fewer than len(CriticalTables) tables found still fails, even with a
+// floor: fewer than len(criticalTables) tables found still fails, even with a
 // nonzero row count (e.g. one giant table).
 func TestSmokeCheck_TooFewTablesFails(t *testing.T) {
 	sub := RestoreDrillResult{
 		Success:        true,
-		TablesVerified: len(CriticalTables) - 1,
+		TablesVerified: len(DefaultCriticalTables) - 1,
 		RowsVerified:   999,
 	}
-	if err := smokeCheck(sub); err == nil {
+	if err := smokeCheck(sub, DefaultCriticalTables); err == nil {
 		t.Fatalf("smokeCheck: want error for too few tables verified, got nil")
 	}
 }
