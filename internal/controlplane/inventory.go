@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/nself-org/cli/internal/deploy"
 	"gopkg.in/yaml.v3"
 )
 
@@ -58,7 +59,17 @@ func Load(projectRoot string) (*Inventory, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return synthesize(), nil
+			synthesized := synthesize()
+			// T31: synthesize() builds Server.RemotePath from
+			// NSELF_REMOTE_PATH_<TARGET> environment variables, another
+			// external-input path into the same field the YAML-load path
+			// below validates. Apply the identical guard so an operator
+			// (or a compromised env) cannot smuggle shell metacharacters in
+			// through this route either.
+			if err := validateInventoryNames(synthesized); err != nil {
+				return nil, err
+			}
+			return synthesized, nil
 		}
 		return nil, fmt.Errorf("controlplane: read inventory: %w", err)
 	}
@@ -81,12 +92,24 @@ func Load(projectRoot string) (*Inventory, error) {
 	return &inv, nil
 }
 
-// validateInventoryNames checks every Server.Name in inv against serverNameRe.
+// validateInventoryNames checks every Server.Name against serverNameRe and
+// every Server.RemotePath against deploy.ValidateRemotePath.
+//
+// This is the defense point for the file-load path: .nself/control-plane.yaml
+// is a hand-editable / import-able YAML file, so a RemotePath smuggled in via
+// a manually edited or migrated inventory file (rather than through
+// `env target add --remote-path`, which validates at the flag layer) is
+// caught here before the inventory is ever used to build an SSH deploy
+// command (T31 — RemotePath is interpolated into a remote shell string in
+// internal/deploy/ssh.go's DeployViaSsh).
 func validateInventoryNames(inv *Inventory) error {
 	for envName, env := range inv.Environments {
 		for _, srv := range env.Servers {
 			if err := ValidateServerName(srv.Name); err != nil {
 				return fmt.Errorf("controlplane: env %q: %w", envName, err)
+			}
+			if err := deploy.ValidateRemotePath(srv.RemotePath); err != nil {
+				return fmt.Errorf("controlplane: env %q: server %q: %w", envName, srv.Name, err)
 			}
 		}
 	}

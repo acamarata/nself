@@ -67,6 +67,18 @@ func DeployViaSsh(ctx context.Context, cfg SSHConfig, composePath string) error 
 		return err
 	}
 
+	// T31 defense-in-depth: remotePath is about to be joined into a path and
+	// interpolated into shell command strings executed on the remote host
+	// (see the fmt.Sprintf calls below and runSSH). The CLI-flag and
+	// inventory-file layers (cmd/commands/env_target_crud.go,
+	// internal/controlplane's inventory Load/synthesize) already validate
+	// this before it reaches SSHConfig, but this check holds even if a
+	// future caller (a test, a new command) constructs an SSHConfig
+	// directly, bypassing those layers.
+	if err := ValidateRemotePath(remotePath); err != nil {
+		return fmt.Errorf("SSHConfig.Host: %w", err)
+	}
+
 	remoteCompose := filepath.Join(remotePath, "nself-compose.yml")
 	if remotePath == "" || remotePath == "/" {
 		remoteCompose = "/tmp/nself-compose.yml"

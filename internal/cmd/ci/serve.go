@@ -35,6 +35,28 @@ type ServeConfig struct {
 	WorkDir     string // base dir for ephemeral checkouts
 	JobTimeout  int    // per-job timeout in seconds
 	Verbose     bool
+
+	// Insecure opts out of the fail-closed "refuse to start without a
+	// webhook secret" default (T32). When true and no secret is configured,
+	// RunServe starts anyway with signature verification disabled — the
+	// previous, unconditional behavior. Off by default.
+	Insecure bool
+
+	// AllowUnsandboxed opts out of the fail-closed "refuse to run a job
+	// when Docker is unavailable" default (T32). When false (default) and
+	// Docker is not on PATH, runGateInDocker refuses the job instead of
+	// silently executing the cloned repo's gate commands directly on the
+	// host. When true, the previous runGateDirect fallback behavior
+	// applies.
+	AllowUnsandboxed bool
+
+	// AllowedRepos is the set of "owner/repo" full names this server will
+	// dispatch jobs for. Fail-closed by design: an EMPTY list rejects every
+	// job (not "allow all") — an operator who configured zero repos almost
+	// certainly forgot to configure this, not intentionally wants an open
+	// relay that clones and executes whatever repository a validly-signed
+	// (or, if --insecure, any) webhook payload names.
+	AllowedRepos []string
 }
 
 // RunServe starts the webhook listener and blocks until SIGINT/SIGTERM.
@@ -45,6 +67,13 @@ func RunServe(cfg ServeConfig) error {
 		secret = os.Getenv("GITHUB_WEBHOOK_SECRET")
 	}
 	if secret == "" {
+		// T32: a webhook endpoint with no secret accepts and dispatches ANY
+		// POST body with no authentication at all — a fully open trigger
+		// for cloning and executing arbitrary repository content. Fail
+		// closed by default; --insecure is the loud, explicit opt-out.
+		if !cfg.Insecure {
+			return fmt.Errorf("refusing to start: no webhook secret configured (--secret or GITHUB_WEBHOOK_SECRET); pass --insecure to start anyway (NOT recommended — this exposes an unauthenticated arbitrary-repo code-execution endpoint)")
+		}
 		ui.Warn("GITHUB_WEBHOOK_SECRET not set — webhook signature verification DISABLED (insecure)")
 	}
 

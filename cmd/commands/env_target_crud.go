@@ -20,6 +20,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/nself-org/cli/internal/controlplane"
+	"github.com/nself-org/cli/internal/deploy"
 	"github.com/spf13/cobra"
 )
 
@@ -130,6 +131,14 @@ func runEnvTargetAdd(cmd *cobra.Command, args []string) error {
 	}
 	if err := rejectInlineSecret("--key-ref", keyRef); err != nil {
 		return err
+	}
+	// Security (T31): remotePath is persisted into .nself/control-plane.yaml
+	// and later interpolated into shell command strings run on the remote
+	// host (see internal/deploy/ssh.go's DeployViaSsh). Reject unsafe
+	// characters here, at the same point --host/--key-ref are already
+	// checked, using the same charset as `nself deploy --remote-path`.
+	if err := deploy.ValidateRemotePath(remotePath); err != nil {
+		return fmt.Errorf("--remote-path: %w", err)
 	}
 
 	role, ok := validRoles[strings.ToLower(roleStr)]

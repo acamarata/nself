@@ -166,7 +166,7 @@ func TestWebhookHandler_signatureRequired(t *testing.T) {
 		secret:     secret,
 		sem:        make(chan struct{}, 1),
 		binaryPath: "/usr/local/bin/nself-ci",
-		cfg:        ServeConfig{Concurrency: 1, JobTimeout: 60},
+		cfg:        ServeConfig{Concurrency: 1, JobTimeout: 60, AllowedRepos: []string{"o/r"}},
 	}
 
 	// Missing signature — must be 403.
@@ -190,13 +190,15 @@ func TestWebhookHandler_signatureRequired(t *testing.T) {
 }
 
 func TestWebhookHandler_noSecret(t *testing.T) {
-	// When secret is empty, all POSTs are accepted without signature check.
+	// When secret is empty (the --insecure path; RunServe refuses to reach
+	// this state otherwise per T32), POSTs for an allowlisted repo are
+	// still accepted without a signature check.
 	body := []byte(`{"after":"aabbcc","ref":"refs/heads/feat","deleted":false,"repository":{"full_name":"o/r","clone_url":"https://github.com/o/r.git"}}`)
 	handler := &webhookHandler{
 		secret:     "",
 		sem:        make(chan struct{}, 1),
 		binaryPath: "/usr/local/bin/nself-ci",
-		cfg:        ServeConfig{Concurrency: 1, JobTimeout: 60},
+		cfg:        ServeConfig{Concurrency: 1, JobTimeout: 60, AllowedRepos: []string{"o/r"}},
 	}
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
 	req.Header.Set("X-GitHub-Event", "push")
@@ -204,6 +206,106 @@ func TestWebhookHandler_noSecret(t *testing.T) {
 	handler.ServeHTTP(w, req)
 	if w.Code != http.StatusAccepted {
 		t.Errorf("no-secret: got %d, want 202", w.Code)
+	}
+}
+
+// TestWebhookHandler_repoNotAllowlisted (T32) verifies a validly-signed
+// payload for a repo NOT present in AllowedRepos is rejected with 403
+// before any clone/dispatch — the handler must never reach cloneRef/runJob
+// for a non-allowlisted repo, no matter how the signature check resolved.
+func TestWebhookHandler_repoNotAllowlisted(t *testing.T) {
+	secret := "webhook-secret"
+	body := []byte(`{"after":"abc123","ref":"refs/heads/main","deleted":false,"repository":{"full_name":"attacker/evil-repo","clone_url":"https://github.com/attacker/evil-repo.git"}}`)
+
+	handler := &webhookHandler{
+		secret:     secret,
+		sem:        make(chan struct{}, 1),
+		binaryPath: "/usr/local/bin/nself-ci",
+		cfg:        ServeConfig{Concurrency: 1, JobTimeout: 60, AllowedRepos: []string{"nself-org/cli"}},
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+	req.Header.Set("X-GitHub-Event", "push")
+	req.Header.Set("X-Hub-Signature-256", signBody(secret, body))
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("non-allowlisted repo: got %d, want 403 — body: %s", w.Code, w.Body.String())
+	}
+	// The dispatch semaphore must never have been acquired for a rejected
+	// repo — if it had, len(handler.sem) would be nonzero right after
+	// ServeHTTP returns synchronously with the rejection (no goroutine was
+	// launched to release it).
+	if len(handler.sem) != 0 {
+		t.Errorf("non-allowlisted repo: job appears to have been dispatched (sem held), want no dispatch")
+	}
+}
+
+// TestWebhookHandler_emptyAllowlistRejectsEverything (T32) proves the
+// fail-closed default: an empty AllowedRepos list rejects every repo, not
+// "allow all" — an operator who configured zero repos almost certainly
+// forgot to configure --allowed-repos, not intentionally wants an open relay.
+func TestWebhookHandler_emptyAllowlistRejectsEverything(t *testing.T) {
+	secret := "webhook-secret"
+	body := []byte(`{"after":"abc123","ref":"refs/heads/main","deleted":false,"repository":{"full_name":"nself-org/cli","clone_url":"https://github.com/nself-org/cli.git"}}`)
+
+	handler := &webhookHandler{
+		secret:     secret,
+		sem:        make(chan struct{}, 1),
+		binaryPath: "/usr/local/bin/nself-ci",
+		cfg:        ServeConfig{Concurrency: 1, JobTimeout: 60, AllowedRepos: nil},
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+	req.Header.Set("X-GitHub-Event", "push")
+	req.Header.Set("X-Hub-Signature-256", signBody(secret, body))
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("empty allowlist: got %d, want 403 — body: %s", w.Code, w.Body.String())
+	}
+}
+
+// TestIsRepoAllowed (T32) unit-tests the allowlist predicate directly.
+func TestIsRepoAllowed(t *testing.T) {
+	cases := []struct {
+		repo    string
+		allowed []string
+		want    bool
+	}{
+		{"o/r", nil, false},
+		{"o/r", []string{}, false},
+		{"o/r", []string{"o/r"}, true},
+		{"o/r", []string{"other/repo"}, false},
+		{"o/r", []string{"other/repo", "o/r"}, true},
+	}
+	for _, c := range cases {
+		if got := isRepoAllowed(c.repo, c.allowed); got != c.want {
+			t.Errorf("isRepoAllowed(%q, %v) = %v, want %v", c.repo, c.allowed, got, c.want)
+		}
+	}
+}
+
+// TestRunServe_RefusesToStartWithoutSecret (T32) is the fail-closed unit
+// test for RunServe's startup gate: with no --secret, no
+// GITHUB_WEBHOOK_SECRET, and Insecure=false, RunServe must return an error
+// immediately (before creating a workdir or resolving the ci binary), never
+// warn-and-continue.
+func TestRunServe_RefusesToStartWithoutSecret(t *testing.T) {
+	t.Setenv("GITHUB_WEBHOOK_SECRET", "")
+
+	err := RunServe(ServeConfig{
+		Addr:     ":0",
+		Secret:   "",
+		Insecure: false,
+	})
+	if err == nil {
+		t.Fatal("RunServe with no secret and Insecure=false: expected refusal error, got nil")
+	}
+	if !strings.Contains(err.Error(), "refusing to start") {
+		t.Errorf("unexpected error: %v", err)
 	}
 }
 
@@ -263,7 +365,7 @@ func TestWebhookHandler_concurrencyLimit(t *testing.T) {
 		secret:     "",
 		sem:        make(chan struct{}),
 		binaryPath: "/usr/local/bin/nself-ci",
-		cfg:        ServeConfig{Concurrency: 0, JobTimeout: 60},
+		cfg:        ServeConfig{Concurrency: 0, JobTimeout: 60, AllowedRepos: []string{"o/r"}},
 	}
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
 	req.Header.Set("X-GitHub-Event", "push")
@@ -299,11 +401,12 @@ func TestWebhookHandler_getNotAllowed(t *testing.T) {
 func TestIntegration_HttpServer(t *testing.T) {
 	secret := "integration-test-secret"
 	cfg := ServeConfig{
-		Addr:        ":0", // let OS assign port
-		Secret:      secret,
-		Concurrency: 1,
-		WorkDir:     t.TempDir(),
-		JobTimeout:  5,
+		Addr:         ":0", // let OS assign port
+		Secret:       secret,
+		Concurrency:  1,
+		WorkDir:      t.TempDir(),
+		JobTimeout:   5,
+		AllowedRepos: []string{"nself-org/test"},
 	}
 
 	// Start server in background.
