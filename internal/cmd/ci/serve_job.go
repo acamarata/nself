@@ -125,7 +125,7 @@ func runGateInDocker(binaryPath, workdir string, cfg ServeConfig) (passed bool, 
 		// --allow-unsandboxed / NSELF_CI_ALLOW_UNSANDBOXED is the explicit,
 		// loud opt-in for legitimate no-Docker deployments.
 		if !cfg.AllowUnsandboxed {
-			return false, "Docker not available", fmt.Errorf("Docker not available; refusing to run gate unsandboxed — pass --allow-unsandboxed to override, understanding the cloned repo's content would then execute directly on this host")
+			return false, "Docker not available", fmt.Errorf("cannot reach Docker; refusing to run the gate unsandboxed. Pass --allow-unsandboxed to override, understanding that the cloned repo's content would then execute directly on this host")
 		}
 		return runGateDirect(binaryPath, workdir, cfg)
 	}
