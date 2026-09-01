@@ -21,6 +21,10 @@ permissions:
   issues: write
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   create-drill-reminder:
     name: Create DR Drill Reminder Issue

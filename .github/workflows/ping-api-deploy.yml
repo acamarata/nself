@@ -24,6 +24,12 @@ on:
 permissions:
   contents: read
 
+# cancel-in-progress: false — this workflow deploys/publishes/releases; a superseding
+# run must queue behind an in-flight one, never cancel it mid-flight.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   # No-op guard: exits success on branch pushes so GitHub never records a
   # failure run for push events. Always skipped on workflow_dispatch, where

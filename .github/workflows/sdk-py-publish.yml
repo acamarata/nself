@@ -35,6 +35,12 @@ permissions:
   id-token: write  # required for OIDC token exchange with PyPI
   contents: read
 
+# cancel-in-progress: false — this workflow deploys/publishes/releases; a superseding
+# run must queue behind an in-flight one, never cancel it mid-flight.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   check-secret:
     name: Check PyPI secret availability

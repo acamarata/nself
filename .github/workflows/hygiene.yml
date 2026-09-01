@@ -1,0 +1,365 @@
+name: Hygiene
+
+# Consolidates four previously-independent workflows that each did well
+# under 45 seconds of real work but each claimed its own runner allocation
+# and queued for minutes: Clean Working Tree, Generated File Gate, Gitleaks,
+# and the Branch Protection Drift Check. Combined they do ~2 minutes of
+# actual work on one runner with one checkout — less than any single one of
+# them used to spend waiting in the queue.
+#
+# Superseded files (do not recreate — extend the matching step group below):
+#   clean-root.yml, generated-file-gate.yml, gitleaks.yml,
+#   branch-protection-check.yml
+#
+# Trigger-preservation contract: the four original workflows had different
+# `on:` filters (see per-group comments below). This file's `on:` block is
+# the UNION of all four, and every step re-applies its own original filter
+# via `if:`, so no group runs on an event it didn't run on before merging.
+#
+# Failure-isolation contract: the four original workflows ran independently,
+# so one failing does not affect the others. Every step therefore carries
+# `if: always()` plus its trigger guard, so a failure in one group can never
+# suppress a later, unrelated group. Steps *within* the same group still
+# stop at the first failure in that group (matching each original
+# workflow's own internal step order) via an explicit
+# `steps.<prev>.outcome == 'success'` check — this is not continue-on-error,
+# it is the same "stop the group, don't stop the job" behavior each
+# standalone workflow already had internally. GitHub still marks the job
+# (and this check) failed if any step fails, regardless of which later
+# `always()` steps still run.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "30 5 * * *"   # branch-protection-check's original cadence
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hygiene-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hygiene:
+    name: hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # ════════════════════════════════════════════════════════════════
+      # Clean Working Tree (was clean-root.yml)
+      # Original trigger: push(main), pull_request(any base)
+      # ════════════════════════════════════════════════════════════════
+
+      - name: "Clean Root: forbid markdown at repo root other than README.md"
+        id: root_md
+        if: always() && (github.event_name == 'push' || github.event_name == 'pull_request')
+        run: |
+          OFFENDERS=$(find . -maxdepth 1 -name '*.md' ! -name 'README.md' -type f | sort)
+          if [ -n "$OFFENDERS" ]; then
+            echo "::error::Disallowed markdown files at repo root:"
+            echo "$OFFENDERS"
+            echo ""
+            echo "Per the nSelf Sub-Repo Root Hygiene rule:"
+            echo "  - CONTRIBUTING.md  -> .github/wiki/Contributing.md  (or .github/docs/contributing.md)"
+            echo "  - CODE_OF_CONDUCT.md -> .github/wiki/Code-of-Conduct.md"
+            echo "  - CHANGELOG.md     -> .github/wiki/Changelog.md"
+            echo "  - SECURITY.md      -> .github/SECURITY.md"
+            echo "  - other .md        -> .github/wiki/ (or .github/docs/ for private repos)"
+            echo ""
+            echo "Spec: ~/.claude/CLAUDE.md (Clean Repo Root - Hard Rule)"
+            echo "      ~/Sites/nself/.claude/CLAUDE.md (Sub-Repo Root Hygiene - Hard Rule)"
+            exit 1
+          fi
+          echo "Repo root markdown is clean (only README.md present)."
+
+      # CLI-R06: the PRI's Clean Root allowlist and the tracked tree had drifted
+      # apart — nine directories (bin, charts, monitoring, packaging, scripts,
+      # templates, terraform, test, tools) were tracked at root while the PRI
+      # forbade them, and the PRI listed a pkg/ that does not exist. Rather than
+      # relocate nine working directories, the allowlist is made explicit here
+      # and in the PRI, and this step keeps the two honest.
+      #
+      # CLI-R11: charts/ removed from the allowlist. It held only
+      # charts/nself/ (the Helm chart for `nself k8s`), referenced solely by
+      # internal/k8s/helm.go's doc comment and nothing else in the tree — so
+      # when `k8s` moved to plugins/free/k8s, charts/ moved with it.
+      - name: "Clean Root: enforce explicit root-entry allowlist"
+        id: root_allowlist
+        if: >-
+          always() && (github.event_name == 'push' || github.event_name == 'pull_request')
+          && steps.root_md.outcome == 'success'
+        run: |
+          set -euo pipefail
+          ALLOWED=".dockerignore .gitattributes .github .gitignore .gitleaks.toml .golangci.yml .goreleaser.yml Dockerfile LICENSE Makefile README.md bin cmd go.mod go.sum internal monitoring packaging scripts sdk templates terraform test tools vendor"
+          echo "$ALLOWED" | tr ' ' '\n' | sort > /tmp/root-allowed.txt
+          git ls-files | awk -F/ '{print $1}' | sort -u > /tmp/root-tracked.txt
+          UNEXPECTED=$(comm -23 /tmp/root-tracked.txt /tmp/root-allowed.txt)
+          if [ -n "$UNEXPECTED" ]; then
+            echo "::error::Root entries not on the Clean Root allowlist:"
+            echo "$UNEXPECTED"
+            echo ""
+            echo "Either relocate them, or add them to BOTH:"
+            echo "  .github/workflows/hygiene.yml (Clean Root: enforce explicit root-entry allowlist step)"
+            echo "  .claude/CLAUDE.md (PRI, Clean Root section)"
+            exit 1
+          fi
+          STALE=$(comm -13 /tmp/root-tracked.txt /tmp/root-allowed.txt)
+          if [ -n "$STALE" ]; then
+            echo "::warning::Allowlist names entries that are no longer tracked (prune them):"
+            echo "$STALE"
+          fi
+          echo "Root entries match the Clean Root allowlist."
+
+      - name: "Clean Root: forbid tracked OS/editor junk anywhere in tree"
+        id: root_osjunk
+        if: >-
+          always() && (github.event_name == 'push' || github.event_name == 'pull_request')
+          && steps.root_allowlist.outcome == 'success'
+        run: |
+          OFFENDERS=$(git ls-files | grep -E '(^|/)(\.DS_Store|Thumbs\.db|desktop\.ini)$|\.swp$|\.swo$' || true)
+          if [ -n "$OFFENDERS" ]; then
+            echo "::error::Tracked OS / editor junk in repository:"
+            echo "$OFFENDERS"
+            echo ""
+            echo "Run: git rm --cached <file> for each, then commit. Add to .gitignore."
+            echo "Spec: ~/.claude/CLAUDE.md (Clean Working Tree - Hard Rule)"
+            exit 1
+          fi
+          echo "No tracked OS junk."
+
+      - name: "Clean Root: forbid tracked secret-bearing .env files"
+        id: root_envsecrets
+        if: >-
+          always() && (github.event_name == 'push' || github.event_name == 'pull_request')
+          && steps.root_osjunk.outcome == 'success'
+        run: |
+          # Per nSelf env cascade convention (PPI):
+          #   ALLOWED tracked: .env.dev, .env.staging, .env.prod, .env.production,
+          #                    .env.example, .env.template, .env.sample,
+          #                    (.environments|environments)/<env>/.env  (web-specific variant)
+          #   FORBIDDEN tracked: .env (bare, anywhere not under .environments/<env>/),
+          #                      .env.local, .env.secrets, .env.computed
+          OFFENDERS=$(git ls-files \
+            | grep -E '(^|/)(\.env|\.env\.local|\.env\.secrets|\.env\.computed)$' \
+            | grep -vE '(^|/)(\.environments|environments)/[^/]+/\.env$' \
+            | grep -vE '(^|/)testdata/[^/]*(-|_|^)fixture[^/]*/\.env$' \
+            || true)
+          if [ -n "$OFFENDERS" ]; then
+            echo "::error::Tracked SECRET-BEARING .env file(s) found:"
+            echo "$OFFENDERS"
+            echo ""
+            echo "Per the nSelf env cascade convention, .env / .env.local / .env.secrets / .env.computed"
+            echo "must NEVER be tracked. They contain local overrides or production secrets."
+            echo "(Exception: .environments/<env>/.env is allowed — web-specific config-folder pattern.)"
+            echo ""
+            echo "If credentials are in any tracked file: ROTATE THEM and scrub git history."
+            echo "Spec: ~/.claude/CLAUDE.md (Clean Working Tree) + ~/Sites/nself/.claude/CLAUDE.md (Env cascade)"
+            exit 1
+          fi
+          echo "No tracked secret-bearing .env files."
+
+      - name: "Clean Root: verify .gitignore baseline patterns present (warn-only)"
+        id: root_gitignore
+        if: >-
+          always() && (github.event_name == 'push' || github.event_name == 'pull_request')
+          && steps.root_envsecrets.outcome == 'success'
+        run: |
+          REQUIRED=(.DS_Store .env node_modules)
+          MISSING=()
+          for pattern in "${REQUIRED[@]}"; do
+            if ! grep -qE "(^|/)${pattern//./\\.}(\$|/)" .gitignore 2>/dev/null && ! grep -qE "^${pattern//./\\.}\$" .gitignore 2>/dev/null; then
+              MISSING+=("$pattern")
+            fi
+          done
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "::warning::.gitignore missing baseline patterns: ${MISSING[*]}"
+            echo "See ~/.claude/CLAUDE.md (Clean Working Tree - Hard Rule) for full baseline."
+          fi
+
+      - name: "Clean Root: verify cli/sdk/ contains the 3 language SDK modules (S33-T09)"
+        id: root_sdk
+        if: >-
+          always() && (github.event_name == 'push' || github.event_name == 'pull_request')
+          && steps.root_gitignore.outcome == 'success'
+        run: |
+          # Sanity check: canonical SDK dirs must exist under cli/sdk/
+          # Canonical location per P96 S33: sdk/{go,py,ts}
+          # sdk/flutter removed with the Flutter SDK elimination (ASI Policy 2, PR #159)
+          MISSING_SDK=()
+          for lang in go py ts; do
+            if [ ! -d "sdk/$lang" ]; then
+              MISSING_SDK+=("sdk/$lang")
+            fi
+          done
+          if [ ${#MISSING_SDK[@]} -gt 0 ]; then
+            echo "::error::cli/sdk/ is missing canonical SDK modules: ${MISSING_SDK[*]}"
+            echo ""
+            echo "All 3 SDK language modules must live under cli/sdk/:"
+            echo "  sdk/go       — Go plugin SDK (github.com/nself-org/cli/sdk/go)"
+            echo "  sdk/py       — Python plugin SDK (nself-plugin-sdk on PyPI)"
+            echo "  sdk/ts       — TypeScript plugin SDK (@nself/plugin-sdk on npm)"
+            echo ""
+            echo "These must NOT be re-created at the project-folder root or as separate repos."
+            echo "Spec: ~/Sites/nself/.claude/CLAUDE.md (Project Folder Hygiene - Hard Rule)"
+            exit 1
+          fi
+          echo "cli/sdk/ sanity check passed: go, py, ts all present."
+
+      # ════════════════════════════════════════════════════════════════
+      # Generated File Gate (was generated-file-gate.yml)
+      # Original trigger: pull_request(base=main only), push(main)
+      # ════════════════════════════════════════════════════════════════
+
+      - name: "Generated File Gate: scan diff for GENERATED BY markers"
+        id: genfile_gate
+        if: >-
+          always() &&
+          (github.event_name == 'push' ||
+           (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'))
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin main --depth=1
+            BASE="origin/main"
+          else
+            BASE="${{ github.event.before }}"
+            if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+              BASE="HEAD~1"
+            fi
+          fi
+
+          CHANGED=$(git diff --name-only "$BASE"...HEAD || true)
+          if [ -z "$CHANGED" ]; then
+            echo "No changed files to scan."
+            exit 0
+          fi
+
+          FAIL=0
+          while IFS= read -r f; do
+            [ -f "$f" ] || continue
+            if head -n 5 "$f" | grep -q "# GENERATED BY"; then
+              if git check-ignore -q "$f"; then
+                echo "OK: $f is generated but gitignored."
+              else
+                echo "ERROR: Refusing to commit generated file. Add to .gitignore first."
+                echo "  -> $f"
+                FAIL=1
+              fi
+            fi
+          done <<< "$CHANGED"
+
+          if [ "$FAIL" -eq 1 ]; then
+            echo "ERROR: Refusing to commit generated file. Add to .gitignore first."
+            exit 1
+          fi
+
+          echo "Generated File Gate: clean."
+
+      # ════════════════════════════════════════════════════════════════
+      # Gitleaks (was gitleaks.yml)
+      # Original trigger: push(main), pull_request(any base), workflow_dispatch
+      # ════════════════════════════════════════════════════════════════
+
+      - name: "Gitleaks: install"
+        id: gitleaks_install
+        if: >-
+          always() &&
+          (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz \
+            | tar xz -C /usr/local/bin gitleaks
+
+      - name: "Gitleaks: configure git for large diffs"
+        id: gitleaks_configure
+        if: >-
+          always() &&
+          (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
+          && steps.gitleaks_install.outcome == 'success'
+        run: git config diff.renameLimit 1861
+
+      - name: "Gitleaks: scan for secrets"
+        id: gitleaks_scan
+        if: >-
+          always() &&
+          (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
+          && steps.gitleaks_configure.outcome == 'success'
+        run: gitleaks detect --source=. --log-level=warn --redact --config .github/gitleaks.toml
+
+      # ════════════════════════════════════════════════════════════════
+      # Branch Protection Drift Check (was branch-protection-check.yml)
+      # Original trigger: push(main), schedule("30 5 * * *"), workflow_dispatch
+      # ════════════════════════════════════════════════════════════════
+
+      - name: "Branch Protection: query"
+        id: branch_protect_query
+        if: >-
+          always() &&
+          (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set +e
+          PROTECTION=$(gh api "repos/$REPO/branches/main/protection" 2>protection.err)
+          STATUS=$?
+          set -e
+
+          if [ "$STATUS" -ne 0 ]; then
+            echo "::warning::Could not read branch protection (token lacks admin scope or branch unprotected)"
+            cat protection.err
+            echo "scope_ok=skip" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "$PROTECTION" > protection.json
+          echo "scope_ok=ok" >> "$GITHUB_OUTPUT"
+
+      - name: "Branch Protection: verify required flags"
+        id: branch_protect_verify
+        if: >-
+          always() &&
+          (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+          && steps.branch_protect_query.outputs.scope_ok == 'ok'
+        run: |
+          set -e
+          PROT=$(cat protection.json)
+
+          REQ_CHECKS=$(echo "$PROT" | jq -r '.required_status_checks.strict // false')
+          REQ_REVIEWS=$(echo "$PROT" | jq -r '.required_pull_request_reviews.required_approving_review_count // 0')
+          LINEAR=$(echo "$PROT" | jq -r '.required_linear_history.enabled // false')
+          ALLOW_FORCE=$(echo "$PROT" | jq -r '.allow_force_pushes.enabled // true')
+          ALLOW_DEL=$(echo "$PROT" | jq -r '.allow_deletions.enabled // true')
+
+          echo "required_status_checks.strict   = $REQ_CHECKS"
+          echo "required_pr_review_count        = $REQ_REVIEWS"
+          echo "required_linear_history.enabled = $LINEAR"
+          echo "allow_force_pushes.enabled      = $ALLOW_FORCE"
+          echo "allow_deletions.enabled         = $ALLOW_DEL"
+
+          FAIL=0
+          [ "$REQ_CHECKS" = "true" ] || { echo "::error::required_status_checks.strict must be true"; FAIL=1; }
+          [ "$REQ_REVIEWS" -ge 1 ]   || { echo "::error::required_pr_review_count must be >= 1"; FAIL=1; }
+          [ "$LINEAR" = "true" ]      || { echo "::error::required_linear_history.enabled must be true"; FAIL=1; }
+          [ "$ALLOW_FORCE" = "false" ] || { echo "::error::allow_force_pushes.enabled must be false"; FAIL=1; }
+          [ "$ALLOW_DEL" = "false" ]   || { echo "::error::allow_deletions.enabled must be false"; FAIL=1; }
+
+          if [ "$FAIL" -ne 0 ]; then
+            echo ""
+            echo "Branch protection drift detected. Re-apply policy:"
+            echo "  see .github/wiki/Branch-Protection-Policy.md or"
+            echo "  PPI: ~/Sites/nself/.claude/docs/operations/branch-protection-policy.md"
+            exit 1
+          fi
+
+          echo "Branch protection OK"

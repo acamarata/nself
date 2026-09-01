@@ -4,7 +4,15 @@ on:
   push:
     branches:
       - main
+    paths: &sdk-cross-import-paths
+      - "cmd/**"
+      - "internal/**"
+      - "sdk/**"
+      - "go.mod"
+      - "go.sum"
+      - ".github/workflows/sdk-cross-import-check.yml"
   pull_request:
+    paths: *sdk-cross-import-paths
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

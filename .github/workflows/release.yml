@@ -10,6 +10,12 @@ permissions:
   id-token: write   # required for Sigstore keyless signing (OIDC)
   attestations: write  # required for SLSA provenance via actions/attest-build-provenance
 
+# cancel-in-progress: false — this workflow deploys/publishes/releases; a superseding
+# run must queue behind an in-flight one, never cancel it mid-flight.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   # ────────────────────────────────────────────────────────────────────────
   # Build the release artifacts (tarballs + checksums.txt) on ubuntu-latest.

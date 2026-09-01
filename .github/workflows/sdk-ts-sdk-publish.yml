@@ -25,6 +25,12 @@ permissions:
   contents: write
   id-token: write
 
+# cancel-in-progress: false — this workflow deploys/publishes/releases; a superseding
+# run must queue behind an in-flight one, never cancel it mid-flight.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   publish:
     name: Publish @nself/sdk

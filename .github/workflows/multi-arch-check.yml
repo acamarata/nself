@@ -8,8 +8,15 @@ name: Multi-Arch Check
 on:
   pull_request:
     branches: [main]
+    paths: &multi-arch-paths
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - "vendor/**"
+      - ".github/workflows/multi-arch-check.yml"
   push:
     branches: [main]
+    paths: *multi-arch-paths
   workflow_dispatch:
 
 concurrency:
