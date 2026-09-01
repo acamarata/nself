@@ -27,3 +27,18 @@ jobs:
 
       - name: Run security lint
         run: bash scripts/sec-lint.sh internal
+
+  ci-masking-lint:
+    name: CI-masking lint (continue-on-error justification)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # P6-E11-W2-S3-T15: regression check for the estate-wide CI-masking
+    # sweep — fails if any workflow adds continue-on-error: true without the
+    # ACCEPTED/Expiry comment documented in
+    # .claude/docs/doctrines/ci-cd-green.md § The ACCEPTED/Expiry Exception Pattern.
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run CI-masking lint
+        run: bash scripts/ci-masking-lint.sh
