@@ -32,8 +32,13 @@ jobs:
       - name: Run plugin search benchmark (p95 <100ms)
         id: search
         run: |
+          # `plugin search` requires a query positional arg (Args:
+          # cobra.MinimumNArgs(1) in cmd/commands/plugin_search.go) -- calling
+          # it with no query fails fast with "requires at least 1 arg(s)",
+          # which was making this step measure a cobra parse error instead of
+          # a real search. "ai" matches the command's own --help examples.
           start=$(date +%s%N)
-          timeout 5 ./nself plugin search --json > /dev/null || true
+          timeout 5 ./nself plugin search ai --json > /dev/null || true
           end=$(date +%s%N)
           ms=$(( (end - start) / 1000000 ))
           echo "search_ms=$ms" >> $GITHUB_OUTPUT
@@ -52,12 +57,21 @@ jobs:
       - name: Run bundle install benchmark (13 plugins <60s)
         id: bundle
         run: |
-          start=$(date +%s%N)
-          timeout 120 ./nself plugin list --bundle nsentry --json > /dev/null || true
-          end=$(date +%s%N)
-          ms=$(( (end - start) / 1000000 ))
-          echo "bundle_ms=$ms" >> $GITHUB_OUTPUT
-          echo "Bundle list (13 plugins): ${ms}ms"
+          # `nself plugin list --bundle <slug> --json` does not exist -- and
+          # never did. `plugin list` only registers --installed/--detailed/
+          # --category/--show-eol (cmd/commands/plugin.go), it has no --json
+          # flag either, and the local PluginManifest type it reads
+          # (internal/plugin/interfaces.go) carries no Bundle field at all.
+          # Bundle membership is only known to the live marketplace API
+          # (`plugin marketplace list --bundle`, internal/plugin_marketplace.go),
+          # which is a network call to https://plugins.nself.org/marketplace --
+          # a fundamentally different measurement (network latency, not local
+          # registry parse) from what this step was meant to benchmark.
+          # Substituting it would silently change the metric, so this is left
+          # unmeasured instead of faked. See "Check regression thresholds"
+          # below for how bundle_ms=0 is reported (WARN, not a real pass).
+          echo "bundle_ms=0" >> $GITHUB_OUTPUT
+          echo "Bundle list (13 plugins): SKIPPED -- no local command filters the local registry by bundle"
 
       - name: Measure registry parse + index
         id: parse
@@ -95,7 +109,9 @@ jobs:
           if [ "$SINGLE_MS" -gt 36000 ]; then
             echo "FAIL single install regression: ${SINGLE_MS}ms > 36000ms (36s)" && exit 1
           fi
-          if [ "$BUNDLE_MS" -gt 72000 ]; then
+          if [ "$BUNDLE_MS" = "0" ]; then
+            echo "WARN bundle_ms is 0 -- bundle-filtered local listing is not currently measurable by any CLI command (see the benchmark step); this is not a real pass"
+          elif [ "$BUNDLE_MS" -gt 72000 ]; then
             echo "FAIL bundle install regression: ${BUNDLE_MS}ms > 72000ms (72s)" && exit 1
           fi
           if [ -n "$PARSE_MS" ] && [ "$PARSE_MS" != "0" ] && [ "$(echo "$PARSE_MS > 60" | bc)" -eq 1 ]; then
@@ -114,8 +130,19 @@ jobs:
           PARSE_VAL="${{ steps.parse.outputs.parse_ms }}"
           PARSE_VAL="${PARSE_VAL:-0}"
           TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          git fetch origin perf/baseline
-          git checkout -B perf/baseline FETCH_HEAD
+          # perf/baseline does not exist on origin (verified: `git ls-remote
+          # origin perf/baseline` returns nothing) -- an unguarded `git fetch`
+          # of a missing ref is fatal ("couldn't find remote ref"), exit 128,
+          # which is what was actually failing this job (the search/bundle
+          # cobra errors above are swallowed by `|| true` and never reach
+          # this step). Bootstrap the branch as an orphan on first run.
+          if git fetch origin perf/baseline 2>/dev/null; then
+            git checkout -B perf/baseline FETCH_HEAD
+          else
+            echo "perf/baseline not found on origin -- bootstrapping as a new orphan branch"
+            git checkout --orphan perf/baseline
+            git rm -rf . > /dev/null 2>&1 || true
+          fi
           mkdir -p .github
           cat > .github/registry-perf-baseline.json << JSONEOF
           {
