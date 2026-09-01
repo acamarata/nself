@@ -3,6 +3,57 @@
 All notable changes to the ɳSelf CLI are documented in this file. Format loosely
 follows Keep a Changelog, with Conventional Commit classification.
 
+## [1.3.5] — 2026-08-30
+
+Infrastructure-only release. No CLI command or flag behavior changed.
+
+### Fixed
+
+- **`nself doctor`'s CI-VAULT-SYNC-01 check could never pass on a CI runner.** The check assumed a
+  developer machine's vault layout; it now recognizes the CI runner's own credential path.
+- **Both TypeScript SDKs stopped publishing to npm.** The publish job never received the npm token,
+  so `@nself/sdk` and the second TypeScript SDK silently failed to release. Both are back in
+  version lockstep with the CLI.
+
+## [1.3.4] — 2026-08-28
+
+Plugin licensing and reliability fixes, plus a new command for server access management.
+
+### Added
+
+- **`nself access grant` / `revoke` / `list`**: manage SSH key access on an already-deployed server
+  without shelling in by hand.
+
+### Fixed
+
+- **An all-access license entitled every plugin, correctly this time.** A prior fix had left a gap
+  where the all-access tier didn't unlock every plugin as intended.
+- **License commands failed outright on machines upgraded from an older layout.** Anyone who
+  installed nSelf before the license directory restructure could no longer run any `nself license`
+  subcommand.
+- **`nself db` treated "database already exists" as a failure on create.** Re-running `nself db
+  create` against an already-initialized database now succeeds instead of erroring.
+- **`nself start` checked the wrong ports.** It validated against nSelf's default port list instead
+  of the ports the stack actually publishes, so custom port configs failed health checks that were
+  actually fine.
+- **`nself doctor` resolved container names by hardcoding `nself` instead of reading
+  `PROJECT_NAME`.** Renamed projects got false-positive "container not found" diagnostics.
+- **`nself plugin outdated` probed the registry even when nothing was installed.**
+- **`nself clean --all`**: host-wide Docker system prune, for reclaiming disk across every nSelf
+  project on a machine, not just the current one.
+- **Blue/green deploys' soak gate now counts container state, not just health status**, closing a
+  gap where a container could report healthy while still restarting.
+- **nginx hardening**: the master process now has the capabilities its own startup needs (it was
+  missing them while workers had them), the cert directory is traversable so a non-root master can
+  read TLS certs (this was also causing a TLS crash-loop), and the tmpfs mount is writable by the
+  master, not just the workers.
+- **Aggregate and per-service health output disagreed on what "healthy" means.** Both now share one
+  predicate.
+- **Public wiki pages shipped with unresolved merge conflict markers and misattributed content**:
+  stray `<<<<<<<` markers in one page, and `mcp-serve.md` claiming env vars, mDNS, and doctor
+  behavior that command doesn't have. `login`/`logout`'s documented credential store path was also
+  wrong.
+
 ## [1.3.3] — 2026-08-26
 
 Plugin lifecycle fixes, all found by installing and removing plugins end to end
