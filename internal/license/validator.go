@@ -210,4 +210,3 @@ func tryRemote(ctx context.Context, key string, opts *ValidatorOptions) (*Valida
 		return nil, remoteAuthFail, fmt.Errorf("server returned %d", resp.StatusCode)
 	}
 }
-
