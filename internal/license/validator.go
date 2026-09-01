@@ -23,7 +23,6 @@ import (
 	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -212,8 +211,3 @@ func tryRemote(ctx context.Context, key string, opts *ValidatorOptions) (*Valida
 	}
 }
 
-// errCacheMissing is returned by atomic write helpers when the destination is
-// unset (placeholder for future use).
-var errCacheMissing = errors.New("license: cache path unavailable")
-
-var _ = errCacheMissing // unused-var guard for future callers
