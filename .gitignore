@@ -98,3 +98,9 @@ bin/certs/
 endpoint-auth-checker
 # Explicitly block Vercel OIDC token lines (P2-E2-W2-S3-T13d)
 VERCEL_OIDC_TOKEN=*
+
+# Generated Files & Secret Safety (P6-E11-W2-S2-T13) -- PPI hard rule
+backend/docker-compose.yml
+backend/docker-compose.override.yml
+*.generated.env
+**/*.gen.yml
