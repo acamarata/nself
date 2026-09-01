@@ -20,6 +20,7 @@ package commands
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -73,9 +74,19 @@ func TestRunSSLAdd_NoCertbot_Errors(t *testing.T) {
 // stubBinDir creates a temp directory containing an executable named `name`
 // that does nothing and exits 0, and returns the directory. Used to satisfy
 // exec.LookPath checks without invoking a real external tool.
+//
+// exec.LookPath only resolves a bare name against PATHEXT on Windows (.exe,
+// .bat, .cmd, ...); a same-named file with no such extension is invisible to
+// it even though it sits on PATH. Give the stub a `.exe` suffix on Windows so
+// the lookup succeeds there the same way it does on Unix — this only needs
+// to be *found*, never actually executed, since every caller fails before
+// reaching exec.Command on the resolved path.
 func stubBinDir(t *testing.T, name string) string {
 	t.Helper()
 	dir := t.TempDir()
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
 	path := filepath.Join(dir, name)
 	if err := os.WriteFile(path, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
 		t.Fatalf("write stub %s: %v", name, err)
