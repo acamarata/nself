@@ -21,6 +21,7 @@ All ɳSelf project configuration lives in `.env` (and optionally `.env.local` fo
 - [Auth](#auth)
 - [Nginx and SSL](#nginx-and-ssl)
 - [ɳSelf Admin](#nself-admin)
+- [AI (Zero-Config AI Pool)](#ai-zero-config-ai-pool)
 - [Optional Service Toggles](#optional-service-toggles)
 - [Custom Services (CS\_N)](#custom-services-cs_n)
 - [Computed Variables](#computed-variables)
@@ -84,6 +85,10 @@ These vars control the top-level identity and behavior of a project.
 | `POSTGRES_EXPOSE_PORT` | enum | `auto` | No | Controls host-port binding. `auto` exposes in dev and hides in prod. Accepted values: `auto`, `true`, `false`. |
 | `POSTGRES_MEM_LIMIT` | string | `2g` | No | Docker memory limit for the Postgres container. |
 | `POSTGRES_CPU_LIMIT` | string | `2.0` | No | Docker CPU core limit for the Postgres container. |
+| `PGVECTOR_ENABLED` | bool | `false` | No | Installs the `pgvector` extension for embedding storage and similarity search (RAG). |
+| `PGVECTOR_DIMENSIONS` | int | `1536` | No | Vector column width. Must match the embedding model's output size. |
+| `PGVECTOR_HNSW_M` | int | `16` | No | HNSW index `m` parameter (max connections per node). Higher values improve recall at the cost of index size. |
+| `PGVECTOR_HNSW_EF_CONSTRUCTION` | int | `64` | No | HNSW index `ef_construction` parameter. Higher values improve index quality at the cost of build time. |
 
 **Computed:** `DATABASE_URL` is derived automatically:
 
@@ -122,6 +127,7 @@ Authentication is provided by nHost Auth. These variables configure the Auth ser
 
 | Variable | Type | Default | Required | Description |
 |---|---|---|---|---|
+| `AUTH_ENABLED` | bool | `true` | No | Whether the Auth container is generated at all. Written by `nself init`; set to `false` for a project that provides its own auth. |
 | `AUTH_VERSION` | string | `0.36.0` | No | Docker image tag for the Auth service. |
 | `AUTH_PORT` | int | `4000` | No | Internal port the Auth service listens on. |
 | `AUTH_CLIENT_URL` | string | `http://localhost:3000` | No | URL the Auth service redirects to after OAuth flows complete. |
@@ -184,12 +190,37 @@ The ɳSelf Admin dashboard is an optional local GUI companion that runs at `loca
 
 ---
 
+## AI (Zero-Config AI Pool)
+
+This block is written once by `nself init` into `.env.secrets` (never `.env`, never committed). It replaces the retired `.env.ai` cascade layer (CLI-R18); the vars and their values are unchanged, only the file moved.
+
+| Variable | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `AI_PROFILE` | enum | `auto` | No | Routing profile. Accepted values: `auto`, `local_only`, `pool_only`, `oauth_only`, `custom`. |
+| `AI_AUTO_INSTALL` | bool | `true` | No | When `true` and `NSELF_MASTER_SECRET` is set, `nself start` runs the local AI setup wizard automatically if Ollama isn't already healthy. |
+| `AI_DEFAULT_MODEL` | string | `gemma2:2b` | No | Local model pulled and used for general-purpose requests. |
+| `AI_EMBEDDING_MODEL` | string | `nomic-embed-text` | No | Local model used for embedding generation (RAG, similarity search). |
+| `AI_POOL_AUTO_PROVISION` | bool | `true` | No | Automatically provisions a pooled GCP API key when the local/OAuth tiers can't serve a request. |
+| `AI_BACKGROUND_LOCAL_ONLY` | bool | `true` | No | Restricts background/non-interactive AI tasks to the local tier only, never spending pool or paid budget. |
+| `AI_DAILY_BUDGET_USD` | float | `0` | No | Hard daily cap on paid-tier spend. `0` disables paid tiers entirely (free tiers only). |
+| `AI_MONTHLY_BUDGET_USD` | float | `0` | No | Hard monthly cap on paid-tier spend. `0` disables paid tiers entirely (free tiers only). |
+| `AI_TIMEOUT_LOCAL_MS` | int | `0` | No | Timeout override for the local tier, in milliseconds. `0` falls back to the router's built-in default. |
+| `AI_TIMEOUT_OAUTH_MS` | int | `0` | No | Timeout override for the OAuth tier, in milliseconds. `0` falls back to the router's built-in default. |
+| `AI_TIMEOUT_POOL_MS` | int | `0` | No | Timeout override for the pool tier, in milliseconds. `0` falls back to the router's built-in default. |
+| `AI_TIMEOUT_PAID_MS` | int | `0` | No | Timeout override for the paid tier, in milliseconds. `0` falls back to the router's built-in default. |
+| `AI_POOL_OAUTH_CLIENT_ID` | string | *(empty)* | No | OAuth client ID for the pooled-key provisioning flow. |
+| `AI_POOL_OAUTH_CLIENT_SECRET` | string | *(empty)* | No | OAuth client secret for the pooled-key provisioning flow. |
+| `NSELF_MASTER_SECRET` | string | *(generated)* | **Yes** (once AI is configured) | Key-encryption-key protecting stored OAuth refresh tokens and pooled API keys. Generated once by `nself init` and must never be regenerated or changed afterward — doing so makes all previously-encrypted material unreadable. |
+
+---
+
 ## Optional Service Toggles
 
 These boolean flags enable optional bundled services. Each defaults to `false`. When set to `true`, the service is included in the generated `docker-compose.yml`.
 
 | Variable | Type | Default | Required | Description |
 |---|---|---|---|---|
+| `ADMIN_ENABLED` | bool | `false` | No | Bare (non-`NSELF_`-prefixed) form written by `nself init`'s generated `.env` template alongside the other optional-service toggles. Distinct from `NSELF_ADMIN_ENABLED` above, which is the toggle the Admin dashboard actually reads. |
 | `REDIS_ENABLED` | bool | `false` | No | Enable Redis (caching, sessions, queues). |
 | `MINIO_ENABLED` | bool | `false` | No | Enable MinIO (S3-compatible object storage). |
 | `SEARCH_ENABLED` | bool | `false` | No | Enable MeiliSearch (full-text search). |
