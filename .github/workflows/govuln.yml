@@ -2,10 +2,18 @@ name: Go Vulnerability Check
 
 on:
   pull_request:
+    paths: &go-vuln-paths
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - "vendor/**"
+      - ".github/workflows/govuln.yml"
+      - ".github/scripts/govuln-gate.sh"
   schedule:
     - cron: "0 8 * * *"
   push:
     branches: [main]
+    paths: *go-vuln-paths
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

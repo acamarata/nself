@@ -23,6 +23,12 @@ on:
 permissions:
   contents: write  # required to push SDK-scoped git tag
 
+# cancel-in-progress: false — this workflow deploys/publishes/releases; a superseding
+# run must queue behind an in-flight one, never cancel it mid-flight.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   publish-go-sdk:
     name: Publish Go SDK

@@ -17,6 +17,10 @@ permissions:
   contents: read
   issues: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.block }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deep-qa:
     name: "DEEP-QA Block ${{ inputs.block }}"

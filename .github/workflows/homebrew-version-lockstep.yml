@@ -15,6 +15,12 @@ on:
     tags:
       - 'v*.*.*'
 
+# cancel-in-progress: false — this workflow deploys/publishes/releases; a superseding
+# run must queue behind an in-flight one, never cancel it mid-flight.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   verify-homebrew-lockstep:
     name: Verify Homebrew formula version matches CLI tag

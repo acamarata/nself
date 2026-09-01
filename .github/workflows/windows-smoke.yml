@@ -24,6 +24,10 @@ on:
           - arm64
           - both
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build & Smoke (windows / ${{ matrix.goarch }})

@@ -7,8 +7,18 @@ name: License Gate
 on:
   pull_request:
     branches: [main]
+    paths: &license-gate-paths
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - "vendor/**"
+      - ".github/workflows/license-gate.yml"
+      - ".github/scripts/go-install-retry.sh"
+      - ".github/license-allowlist.txt"
+      - ".github/license-report.tpl"
   push:
     branches: [main]
+    paths: *license-gate-paths
   release:
     types: [created]
   workflow_dispatch:

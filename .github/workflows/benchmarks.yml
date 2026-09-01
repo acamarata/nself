@@ -15,6 +15,10 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # cron ORs day-of-month with day-of-week when both are restricted, so
   # "0 7 1-7 3,6,9,12 1" matches the 1st-7th AND every Monday of those months,

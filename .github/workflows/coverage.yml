@@ -3,8 +3,15 @@ name: Coverage
 on:
   push:
     branches: [main]
+    paths: &coverage-paths
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - "vendor/**"
+      - ".github/workflows/coverage.yml"
   pull_request:
     branches: [main]
+    paths: *coverage-paths
 
 # S88b.T05: CLI coverage gate — fails if coverage drops below floor.
 #

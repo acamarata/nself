@@ -3,8 +3,15 @@ name: CLI Performance — Binary Size Gate + Benchmarks
 on:
   pull_request:
     branches: [main]
+    paths: &perf-paths
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - "vendor/**"
+      - ".github/workflows/perf.yml"
   push:
     branches: [main]
+    paths: *perf-paths
   schedule:
     - cron: "0 6 * * 1"  # Monday 06:00 UTC baseline run
   workflow_dispatch:

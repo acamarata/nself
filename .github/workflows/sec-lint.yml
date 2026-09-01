@@ -3,7 +3,14 @@ name: Security Lint
 on:
   push:
     branches: [main]
+    paths: &sec-lint-paths
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - "scripts/sec-lint.sh"
+      - ".github/workflows/sec-lint.yml"
   pull_request:
+    paths: *sec-lint-paths
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
