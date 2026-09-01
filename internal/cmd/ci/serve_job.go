@@ -118,7 +118,15 @@ func runGateInDocker(binaryPath, workdir string, cfg ServeConfig) (passed bool, 
 
 	// Check Docker availability.
 	if _, lookErr := exec.LookPath("docker"); lookErr != nil {
-		// Docker not available — fall back to running the binary directly on host.
+		// T32: Docker absence used to silently fall back to running the
+		// just-cloned, attacker-influenced repo's gate commands directly on
+		// the host with this daemon's own privileges — no log line
+		// distinguished this from the sandboxed path. Refuse by default;
+		// --allow-unsandboxed / NSELF_CI_ALLOW_UNSANDBOXED is the explicit,
+		// loud opt-in for legitimate no-Docker deployments.
+		if !cfg.AllowUnsandboxed {
+			return false, "Docker not available", fmt.Errorf("Docker not available; refusing to run gate unsandboxed — pass --allow-unsandboxed to override, understanding the cloned repo's content would then execute directly on this host")
+		}
 		return runGateDirect(binaryPath, workdir, cfg)
 	}
 

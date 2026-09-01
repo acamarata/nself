@@ -92,6 +92,18 @@ func (h *webhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Repo allowlist (T32): reject any job whose RepoFullName is not in the
+	// configured set BEFORE cloneRef is ever called. An empty AllowedRepos
+	// list rejects everything — fail-closed, not "allow all" — since a
+	// valid signature alone (or, under --insecure, no signature at all)
+	// must never be sufficient to dispatch a clone+build of an arbitrary
+	// repository.
+	if !isRepoAllowed(job.RepoFullName, h.cfg.AllowedRepos) {
+		ui.Warn(fmt.Sprintf("[ci-serve] rejected: repo %q is not in --allowed-repos", job.RepoFullName))
+		http.Error(w, fmt.Sprintf("repo %q is not allowlisted", job.RepoFullName), http.StatusForbidden)
+		return
+	}
+
 	// Dispatch asynchronously.
 	select {
 	case h.sem <- struct{}{}:
@@ -169,6 +181,23 @@ func parseEvent(event string, body []byte) (ciJob, error) {
 	default:
 		return ciJob{}, fmt.Errorf("event %q: skip", event)
 	}
+}
+
+// isRepoAllowed reports whether repoFullName ("owner/repo") is present in
+// allowed. An empty allowed list rejects everything — fail-closed by design
+// (T32) — since an operator with zero configured repos almost certainly
+// forgot to configure --allowed-repos / NSELF_CI_ALLOWED_REPOS, rather than
+// intentionally wanting an open relay.
+func isRepoAllowed(repoFullName string, allowed []string) bool {
+	if len(allowed) == 0 {
+		return false
+	}
+	for _, a := range allowed {
+		if a == repoFullName {
+			return true
+		}
+	}
+	return false
 }
 
 // verifySignature checks the X-Hub-Signature-256 header against body using secret.

@@ -289,6 +289,98 @@ func TestEnvTargetAdd_InlineKeyRefRejected(t *testing.T) {
 	}
 }
 
+// TestEnvTargetAdd_RemotePathInjectionRejected (T31) verifies that
+// `env target add --remote-path` rejects values containing shell
+// metacharacters before they are ever persisted to
+// .nself/control-plane.yaml, since RemotePath is later interpolated into a
+// shell command string run on the remote host over SSH.
+func TestEnvTargetAdd_RemotePathInjectionRejected(t *testing.T) {
+	payloads := []string{
+		"/opt/x; id",
+		"/opt/x$(id)",
+		"/opt/x`id`",
+		"/opt/x | id",
+		"/opt/x && id",
+	}
+
+	for _, payload := range payloads {
+		payload := payload
+		t.Run(payload, func(t *testing.T) {
+			root, cleanup := newTestRoot(t)
+			defer cleanup()
+
+			writeInventory(t, root, &controlplane.Inventory{
+				SchemaVersion: 1,
+				Project:       "test",
+				Environments:  map[string]controlplane.Environment{},
+			})
+
+			cmd := envTargetAddCmd
+			cmd.ResetFlags()
+			cmd.Flags().String("host", "ubuntu@staging.example.com", "")
+			cmd.Flags().String("role", "app", "")
+			cmd.Flags().String("key-ref", "NSELF_SSH_KEY_STAGING", "")
+			cmd.Flags().String("remote-path", "/opt/nself", "")
+			cmd.Flags().Bool("primary", false, "")
+			cmd.Flags().StringSlice("upstreams", nil, "")
+			_ = cmd.Flags().Set("remote-path", payload)
+
+			err := runEnvTargetAdd(cmd, []string{"staging", "web1"})
+			if err == nil {
+				t.Fatalf("expected error for malicious --remote-path %q, got nil", payload)
+			}
+			if !strings.Contains(err.Error(), "unsafe characters") {
+				t.Errorf("unexpected error for %q: %v", payload, err)
+			}
+
+			// The malicious value must never reach the inventory file.
+			inv := readInventory(t, root)
+			if stg, ok := inv.Environments["staging"]; ok {
+				for _, s := range stg.Servers {
+					if s.RemotePath == payload {
+						t.Errorf("malicious RemotePath %q was written to control-plane.yaml", payload)
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestEnvTargetAdd_RemotePathNormalPathAccepted (T31) proves the new guard
+// causes no regression for legitimate remote paths.
+func TestEnvTargetAdd_RemotePathNormalPathAccepted(t *testing.T) {
+	root, cleanup := newTestRoot(t)
+	defer cleanup()
+
+	writeInventory(t, root, &controlplane.Inventory{
+		SchemaVersion: 1,
+		Project:       "test",
+		Environments:  map[string]controlplane.Environment{},
+	})
+
+	cmd := envTargetAddCmd
+	cmd.ResetFlags()
+	cmd.Flags().String("host", "ubuntu@staging.example.com", "")
+	cmd.Flags().String("role", "app", "")
+	cmd.Flags().String("key-ref", "NSELF_SSH_KEY_STAGING", "")
+	cmd.Flags().String("remote-path", "/opt/nself", "")
+	cmd.Flags().Bool("primary", false, "")
+	cmd.Flags().StringSlice("upstreams", nil, "")
+
+	if err := runEnvTargetAdd(cmd, []string{"staging", "web1"}); err != nil {
+		t.Fatalf("add with normal --remote-path: %v", err)
+	}
+
+	inv := readInventory(t, root)
+	stg, ok := inv.Environments["staging"]
+	if !ok || len(stg.Servers) != 1 {
+		t.Fatal("expected staging environment with 1 server")
+	}
+	if stg.Servers[0].RemotePath != "/opt/nself" {
+		t.Errorf("RemotePath: got %q, want /opt/nself", stg.Servers[0].RemotePath)
+	}
+}
+
 func TestEnvTargetRemove_NotFound(t *testing.T) {
 	root, cleanup := newTestRoot(t)
 	defer cleanup()

@@ -18,7 +18,7 @@ One row per top-level command (CLI-R17), scored against the four surfaces a comm
 | `nself backup` | data | yes | yes | n/a | n/a (see below) |
 | `nself build` | core | yes | yes | undocumented: NSELF_PROFILE | n/a (see below) |
 | `nself bundle` | extend | yes | no | n/a | n/a (see below) |
-| `nself ci` | deploy | yes | no | undocumented: NSELF_FORGEJO_ADMIN_PASSWORD, NSELF_FORGEJO_ADMIN_USER | n/a (see below) |
+| `nself ci` | deploy | yes | no | undocumented: NSELF_CI_ALLOWED_REPOS, NSELF_CI_ALLOW_UNSANDBOXED, NSELF_FORGEJO_ADMIN_PASSWORD, NSELF_FORGEJO_ADMIN_USER | n/a (see below) |
 | `nself clean` | core | yes | no | n/a | n/a (see below) |
 | `nself completion` | account | yes | no | n/a | n/a (see below) |
 | `nself config` | config | yes | yes | n/a | n/a (see below) |

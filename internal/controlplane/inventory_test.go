@@ -308,3 +308,61 @@ environments:
 		t.Error("Load: expected error for invalid server name, got nil")
 	}
 }
+
+// TestLoadRejectsInvalidRemotePath (T31) verifies that a hand-edited or
+// imported .nself/control-plane.yaml carrying a RemotePath with shell
+// metacharacters is rejected by Load, not just the `env target add` CLI
+// flag path. RemotePath is later interpolated into a shell command string
+// executed on the remote host over SSH (internal/deploy/ssh.go).
+func TestLoadRejectsInvalidRemotePath(t *testing.T) {
+	payloads := []string{
+		"/opt/x; id",
+		"/opt/x$(id)",
+		"/opt/x`id`",
+	}
+
+	for _, payload := range payloads {
+		dir := t.TempDir()
+		nself := filepath.Join(dir, ".nself")
+		if err := os.MkdirAll(nself, 0o700); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+
+		content := "schema_version: 1\n" +
+			"project: evilproject\n" +
+			"environments:\n" +
+			"  prod:\n" +
+			"    name: prod\n" +
+			"    kind: remote\n" +
+			"    servers:\n" +
+			"      - name: web1\n" +
+			"        role: app\n" +
+			"        host: ubuntu@prod.example.com\n" +
+			"        ssh_key_ref: NSELF_SSH_KEY_PROD\n" +
+			"        remote_path: \"" + payload + "\"\n" +
+			"        primary: true\n"
+
+		p := filepath.Join(nself, "control-plane.yaml")
+		if err := os.WriteFile(p, []byte(content), 0o600); err != nil {
+			t.Fatalf("write fixture: %v", err)
+		}
+
+		if _, err := Load(dir); err == nil {
+			t.Errorf("Load: expected error for RemotePath %q, got nil", payload)
+		}
+	}
+}
+
+// TestLoadSynthesizeRejectsInvalidRemotePathEnvVar (T31) verifies the
+// env-var synthesis path (Load when .nself/control-plane.yaml is absent)
+// applies the same RemotePath guard, since NSELF_REMOTE_PATH_<TARGET> is
+// just as much external input as the YAML file.
+func TestLoadSynthesizeRejectsInvalidRemotePathEnvVar(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("NSELF_DEPLOY_HOST_STAGING", "ubuntu@staging.example.com")
+	t.Setenv("NSELF_REMOTE_PATH_STAGING", "/opt/x; id")
+
+	if _, err := Load(dir); err == nil {
+		t.Error("Load: expected error for malicious NSELF_REMOTE_PATH_STAGING, got nil")
+	}
+}

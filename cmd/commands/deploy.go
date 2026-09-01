@@ -9,12 +9,18 @@ import (
 	"strings"
 
 	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/deploy"
 
 	"github.com/spf13/cobra"
 )
 
 // remotePathRe allows safe remote path characters: alphanumeric, slash, hyphen, underscore, dot.
-var remotePathRe = regexp.MustCompile(`^[a-zA-Z0-9/_.-]+$`)
+// Aliased from internal/deploy.RemotePathRe (T31 fix) so every remote-path
+// validation site in the codebase (this file's --remote-path flag,
+// env_target_crud.go's `env target add --remote-path`, and
+// internal/controlplane's inventory Load/synthesize) shares one definition
+// instead of three that could silently drift apart.
+var remotePathRe = deploy.RemotePathRe
 
 // sshKeyRe allows safe filesystem path characters for the SSH key path.
 // The key path is interpolated into the rsync "-e ssh -i %s ..." string, which

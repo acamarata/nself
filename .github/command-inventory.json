@@ -478,7 +478,10 @@
         "hidden": false,
         "flags": [
           "--addr",
+          "--allow-unsandboxed",
+          "--allowed-repos",
           "--concurrency",
+          "--insecure",
           "--secret",
           "--timeout",
           "--verbose",

@@ -61,7 +61,7 @@
       "group_id": "deploy",
       "wiki_page": true,
       "mcp_tool": false,
-      "env_vars": "undocumented: NSELF_FORGEJO_ADMIN_PASSWORD, NSELF_FORGEJO_ADMIN_USER",
+      "env_vars": "undocumented: NSELF_CI_ALLOWED_REPOS, NSELF_CI_ALLOW_UNSANDBOXED, NSELF_FORGEJO_ADMIN_PASSWORD, NSELF_FORGEJO_ADMIN_USER",
       "openapi": "n/a (see below)"
     },
     {
