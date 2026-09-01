@@ -106,6 +106,20 @@ func bundleEntitledFromCache(key, bundleName string) (bool, error) {
 		return false, fmt.Errorf("cached license does not match current key (bundle=%q)", bundleName)
 	}
 
+	// Revocation still applies when we cannot reach the server. Without this
+	// the fail-open path was the one route by which a revoked licence kept
+	// working indefinitely: it validated the key hash and the tier and never
+	// consulted the revocation list at all.
+	//
+	// Only KeyHash is available here. The cache entry carries no JTI, user id
+	// or key id, so a revocation published against any of those identifiers
+	// cannot be matched on this path; the revocation list must carry a
+	// key_hash entry for the refusal to fire. IsRecordRevoked itself remains
+	// fail-open for a cold or week-stale cache, which is deliberate.
+	if IsRecordRevoked(LicenseRecord{KeyHash: entry.KeyHash}) {
+		return false, fmt.Errorf("license has been revoked (bundle=%q); contact support if this is unexpected", bundleName)
+	}
+
 	tier := strings.ToLower(entry.Tier)
 	// ɳSelf+ / owner / enterprise cover all bundles. Delegated to IsAllAccessTier
 	// so this rule has one definition; the plugin installer needs the same one.
