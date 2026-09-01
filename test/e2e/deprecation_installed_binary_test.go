@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -32,7 +33,10 @@ import (
 // go:embed fix travels with a copied-away, installed-style binary.
 func TestDeprecationInstalledBinary(t *testing.T) {
 	buildDir := t.TempDir()
-	bin := filepath.Join(buildDir, "nself-copy-test")
+	// Windows decides what is executable by the .exe extension, not a mode bit,
+	// so a binary written without it cannot be exec'd there. See the repo rules
+	// on Windows-portable tests.
+	bin := filepath.Join(buildDir, "nself-copy-test"+exeSuffix())
 
 	buildCmd := exec.Command("go", "build", "-mod=vendor", "-o", bin, "../../cmd/nself")
 	buildCmd.Dir = mustGetwdT2(t)
@@ -45,7 +49,7 @@ func TestDeprecationInstalledBinary(t *testing.T) {
 	// internal/deprecation/registry.yaml anywhere on disk nearby — only the
 	// compiled binary itself.
 	emptyDir := t.TempDir()
-	copiedBin := filepath.Join(emptyDir, "nself")
+	copiedBin := filepath.Join(emptyDir, "nself"+exeSuffix())
 	copyFile(t, bin, copiedBin)
 	if err := os.Chmod(copiedBin, 0o755); err != nil {
 		t.Fatalf("chmod copied binary: %v", err)
@@ -100,4 +104,15 @@ func copyFile(t *testing.T, src, dst string) {
 	if err := os.WriteFile(dst, data, 0o755); err != nil {
 		t.Fatalf("writing %s: %v", dst, err)
 	}
+}
+
+// exeSuffix returns the extension an executable needs on this platform.
+// Windows resolves executability from the extension, so a test that builds a
+// binary and then runs it must add .exe or exec fails with "file does not
+// exist" on that platform only.
+func exeSuffix() string {
+	if runtime.GOOS == "windows" {
+		return ".exe"
+	}
+	return ""
 }
