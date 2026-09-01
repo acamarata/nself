@@ -28,7 +28,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	go.opentelemetry.io/otel v1.46.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.45.0
-	go.opentelemetry.io/otel/sdk v1.45.0
+	go.opentelemetry.io/otel/sdk v1.46.0
 	go.opentelemetry.io/otel/trace v1.46.0
 	golang.org/x/term v0.45.0
 	gopkg.in/yaml.v3 v3.0.1
