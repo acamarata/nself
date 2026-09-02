@@ -2,9 +2,10 @@ package setup
 
 // setup_env_files.go — .env file generation for a new project.
 //
-// Purpose: write the standard, demo and example .env files (and set their permissions) for a freshly initialized project, used by Initialize in setup.go, split out for file size.
+// Purpose: write the standard and demo .env files (and set their permissions) for a freshly initialized project, used by Initialize in setup.go, split out for file size.
+// The .env.example and --full multi-environment builders live in setup_env_files_full.go (further split for the same reason).
 // Inputs: the resolved Options and secrets from setup_resolve.go.
-// Outputs: .env / .env.example files written to the project directory with 0600 permissions.
+// Outputs: .env files written to the project directory with 0600 permissions.
 // Constraints: pure move from setup.go (CLI-R12 Batch E); no behaviour change. Per the CLI go.md rule, any code writing a .env* file chmods 0600 immediately after -- preserved as-is.
 
 import (
@@ -53,8 +54,11 @@ func buildDomainLine(baseDomain, domainComment string) string {
 	return "BASE_DOMAIN=" + baseDomain
 }
 
-// buildStandardEnv generates the default .env content.
-func buildStandardEnv(projectName, baseDomain, env, pgPass, hasuraSecret, jwtKey, notifySecret, cronSecret, pluginInternalSecret, domainComment string, pgvectorEnabled bool) string {
+// buildStandardEnv generates the default .env content. dbName is the
+// SanitizeDBName-normalized POSTGRES_DB value, distinct from projectName
+// (PROJECT_NAME) because the two have different valid-character sets — see
+// config.SanitizeDBName.
+func buildStandardEnv(projectName, dbName, baseDomain, env, pgPass, hasuraSecret, jwtKey, notifySecret, cronSecret, pluginInternalSecret, domainComment string, pgvectorEnabled bool) string {
 	pgvectorVal := "true"
 	if !pgvectorEnabled {
 		pgvectorVal = "false"
@@ -109,11 +113,14 @@ SEARCH_ENABLED=false
 NOTIFY_INTERNAL_SECRET=%s
 CRON_INTERNAL_SECRET=%s
 PLUGIN_INTERNAL_SECRET=%s
-`, projectName, buildDomainLine(baseDomain, domainComment), env, projectName, pgPass, pgvectorVal, hasuraSecret, jwtKey, notifySecret, cronSecret, pluginInternalSecret)
+`, projectName, buildDomainLine(baseDomain, domainComment), env, dbName, pgPass, pgvectorVal, hasuraSecret, jwtKey, notifySecret, cronSecret, pluginInternalSecret)
 }
 
 // buildDemoEnv generates .env for --demo mode with all services enabled.
-func buildDemoEnv(projectName, baseDomain, env, pgPass, hasuraSecret, jwtKey, minioPassword, notifySecret, cronSecret, pluginInternalSecret, domainComment string, pgvectorEnabled bool) string {
+// dbName is the SanitizeDBName-normalized POSTGRES_DB value; see
+// buildStandardEnv and config.SanitizeDBName for why it differs from
+// projectName.
+func buildDemoEnv(projectName, dbName, baseDomain, env, pgPass, hasuraSecret, jwtKey, minioPassword, notifySecret, cronSecret, pluginInternalSecret, domainComment string, pgvectorEnabled bool) string {
 	pgvectorVal := "true"
 	if !pgvectorEnabled {
 		pgvectorVal = "false"
@@ -203,93 +210,8 @@ FRONTEND_APP_2_ROUTE=dashboard
 NOTIFY_INTERNAL_SECRET=%s
 CRON_INTERNAL_SECRET=%s
 PLUGIN_INTERNAL_SECRET=%s
-`, projectName, buildDomainLine(baseDomain, domainComment), env, projectName, pgPass, hasuraSecret, jwtKey, minioPassword, notifySecret, cronSecret, pluginInternalSecret)
+`, projectName, buildDomainLine(baseDomain, domainComment), env, dbName, pgPass, hasuraSecret, jwtKey, minioPassword, notifySecret, cronSecret, pluginInternalSecret)
 }
 
-// buildExampleEnv generates the .env.example (no real secrets).
-func buildExampleEnv(projectName, baseDomain, env string, demo bool) string {
-	mode := ""
-	if demo {
-		mode = " (Demo Mode)"
-	}
-	return fmt.Sprintf(`# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# nSelf Project Configuration%s
-# Copy to .env and fill in your secrets.
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-PROJECT_NAME=%s
-BASE_DOMAIN=%s
-ENV=%s
-
-POSTGRES_PASSWORD=CHANGE_ME
-HASURA_GRAPHQL_ADMIN_SECRET=CHANGE_ME
-HASURA_JWT_KEY=CHANGE_ME
-`, mode, projectName, baseDomain, env)
-}
-
-// writeFullEnvFiles creates .env.dev, .env.staging, .env.prod, .env.secrets.
-func writeFullEnvFiles(workDir, projectName, baseDomain string) ([]string, error) {
-	var created []string
-
-	// .env.dev
-	devContent := `# Development environment overrides
-ENV=dev
-BASE_DOMAIN=local.nself.org
-HASURA_GRAPHQL_ENABLE_CONSOLE=true
-HASURA_GRAPHQL_DEV_MODE=true
-`
-	if err := writeFile(filepath.Join(workDir, ".env.dev"), devContent, 0600); err != nil {
-		return nil, err
-	}
-	created = append(created, ".env.dev")
-
-	// .env.staging
-	stagingContent := fmt.Sprintf(`# Staging environment overrides
-ENV=staging
-BASE_DOMAIN=staging.%s
-HASURA_GRAPHQL_ENABLE_CONSOLE=false
-HASURA_GRAPHQL_DEV_MODE=false
-`, baseDomain)
-	if err := writeFile(filepath.Join(workDir, ".env.staging"), stagingContent, 0600); err != nil {
-		return nil, err
-	}
-	created = append(created, ".env.staging")
-
-	// .env.prod
-	prodContent := fmt.Sprintf(`# Production environment overrides
-ENV=prod
-BASE_DOMAIN=%s
-HASURA_GRAPHQL_ENABLE_CONSOLE=false
-HASURA_GRAPHQL_DEV_MODE=false
-`, baseDomain)
-	if err := writeFile(filepath.Join(workDir, ".env.prod"), prodContent, 0600); err != nil {
-		return nil, err
-	}
-	created = append(created, ".env.prod")
-
-	// .env.secrets (600 perms, gitignored)
-	pgPass, err := GenerateSecret(32)
-	if err != nil {
-		return nil, fmt.Errorf("generating postgres password for secrets file: %w", err)
-	}
-	hasuraSecret, err := GenerateSecret(44)
-	if err != nil {
-		return nil, fmt.Errorf("generating hasura secret for secrets file: %w", err)
-	}
-	jwtKey, err := GenerateSecret(44)
-	if err != nil {
-		return nil, fmt.Errorf("generating JWT key for secrets file: %w", err)
-	}
-	secretsContent := fmt.Sprintf(`# Secrets — DO NOT COMMIT
-# Auto-generated by nself init --full
-POSTGRES_PASSWORD=%s
-HASURA_GRAPHQL_ADMIN_SECRET=%s
-HASURA_JWT_KEY=%s
-`, pgPass, hasuraSecret, jwtKey)
-	if err := writeFile(filepath.Join(workDir, ".env.secrets"), secretsContent, 0600); err != nil {
-		return nil, err
-	}
-	created = append(created, ".env.secrets")
-
-	return created, nil
-}
+// buildExampleEnv and writeFullEnvFiles moved to setup_env_files_full.go
+// (CLI go.md 300-line file cap).
