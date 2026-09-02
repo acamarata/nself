@@ -7,12 +7,9 @@ on:
       - ".github/wiki/**"
       - '.github/workflows/wiki-sync.yml'
 
-# cancel-in-progress: false — this workflow deploys/publishes/releases; a superseding
-# run must queue behind an in-flight one, never cancel it mid-flight.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
-
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   sync:
     runs-on: ubuntu-latest
