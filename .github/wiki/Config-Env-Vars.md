@@ -79,7 +79,7 @@ These vars control the top-level identity and behavior of a project.
 | `BACKUP_CRITICAL_TABLES` | string | `np_users,np_licenses,np_audit_log,np_plugins,np_billing` | No | Comma-separated tables `nself backup drill` looks for after restoring into its scratch database. The check is presence-only and advisory: an empty table counts as present, and missing tables are reported without failing the drill. Set this when your schema does not use the `np_` prefix, or the defaults will all read as missing. See [[cmd-backup]]. |
 | `POSTGRES_HOST` | string | `postgres` | No | Internal container hostname. Change only if running Postgres externally. |
 | `POSTGRES_PORT` | int | `5432` | No | Port exposed to the host machine. |
-| `POSTGRES_DB` | string | `nself` | No | Name of the default database created on first start. |
+| `POSTGRES_DB` | string | derived from the project name | No | Database created on first start. `nself init` writes a name derived from the project directory, lowercased with hyphens, dots and spaces folded to underscores, since a database name must be a valid SQL identifier and a directory name often is not. `my-app` becomes `my_app`. Only if nothing sets it at all does it fall back to `nself`. Set it explicitly to control the name. |
 | `POSTGRES_USER` | string | `postgres` | No | Superuser account name. |
 | `POSTGRES_PASSWORD` | string | *(none)* | **Yes** | Superuser password. Minimum 16 characters. |
 | `POSTGRES_EXTENSIONS` | string | `uuid-ossp` | No | Comma-separated list of extensions to install automatically. |
