@@ -288,6 +288,21 @@ This registers a Node.js service named `ping_api` accessible at `ping.{BASE_DOMA
 
 ---
 
+## Legacy `BIOS_*` variables
+
+nSelf was called "BIOS" internally before v1.0. Variables using that prefix
+(`BIOS_DOMAIN`, `BIOS_PROJECT_NAME`, `BIOS_LICENSE_KEY` and the rest) are **not
+read**. A compatibility shim mapping them to their `NSELF_*` equivalents was
+present in the source until v1.3.5, but it was never wired into any startup
+path, so it never promoted a value in any released build. It has been removed.
+
+If you are upgrading a long-lived deployment, rename any `BIOS_*` entry in your
+`.env` to its `NSELF_*` counterpart. The names map one to one:
+`BIOS_DOMAIN` and `BIOS_BASE_DOMAIN` become `NSELF_BASE_DOMAIN`, `BIOS_ENV` and
+`BIOS_ENVIRONMENT` become `NSELF_ENV`, `BIOS_PROJECT` and `BIOS_PROJECT_NAME`
+become `NSELF_PROJECT_NAME`, and the others drop the prefix change directly
+(`BIOS_ADMIN_EMAIL` to `NSELF_ADMIN_EMAIL`, and so on).
+
 ## Computed Variables
 
 The following variables are derived automatically and written to `.env.computed` on every `nself build` and `nself start`. Do not set these manually, they will be overwritten.
