@@ -54,6 +54,15 @@ type BackupConfig struct {
 	S3SecretAccessKey   string `env:"BACKUP_S3_SECRET_ACCESS_KEY"`
 	S3Region            string `env:"BACKUP_S3_REGION"`
 	S3Endpoint          string `env:"BACKUP_S3_ENDPOINT"`
+
+	// CriticalTables overrides database.DefaultCriticalTables for the backup
+	// drill's smoke check (comma-separated table names, e.g.
+	// "users,licenses,audit_logs,plugins"). Empty (the default) keeps the
+	// np_-prefixed convention. Deployed schemas vary in whether they use
+	// nSelf's np_ multi-app-isolation prefix, so the drill's critical-table
+	// presence check must be project-configurable rather than hardcoded to
+	// one convention — see .claude/qa/bugs/drill-critical-tables-naming.md.
+	CriticalTables string `env:"BACKUP_CRITICAL_TABLES"`
 }
 
 // LicenseConfig holds license validation and grace period configuration.

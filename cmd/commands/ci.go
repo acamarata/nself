@@ -89,29 +89,17 @@ func runCI(cmd *cobra.Command, args []string) error {
 	}
 
 	// Build argument list for the nself-ci binary.
-	ciArgs := []string{}
-	if checkMode || noStatus {
-		ciArgs = append(ciArgs, "--no-status")
-	}
-	if noGitleaks {
-		ciArgs = append(ciArgs, "--no-gitleaks")
-	}
-	if filesystem {
-		ciArgs = append(ciArgs, "--filesystem")
-	}
-	if verbose {
-		ciArgs = append(ciArgs, "-v")
-	}
-	if sha != "" {
-		ciArgs = append(ciArgs, "--sha", sha)
-	}
-	if owner != "" {
-		ciArgs = append(ciArgs, "--owner", owner)
-	}
-	if repo != "" {
-		ciArgs = append(ciArgs, "--repo", repo)
-	}
-	ciArgs = append(ciArgs, repoRoot)
+	ciArgs := buildCIArgs(ciArgsInput{
+		checkMode:  checkMode,
+		noStatus:   noStatus,
+		noGitleaks: noGitleaks,
+		filesystem: filesystem,
+		verbose:    verbose,
+		sha:        sha,
+		owner:      owner,
+		repo:       repo,
+		repoRoot:   repoRoot,
+	})
 
 	ui.Section("nself-ci gate")
 	if postStatus {
@@ -134,4 +122,51 @@ func runCI(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("nself-ci: %w", err)
 	}
 	return nil
+}
+
+// ciArgsInput holds the resolved flag values runCI passes to buildCIArgs. It
+// exists so the pure argument-construction logic below can be unit tested
+// without invoking cobra or building the nself-ci binary.
+type ciArgsInput struct {
+	checkMode  bool
+	noStatus   bool
+	noGitleaks bool
+	filesystem bool
+	verbose    bool
+	sha        string
+	owner      string
+	repo       string
+	repoRoot   string
+}
+
+// buildCIArgs constructs the argv passed to the nself-ci gate binary from
+// nself ci's own flags. --filesystem maps to --filesystem on the gate binary,
+// which plugins/free/ci's gitleaksArgs() honors by forcing a --no-git
+// (filesystem) gitleaks scan even inside a real git checkout — see
+// P6-E2-W1-S2-T6 / msg-2026-08-31-gitleaks-e2e-regression-fix.md.
+func buildCIArgs(in ciArgsInput) []string {
+	ciArgs := []string{}
+	if in.checkMode || in.noStatus {
+		ciArgs = append(ciArgs, "--no-status")
+	}
+	if in.noGitleaks {
+		ciArgs = append(ciArgs, "--no-gitleaks")
+	}
+	if in.filesystem {
+		ciArgs = append(ciArgs, "--filesystem")
+	}
+	if in.verbose {
+		ciArgs = append(ciArgs, "-v")
+	}
+	if in.sha != "" {
+		ciArgs = append(ciArgs, "--sha", in.sha)
+	}
+	if in.owner != "" {
+		ciArgs = append(ciArgs, "--owner", in.owner)
+	}
+	if in.repo != "" {
+		ciArgs = append(ciArgs, "--repo", in.repo)
+	}
+	ciArgs = append(ciArgs, in.repoRoot)
+	return ciArgs
 }

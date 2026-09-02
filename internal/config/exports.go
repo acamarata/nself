@@ -172,6 +172,7 @@ func DefaultFor(key string) string {
 		"BACKUP_S3_SECRET_ACCESS_KEY":  "",
 		"BACKUP_S3_REGION":             "",
 		"BACKUP_S3_ENDPOINT":           "",
+		"BACKUP_CRITICAL_TABLES":       "",
 
 		// Disaster Recovery
 		"DR_SECONDARY_REGION": "",

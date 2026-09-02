@@ -80,7 +80,7 @@ func runBackupDrill(cmd *cobra.Command, _ []string) error {
 	ui.Dimmed(fmt.Sprintf("  Rows observed:  %d", result.RowsObserved))
 	ui.Dimmed(fmt.Sprintf("  RTO target met: %v", result.RTOTargetMet))
 	if len(result.MissingCriticalTables) > 0 {
-		ui.Dimmed(fmt.Sprintf("  Critical tables not found by name: %v (see CriticalTables naming note)",
+		ui.Dimmed(fmt.Sprintf("  Critical tables not found by name: %v (set BACKUP_CRITICAL_TABLES if your schema uses different names)",
 			result.MissingCriticalTables))
 	}
 	return nil

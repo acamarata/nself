@@ -34,44 +34,29 @@ import (
 	"github.com/nself-org/cli/internal/config"
 )
 
-// CriticalTables is the canonical list of np_* tables the drill smoke suite
-// asserts presence on. The five tables here are load-bearing for the most
-// common recovery scenario: license validation + signup pipeline + audit log
-// must survive a restore. Adding a table here makes drill stricter; remove
-// only with explicit user approval (these are the smoke-check baseline).
-var CriticalTables = []string{
-	"np_users",
-	"np_licenses",
-	"np_audit_log",
-	"np_plugins",
-	"np_billing",
-}
-
 // smokeCheck evaluates a completed RestoreDrillResult against the drill's
 // smoke gate. Pulled out of Drill as a pure function specifically so it can
 // be unit-tested without a live Postgres — RestoreDrill itself needs one, so
 // exercising this logic through Drill() end-to-end is not practical in CI.
 //
+// criticalTables is the resolved list (ResolveCriticalTables) used only for
+// the table-count floor below — it is NOT re-checked by name here; presence
+// by name is verifyCriticalTables' job and stays advisory-only (see
+// MissingCriticalTables on DrillResult).
+//
 // Two independent conditions, either of which fails the drill:
-//  1. Table-count floor: fewer than len(CriticalTables) tables were found at
-//     all. Weak alone (any 5+ tables of any name pass) but cheap and kept.
+//  1. Table-count floor: fewer than len(criticalTables) tables were found at
+//     all. Weak alone (any N+ tables of any name pass) but cheap and kept.
 //  2. Row-total: subResult.RowsVerified is an EXACT total across every user
 //     table (see VerifyRestoredDatabase — no LIMIT-10 sampling), so it is
 //     safe to hard-fail on zero. A fresh-init DB has zero rows in user
 //     tables; a real restore must not. Proven live on staging 2026-08-31: a
 //     drill reported tables_checked=107, rows_observed=0, success=true under
 //     the old code, which had no row assertion at all — this is that gate.
-//
-// subResult.MissingCriticalTables (CriticalTables entries not found by name)
-// is intentionally NOT part of this gate: several drilled environments do
-// not use the np_ prefix the canonical list assumes, so failing on it would
-// make the drill permanently red for them. It is surfaced on DrillResult for
-// visibility; see .claude/qa/bugs/drill-critical-tables-naming.md for the
-// naming question, which needs a human decision, not a silent list edit.
-func smokeCheck(subResult RestoreDrillResult) error {
-	if subResult.TablesVerified < len(CriticalTables) {
+func smokeCheck(subResult RestoreDrillResult, criticalTables []string) error {
+	if subResult.TablesVerified < len(criticalTables) {
 		return fmt.Errorf("only %d tables verified, want >= %d (critical: %v)",
-			subResult.TablesVerified, len(CriticalTables), CriticalTables)
+			subResult.TablesVerified, len(criticalTables), criticalTables)
 	}
 	if subResult.RowsVerified <= 0 {
 		return fmt.Errorf(
@@ -180,8 +165,8 @@ func Drill(ctx context.Context, cfg *config.Config, opts DrillOptions) (DrillRes
 	// subResult while the DB was still alive.
 	//
 	// Two independent gates:
-	//  1. Table-count floor: ≥len(CriticalTables) tables were found at all.
-	//     Weak on its own (any 5+ tables pass regardless of name) but kept as
+	//  1. Table-count floor: ≥len(criticalTables) tables were found at all.
+	//     Weak on its own (any N+ tables pass regardless of name) but kept as
 	//     a cheap first check.
 	//  2. Row-total assertion: subResult.RowsVerified is an EXACT total across
 	//     every user table (see VerifyRestoredDatabase — no more LIMIT-10
@@ -191,18 +176,17 @@ func Drill(ctx context.Context, cfg *config.Config, opts DrillOptions) (DrillRes
 	//     rows_observed=0, success=true under the old code — this gate is
 	//     what was missing.
 	//
-	// CriticalTables presence-by-name (subResult.MissingCriticalTables) is
-	// surfaced for visibility but does NOT fail the drill: several drilled
-	// environments do not use the np_ prefix the canonical list assumes, so a
-	// hard fail here would make the drill permanently red for them. See
-	// .claude/qa/bugs/drill-critical-tables-naming.md for the naming
-	// question, which needs a human decision, not a silent list edit.
+	// criticalTables presence-by-name (subResult.MissingCriticalTables) is
+	// surfaced for visibility but does NOT fail the drill: the list itself is
+	// per-project (ResolveCriticalTables / BACKUP_CRITICAL_TABLES) precisely
+	// because deployed schemas disagree on naming conventions — see
+	// .claude/qa/bugs/drill-critical-tables-naming.md for the decision.
 	result.Phase = "smoke"
 	smokeStart := time.Now()
 	result.TablesChecked = subResult.TablesVerified
 	result.MissingCriticalTables = subResult.MissingCriticalTables
 
-	if smokeErr := smokeCheck(subResult); smokeErr != nil {
+	if smokeErr := smokeCheck(subResult, ResolveCriticalTables(cfg)); smokeErr != nil {
 		result.ErrorMessage = fmt.Sprintf("smoke: %v", smokeErr)
 		result.SmokeSeconds = time.Since(smokeStart).Seconds()
 		result.CompletedAt = time.Now()
