@@ -5,6 +5,7 @@
 package database
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -22,20 +23,29 @@ var identRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 // used to query it. We reject them early instead of letting Postgres truncate.
 const maxIdentLen = 63
 
+// ErrInvalidIdentifier is wrapped into every error SanitizeIdentifier returns.
+// Callers several layers up (e.g. cmd/commands/start_containers.go) use
+// errors.Is against this sentinel to distinguish "the configured name isn't a
+// usable SQL identifier" from unrelated Postgres failures (auth,
+// connectivity, etc.) so they can point the user at the actual problem
+// instead of a generic credentials/connectivity checklist.
+var ErrInvalidIdentifier = errors.New("invalid SQL identifier")
+
 // SanitizeIdentifier validates a SQL identifier and returns a double-quoted,
 // escape-safe form suitable for direct interpolation into SQL. Returns an
-// error if the input does not match the safe identifier pattern or exceeds
-// the PostgreSQL identifier byte limit (63 bytes).
+// error wrapping ErrInvalidIdentifier if the input does not match the safe
+// identifier pattern or exceeds the PostgreSQL identifier byte limit (63
+// bytes).
 //
 // Use this for database names, schema names, table names, column names, and
 // any other SQL identifier that must appear in a statement string. NEVER
 // interpolate a raw string into SQL without validation.
 func SanitizeIdentifier(s string) (string, error) {
 	if len(s) > maxIdentLen {
-		return "", fmt.Errorf("SQL identifier too long (%d bytes, max %d): %q", len(s), maxIdentLen, s)
+		return "", fmt.Errorf("%w: too long (%d bytes, max %d): %q", ErrInvalidIdentifier, len(s), maxIdentLen, s)
 	}
 	if !identRegex.MatchString(s) {
-		return "", fmt.Errorf("invalid SQL identifier: %q", s)
+		return "", fmt.Errorf("%w: %q", ErrInvalidIdentifier, s)
 	}
 	// Double quote and escape any embedded quote (defensive; regex already
 	// rejects strings containing quotes, but belt-and-suspenders).

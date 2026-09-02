@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+
+	"github.com/nself-org/cli/internal/config"
 )
 
 // Options holds all flags and settings for the init command.
@@ -79,6 +81,16 @@ func Initialize(opts Options) (*Result, error) {
 	env := resolveEnv(opts)
 	baseDomain := resolveBaseDomain(opts, env)
 
+	// Derive the Postgres database name from the project name. PROJECT_NAME
+	// allows hyphens and a leading digit (Docker-compatible); POSTGRES_DB is
+	// interpolated as a SQL identifier downstream (internal/database) and
+	// does not, so it must be normalized separately rather than reusing
+	// projectName verbatim (see SanitizeDBName for why).
+	dbName, err := config.SanitizeDBName(projectName)
+	if err != nil {
+		return nil, fmt.Errorf("deriving database name from project name %q: %w", projectName, err)
+	}
+
 	// Generate secrets.
 	postgresPassword, err := GenerateSecret(32)
 	if err != nil {
@@ -117,9 +129,9 @@ func Initialize(opts Options) (*Result, error) {
 	pgvectorEnabled := !opts.NoPgvector
 	var envContent string
 	if opts.Demo {
-		envContent = buildDemoEnv(projectName, baseDomain, env, postgresPassword, hasuraAdminSecret, hasuraJWTKey, minioPassword, notifySecret, cronSecret, pluginInternalSecret, opts.DomainComment, pgvectorEnabled)
+		envContent = buildDemoEnv(projectName, dbName, baseDomain, env, postgresPassword, hasuraAdminSecret, hasuraJWTKey, minioPassword, notifySecret, cronSecret, pluginInternalSecret, opts.DomainComment, pgvectorEnabled)
 	} else {
-		envContent = buildStandardEnv(projectName, baseDomain, env, postgresPassword, hasuraAdminSecret, hasuraJWTKey, notifySecret, cronSecret, pluginInternalSecret, opts.DomainComment, pgvectorEnabled)
+		envContent = buildStandardEnv(projectName, dbName, baseDomain, env, postgresPassword, hasuraAdminSecret, hasuraJWTKey, notifySecret, cronSecret, pluginInternalSecret, opts.DomainComment, pgvectorEnabled)
 	}
 
 	// Write .env.
