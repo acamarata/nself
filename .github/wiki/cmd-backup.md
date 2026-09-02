@@ -228,6 +228,41 @@ nself backup status [--format json]
 
 ---
 
+## backup drill
+
+Restore the most recent backup into a scratch database, measure how long the
+restore took against an RTO target, and smoke-check the result.
+
+```bash
+nself backup drill [--file <backup>] [--rto-hours 4] [--dry-run] [--json]
+```
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--file` | most recent backup | Backup file to drill against. |
+| `--rto-hours` | `4.0` | RTO target in hours. `0` disables the gate. |
+| `--dry-run` | `false` | Validate inputs and exit without restoring. |
+| `--json` | `false` | Emit the drill result as JSON on stdout. |
+
+### Critical tables
+
+After the restore, the drill checks that a list of critical tables exists by
+name in the scratch database. The list comes from `BACKUP_CRITICAL_TABLES`
+(comma-separated) when set, and otherwise falls back to the built-in
+`np_`-prefixed default: `np_users`, `np_licenses`, `np_audit_log`,
+`np_plugins`, `np_billing`.
+
+Two things about this check are worth knowing before you rely on it:
+
+- It tests **presence only**. A table that exists but holds no rows counts as
+  present. The drill does not compare row counts against the source database.
+- A missing table does **not** fail the drill. The verdict stays `PASS` and the
+  missing names are listed as an advisory. Treat the drill as a restore-path
+  smoke test, not as a data-completeness gate.
+
+Deployments whose schema does not use the `np_` prefix will see every default
+name reported missing until they set `BACKUP_CRITICAL_TABLES`.
+
 ## backup init-key
 
 Generate an age encryption keypair for backup encryption.
