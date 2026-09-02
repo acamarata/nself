@@ -32,7 +32,10 @@ for f in "$WORKFLOWS_DIR"/*.yml "$WORKFLOWS_DIR"/*.yaml; do
       echo "FAIL: $f:$lineno — continue-on-error: true with no ACCEPTED comment within 5 lines above"
       FAILED=1
     fi
-  done < <(grep -n 'continue-on-error: *true' "$f" || true)
+  # Anchor to the start of the line (after indentation) so a comment that
+  # merely mentions continue-on-error: true -- including this gate's own
+  # description in sec-lint.yml -- is not mistaken for a real setting.
+  done < <(grep -nE '^[[:space:]]*continue-on-error: *true' "$f" || true)
 done
 
 if [ "$FAILED" -eq 1 ]; then
