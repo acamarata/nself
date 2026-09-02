@@ -77,6 +77,13 @@ func ApplyFile(ctx context.Context, cfg *config.Config, filePath string) (skippe
 		return false, fmt.Errorf("read migration file %s: %w", name, readErr)
 	}
 
+	// Reject SQL no Postgres version accepts before opening a transaction, so
+	// it surfaces here rather than as a syntax error partway through a batch
+	// with earlier statements already committed.
+	if lintErr := ValidateMigrationSQL(name, string(data)); lintErr != nil {
+		return false, lintErr
+	}
+
 	checksum, csErr := checksumBytes(data)
 	if csErr != nil {
 		return false, fmt.Errorf("compute checksum for %s: %w", name, csErr)
