@@ -2,6 +2,8 @@ package config
 
 import (
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -56,6 +58,83 @@ func TestSanitizeName(t *testing.T) {
 			}
 			if got2 != got {
 				t.Errorf("SanitizeName not idempotent: first=%q second=%q", got, got2)
+			}
+		})
+	}
+}
+
+// identRegexMirror mirrors internal/database's identRegex (PostgreSQL
+// unquoted identifier syntax). It is duplicated here, not imported, because
+// internal/database imports internal/config and importing it back would
+// create a cycle; this test exists precisely to catch the two definitions
+// drifting apart.
+var identRegexMirror = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+
+func TestSanitizeDBName(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    string
+		wantErr bool
+	}{
+		{name: "empty input", input: "", wantErr: true},
+		{name: "whitespace only", input: "   ", wantErr: true},
+		{name: "hyphens folded to underscores", input: "rls-pentest-project", want: "rls_pentest_project"},
+		{name: "leading digit gets underscore prefix", input: "9lives", want: "_9lives"},
+		{name: "dots folded to underscores", input: "my.project", want: "my_project"},
+		{name: "spaces folded to underscores", input: "my project", want: "my_project"},
+		{name: "uppercase lowercased", input: "MyProject", want: "myproject"},
+		{name: "already-valid name passes through unchanged", input: "myproject", want: "myproject"},
+		{name: "already-valid with underscore unchanged", input: "my_project_2", want: "my_project_2"},
+		{name: "mixed hyphens dots spaces uppercase", input: "My Rls-Pentest.Project", want: "my_rls_pentest_project"},
+		{name: "leading hyphen plus leading digit", input: "-9lives", want: "_9lives"},
+		{name: "hyphens only yields no valid characters", input: "---", wantErr: true},
+		{
+			name:  "longer than 63-byte Postgres identifier limit is truncated",
+			input: strings.Repeat("a", 70),
+			want:  strings.Repeat("a", 63),
+		},
+		{
+			// A directory name built entirely of the org's own naming
+			// convention (hyphens) that also happens to be oversized —
+			// exercises the hyphen-fold and truncation paths together.
+			name:  "hyphenated name over the limit truncates after folding",
+			input: strings.Repeat("a-", 40), // 80 chars: "a-a-a-...-a-"
+			want:  strings.Repeat("a_", 31) + "a",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := SanitizeDBName(tt.input)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("SanitizeDBName(%q) expected error, got %q", tt.input, got)
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("SanitizeDBName(%q) unexpected error: %v", tt.input, err)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("SanitizeDBName(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+			if len(got) > 63 {
+				t.Errorf("SanitizeDBName(%q) = %q exceeds 63-byte Postgres identifier limit (%d bytes)", tt.input, got, len(got))
+			}
+			if !identRegexMirror.MatchString(got) {
+				t.Errorf("SanitizeDBName(%q) = %q does not satisfy the SQL identifier pattern enforced by database.SanitizeIdentifier", tt.input, got)
+			}
+			// Idempotency check: re-sanitizing an already-sanitized name must
+			// not change it further.
+			got2, err2 := SanitizeDBName(got)
+			if err2 != nil {
+				t.Errorf("SanitizeDBName(%q) second call error: %v", got, err2)
+				return
+			}
+			if got2 != got {
+				t.Errorf("SanitizeDBName not idempotent: first=%q second=%q", got, got2)
 			}
 		})
 	}

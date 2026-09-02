@@ -19,6 +19,23 @@ You can choose which optional services to enable during init (Redis, MinIO, Meil
 
 After `nself init` completes, run `nself build` to generate `docker-compose.yml` and nginx configs, then `nself start` to boot the stack.
 
+## Derived project and database names
+
+`init` takes the project name from the current directory name and writes it to
+`PROJECT_NAME`. It also derives `POSTGRES_DB` from that name, because a
+database name has to be a valid SQL identifier and a directory name frequently
+is not.
+
+The derivation lowercases the name, folds `-`, `.` and space to `_`, drops
+anything else, prefixes a leading digit with `_`, and truncates to Postgres's
+63-byte identifier limit. So `my-app` yields database `my_app`, while
+`PROJECT_NAME` keeps its hyphens for Docker compatibility. The two values are
+allowed to differ and normally do.
+
+Set `POSTGRES_DB` yourself in `.env` if you want a specific name. A directory
+name that reduces to nothing usable (`---`, for example) is rejected at init
+rather than at first start.
+
 ## Clone Templates
 
 Clone templates are full-stack app starters embedded in the CLI binary. They include a Postgres schema with RLS policies, Hasura metadata, seed data, and a Flutter UI starter. No network access is needed to scaffold them.

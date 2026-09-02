@@ -79,7 +79,7 @@ These vars control the top-level identity and behavior of a project.
 | `BACKUP_CRITICAL_TABLES` | string | `np_users,np_licenses,np_audit_log,np_plugins,np_billing` | No | Comma-separated tables `nself backup drill` looks for after restoring into its scratch database. The check is presence-only and advisory: an empty table counts as present, and missing tables are reported without failing the drill. Set this when your schema does not use the `np_` prefix, or the defaults will all read as missing. See [[cmd-backup]]. |
 | `POSTGRES_HOST` | string | `postgres` | No | Internal container hostname. Change only if running Postgres externally. |
 | `POSTGRES_PORT` | int | `5432` | No | Port exposed to the host machine. |
-| `POSTGRES_DB` | string | `nself` | No | Name of the default database created on first start. |
+| `POSTGRES_DB` | string | derived from the project name | No | Database created on first start. `nself init` writes a name derived from the project directory, lowercased with hyphens, dots and spaces folded to underscores, since a database name must be a valid SQL identifier and a directory name often is not. `my-app` becomes `my_app`. Only if nothing sets it at all does it fall back to `nself`. Set it explicitly to control the name. |
 | `POSTGRES_USER` | string | `postgres` | No | Superuser account name. |
 | `POSTGRES_PASSWORD` | string | *(none)* | **Yes** | Superuser password. Minimum 16 characters. |
 | `POSTGRES_EXTENSIONS` | string | `uuid-ossp` | No | Comma-separated list of extensions to install automatically. |
@@ -287,6 +287,21 @@ This registers a Node.js service named `ping_api` accessible at `ping.{BASE_DOMA
 | `NSELF_POSTGRES_MODE` | string | `docker` | No | Selects the Postgres runtime. `docker` runs the standard Postgres container (default, fully supported). `wasm` runs the experimental embedded pglite/wasmtime lane. The `wasm` mode is gated behind the Emscripten ABI shim and is not yet production ready. |
 
 ---
+
+## Legacy `BIOS_*` variables
+
+nSelf was called "BIOS" internally before v1.0. Variables using that prefix
+(`BIOS_DOMAIN`, `BIOS_PROJECT_NAME`, `BIOS_LICENSE_KEY` and the rest) are **not
+read**. A compatibility shim mapping them to their `NSELF_*` equivalents was
+present in the source until v1.3.5, but it was never wired into any startup
+path, so it never promoted a value in any released build. It has been removed.
+
+If you are upgrading a long-lived deployment, rename any `BIOS_*` entry in your
+`.env` to its `NSELF_*` counterpart. The names map one to one:
+`BIOS_DOMAIN` and `BIOS_BASE_DOMAIN` become `NSELF_BASE_DOMAIN`, `BIOS_ENV` and
+`BIOS_ENVIRONMENT` become `NSELF_ENV`, `BIOS_PROJECT` and `BIOS_PROJECT_NAME`
+become `NSELF_PROJECT_NAME`, and the others drop the prefix change directly
+(`BIOS_ADMIN_EMAIL` to `NSELF_ADMIN_EMAIL`, and so on).
 
 ## Computed Variables
 

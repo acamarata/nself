@@ -9,7 +9,6 @@ var AllowedAuthMiddleware = map[string]string{
 	"RequirePluginJWT":      "plugins/shared/go/auth", // Q01 per-plugin JWT
 	"RequireLicenseKey":     "plugins/shared/go/auth", // existing license middleware
 	"RequireHasuraAdminKey": "plugins/shared/go/auth",
-	"RequireInternalSecret": "plugins/shared/go/auth", // deprecated — allowed until Phase B-3 cutover
 	"RequireUserJWT":        "plugins/shared/go/auth",
 	"AdminOnly":             "admin/pkg/middleware",
 	"InternalNetworkOnly":   "web/backend/pkg/middleware", // IP allowlist for internal-only routes

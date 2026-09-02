@@ -17,9 +17,8 @@ on:
       - main
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.workflow_run.id }}
-  cancel-in-progress: true
-
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   alert-on-failure:
     name: Alert — main CI failure

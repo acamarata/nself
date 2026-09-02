@@ -169,6 +169,10 @@ jobs:
         # real pass/fail already happened above.
         # Expiry: permanent
         if: github.event_name == 'pull_request'
+        # ACCEPTED: this is a side-effect PR comment only; the "Fail on size limit
+        # exceeded" / "Fail on regression" steps above already enforce the real gate.
+        # A 403 from a restricted token (fork PR) must not fail the check.
+        # Expiry: permanent.
         continue-on-error: true
         uses: actions/github-script@v9
         with:

@@ -21,6 +21,7 @@ import (
 // - FRONTEND_APP_N_IMAGE (frontend_apps.go) via validateFrontendAppImage
 // - CS_N name (custom_services.go) via validateCustomServiceName + SanitizeName
 // - REMOTE_SCHEMA_N_URL (remote_schemas.go) via validateRemoteSchemaURL
+// - POSTGRES_DB derived from PROJECT_NAME (internal/setup) via SanitizeDBName
 // Add new entries here when adding new user-facing inputs.
 //
 // Audited and not sanitized (different validation concerns):
@@ -32,7 +33,15 @@ var (
 	reSanitizeInvalid = regexp.MustCompile(`[^a-z0-9-]`)
 	reSanitizeHyphens = regexp.MustCompile(`-{2,}`)
 	reDomainValid     = regexp.MustCompile(`^[a-zA-Z0-9.\-]+$`)
+	reDBNameInvalid   = regexp.MustCompile(`[^a-z0-9_]`)
 )
+
+// maxDBNameBytes is the PostgreSQL identifier byte limit (NAMEDATALEN-1 = 63).
+// Duplicated from internal/database's identical constant: internal/database
+// imports internal/config (for *config.Config), so config cannot import
+// database without a cycle. Both values encode the same Postgres fact and
+// must be kept in sync.
+const maxDBNameBytes = 63
 
 // SanitizeName lowercases, trims whitespace, replaces spaces/underscores with
 // hyphens, removes all non-alphanumeric-hyphen characters, collapses consecutive
@@ -51,6 +60,51 @@ func SanitizeName(input string) (string, error) {
 	name = strings.Trim(name, "-")
 	if name == "" {
 		return "", fmt.Errorf("contains no valid characters after sanitization")
+	}
+	return name, nil
+}
+
+// SanitizeDBName converts a Docker-compatible project name (as produced by
+// SanitizeName: lowercase alphanumeric + hyphens) into a value that satisfies
+// the stricter PostgreSQL unquoted-identifier syntax enforced by
+// database.SanitizeIdentifier (start with a letter or underscore; only
+// letters, digits, and underscores after that; max 63 bytes).
+//
+// PROJECT_NAME and POSTGRES_DB have different validity domains — Docker
+// container/network names allow hyphens and a leading digit, SQL identifiers
+// allow neither — so the raw project name (e.g. from a hyphenated directory
+// like "rls-pentest-project") cannot be reused verbatim as the database name.
+// This normalizes it instead of rejecting it, so init always produces a
+// working POSTGRES_DB regardless of the source directory name.
+//
+// Returns ("", err) only if nothing usable remains after normalization (e.g.
+// an input made entirely of characters outside [a-z0-9_-. ]).
+func SanitizeDBName(input string) (string, error) {
+	name := strings.ToLower(strings.TrimSpace(input))
+	// Fold the characters most likely to appear in a project/directory name
+	// but disallowed in a SQL identifier into underscores, rather than
+	// dropping them, so "my-project" and "my.project" don't collide into the
+	// same "myproject" name.
+	name = strings.NewReplacer("-", "_", ".", "_", " ", "_").Replace(name)
+	// Remove anything else that isn't a lowercase letter, digit, or underscore.
+	name = reDBNameInvalid.ReplaceAllString(name, "")
+	// identRegex (internal/database) requires the identifier to start with a
+	// letter or underscore. PROJECT_NAME permits a leading digit (e.g.
+	// "9lives"), which is not a valid identifier start, so prefix it.
+	if name != "" && name[0] >= '0' && name[0] <= '9' {
+		name = "_" + name
+	}
+	// Reject a result made entirely of underscores (e.g. input "---"): it is
+	// technically a valid SQL identifier, but it carries no trace of the
+	// original name and isn't a useful database name.
+	if strings.Trim(name, "_") == "" {
+		return "", fmt.Errorf("contains no valid characters after sanitization")
+	}
+	if len(name) > maxDBNameBytes {
+		name = strings.TrimRight(name[:maxDBNameBytes], "_")
+		if strings.Trim(name, "_") == "" {
+			return "", fmt.Errorf("contains no valid characters after truncation to %d bytes", maxDBNameBytes)
+		}
 	}
 	return name, nil
 }

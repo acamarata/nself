@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/nself-org/cli/internal/database"
 )
 
 // TestGenerateSecret_Length verifies that GenerateSecret produces a string of
@@ -138,5 +140,59 @@ func TestValidateProjectName_Invalid(t *testing.T) {
 				t.Errorf("validateProjectName(%q): expected error, got nil", name)
 			}
 		})
+	}
+}
+
+// extractEnvValue returns the value of key=... from raw .env content, or ""
+// if the key is not present. Minimal line scanner; good enough for
+// single-line, unquoted KEY=VALUE test fixtures.
+func extractEnvValue(content, key string) string {
+	prefix := key + "="
+	for _, line := range strings.Split(content, "\n") {
+		if strings.HasPrefix(line, prefix) {
+			return strings.TrimPrefix(line, prefix)
+		}
+	}
+	return ""
+}
+
+// TestInitialize_HyphenatedDirName_ProducesValidPostgresDB is a regression
+// test: `nself init` run inside a directory whose name contains a hyphen (the
+// dominant convention for this org's own repos — plugins-pro, homebrew-nself,
+// nself-org) used to write that raw, hyphenated name straight into
+// POSTGRES_DB. PROJECT_NAME legitimately allows hyphens (Docker-compatible),
+// but POSTGRES_DB is later interpolated as a SQL identifier by
+// internal/database, which does not — so `nself start` failed with "invalid
+// SQL identifier" on a hyphenated project, several commands after the bad
+// value was written by init. See config.SanitizeDBName.
+func TestInitialize_HyphenatedDirName_ProducesValidPostgresDB(t *testing.T) {
+	parent := t.TempDir()
+	hyphenated := filepath.Join(parent, "rls-pentest-project")
+	if err := os.MkdirAll(hyphenated, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	result, err := Initialize(Options{WorkDir: hyphenated, NonInteractive: true})
+	if err != nil {
+		t.Fatalf("Initialize: %v", err)
+	}
+	if result.ProjectName != "rls-pentest-project" {
+		t.Fatalf("expected PROJECT_NAME to keep hyphens (Docker-compatible), got %q", result.ProjectName)
+	}
+
+	envBytes, err := os.ReadFile(filepath.Join(hyphenated, ".env"))
+	if err != nil {
+		t.Fatalf("ReadFile .env: %v", err)
+	}
+
+	dbName := extractEnvValue(string(envBytes), "POSTGRES_DB")
+	if dbName == "" {
+		t.Fatal("POSTGRES_DB not found in generated .env")
+	}
+	if strings.Contains(dbName, "-") {
+		t.Errorf("POSTGRES_DB=%q retains a hyphen; database.SanitizeIdentifier rejects this at `nself start`", dbName)
+	}
+	if _, err := database.SanitizeIdentifier(dbName); err != nil {
+		t.Errorf("POSTGRES_DB=%q is not a valid SQL identifier: %v", dbName, err)
 	}
 }

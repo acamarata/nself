@@ -42,7 +42,9 @@ func TestAllowedAuthMiddleware_Known(t *testing.T) {
 		"RequirePluginJWT",
 		"RequireLicenseKey",
 		"RequireHasuraAdminKey",
-		"RequireInternalSecret",
+		// RequireInternalSecret removed (P6-E11-W2-S3-T16 row 23): it was marked
+		// "deprecated until Phase B-3 cutover" and B-3 has passed with zero
+		// remaining callers anywhere in the estate (cli, plugins, plugins-pro).
 		"RequireUserJWT",
 		"AdminOnly",
 		"InternalNetworkOnly",
