@@ -76,6 +76,7 @@ These vars control the top-level identity and behavior of a project.
 | Variable | Type | Default | Required | Description |
 |---|---|---|---|---|
 | `POSTGRES_VERSION` | string | `16-alpine` | No | Docker image tag for the Postgres container. |
+| `BACKUP_CRITICAL_TABLES` | string | project defaults | No | Comma-separated tables the restore drill must verify after a restore. The drill certifies a restore only once every table named here is present and non-empty, so a project with its own critical tables can point the check at them instead of the built-in list. |
 | `POSTGRES_HOST` | string | `postgres` | No | Internal container hostname. Change only if running Postgres externally. |
 | `POSTGRES_PORT` | int | `5432` | No | Port exposed to the host machine. |
 | `POSTGRES_DB` | string | `nself` | No | Name of the default database created on first start. |

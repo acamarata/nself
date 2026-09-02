@@ -63,6 +63,13 @@ jobs:
       - name: Upload Trivy SARIF
         if: always()
         uses: github/codeql-action/upload-sarif@v4
+        # ACCEPTED: this is a reporting side-effect (uploads the SARIF to the
+        # repo's Code Scanning tab); the real gate is the "Run Trivy" step
+        # above, which sets exit-code: "1" on any CRITICAL finding and is not
+        # continue-on-error. A SARIF-upload failure (e.g. Code Scanning not
+        # enabled on a fork, GITHUB_TOKEN missing security-events:write) must
+        # not mask that the scan itself already ran and enforced.
+        # Expiry: permanent
         continue-on-error: true
         with:
           sarif_file: trivy-fs.sarif
