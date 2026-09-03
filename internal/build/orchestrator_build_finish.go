@@ -48,6 +48,12 @@ func (st *buildState) writeFinalArtifacts() (*BuildResult, error) {
 	}
 	st.filesGenerated++
 
+	// Record the profile too, so the next build notices a switch.
+	if err := RecordProfile(st.workdir, string(st.opts.Profile)); err != nil {
+		return nil, fmt.Errorf("writing build profile: %w", err)
+	}
+	st.filesGenerated++
+
 	// ── Step 11.6: Generate OpenAPI 3.1 spec + Scalar HTML page ─────
 	// Only runs when api_docs.enabled is true (default). Writes two files:
 	//   .nself/dist/openapi.json   — served at /api-docs by nginx
