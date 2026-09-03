@@ -80,6 +80,8 @@ func init() {
 	backupStreamCmd.Flags().String("to", "", "Destination URL (rclone remote path, e.g. s3:bucket/prefix)")
 	backupStreamCmd.Flags().StringArray("recipient", nil, "Encryption recipient: age key, SSH key, or github:<username> (repeatable)")
 	backupStreamCmd.Flags().Bool("dry-run", false, "Preview without running")
+	backupStreamCmd.Flags().Bool("no-encrypt", false,
+		"Stream in the clear when no recipient is configured. Without this, a missing recipient is an error rather than a silent plaintext upload.")
 
 	// backup resume flags (no extra flags beyond the positional backup-id)
 

@@ -45,6 +45,10 @@ type StreamOptions struct {
 	To         string   // destination URL (rclone remote path)
 	Recipients []string // --recipient flags (may be specified multiple times)
 	DryRun     bool
+	// AllowUnencrypted permits streaming in the clear when no recipient
+	// resolves. Off by default: without it, a missing recipient is an error
+	// rather than a silent plaintext upload. See the check in Stream.
+	AllowUnencrypted bool
 }
 
 // StreamResult is returned by Stream on success.
@@ -83,6 +87,24 @@ func Stream(ctx context.Context, cfg *config.Config, opts StreamOptions) (*Strea
 	recipients, err = resolveRecipients(ctx, recipients)
 	if err != nil {
 		return nil, fmt.Errorf("resolve recipients: %w", err)
+	}
+
+	// Fail closed. Encryption was previously skipped whenever no recipient
+	// resolved, with no error and no warning, so `nself backup stream --to
+	// s3:bucket/path` uploaded a plaintext database dump to object storage
+	// while the operator had every reason to believe it was encrypted. Under
+	// the Security-Always-Free doctrine a silent-plaintext default is a defect,
+	// and the failure is invisible precisely when it matters: offsite backups.
+	if len(recipients) == 0 && !opts.AllowUnencrypted {
+		return nil, fmt.Errorf(
+			"refusing to stream an unencrypted backup: no recipient configured.\n"+
+				"  Pass --recipient <age1... | ssh-... | github:username>, or set %s.\n"+
+				"  To stream in the clear anyway, pass --no-encrypt (the object will NOT be encrypted).",
+			"NSELF_BACKUP_AGE_RECIPIENTS")
+	}
+	if len(recipients) == 0 {
+		slog.Warn("streaming an UNENCRYPTED backup: --no-encrypt was passed and no recipient is configured",
+			"destination", opts.To)
 	}
 
 	// Build the object key.

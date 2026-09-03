@@ -335,6 +335,7 @@
         "hidden": false,
         "flags": [
           "--dry-run",
+          "--no-encrypt",
           "--recipient",
           "--to"
         ]
