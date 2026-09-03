@@ -280,9 +280,14 @@ func TestStream_DryRun(t *testing.T) {
 	cfg.ProjectName = "testproject"
 	cfg.Backup.Remote = "s3:mybucket"
 
+	// A recipient is supplied because streaming now fails closed without one.
+	// This test is about the dry-run path and the destination, not about
+	// encryption, so it exercises the ordinary encrypted case rather than
+	// depending on the unencrypted default that used to be silent.
 	result, err := Stream(context.Background(), cfg, StreamOptions{
-		To:     "s3:mybucket",
-		DryRun: true,
+		To:         "s3:mybucket",
+		Recipients: []string{"age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsxxxxxx"},
+		DryRun:     true,
 	})
 	if err != nil {
 		t.Fatalf("Stream dry-run: %v", err)

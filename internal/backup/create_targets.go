@@ -100,7 +100,16 @@ func createFullBackup(ctx context.Context, cfg *config.Config, backupDir, ts, ta
 	if opts.NoEncrypt {
 		encrypt = false
 	}
-	if encrypt && cfg.Backup.AgeRecipients != "" {
+	// Asking for encryption and getting plaintext is worse than not asking.
+	// This was `encrypt && AgeRecipients != ""`, so a caller who passed
+	// --encrypt (or set NSELF_BACKUP_ENCRYPTION) with no recipient configured
+	// silently got an unencrypted backup: the condition was false and nothing
+	// reported it. Refuse instead.
+	if encrypt && cfg.Backup.AgeRecipients == "" {
+		return fmt.Errorf(
+			"encryption requested but no recipient configured: set NSELF_BACKUP_AGE_RECIPIENTS, or pass --no-encrypt to write the backup in the clear")
+	}
+	if encrypt {
 		if err := encryptFile(outputPath, cfg.Backup.AgeRecipients); err != nil {
 			return fmt.Errorf("encrypt backup: %w", err)
 		}

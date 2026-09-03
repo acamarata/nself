@@ -67,11 +67,13 @@ func runBackupStream(cmd *cobra.Command, _ []string) error {
 	to, _ := cmd.Flags().GetString("to")
 	recipients, _ := cmd.Flags().GetStringArray("recipient")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	noEncrypt, _ := cmd.Flags().GetBool("no-encrypt")
 
 	result, err := backup.Stream(cmd.Context(), cfg, backup.StreamOptions{
-		To:         to,
-		Recipients: recipients,
-		DryRun:     dryRun,
+		To:               to,
+		Recipients:       recipients,
+		DryRun:           dryRun,
+		AllowUnencrypted: noEncrypt,
 	})
 	if err != nil {
 		return fmt.Errorf("backup stream: %w", err)
