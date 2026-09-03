@@ -97,9 +97,9 @@ func Stream(ctx context.Context, cfg *config.Config, opts StreamOptions) (*Strea
 	// and the failure is invisible precisely when it matters: offsite backups.
 	if len(recipients) == 0 && !opts.AllowUnencrypted {
 		return nil, fmt.Errorf(
-			"refusing to stream an unencrypted backup: no recipient configured.\n"+
-				"  Pass --recipient <age1... | ssh-... | github:username>, or set %s.\n"+
-				"  To stream in the clear anyway, pass --no-encrypt (the object will NOT be encrypted).",
+			"refusing to stream an unencrypted backup: no recipient configured "+
+				"(pass --recipient <age1...|ssh-...|github:username>, or set %s, "+
+				"or pass --no-encrypt to stream in the clear)",
 			"NSELF_BACKUP_AGE_RECIPIENTS")
 	}
 	if len(recipients) == 0 {
