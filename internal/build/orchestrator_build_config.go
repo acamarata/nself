@@ -73,6 +73,12 @@ func (st *buildState) loadValidateConfig() (*BuildResult, error) {
 		if err != nil {
 			return nil, fmt.Errorf("checking build cache: %w", err)
 		}
+		// A profile switch changes which services are emitted but touches
+		// neither .env's mtime nor the CLI version, so the mtime/version check
+		// above cannot see it.
+		if ProfileChanged(st.workdir, string(st.opts.Profile)) {
+			needsRebuild = true
+		}
 		if !needsRebuild {
 			return &BuildResult{
 				ProjectName: st.cfg.ProjectName,
