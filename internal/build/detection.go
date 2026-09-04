@@ -18,7 +18,10 @@ var pluginsNeedingRedis = []string{"ai", "claw", "mux", "cron", "notify", "push"
 // DetectServices returns the list of Docker service names that should be
 // generated in docker-compose.yml based on the current configuration.
 //
-// Core services (4):     postgres, hasura, auth, nginx
+// Core services (4):     postgres, hasura, auth, nginx (nginx is omitted
+//
+//	when NGINX_FRONTED_BY is set — see NginxConfig.FrontedBy)
+//
 // Optional services (6): redis, minio, mailpit (email), search, functions, admin
 // Custom services:       CS_1..CS_10
 //
@@ -30,8 +33,16 @@ var pluginsNeedingRedis = []string{"ai", "claw", "mux", "cron", "notify", "push"
 // so callers (e.g. Build) must also set cfg.Redis.Enabled = true before
 // passing cfg to compose.NewGenerator to keep both outputs consistent.
 func DetectServices(cfg *config.Config) []string {
-	// ── Core 4 (always enabled) ──────────────────────────────────────
-	services := []string{"postgres", "hasura", "auth", "nginx"}
+	// ── Core services (always enabled) ───────────────────────────────
+	// nginx is omitted when this stack is fronted by another stack's nginx
+	// (NGINX_FRONTED_BY set) — see NginxConfig.FrontedBy and the matching
+	// gate in compose.Generator.buildDockerCompose. Without this, `nself
+	// status` sizes its total off a nginx container that compose never
+	// generates, and reports it unhealthy forever.
+	services := []string{"postgres", "hasura", "auth"}
+	if cfg.Nginx.FrontedBy == "" {
+		services = append(services, "nginx")
+	}
 
 	// ── Redis (explicit or auto-enabled by BullMQ plugin) ────────────
 	if cfg.Redis.Enabled {

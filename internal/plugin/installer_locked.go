@@ -229,6 +229,14 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 		return fmt.Errorf("extracting plugin %q: %w", name, err)
 	}
 
+	// Step 6a: Correct a build-time tarball nesting bug (see
+	// flattenExtractedPlugin's doc comment) that otherwise leaves this
+	// plugin's files one directory level too deep for build-time compose
+	// discovery and `nself plugin start` to find.
+	if err := flattenExtractedPlugin(destDir); err != nil {
+		return fmt.Errorf("normalizing extracted layout for plugin %q: %w", name, err)
+	}
+
 	// Step 6b: Publish a CLI plugin's binary where ProxyCommand will find it.
 	// Without this a command-providing plugin installs cleanly and then cannot
 	// be run at all — the proxy only reads ~/.nself/plugins/bin/.
@@ -252,30 +260,9 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 		}
 	}
 
-	// Step 7b (Q01): Generate per-plugin Ed25519 identity keypair and register
-	// the public key with ping_api. This is a best-effort step — a failure is
-	// logged as a warning but does not roll back the install, because the plugin
-	// will still function without JWT auth until Phase B-3 strict mode.
-	// The key is only generated when PLUGIN_INTERNAL_SECRET is set (i.e., the
-	// operator has opted into the inter-plugin JWT system).
-	if os.Getenv("PLUGIN_INTERNAL_SECRET") != "" {
-		// pluginDir doubles as the identity data root — each plugin's keypair
-		// is stored at pluginDir/<name>/identity.key alongside its manifest.
-		if !IdentityKeyExists(pluginDir, name) {
-			pubKey, idErr := GenerateEd25519Keypair(pluginDir, name)
-			if idErr != nil {
-				slog.Warn("plugin identity key generation failed — inter-plugin JWT auth unavailable until resolved",
-					"plugin", name, "error", idErr)
-			} else {
-				if regErr := RegisterIdentity(ctx, name, pubKey); regErr != nil {
-					slog.Warn("plugin identity registration with ping_api failed — JWT auth unavailable until resolved",
-						"plugin", name, "error", regErr)
-				} else {
-					slog.Info("plugin.identity.registered", "plugin", name)
-				}
-			}
-		}
-	}
+	// Step 7b (Q01): best-effort per-plugin identity keypair + ping_api
+	// registration (split out — see installer_identity.go).
+	registerPluginIdentityIfEnabled(ctx, pluginDir, name)
 
 	// S71-T02: Emit structured audit log for the granted permission set.
 	// One line per install, consumable by Loki. Never logs secret values —

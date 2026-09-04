@@ -120,6 +120,7 @@ func parseEnvCore(cfg *Config) {
 		RateLimitAPI:  os.Getenv("RATE_LIMIT_API_RPS"),
 		RateLimitAuth: os.Getenv("RATE_LIMIT_AUTH_RPS"),
 		RateLimitAI:   os.Getenv("RATE_LIMIT_AI_RPS"),
+		FrontedBy:     os.Getenv("NGINX_FRONTED_BY"),
 	}
 
 	// ── SSL ──────────────────────────────────────────────────────────

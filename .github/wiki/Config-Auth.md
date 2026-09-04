@@ -167,6 +167,22 @@ AUTH_PROVIDER_GITHUB_CLIENT_ID=Iv1.xxxxxxxxxxxxxxxx
 AUTH_PROVIDER_GITHUB_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
+---
+
+## Forwarding Any AUTH_* / HASURA_AUTH_* Engine Var
+
+Beyond `AUTH_PROVIDER_*`, **every other variable in hasura-auth's own `AUTH_*` and `HASURA_AUTH_*` namespaces set in any `.env` file is forwarded verbatim into the auth container** at `nself build` time, additive only, so it never overrides the curated values above (JWT secret, SMTP config, allowed redirect URLs, etc.). This covers hasura-auth engine flags ɳSelf does not wrap in its own typed setting, for example:
+
+```bash
+# .env.dev
+AUTH_ANONYMOUS_USERS_ENABLED=true
+AUTH_DISABLE_NEW_USERS=false
+AUTH_REQUIRE_EMAIL_VERIFICATION=true
+HASURA_AUTH_SMTP_HOST=smtp.example.com
+```
+
+Run `nself build` (or `nself restart`) after adding one of these for the regenerated compose to pick it up. See [[Config-Hasura]] for the equivalent `HASURA_GRAPHQL_*` forwarding rule.
+
 ### Setting Up Google Login
 
 1. Create OAuth 2.0 credentials in the [Google Cloud Console](https://console.cloud.google.com/)

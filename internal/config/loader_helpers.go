@@ -22,14 +22,29 @@ import (
 )
 
 // collectPassthrough scans the full environment for dynamic env vars matching
-// known prefixes (AUTH_PROVIDER_*, REMOTE_SCHEMA_*, HASURA_EXTRA_*) and returns
-// them as a key-value map. These variables cannot be predefined in structs
-// because users add them dynamically for OAuth providers, remote schemas, etc.
+// known prefixes (AUTH_*, REMOTE_SCHEMA_*, HASURA_EXTRA_*, HASURA_GRAPHQL_*)
+// and returns them as a key-value map. These variables cannot be predefined in
+// structs because users add them dynamically for OAuth providers, remote
+// schemas, etc.
+//
+// HASURA_GRAPHQL_* and AUTH_* are namespace-wide prefixes (not single vars):
+// loader_known_vars_core.go recognizes a superset of Hasura/Auth engine
+// tuning vars (HASURA_GRAPHQL_ENABLE_ALLOWLIST, HASURA_GRAPHQL_NODE_LIMIT,
+// AUTH_ANONYMOUS_USERS_ENABLED, etc.) purely to suppress "unknown env var"
+// warnings, but buildHasuraService/buildAuthService only ever wrote a curated
+// subset into the generated compose env — every other var in Hasura's/Auth's
+// own namespace was silently dropped at `nself build` time even though it was
+// present in .env (found live: HASURA_GRAPHQL_ENABLE_ALLOWLIST never reached
+// the container). Capturing the full namespace here and merging it
+// additively in the compose builders (existing curated keys always win) is
+// safe because these are Hasura's/hasura-auth's own env vars — forwarding
+// them through is exactly what the operator asked for by setting them.
 func collectPassthrough(environ []string) map[string]string {
 	prefixes := []string{
-		"AUTH_PROVIDER_",
+		"AUTH_",
 		"REMOTE_SCHEMA_",
 		"HASURA_EXTRA_",
+		"HASURA_GRAPHQL_",
 	}
 	result := make(map[string]string)
 	for _, env := range environ {
