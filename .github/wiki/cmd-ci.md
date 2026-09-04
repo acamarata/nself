@@ -89,6 +89,7 @@ is why `nself ci` could not be used as a required status check.
 <!-- BEGIN GENERATED:subcommands -->
 | Name | Description |
 |------|-------------|
+| `build` | Build a signed release artifact locally (Android only) |
 | `eval` | Run eval-gate suite or validate an eval-set YAML |
 | `forgejo` | Show Forgejo server + runner health (ops profile) |
 | `serve` | Start the nself-ci webhook listener daemon (port 3845) |
