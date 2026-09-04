@@ -79,3 +79,85 @@ func TestServiceRoute_EmitsTrustedChainWhenPresent(t *testing.T) {
 		t.Error("chain.pem exists but stapling was not enabled")
 	}
 }
+
+// TestGenerate_RealBuildPathEmitsTrustedChainWhenPresent is the regression
+// guard for a live-path gap found 2026-09-03 verifying P6-E11-W2-S1-T2:
+// TestServiceRoute_EmitsTrustedChainWhenPresent above proves RenderServiceRoute
+// sets HasTrustedChain correctly, but `nself build` never calls
+// RenderServiceRoute directly — it calls Generate(), which calls
+// generateAllRoutes(), which builds every nginx/sites/*.conf via its own
+// propagation loop. That loop set HasSSL and UpstreamName on each route's
+// data but never HasTrustedChain, so every route kept the Go zero value
+// (false) regardless of whether a real chain.pem was on disk: a genuine CA
+// chain (e.g. Let's Encrypt) placed in ssl/certificates/<dir>/chain.pem was
+// silently never reflected in any file `nself build` actually writes. This
+// test drives the real Generate() entrypoint, not RenderServiceRoute, so it
+// would have caught the gap the isolated unit test above could not.
+func TestGenerate_RealBuildPathEmitsTrustedChainWhenPresent(t *testing.T) {
+	dir := t.TempDir()
+	certDir := filepath.Join(dir, "ssl", "certificates", "local-nself-org")
+	if err := os.MkdirAll(certDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(certDir, "chain.pem"), []byte("-----BEGIN CERTIFICATE-----\n"), 0o600); err != nil {
+		t.Fatalf("write chain.pem: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(certDir, "fullchain.pem"), []byte("-----BEGIN CERTIFICATE-----\n"), 0o600); err != nil {
+		t.Fatalf("write fullchain.pem: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(certDir, "privkey.pem"), []byte("-----BEGIN PRIVATE KEY-----\n"), 0o600); err != nil {
+		t.Fatalf("write privkey.pem: %v", err)
+	}
+
+	g := newLocalSSLGenerator(t, dir)
+	files, err := g.Generate()
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	hasura, ok := files["nginx/sites/hasura.conf"]
+	if !ok {
+		t.Fatal("Generate did not produce nginx/sites/hasura.conf (core route)")
+	}
+	if !strings.Contains(hasura, "ssl_trusted_certificate") {
+		t.Error("real Generate() build path: chain.pem exists on disk but " +
+			"nginx/sites/hasura.conf has no ssl_trusted_certificate — " +
+			"generateAllRoutes() is not propagating HasTrustedChain")
+	}
+	if !strings.Contains(hasura, "ssl_stapling on") {
+		t.Error("real Generate() build path: chain.pem exists but stapling was not enabled in hasura.conf")
+	}
+}
+
+// TestGenerate_RealBuildPathOmitsTrustedChainWhenMissing is the companion
+// no-chain case for the same real Generate() path, guarding against a fix to
+// the present-case regressing the already-fixed absent-case (nginx must
+// never be pointed at a chain.pem that does not exist).
+func TestGenerate_RealBuildPathOmitsTrustedChainWhenMissing(t *testing.T) {
+	dir := t.TempDir()
+	certDir := filepath.Join(dir, "ssl", "certificates", "local-nself-org")
+	if err := os.MkdirAll(certDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(certDir, "fullchain.pem"), []byte("-----BEGIN CERTIFICATE-----\n"), 0o600); err != nil {
+		t.Fatalf("write fullchain.pem: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(certDir, "privkey.pem"), []byte("-----BEGIN PRIVATE KEY-----\n"), 0o600); err != nil {
+		t.Fatalf("write privkey.pem: %v", err)
+	}
+
+	g := newLocalSSLGenerator(t, dir)
+	files, err := g.Generate()
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	hasura, ok := files["nginx/sites/hasura.conf"]
+	if !ok {
+		t.Fatal("Generate did not produce nginx/sites/hasura.conf (core route)")
+	}
+	if strings.Contains(hasura, "ssl_trusted_certificate") {
+		t.Error("real Generate() build path: no chain.pem on disk but " +
+			"nginx/sites/hasura.conf emitted ssl_trusted_certificate — nginx will refuse to start")
+	}
+}

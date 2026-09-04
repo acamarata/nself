@@ -82,8 +82,22 @@ func (g *Generator) generateAllRoutes() (map[string]string, error) {
 
 	// Propagate HasSSL to every route entry so templates can conditionally
 	// omit ssl_certificate directives when certs are not locally managed.
+	//
+	// HasTrustedChain must be computed here too: this loop (not
+	// RenderServiceRoute) is the code path `nself build` actually uses to
+	// render every nginx/sites/*.conf file. RenderServiceRoute sets it on its
+	// own ServiceRouteData and is exercised by generator_chain_test.go's
+	// TestServiceRoute_EmitsTrustedChainWhenPresent, but that test — and
+	// every other caller of RenderServiceRoute — never runs through
+	// generateAllRoutes(), so a real chain.pem placed on disk was silently
+	// never reflected in the routes this command actually writes: every
+	// entry kept HasTrustedChain at its Go zero value (false), so
+	// ssl_trusted_certificate/OCSP stapling never activated even with a
+	// genuine CA chain (Let's Encrypt, etc.) present. Found live 2026-09-03
+	// verifying P6-E11-W2-S1-T2 (chain.pem end-to-end fixture test).
 	for i := range allEntries {
 		allEntries[i].data.HasSSL = g.hasSSL
+		allEntries[i].data.HasTrustedChain = g.hasTrustedChain(allEntries[i].data.SSLDir)
 		allEntries[i].data.UpstreamName = upstreamName(allEntries[i].data.Route)
 	}
 
