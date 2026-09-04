@@ -132,9 +132,11 @@ func init() {
 	pluginListCmd.Flags().Bool("detailed", false, "Show detailed information")
 	pluginListCmd.Flags().String("category", "", "Filter by category")
 	pluginListCmd.Flags().Bool("show-eol", false, "Include EOL plugins in listing (hidden by default)") // S58-T03
+	pluginListCmd.Flags().Bool("available", false, "List every registry tier of a slug served twice (free+pro pairs), marking the resolved default")
 
 	// Flags on install.
 	pluginInstallCmd.Flags().String("key", "", "License key for pro plugins")
+	pluginInstallCmd.Flags().String("tier", "", `Force "free" or "pro" for a slug served as both (e.g. cron, notify); default resolves by license entitlement`)
 	pluginInstallCmd.Flags().String("version", "", "Install a specific version")
 	pluginInstallCmd.Flags().Bool("force", false, "Required when using NSELF_LICENSE_SKIP_VERIFY; explicit acknowledgment of skipped validation")
 	pluginInstallCmd.Flags().Bool("allow-eol", false, "Allow installing an EOL plugin (not recommended)") // S58-T03

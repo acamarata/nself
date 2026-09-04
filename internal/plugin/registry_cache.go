@@ -115,6 +115,8 @@ func (r Registry) MarshalJSON() ([]byte, error) {
 			Tags:            p.Tags,
 			Tables:          p.Tables,
 			Port:            p.Port,
+			TierPair:        p.TierPair,
+			Bundles:         p.Bundles,
 			Dependencies:    rawDeps,
 			APIEndpoints:    rawEPs,
 			Compat:          p.Compat,

@@ -50,6 +50,18 @@ The event body contains one field: `instanceId`, which is an opaque SHA-256 hash
 
 To opt out, set `NSELF_DISABLE_TELEMETRY=1` in your environment or `.env.local`.
 
+## A slug served as both free and pro
+
+A small number of plugins (`cron`, `notify`) ship as a genuine free/pro pair: the same product, listed twice in the registry under one slug. `nself plugin install cron` resolves which entry to install like this:
+
+- If your license entitles the bundle the pro entry belongs to (checked via the same bundle-entitlement path `nself bundle install` uses), you get **pro**.
+- Otherwise, or with no license key configured, you get **free**. Free never requires a key.
+- Pass `--tier free` or `--tier pro` to force a side. `--tier free` always succeeds. `--tier pro` still runs the entitlement check — it is a way to *ask* for pro, not a way to bypass licensing — and fails with a clear "buy the bundle" error if you're not entitled.
+
+Run `nself plugin list --available` to see every tier of every such slug side by side, with the tier a plain `nself plugin install <name>` would resolve to today marked in the `Default` column.
+
+Any *other* slug collision — two unrelated registry entries that happen to share a name, not a declared tier pair — is refused outright with an error naming both entries. The CLI never silently installs "whichever one came first" for an ambiguous slug.
+
 ## Official by name, third-party by URL
 
 `nself plugin install <name>` resolves against the official plugins.nself.org registry: license-checked for pro tiers, and its tarball is Ed25519-signature-verified against a registry-pinned author key.
@@ -185,6 +197,16 @@ nself plugin install livekit --key nself_pro_xxxxx...
 
 # Install a specific version
 nself plugin install recording --version 1.2.0
+
+# See both tiers of a slug served twice (e.g. cron: free + pro), with the
+# resolved default marked
+nself plugin list --available
+
+# Force the free entry of a free/pro slug, ignoring entitlement
+nself plugin install cron --tier free
+
+# Ask for the pro entry explicitly (still requires an entitled license)
+nself plugin install cron --tier pro
 
 # Remove a plugin
 nself plugin remove ai
