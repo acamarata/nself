@@ -10,12 +10,15 @@ package commands
 // (T-P6-E2-W1-S1-T3), superseding the prior CLI-R12 "cannot be split" note.
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/hasura"
 	"github.com/nself-org/cli/internal/maintenance"
 	"github.com/nself-org/cli/internal/ui"
 
@@ -142,6 +145,9 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 			if restartErr != nil {
 				return finalize(jsonOut, target, strategy, start, steps, restartErr)
 			}
+			if metaErr := applyLocalHasuraMetadataAfterDeploy(cmd.Context(), workdir, jsonOut); metaErr != nil {
+				return finalize(jsonOut, target, strategy, start, steps, metaErr)
+			}
 		}
 
 	case "staging", "prod":
@@ -190,6 +196,9 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 			steps = append(steps, restartSteps...)
 			if restartErr != nil {
 				return finalize(jsonOut, target, strategy, start, steps, restartErr)
+			}
+			if metaErr := applyLocalHasuraMetadataAfterDeploy(cmd.Context(), workdir, jsonOut); metaErr != nil {
+				return finalize(jsonOut, target, strategy, start, steps, metaErr)
 			}
 		}
 
@@ -266,4 +275,21 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// applyLocalHasuraMetadataAfterDeploy applies hasura/metadata/ (if present)
+// against the Hasura instance the rolling restart just brought up on THIS
+// host — used by the "local" target and the "no host configured" staging/prod
+// fallback (both cases run entirely on the current machine, so a plain
+// config.Load + local API call is correct; the remote-host case is handled
+// separately, over SSH, at the end of remoteDeployPush in deploy_remote.go).
+func applyLocalHasuraMetadataAfterDeploy(ctx context.Context, workdir string, jsonOut bool) error {
+	cfg, err := config.Load(workdir)
+	if err != nil {
+		return fmt.Errorf("hasura metadata apply: loading config: %w", err)
+	}
+	if !jsonOut {
+		fmt.Println("  [running] hasura metadata apply")
+	}
+	return hasura.ApplyIfPresent(ctx, cfg, workdir)
 }

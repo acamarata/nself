@@ -94,7 +94,7 @@ tree in `cmd/commands/`. Run `make cmd-inventory` to refresh.
 ## Complete index
 
 Generated from the cobra registration tree in `cmd/commands/`.
-Run `make cmd-inventory` to refresh. **Total top-level commands: 50**
+Run `make cmd-inventory` to refresh. **Total top-level commands: 51**
 
 | Command | Short Description | Group | Subcommands |
 |---|---|---|---|
@@ -116,6 +116,7 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 50**
 | `nself exec` | Execute a command inside a service container | core | — |
 | `nself functions` | Manage serverless functions | data | delete, deploy, invoke, list, logs |
 | `nself generate` | Generate type-safe client SDK types from the live Hasura schema | config | — |
+| `nself hasura` | Hasura metadata operations (alias for 'nself db hasura') | — | diff, metadata |
 | `nself health` | Health check management with continuous monitoring | observe | check, config, endpoint, history, service, watch |
 | `nself help-topics` | Browse help topics (quickstart, plugins, license, envs, doctor, errors) | account | — |
 | `nself init` | Initialize a new nSelf project | core | — |

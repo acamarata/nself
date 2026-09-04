@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/hasura"
 	"github.com/nself-org/cli/internal/health"
 	"github.com/nself-org/cli/internal/lifecycle"
 	"github.com/nself-org/cli/internal/migration"
@@ -227,6 +228,16 @@ func runStart(cmd *cobra.Command, _ []string) error {
 
 		report := runHealthCheckLoop(ctx, cfg, projectDir, opts.timeout, requiredPct, opts.verbose)
 		_ = report // Final report used inline by the loop for display.
+	}
+
+	// ── Hasura metadata apply (FIX-CLI-3) ─────────────────────────────
+	// Skipped for --skip-db-init (CI/E2E mode): the test suite manages
+	// schema/metadata state itself, matching the migrations/seed skip above.
+	if !opts.skipDBInit {
+		if err := hasura.ApplyIfPresent(ctx, cfg, projectDir); err != nil {
+			startErr = err
+			return startErr
+		}
 	}
 
 	// ── MeiliSearch index warm-up ────────────────────────────────────

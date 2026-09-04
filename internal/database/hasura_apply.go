@@ -148,6 +148,9 @@ func applyViaIncludeResolver(ctx context.Context, cfg *config.Config, metadataDi
 	if err := yaml.Unmarshal(resolved, &doc); err != nil {
 		return fmt.Errorf("parse resolved metadata YAML: %w", err)
 	}
+	if err := validateNoListWrappedEntries(doc); err != nil {
+		return err
+	}
 	jsonBytes, err := json.Marshal(convertYAMLToJSON(doc))
 	if err != nil {
 		return fmt.Errorf("encode metadata as JSON: %w", err)
@@ -206,6 +209,40 @@ func resolveIncludes(baseDir, filePath string) ([]byte, error) {
 	}
 
 	return []byte(out.String()), nil
+}
+
+// hasuraArraySections are the top-level metadata.yaml/tables.yaml keys whose
+// value must be an array of single-object mappings, one per !include'd file.
+// This is the exact shape the historical incident (43/48 !include'd table
+// files list-wrapped since a9eb61bf, found 2026-09-03) violated: each
+// included file was itself `- table: ...` (a one-element list) instead of a
+// bare `table: ...` mapping, silently nesting a list inside the array.
+var hasuraArraySections = []string{"tables", "actions", "remote_schemas", "cron_triggers", "query_collections", "rest_endpoints"}
+
+// validateNoListWrappedEntries walks the known metadata array sections and
+// returns a clear, actionable error the first time an entry is itself a list
+// rather than a single mapping — instead of letting the malformed shape
+// reach the Hasura API as an opaque 400.
+func validateNoListWrappedEntries(doc interface{}) error {
+	root, ok := doc.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	for _, section := range hasuraArraySections {
+		items, ok := root[section].([]interface{})
+		if !ok {
+			continue
+		}
+		for i, item := range items {
+			if _, isList := item.([]interface{}); isList {
+				return fmt.Errorf(
+					"hasura metadata: %s[%d] is a YAML list, not an object — the !include'd file is "+
+						"list-wrapped (starts with \"- \" instead of a bare mapping); unwrap it to a single object",
+					section, i)
+			}
+		}
+	}
+	return nil
 }
 
 // convertYAMLToJSON recursively converts a yaml.v3-decoded value (which uses

@@ -152,6 +152,27 @@ func remoteDeployPush(ctx context.Context, workdir, host, target string, jsonOut
 	if out, err := rc.CombinedOutput(); err != nil {
 		return fmt.Errorf("rsync to %s failed: %w\n%s", sshTarget, err, strings.TrimSpace(string(out)))
 	}
+
+	// FIX-CLI-3: sync hasura/ (metadata YAML tree) if the project has one, so
+	// the remote 'nself db hasura metadata apply' invoked below has something
+	// to apply. Best-effort: a project with no hasura/ dir simply skips this —
+	// matches ApplyIfPresent's clean-skip behavior in the local start path.
+	if info, statErr := os.Stat(filepath.Join(workdir, "hasura")); statErr == nil && info.IsDir() {
+		if !jsonOut {
+			fmt.Printf("  [running] rsync hasura/ metadata to %s:%s\n", sshTarget, remotePath)
+		}
+		hasuraRsync := exec.CommandContext(ctx, "rsync",
+			"-az", "--delete",
+			"-e", fmt.Sprintf("ssh -i %s -o StrictHostKeyChecking=accept-new -o ForwardAgent=no", sshKey),
+			"hasura/",
+			fmt.Sprintf("%s:%s/hasura/", sshTarget, remotePath),
+		)
+		hasuraRsync.Dir = workdir
+		hasuraRsync.Env = os.Environ()
+		if out, err := hasuraRsync.CombinedOutput(); err != nil {
+			return fmt.Errorf("rsync hasura/ to %s failed: %w\n%s", sshTarget, err, strings.TrimSpace(string(out)))
+		}
+	}
 	// Rename the pushed snapshot to the expected .env.<target> name on the
 	// remote (rsync above pushes it under its resolvedEnvPath basename).
 	renameCmd := fmt.Sprintf("cd %s && mv %s .env.%s", remotePath, filepath.Base(resolvedEnvPath), target)
@@ -221,6 +242,39 @@ func remoteDeployPush(ctx context.Context, workdir, host, target string, jsonOut
 			return fmt.Errorf("remote rolling restart of %s failed: %w\n%s\nRun 'nself logs %s' on the remote host for details", svc, err, strings.TrimSpace(string(out)), svc)
 		}
 	}
+
+	// FIX-CLI-3: apply Hasura metadata on the remote once hasura is back up.
+	// Re-invokes the remote box's own 'nself db hasura metadata apply' (which
+	// cleanly no-ops when hasura/ isn't present) rather than speaking the
+	// Hasura HTTP API over the tunnel — same "SSH in, run the same
+	// subcommand" pattern as runRemoteNselfCommand (db_remote.go). A short
+	// retry loop absorbs the gap between "container up" (no health gate on
+	// this remote path, unlike the local rolling restart) and "API ready".
+	applyCmd := fmt.Sprintf("cd %s && for i in 1 2 3 4 5; do nself db hasura metadata apply && exit 0; sleep 3; done; exit 1", remotePath)
+	if !jsonOut {
+		fmt.Printf("  [running] hasura metadata apply on %s\n", sshTarget)
+	}
+	ac := exec.CommandContext(ctx, "ssh",
+		"-i", sshKey,
+		"-o", "StrictHostKeyChecking=accept-new",
+		"-o", "ForwardAgent=no",
+		sshTarget, applyCmd)
+	ac.Env = os.Environ()
+	if out, err := ac.CombinedOutput(); err != nil {
+		// Mirrors hasura.IsStrict's default (strict in staging/prod, warn in
+		// dev/local) — this path has no *config.Config to read cfg.Env from,
+		// so it keys off the deploy target string directly instead.
+		strict := target == "staging" || target == "prod"
+		if raw := os.Getenv("NSELF_HASURA_METADATA_STRICT"); raw != "" {
+			strict = raw == "true"
+		}
+		msg := fmt.Sprintf("remote hasura metadata apply failed: %v\n%s", err, strings.TrimSpace(string(out)))
+		if strict {
+			return fmt.Errorf("%s", msg)
+		}
+		fmt.Printf("  [warn] %s (non-fatal; set NSELF_HASURA_METADATA_STRICT=true to fail deploys on this)\n", msg)
+	}
+
 	return nil
 }
 
