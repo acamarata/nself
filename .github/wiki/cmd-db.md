@@ -247,10 +247,19 @@ nself db hasura validate
 ## Examples
 
 <!-- BEGIN PROSE:examples -->
-<!-- TODO(docs): needs human prose -->
-
 ```bash
-nself db
+# Apply all pending migrations
+nself db migrate up
+
+# Open an interactive psql shell inside the Postgres container
+nself db shell
+
+# Audit RLS policies and schema for tenant-scoped tables
+nself db lint
+
+# Take a local backup, then check migration status
+nself db backup
+nself db migrate status
 ```
 <!-- END PROSE:examples -->
 

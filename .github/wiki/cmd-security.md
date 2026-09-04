@@ -87,10 +87,18 @@ Security: 5/6 checks passing | Last audit: 2 hours ago
 ## Examples
 
 <!-- BEGIN PROSE:examples -->
-<!-- TODO(docs): needs human prose -->
-
 ```bash
-nself security
+# Run a read-only security audit
+nself security audit
+
+# Preview hardening changes without applying them
+nself security setup
+
+# Apply hardening for real (requires root)
+sudo nself security setup --apply
+
+# One-line posture summary
+nself security status
 ```
 <!-- END PROSE:examples -->
 

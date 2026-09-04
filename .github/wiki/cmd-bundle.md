@@ -223,10 +223,18 @@ Buy or manage subscriptions at: https://nself.org/pricing
 ## Examples
 
 <!-- BEGIN PROSE:examples -->
-<!-- TODO(docs): needs human prose -->
-
 ```bash
-nself bundle
+# List all available bundles with pricing and plugin counts
+nself bundle list
+
+# See what's in the ɳClaw bundle and your current license status
+nself bundle info nclaw
+
+# Install every plugin in a bundle in one transaction
+nself bundle install nclaw
+
+# Preview a bundle removal without changing anything
+nself bundle remove ntv --dry-run
 ```
 <!-- END PROSE:examples -->
 

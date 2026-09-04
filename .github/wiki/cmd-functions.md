@@ -105,10 +105,18 @@ Resource limits are controlled by `FUNCTIONS_MEMORY` (default `256M`) and `FUNCT
 ## Examples
 
 <!-- BEGIN PROSE:examples -->
-<!-- TODO(docs): needs human prose -->
-
 ```bash
-nself functions
+# Deploy a function from a single file
+nself functions deploy hello-world.ts
+
+# List deployed functions and their health status
+nself functions list
+
+# Invoke a function with a JSON payload
+nself functions invoke hello-world --payload '{"name":"Alice"}'
+
+# Follow logs for a running function
+nself functions logs hello-world --follow
 ```
 <!-- END PROSE:examples -->
 

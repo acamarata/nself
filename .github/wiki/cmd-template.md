@@ -210,10 +210,18 @@ nself template update --force
 ## Examples
 
 <!-- BEGIN PROSE:examples -->
-<!-- TODO(docs): needs human prose -->
-
 ```bash
-nself template
+# Browse available templates
+nself template list
+
+# Filter to free templates, sorted by rating
+nself template list --free --sort rating
+
+# Inspect one template before installing
+nself template info saas-starter
+
+# Scaffold a new project from a marketplace template
+nself init --template saas-starter ./my-saas
 ```
 <!-- END PROSE:examples -->
 
