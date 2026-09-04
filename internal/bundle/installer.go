@@ -90,7 +90,7 @@ func Install(ctx context.Context, bundleSlug string, opts InstallOpts) (*Install
 		return nil, UnknownBundleError(bundleSlug)
 	}
 	if !b.IsInstallable() {
-		return nil, fmt.Errorf("bundle %q is not installable as a unit (meta or free)", b.Slug)
+		return nil, notInstallableError(b)
 	}
 
 	result := &InstallResult{
