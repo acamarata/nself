@@ -164,7 +164,7 @@ Up to 20 internal routes are supported (N = 1 through 20).
 |----------|-------------|
 | `INTERNAL_ROUTE_N_NAME` | Human-readable identifier for the route (used in generated config comments) |
 | `INTERNAL_ROUTE_N_SUBDOMAIN` | Subdomain prefix under `BASE_DOMAIN` that Nginx will route to this upstream |
-| `INTERNAL_ROUTE_N_TARGET` | Upstream target in `host:port` format (e.g., `myservice:3000`, `hasura:8080`) |
+| `INTERNAL_ROUTE_N_TARGET` | Upstream target as a full URL, including the scheme (e.g., `http://myservice:3000`, `http://hasura:8080`). A bare `host:port` is rejected by `nself build`. |
 
 Example, route `metrics.myproject.example.com` to a Grafana container on port 3000:
 
@@ -172,7 +172,7 @@ Example, route `metrics.myproject.example.com` to a Grafana container on port 30
 # .env.dev
 INTERNAL_ROUTE_1_NAME=grafana
 INTERNAL_ROUTE_1_SUBDOMAIN=metrics
-INTERNAL_ROUTE_1_TARGET=grafana:3000
+INTERNAL_ROUTE_1_TARGET=http://grafana:3000
 ```
 
 After running `nself build`, Nginx will proxy all traffic for `metrics.{BASE_DOMAIN}` to the `grafana` container on port 3000. SSL is applied automatically based on the configured `SSL_MODE`.
