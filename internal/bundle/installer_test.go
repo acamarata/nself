@@ -38,6 +38,39 @@ func TestInstall_MetaBundleNotInstallable(t *testing.T) {
 	if !strings.Contains(err.Error(), "not installable") {
 		t.Errorf("error %v missing 'not installable'", err)
 	}
+	if !strings.Contains(err.Error(), "nself bundle install claw") {
+		t.Errorf("error %v should point at a paid bundle to install instead, got: %v", err, err)
+	}
+}
+
+// TestInstall_TaskBundleNotInstallable_ListsPerPluginCommands proves the free
+// Task Bundle's refusal is actionable: design-confirmed (Ruling 2 +
+// P6-E4-W3-S3-T10 — free bundles install their plugins individually, not as
+// a unit), the error must name the exact `nself plugin install <name>`
+// command for every plugin in bundles.json's task.plugins list rather than a
+// bare "not installable" dead end.
+func TestInstall_TaskBundleNotInstallable_ListsPerPluginCommands(t *testing.T) {
+	ctx := context.Background()
+	_, err := Install(ctx, "task", InstallOpts{DryRun: true, Out: &bytes.Buffer{}})
+	if err == nil {
+		t.Fatal("expected error: task is not installable as a unit")
+	}
+	if !strings.Contains(err.Error(), "not installable") {
+		t.Errorf("error %v missing 'not installable'", err)
+	}
+	taskBundle, ok := Get("task")
+	if !ok {
+		t.Fatal("fixture missing task bundle")
+	}
+	if len(taskBundle.Plugins) == 0 {
+		t.Fatal("fixture task bundle has no plugins to assert against")
+	}
+	for _, p := range taskBundle.Plugins {
+		want := "nself plugin install " + p
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error missing per-plugin command %q; got: %v", want, err)
+		}
+	}
 }
 
 func TestInstall_DryRunWithMockedRegistry(t *testing.T) {
