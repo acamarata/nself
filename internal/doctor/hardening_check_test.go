@@ -290,6 +290,142 @@ func TestCheckHardeningNginxRateZones_RealGeneratorOutputPasses(t *testing.T) {
 	}
 }
 
+// TestCheckHardeningNginxRateZones_ServiceIdentity is the cli#379
+// regression: detect rate limiting by server_name/service identity, not
+// just the literal /auth/login and /api/ path substrings, while keeping
+// the literal-path match as a fallback and never weakening the check
+// (no limit_req anywhere must still fail; a limit_req in an unrelated
+// server block must still fail).
+func TestCheckHardeningNginxRateZones_ServiceIdentity(t *testing.T) {
+	tests := []struct {
+		name       string
+		files      map[string]string
+		wantStatus string
+	}{
+		{
+			// The exact shape cli#379 reported: one server{} block per
+			// service, named by server_name, with limit_req only inside
+			// the server-wide `location /` — no literal /auth/login or
+			// /api/ path anywhere. Pre-fix this always failed.
+			name: "generated-shape config: server_name-per-service, limit_req in location /",
+			files: map[string]string{
+				"auth.conf": `
+server {
+    listen 443 ssl;
+    server_name auth.staging.nself.org;
+    location / {
+        limit_req zone=auth burst=5 nodelay;
+        set $up_auth auth:4000;
+        proxy_pass $up_auth;
+    }
+}
+`,
+				"hasura.conf": `
+server {
+    listen 443 ssl;
+    server_name api.staging.nself.org;
+    location / {
+        limit_req zone=graphql_api burst=20 nodelay;
+        set $up_hasura hasura:8080;
+        proxy_pass $up_hasura;
+    }
+}
+`,
+			},
+			wantStatus: "pass",
+		},
+		{
+			// Hand-written gateway that routes by literal path instead of
+			// by server_name — the original detection signal, kept as a
+			// fallback and must keep passing.
+			name: "literal-path legacy gateway config",
+			files: map[string]string{
+				"gateway.conf": `
+limit_req_zone $binary_remote_addr zone=auth_login:10m rate=5r/m;
+location /auth/login { limit_req zone=auth_login; }
+limit_req_zone $binary_remote_addr zone=api:10m rate=30r/s;
+location /api/ { limit_req zone=api; }
+`,
+			},
+			wantStatus: "pass",
+		},
+		{
+			name: "no limit_req anywhere",
+			files: map[string]string{
+				"default.conf": "server {\n    listen 80;\n    server_name example.com;\n    location / { proxy_pass http://app:3000; }\n}\n",
+			},
+			wantStatus: "fail",
+		},
+		{
+			// limit_req exists, but only inside a server block whose
+			// server_name identifies neither the auth nor the API
+			// service, and no literal path fallback applies. Must not be
+			// misread as satisfying either half.
+			name: "limit_req only in an unrelated server block",
+			files: map[string]string{
+				"static.conf": `
+server {
+    listen 443 ssl;
+    server_name static.staging.nself.org;
+    location / {
+        limit_req zone=static burst=10 nodelay;
+        set $up_static frontend:3000;
+        proxy_pass $up_static;
+    }
+}
+`,
+			},
+			wantStatus: "fail",
+		},
+		{
+			// Auth half satisfied by identity, API half present but not
+			// actually rate-limited — must land on warn, not pass.
+			name: "auth satisfied by identity, api block present but unlimited",
+			files: map[string]string{
+				"auth.conf": `
+server {
+    server_name auth.staging.nself.org;
+    location / {
+        limit_req zone=auth burst=5 nodelay;
+        proxy_pass http://auth:4000;
+    }
+}
+`,
+				"hasura.conf": `
+server {
+    server_name api.staging.nself.org;
+    location / {
+        proxy_pass http://hasura:8080;
+    }
+}
+`,
+			},
+			wantStatus: "warn",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			confDir := filepath.Join(dir, "nginx", "sites")
+			if err := os.MkdirAll(confDir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			for fname, content := range tt.files {
+				if err := os.WriteFile(filepath.Join(confDir, fname), []byte(content), 0o644); err != nil {
+					t.Fatalf("write %s: %v", fname, err)
+				}
+			}
+
+			ctx := context.Background()
+			res := checkHardeningNginxRateZones(ctx, dir)
+			if res.Status != tt.wantStatus {
+				t.Errorf("status=%q, want %q; msg=%s", res.Status, tt.wantStatus, res.Message)
+			}
+		})
+	}
+}
+
 // ─── SEC-HARDENING-08: Encryption at rest ───────────────────────────────────
 
 func TestCheckHardeningEncryptionAtRest_EnvSet(t *testing.T) {
