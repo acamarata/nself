@@ -44,7 +44,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/health"
 )
 
@@ -179,76 +178,21 @@ func scanNginxContentForRateZones(content string) (authZone, apiZone bool) {
 	return authZone, apiZone
 }
 
-// resolveNginxFrontedDir resolves the on-disk nginx directory for a project
-// fronted by another stack (NGINX_FRONTED_BY — see config.NginxConfig.FrontedBy).
-//
-// FrontedBy carries only a stack NAME (e.g. "nself-web"), never a path, and
-// none of the codebase's other three consumers of it
-// (internal/build/detection.go, internal/build/manifest_resolve.go,
-// internal/compose/generator.go) resolve that name to a filesystem
-// location — all three only test it for emptiness, to decide whether to
-// generate this project's own nginx service. There is no config-driven
-// convention anywhere in this CLI for turning a stack name into a directory
-// in the general case, so this function does not attempt one.
-//
-// The one topology it trusts is the one that caused the regression this
-// check exists to catch (cli#380/cli#371 on staging): this project living
-// as a subdirectory (conventionally "backend") directly under the fronting
-// stack's own directory, whose basename equals FrontedBy — e.g. projectDir
-// ".../nself-web/backend" with FrontedBy "nself-web" resolves to
-// ".../nself-web/nginx". That is a structural inference from the directory
-// layout the operator already chose, not a second FrontedBy-to-path
-// convention grafted onto config. When the parent directory's name does
-// not match, this function returns ok=false — the caller must not guess
-// further and silently audit the wrong directory.
-func resolveNginxFrontedDir(projectDir, frontedBy string) (dir string, ok bool) {
-	parent := filepath.Dir(projectDir)
-	if parent == projectDir || filepath.Base(parent) != frontedBy {
-		return "", false
-	}
-	return parent, true
-}
-
 // checkHardeningNginxRateZones verifies nginx has limit_req_zone + limit_req
 // directives covering the auth and API surfaces, first by scanning local
 // config files, then by grepping inside the running nginx container as a
 // fallback. See the file-level doc comment for the two detection signals.
 //
-// Fronted deployments (cli#380/cli#371 staging regression): when
-// NGINX_FRONTED_BY names another stack as this project's ingress, this
-// project's own <projectDir>/nginx/** is not what the running nginx reads
-// — the fronting stack's nginx directory is, and this project generates no
-// nginx container of its own to fall back to (internal/build/detection.go).
-// Auditing <projectDir>/nginx/** unconditionally let SEC-HARDENING-06 pass
-// or fail off a directory nginx never serves from. See
-// resolveNginxFrontedDir for how (and how far) this resolves the real
-// directory; when it cannot, this check reports "skip" with a reason
-// instead of silently auditing (and passing) the wrong path.
+// Fronted deployments (cli#380/cli#371) need a different directory than
+// <projectDir>/nginx/** — see planNginxAudit (hardening_check_nginx_fronted_dir.go).
 func checkHardeningNginxRateZones(ctx context.Context, projectDir string) CheckResult {
 	const checkID = "SEC-HARDENING-06"
 
-	// auditDir is the directory whose nginx/** this check actually reads.
-	// Defaults to projectDir (today's unfronted behavior); resolved to the
-	// fronting stack's directory below when NGINX_FRONTED_BY is set and
-	// resolvable. skipDockerFallback disables the this-project container
-	// exec fallback for fronted projects, which never have an nginx
-	// container of their own to exec into (internal/build/detection.go).
-	auditDir := projectDir
-	skipDockerFallback := false
-
-	if cfg, err := config.Load(projectDir); err == nil && cfg.Nginx.FrontedBy != "" {
-		skipDockerFallback = true
-		resolved, ok := resolveNginxFrontedDir(projectDir, cfg.Nginx.FrontedBy)
-		if !ok {
-			return CheckResult{
-				Section: hardeningSection,
-				Name:    checkID,
-				Status:  "skip",
-				Message: fmt.Sprintf("SEC-HARDENING-06: skipped — audited nothing. Project is fronted by nginx stack %q (NGINX_FRONTED_BY) but its nginx directory could not be resolved from %q; %s's own nginx config was not scanned here and must be audited directly for rate-limit zones", cfg.Nginx.FrontedBy, projectDir, cfg.Nginx.FrontedBy),
-			}
-		}
-		auditDir = resolved
+	plan := planNginxAudit(projectDir)
+	if plan.skip != nil {
+		return *plan.skip
 	}
+	auditDir := plan.auditDir
 
 	// Search <auditDir>/nginx/conf.d/, /sites/ and /nginx.conf for
 	// limit_req_zone + limit_req directives covering the auth and API
@@ -302,7 +246,7 @@ func checkHardeningNginxRateZones(ctx context.Context, projectDir string) CheckR
 	// Skipped for fronted projects — they generate no nginx container of
 	// their own to exec into (internal/build/detection.go), so this would
 	// only ever exec into a nonexistent or unrelated container.
-	if !skipDockerFallback && (!hasAuthZone || !hasAPIZone) {
+	if !plan.skipDockerFallback && (!hasAuthZone || !hasAPIZone) {
 		nginxContainer := health.ContainerName(resolveProjectName(projectDir), "nginx")
 		cmd := exec.CommandContext(ctx, "docker", "exec", nginxContainer,
 			"sh", "-c", "cat /etc/nginx/nginx.conf /etc/nginx/conf.d/* /etc/nginx/sites/* 2>/dev/null")
