@@ -2,30 +2,91 @@ package build
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	"github.com/nself-org/cli/internal/config"
 )
 
-// checkPluginRouteConflict checks if a plugin's nginx route config conflicts
-// with an existing config in the sites directory or a core service route.
-func checkPluginRouteConflict(workdir string, pluginName string, destName string) error {
-	sitesDir := filepath.Join(workdir, "nginx", "sites")
+// claimsOf returns the set of "<port>|<server_name>" claims a rendered
+// nginx config makes, using the shared block parser in
+// nginx_server_blocks.go. Keying on port as well as name matches nginx's
+// own conflict rule: the same name served on :80 by one file and :443 by
+// another is a legitimate split, not a conflict.
+func claimsOf(content string) map[string]bool {
+	claims := make(map[string]bool)
+	for _, block := range parseServerBlocks(content) {
+		ports := block.Ports
+		if len(ports) == 0 {
+			ports = []string{defaultListenPort}
+		}
+		for _, name := range block.ServerNames {
+			if name == "_" {
+				continue // the catch-all default server, intentionally shared
+			}
+			for _, port := range ports {
+				claims[port+"|"+name] = true
+			}
+		}
+	}
+	return claims
+}
 
-	// Check if dest file already exists (not written by us in this run).
-	destPath := filepath.Join(sitesDir, destName)
-	if _, err := os.Stat(destPath); err == nil {
-		return fmt.Errorf("nginx route conflict: %s already exists in %s", destName, sitesDir)
+// checkServerNameConflict reports whether any server_name/port pair declared
+// in content is already claimed by a DIFFERENT .conf file already sitting in
+// sitesDir. destName is excluded from the scan so a plugin re-running
+// `nself build` and rewriting its own previously-injected file is not a
+// conflict with itself.
+//
+// Returns an error naming both files and the shared name so the build fails
+// loudly, instead of nginx silently picking one of two server blocks at
+// runtime (2026-09-03 staging: two generated site files both claimed
+// "api.staging.nself.org"; nginx logged "conflicting server name ...
+// ignored" and kept serving whichever loaded last).
+//
+// This is the early, precise check on the plugin-injection path.
+// checkServerNameUniqueness in postvalidate_nginx.go is the backstop that
+// sweeps the whole directory after every writer has run.
+func checkServerNameConflict(sitesDir, destName, content string) error {
+	newClaims := claimsOf(content)
+	if len(newClaims) == 0 {
+		return nil
 	}
 
-	// Check core service routes — files without the plugin prefix.
-	coreConf := filepath.Join(sitesDir, pluginName+".conf")
-	if _, err := os.Stat(coreConf); err == nil {
-		return fmt.Errorf("nginx route conflict: %s.conf already exists as a core service route", pluginName)
+	entries, err := os.ReadDir(sitesDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("reading %s: %w", sitesDir, err)
 	}
 
+	// Sorted so the file named in the error is the same on every run;
+	// os.ReadDir order is not guaranteed across platforms.
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if !entry.IsDir() && entry.Name() != destName {
+			names = append(names, entry.Name())
+		}
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		existing, readErr := os.ReadFile(filepath.Join(sitesDir, name))
+		if readErr != nil {
+			continue
+		}
+		existingClaims := claimsOf(string(existing))
+		for claim := range newClaims {
+			if !existingClaims[claim] {
+				continue
+			}
+			parts := strings.SplitN(claim, "|", 2)
+			return fmt.Errorf("nginx server_name conflict: %q on port %s is claimed by both %s and %s — nginx would silently ignore one of them (\"conflicting server name\"); rename one route or remove the duplicate", parts[1], parts[0], name, destName)
+		}
+	}
 	return nil
 }
 
@@ -63,6 +124,9 @@ func InjectPluginNginxRoutes(workdir, pluginDir string, cfg *config.Config) (int
 
 	count := 0
 	sitesDir := filepath.Join(workdir, "nginx", "sites")
+	if err := os.MkdirAll(sitesDir, 0755); err != nil {
+		return 0, fmt.Errorf("creating %s: %w", sitesDir, err)
+	}
 
 	for _, entry := range entries {
 		if !entry.IsDir() {
@@ -98,10 +162,12 @@ func InjectPluginNginxRoutes(workdir, pluginDir string, cfg *config.Config) (int
 			destName := pluginName + "-" + filename
 			destPath := filepath.Join(sitesDir, destName)
 
-			// Warn on route conflicts but do not block — plugin may be
-			// replacing its own config on update.
-			if err := checkPluginRouteConflict(workdir, pluginName, destName); err != nil {
-				slog.Warn("plugin nginx route conflict — proceeding anyway", "plugin", pluginName, "err", err)
+			// A duplicate server_name across two site files is not a warning
+			// — nginx silently serves only one of them ("conflicting server
+			// name ... ignored"). Fail the build so the conflict is fixed
+			// before it ever reaches nginx, naming both sources.
+			if err := checkServerNameConflict(sitesDir, destName, rendered); err != nil {
+				return count, err
 			}
 
 			if err := os.WriteFile(destPath, []byte(rendered), 0644); err != nil {

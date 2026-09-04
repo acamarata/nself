@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -17,6 +18,88 @@ import (
 // *PostValidateResult to append findings to.
 // Outputs: appends to result.Errors/Warnings; never returns a Go error.
 // Constraints: skips (warn, not fail) when nginx is not installed locally.
+
+// checkServerNameUniqueness reports every FQDN claimed by more than one
+// server block, on the same listen port, across the generated
+// nginx/sites/ directory — naming both source files.
+//
+// nginx does not treat this as a config error. It logs
+// `conflicting server name "x" on 0.0.0.0:443, ignored`, keeps whichever
+// block it loaded last, and still prints "syntax is ok" — so
+// checkNginxSyntax below passes and one of the two routes is silently
+// dead. That is how api.staging.nself.org ended up served by an
+// unintended block on 2026-09-03.
+//
+// Three separate writers populate nginx/sites/ in one build — the nginx
+// generator (Step 7), plugin route injection (Step 7.1), and the api-docs
+// site conf (Step 11) — and none can see the others' output. This runs
+// after all of them, the only point where the whole directory is visible.
+//
+// The check is keyed on port AND name because that is nginx's own rule: a
+// name served on :80 by one file and on :443 by another is a legitimate
+// split, not a conflict, and failing a build over it would be worse than
+// the bug being fixed.
+func checkServerNameUniqueness(nginxConfDir string, result *PostValidateResult) {
+	sitesDir := nginxConfDir
+	if filepath.Base(sitesDir) != "sites" {
+		sitesDir = filepath.Join(nginxConfDir, "sites")
+	}
+
+	entries, err := os.ReadDir(sitesDir)
+	if err != nil {
+		// No generated sites directory is not a finding — a stack fronted
+		// by another stack's nginx legitimately generates none.
+		return
+	}
+
+	// Sorted so the file reported as the first claimant, and therefore the
+	// exact wording of the error, is identical on every machine and run.
+	// os.ReadDir order is not guaranteed across platforms, and a conflict
+	// that names a different file each run is not actionable.
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".conf") {
+			names = append(names, e.Name())
+		}
+	}
+	sort.Strings(names)
+
+	// claimedBy maps "<port>|<server_name>" to the first file to claim it.
+	claimedBy := make(map[string]string)
+
+	for _, name := range names {
+		data, readErr := os.ReadFile(filepath.Join(sitesDir, name))
+		if readErr != nil {
+			continue
+		}
+		for _, block := range parseServerBlocks(string(data)) {
+			ports := block.Ports
+			if len(ports) == 0 {
+				ports = []string{defaultListenPort}
+			}
+			for _, serverName := range block.ServerNames {
+				if serverName == "_" {
+					continue // the catch-all default server, intentionally shared
+				}
+				for _, port := range ports {
+					key := port + "|" + serverName
+					first, dup := claimedBy[key]
+					if !dup {
+						claimedBy[key] = name
+						continue
+					}
+					if first == name {
+						continue // same file, e.g. its own :80 and :443 blocks
+					}
+					result.NginxValid = false
+					result.Errors = append(result.Errors, fmt.Sprintf(
+						"nginx server_name %q on port %s is claimed by both %s and %s — nginx logs \"conflicting server name\" and silently serves only one of them; rename one route or remove the duplicate",
+						serverName, port, first, name))
+				}
+			}
+		}
+	}
+}
 
 // checkNginxSyntax runs `nginx -t -c <nginx.conf>` if the nginx binary is
 // available in PATH and the main nginx.conf can be found. Skips with a
