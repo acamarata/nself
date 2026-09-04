@@ -430,6 +430,229 @@ func TestBuildCustomService_Network(t *testing.T) {
 	}
 }
 
+// ── CS_N_ENV_PASSTHROUGH ──────────────────────────────────────────────────────
+
+// TestCoreEnvVars_EnvPassthrough_Forwarded verifies that a var named in
+// CS_N_ENV_PASSTHROUGH and present in the process env is forwarded into the
+// service's Environment.
+func TestCoreEnvVars_EnvPassthrough_Forwarded(t *testing.T) {
+	t.Setenv("MY_API_KEY", "secret-value")
+
+	cfg := minimalConfigWithCS()
+	cs := testCS()
+	cs.EnvPassthrough = "MY_API_KEY"
+
+	env := coreEnvVars(cfg, cs)
+
+	if env["MY_API_KEY"] != "secret-value" {
+		t.Errorf("MY_API_KEY = %q, want %q", env["MY_API_KEY"], "secret-value")
+	}
+}
+
+// TestCoreEnvVars_EnvPassthrough_MultipleNames verifies that a
+// comma-separated allowlist forwards every named var, trimming whitespace.
+func TestCoreEnvVars_EnvPassthrough_MultipleNames(t *testing.T) {
+	t.Setenv("FOO_VAR", "foo")
+	t.Setenv("BAR_VAR", "bar")
+
+	cfg := minimalConfigWithCS()
+	cs := testCS()
+	cs.EnvPassthrough = "FOO_VAR, BAR_VAR"
+
+	env := coreEnvVars(cfg, cs)
+
+	if env["FOO_VAR"] != "foo" {
+		t.Errorf("FOO_VAR = %q, want %q", env["FOO_VAR"], "foo")
+	}
+	if env["BAR_VAR"] != "bar" {
+		t.Errorf("BAR_VAR = %q, want %q", env["BAR_VAR"], "bar")
+	}
+}
+
+// TestCoreEnvVars_EnvPassthrough_AbsentSkipped verifies that a name in the
+// allowlist that has no value in the process env is silently skipped, not
+// injected as an empty string and not an error.
+func TestCoreEnvVars_EnvPassthrough_AbsentSkipped(t *testing.T) {
+	cfg := minimalConfigWithCS()
+	cs := testCS()
+	cs.EnvPassthrough = "DOES_NOT_EXIST_VAR"
+
+	env := coreEnvVars(cfg, cs)
+
+	if _, ok := env["DOES_NOT_EXIST_VAR"]; ok {
+		t.Error("DOES_NOT_EXIST_VAR should not be present when unset in the process env")
+	}
+}
+
+// TestCoreEnvVars_EnvPassthrough_ExtraEnvWins verifies that CS_N_ENV still
+// overrides a value forwarded via CS_N_ENV_PASSTHROUGH (explicit override
+// beats allowlist forwarding).
+func TestCoreEnvVars_EnvPassthrough_ExtraEnvWins(t *testing.T) {
+	t.Setenv("SHARED_VAR", "from-passthrough")
+
+	cfg := minimalConfigWithCS()
+	cs := testCS()
+	cs.EnvPassthrough = "SHARED_VAR"
+	cs.ExtraEnv = "SHARED_VAR=from-extra-env"
+
+	env := coreEnvVars(cfg, cs)
+
+	if env["SHARED_VAR"] != "from-extra-env" {
+		t.Errorf("SHARED_VAR = %q, want %q (CS_N_ENV must win over CS_N_ENV_PASSTHROUGH)", env["SHARED_VAR"], "from-extra-env")
+	}
+}
+
+// TestCoreEnvVars_EnvPassthrough_Absent verifies that omitting
+// CS_N_ENV_PASSTHROUGH injects no extra vars beyond the fixed core set.
+func TestCoreEnvVars_EnvPassthrough_Absent(t *testing.T) {
+	cfg := minimalConfigWithCS()
+	cfg.Redis.Enabled = false
+	cfg.Minio.Enabled = false
+	cs := testCS()
+	cs.EnvPassthrough = ""
+
+	env := coreEnvVars(cfg, cs)
+
+	// The fixed core set only (PROJECT_NAME..TABLE_PREFIX), per coreEnvVars'
+	// documented design: no Redis/Minio (disabled) and no passthrough/extra-env.
+	const wantKeys = 17
+	if len(env) != wantKeys {
+		t.Errorf("got %d env keys with no passthrough/extra-env, want %d (fixed core set only): %v", len(env), wantKeys, env)
+	}
+}
+
+// ── buildHealthcheck / CS_N_HEALTHCHECK ───────────────────────────────────────
+
+// TestBuildHealthcheck is table-driven over the real generator function,
+// covering the default, custom path, custom CMD, and disabled cases.
+func TestBuildHealthcheck(t *testing.T) {
+	cases := []struct {
+		name       string
+		raw        string
+		port       int
+		wantNil    bool
+		wantTest   []string
+		wantSubstr string // substring the rendered Test command must contain
+	}{
+		{
+			name:       "default_empty_uses_slash_health",
+			raw:        "",
+			port:       8001,
+			wantTest:   []string{"CMD", "wget", "-qO-", "http://localhost:8001/health"},
+			wantSubstr: "/health",
+		},
+		{
+			name:       "custom_path_overrides_default",
+			raw:        "/auth/health",
+			port:       4002,
+			wantTest:   []string{"CMD", "wget", "-qO-", "http://localhost:4002/auth/health"},
+			wantSubstr: "/auth/health",
+		},
+		{
+			name:       "bare_path_without_leading_slash_normalized",
+			raw:        "status",
+			port:       9000,
+			wantTest:   []string{"CMD", "wget", "-qO-", "http://localhost:9000/status"},
+			wantSubstr: "/status",
+		},
+		{
+			name:       "full_cmd_override_passed_through",
+			raw:        "CMD-SHELL curl -f http://localhost:4002/status",
+			port:       4002,
+			wantTest:   []string{"CMD-SHELL", "curl", "-f", "http://localhost:4002/status"},
+			wantSubstr: "curl",
+		},
+		{
+			name:    "disabled_yields_no_healthcheck",
+			raw:     "disabled",
+			port:    8001,
+			wantNil: true,
+		},
+		{
+			name:    "none_case_insensitive_yields_no_healthcheck",
+			raw:     "None",
+			port:    8001,
+			wantNil: true,
+		},
+		{
+			name:    "false_yields_no_healthcheck",
+			raw:     "false",
+			port:    8001,
+			wantNil: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cs := testCS()
+			cs.Port = tc.port
+			cs.HealthCheck = tc.raw
+
+			hc := buildHealthcheck(cs)
+
+			if tc.wantNil {
+				if hc != nil {
+					t.Fatalf("buildHealthcheck(%q) = %+v, want nil", tc.raw, hc)
+				}
+				return
+			}
+			if hc == nil {
+				t.Fatalf("buildHealthcheck(%q) = nil, want non-nil", tc.raw)
+			}
+			if len(tc.wantTest) > 0 && strings.Join(hc.Test, " ") != strings.Join(tc.wantTest, " ") {
+				t.Errorf("Test = %v, want %v", hc.Test, tc.wantTest)
+			}
+			if tc.wantSubstr != "" && !strings.Contains(strings.Join(hc.Test, " "), tc.wantSubstr) {
+				t.Errorf("Test = %v, want it to contain %q", hc.Test, tc.wantSubstr)
+			}
+			// Timing fields must stay the prior fixed defaults regardless of
+			// which healthcheck form was chosen.
+			if hc.Interval != "30s" || hc.Timeout != "10s" || hc.Retries != 3 || hc.StartPeriod != "60s" {
+				t.Errorf("timing fields changed: %+v", hc)
+			}
+		})
+	}
+}
+
+// TestBuildCustomService_HealthcheckDisabled is the golden-fragment
+// regression test for the generator entry point: CS_N_HEALTHCHECK=disabled
+// must render no healthcheck block on the generated ServiceConfig.
+func TestBuildCustomService_HealthcheckDisabled(t *testing.T) {
+	cfg := minimalConfigWithCS()
+	cs := testCS()
+	cs.HealthCheck = "disabled"
+
+	g := NewGenerator(cfg)
+	svc := g.buildCustomService(cs)
+
+	if svc.Healthcheck != nil {
+		t.Errorf("Healthcheck = %+v, want nil when CS_N_HEALTHCHECK=disabled", svc.Healthcheck)
+	}
+}
+
+// TestBuildCustomService_HealthcheckCustomPath is the golden-fragment
+// regression test for the case that motivated this ticket: a service whose
+// health endpoint is not the default /health (e.g. auth_server's /auth/health)
+// must be probed at the declared path, not silently reported unhealthy.
+func TestBuildCustomService_HealthcheckCustomPath(t *testing.T) {
+	cfg := minimalConfigWithCS()
+	cs := testCS()
+	cs.Port = 4002
+	cs.HealthCheck = "/auth/health"
+
+	g := NewGenerator(cfg)
+	svc := g.buildCustomService(cs)
+
+	if svc.Healthcheck == nil {
+		t.Fatal("buildCustomService: Healthcheck is nil")
+	}
+	want := "http://localhost:4002/auth/health"
+	hcStr := strings.Join(svc.Healthcheck.Test, " ")
+	if !strings.Contains(hcStr, want) {
+		t.Errorf("healthcheck must reference %q, got: %s", want, hcStr)
+	}
+}
+
 // TestBuildCustomService_CoreEnvInjected verifies that core env vars like
 // PROJECT_NAME and POSTGRES_HOST are present in the generated service Environment.
 func TestBuildCustomService_CoreEnvInjected(t *testing.T) {

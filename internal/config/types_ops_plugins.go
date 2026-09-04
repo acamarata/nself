@@ -144,6 +144,16 @@ type CustomService struct {
 	TablePrefix string // CS_N_TABLE_PREFIX
 	ExtraEnv    string // CS_N_ENV (raw key=val pairs, comma-separated)
 	BuildPath   string // CS_N_PATH: overrides default ./services/{name} build context
+
+	// HealthCheck is CS_N_HEALTHCHECK: a path (e.g. "/auth/health"), a full
+	// "CMD ..." / "CMD-SHELL ..." override, or "disabled"/"none"/"false" to
+	// omit the healthcheck entirely. Empty keeps the default GET /health.
+	HealthCheck string
+
+	// EnvPassthrough is CS_N_ENV_PASSTHROUGH: a comma-separated allowlist of
+	// project .env var names to forward into this container in addition to
+	// the fixed core set from coreEnvVars. CS_N_ENV still wins on conflict.
+	EnvPassthrough string
 }
 
 // FrontendApp represents a frontend application (FRONTEND_APP_1..FRONTEND_APP_20).
