@@ -159,6 +159,29 @@ func startPostgresPhase(ctx context.Context, opts startOpts, cfg *config.Config,
 	// Phase 1: Start only postgres so schemas can be created before auth starts.
 	sp := ui.NewSpinner("Starting PostgreSQL...")
 	sp.Start()
+
+	// Idempotent-start guard: if a healthy postgres container for this
+	// project is already running, skip `docker compose up -d postgres`
+	// entirely instead of relying on Compose's own config-hash diff to be a
+	// no-op. On-disk docker-compose.yml can drift from what actually created
+	// the running container (regenerated on another host, edited .env since
+	// the last `nself build`, etc.); when that happens Compose treats it as
+	// a config change and attempts to recreate an already-healthy postgres,
+	// which can fail mid-recreate even though nothing was actually broken
+	// (found live 2026-09-03: `nself start` run a second time against an
+	// already-healthy postgres failed here; `docker compose up` — no
+	// service filter — succeeded immediately after as a workaround).
+	// --clean-start/--fresh already ran ComposeDown above, so postgres is
+	// never still healthy on those paths and this guard is a no-op for them.
+	if !opts.cleanStart && !opts.fresh {
+		containerName := fmt.Sprintf("%s_postgres", cfg.ProjectName)
+		health, healthErr := docker.GetHealthStatus(ctx, containerName)
+		if healthErr == nil && postgresAlreadyRunning(health) {
+			sp.Success("PostgreSQL container already running and healthy")
+			return compose, nil, nil
+		}
+	}
+
 	if err := compose.ComposeUp(ctx, projectDir, "postgres"); err != nil {
 		sp.Fail("Failed to start PostgreSQL")
 		ui.UXError(
@@ -176,6 +199,17 @@ func startPostgresPhase(ctx context.Context, opts startOpts, cfg *config.Config,
 	sp.Success("PostgreSQL container started")
 
 	return compose, nil, nil
+}
+
+// postgresAlreadyRunning reports whether a docker.GetHealthStatus result for
+// the project's postgres container means `nself start` can safely treat
+// PostgreSQL as already up — i.e. skip `docker compose up -d postgres` for
+// this run rather than asking Compose to reconcile it. Only "healthy" (the
+// container exists, has a healthcheck, and it is passing) qualifies:
+// "starting" may still fail its first probe, "unhealthy"/"none"/"not_found"
+// all mean the container needs a real compose-up to reach a good state.
+func postgresAlreadyRunning(healthStatus string) bool {
+	return healthStatus == "healthy"
 }
 
 // initializeDatabasePhase runs database initialization (Step 5). Must run

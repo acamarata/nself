@@ -124,6 +124,31 @@ Slots with no `REMOTE_SCHEMA_N_NAME` set are silently skipped.
 
 ---
 
+## Forwarding Any HASURA_GRAPHQL_* Engine Tuning Var
+
+The table above lists the `HASURA_GRAPHQL_*` variables ɳSelf builds into a curated compose value (admin secret, JWT secret, console/dev-mode toggles, CORS, log level). Beyond that curated set, **every other `HASURA_GRAPHQL_*` variable you set in any `.env` file is forwarded verbatim into the Hasura container** at `nself build` time — you do not need to add support for it first.
+
+This covers real Hasura engine config surface that ɳSelf does not wrap in its own typed setting, for example:
+
+```bash
+# .env.dev — allow-list mode and engine limits
+HASURA_GRAPHQL_ENABLE_ALLOWLIST=true
+HASURA_GRAPHQL_NODE_LIMIT=5000
+HASURA_GRAPHQL_DEPTH_LIMIT=10
+HASURA_GRAPHQL_BATCH_SIZE=10
+HASURA_GRAPHQL_LIVE_QUERIES_MULTIPLEXED_BATCH_SIZE=100
+HASURA_GRAPHQL_LIVE_QUERIES_MULTIPLEXED_REFETCH_INTERVAL=1000
+```
+
+**Rules:**
+
+- The forward is additive only. If a variable is already curated by ɳSelf (`HASURA_GRAPHQL_ADMIN_SECRET`, `_JWT_SECRET`, `_ENABLE_CONSOLE`, `_DEV_MODE`, `_ENABLE_TELEMETRY`, `_CORS_DOMAIN`, `_LOG_LEVEL`, `_UNAUTHORIZED_ROLE`, `_DATABASE_URL`), your `.env` value is **ignored** for that key — use the dedicated variable (or the `HASURA_JWT_KEY`/`HASURA_JWT_TYPE` pair for JWT) instead, so it goes through validation.
+- Everything else in the `HASURA_GRAPHQL_*` namespace reaches the container untouched — no allow-list of names to keep in sync in the CLI itself.
+- Run `nself build` (or `nself restart`) after adding or changing one of these vars so the regenerated compose picks it up.
+- The same additive-forwarding rule applies to hasura-auth's own `AUTH_*`/`HASURA_AUTH_*` namespace — see [[Config-Auth]].
+
+---
+
 ## Accessing the Hasura Console
 
 The Hasura Console is a web UI for browsing your schema, running GraphQL queries, managing metadata, and configuring permissions.

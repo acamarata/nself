@@ -273,6 +273,36 @@ func TestSnapshot_ComposeV5PidsLimitInDeploy(t *testing.T) {
 	}
 }
 
+// TestSnapshot_HasuraGraphqlEnvVarForwarding is the end-to-end fixture
+// regression test for P6 FIX-CLI-2 (2026-09-03): a full `nself build`-style
+// Generate() run, with HASURA_GRAPHQL_ENABLE_ALLOWLIST and an arbitrary
+// HASURA_GRAPHQL_* var set via cfg.Passthrough (mirroring what the loader
+// populates from a real .env file — see internal/config/loader_helpers.go),
+// must land both vars verbatim in the rendered docker-compose YAML under the
+// hasura service. This is the "diffed against a golden fixture" check for
+// the fix: rather than a byte-for-byte golden file (this package deliberately
+// avoids those — see file header — because generated secrets make output
+// non-deterministic), it follows the established golden-fragment convention
+// and asserts the exact rendered fragment is present.
+func TestSnapshot_HasuraGraphqlEnvVarForwarding(t *testing.T) {
+	cfg := snapshotConfig()
+	cfg.Passthrough = map[string]string{
+		"HASURA_GRAPHQL_ENABLE_ALLOWLIST": "true",
+		"HASURA_GRAPHQL_FOO":              "bar",
+	}
+	yaml := generateYAML(t, cfg)
+
+	hasuraBlock := extractServiceBlock(yaml, "hasura")
+	for _, frag := range []string{
+		"HASURA_GRAPHQL_ENABLE_ALLOWLIST: \"true\"",
+		"HASURA_GRAPHQL_FOO: bar",
+	} {
+		if !strings.Contains(hasuraBlock, frag) {
+			t.Errorf("snapshot: expected %q in generated hasura service block but not found, block:\n%s", frag, hasuraBlock)
+		}
+	}
+}
+
 // extractServiceBlock is a debug helper that returns the lines in the YAML that
 // start at "  <name>:" and continue until the next top-level-indented service.
 // Used only for test failure messages — not part of the assertion logic.
