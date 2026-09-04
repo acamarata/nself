@@ -26,7 +26,12 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 	installed, _ := cmd.Flags().GetBool("installed")
 	detailed, _ := cmd.Flags().GetBool("detailed")
 	category, _ := cmd.Flags().GetString("category")
-	showEOL, _ := cmd.Flags().GetBool("show-eol") // S58-T03
+	showEOL, _ := cmd.Flags().GetBool("show-eol")    // S58-T03
+	available, _ := cmd.Flags().GetBool("available") // OWNER-ACTIONS.md item 15
+
+	if available {
+		return runPluginListAvailable(cmd, category)
+	}
 
 	pluginDir := resolvePluginDir()
 
@@ -96,6 +101,42 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	return nil
+}
+
+// runPluginListAvailable implements `nself plugin list --available`
+// (OWNER-ACTIONS.md item 15): every registry entry for a slug served more
+// than once (a declared free/pro tier pair or, for anything else, a
+// registry-data collision `nself plugin install` refuses to resolve), with
+// the entitlement-resolved default marked so an operator can see the split
+// before installing.
+func runPluginListAvailable(cmd *cobra.Command, category string) error {
+	rows, err := plugin.ListAvailableWithTiers(cmd.Context(), nil)
+	if err != nil {
+		return fmt.Errorf("listing available plugin tiers: %w", err)
+	}
+	if len(rows) == 0 {
+		fmt.Println("No plugins found in registry.")
+		return nil
+	}
+
+	tbl := ui.NewTable("Name", "Tier", "Version", "Default")
+	for _, r := range rows {
+		if category != "" && !strings.EqualFold(r.Category, category) {
+			continue
+		}
+		def := ""
+		if r.IsDefault {
+			def = "✓"
+		}
+		tier := r.Tier
+		if tier == "" {
+			tier = "-"
+		}
+		tbl.AddRow(r.Name, tier, r.Version, def)
+	}
+	tbl.Render()
+	fmt.Println("\nDefault = what a plain 'nself plugin install <name>' resolves to today (license entitlement for a tier pair, otherwise its only entry). Override with --tier free|pro.")
 	return nil
 }
 

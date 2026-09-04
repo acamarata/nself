@@ -144,6 +144,8 @@ func entryToManifest(e pluginEntry) PluginManifest {
 		RequiresLicense: e.RequiresLicense,
 		Tables:          e.Tables,
 		Port:            port,
+		TierPair:        e.TierPair,
+		Bundles:         e.Bundles,
 		Dependencies:    parseDependencies(e.Dependencies),
 		APIEndpoints:    parseAPIEndpoints(e.APIEndpoints),
 		Language:        language,

@@ -35,6 +35,22 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 	showGraph, _ := cmd.Flags().GetBool("show-graph")
 	yes, _ := cmd.Flags().GetBool("yes")
 	checksum, _ := cmd.Flags().GetString("checksum")
+	tier, _ := cmd.Flags().GetString("tier")
+
+	// --tier overrides entitlement-based resolution for a slug served as both
+	// free and pro (OWNER-ACTIONS.md item 15). Threaded via env var, matching
+	// the existing NSELF_SKIP_SBOM_CHECK / NSELF_PLUGIN_LICENSE_KEY convention
+	// so plugin.installLocked (and its dependency-install recursion) sees it
+	// without widening plugin.Install's signature.
+	tier = strings.ToLower(strings.TrimSpace(tier))
+	if tier != "" && tier != "free" && tier != "pro" {
+		return fmt.Errorf(`invalid --tier %q: must be "free" or "pro"`, tier)
+	}
+	if tier != "" {
+		if err := os.Setenv("NSELF_PLUGIN_INSTALL_TIER", tier); err != nil {
+			return fmt.Errorf("setting tier override: %w", err)
+		}
+	}
 
 	// CLI-R16: "official by name, third-party by URL" — split the requested
 	// refs up front so registry-only flows (preview/show-graph/dry-run, the
