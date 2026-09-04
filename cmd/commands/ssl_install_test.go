@@ -131,6 +131,83 @@ func TestWriteCustomDomainConf_ReferencesFilesafeCertPath(t *testing.T) {
 	}
 }
 
+// TestWriteCustomDomainConf_PathScopedRateLimits is the SEC-HARDENING-06
+// regression guard (P6-E2-W2-S3-T20): a custom domain proxying to a backend
+// (--upstream set) must get the same path-scoped /auth/login (auth_strict)
+// and /api/ (api) rate-limit locations as internal/nginx's
+// defaultSecurityPathZones, ahead of the catch-all `location /`. The
+// placeholder (no upstream) branch is asserted separately to have none of
+// them, since it never proxies anywhere.
+func TestWriteCustomDomainConf_PathScopedRateLimits(t *testing.T) {
+	t.Run("proxying custom domain gets both path-scoped locations", func(t *testing.T) {
+		workdir := t.TempDir()
+		if err := writeCustomDomainConf(workdir, "gw.example.com", "gw-upstream:8080"); err != nil {
+			t.Fatalf("writeCustomDomainConf: %v", err)
+		}
+		confPath := filepath.Join(workdir, "nginx", "conf.d", "custom-gw-example-com.conf")
+		raw, err := os.ReadFile(confPath) //nolint:gosec // path built from t.TempDir
+		if err != nil {
+			t.Fatalf("conf not written: %v", err)
+		}
+		conf := string(raw)
+
+		for _, want := range []string{
+			"location = /auth/login {",
+			"limit_req zone=auth_strict burst=5 nodelay;",
+			"location /api/ {",
+			"limit_req zone=api burst=20 nodelay;",
+			"proxy_pass http://gw-upstream:8080;",
+		} {
+			if !strings.Contains(conf, want) {
+				t.Errorf("missing %q\n--- conf ---\n%s", want, conf)
+			}
+		}
+
+		// Doctor check (internal/doctor/hardening_check_nginx_zones.go)
+		// greps this exact file's content for "/auth/login" + "limit_req"
+		// and "/api/" + "limit_req" co-occurring — assert its literal
+		// contract, not just our own template's wording.
+		if !strings.Contains(conf, "/auth/login") || !strings.Contains(conf, "limit_req") {
+			t.Error("conf must satisfy the doctor check's /auth/login + limit_req grep")
+		}
+		if !strings.Contains(conf, "/api/") {
+			t.Error("conf must satisfy the doctor check's /api/ grep")
+		}
+
+		authIdx := strings.Index(conf, "location = /auth/login")
+		apiIdx := strings.Index(conf, "location /api/")
+		// LastIndex: writeCustomDomainConf emits a separate listen-80
+		// redirect server block ahead of the proxying listen-443 block, and
+		// that redirect block's own `location / { return 301 ...}` also
+		// matches "location / {" — the catch-all we care about ordering
+		// against is the one in the same (443) server block as the
+		// path-scoped locations, i.e. the LAST occurrence in the file.
+		catchAllIdx := strings.LastIndex(conf, "location / {")
+		if authIdx == -1 || apiIdx == -1 || catchAllIdx == -1 {
+			t.Fatal("could not locate all three location blocks")
+		}
+		if authIdx > catchAllIdx || apiIdx > catchAllIdx {
+			t.Error("path-scoped locations must be declared before the catch-all location /")
+		}
+	})
+
+	t.Run("placeholder custom domain (no upstream) has none of them", func(t *testing.T) {
+		workdir := t.TempDir()
+		if err := writeCustomDomainConf(workdir, "future.example.com", ""); err != nil {
+			t.Fatalf("writeCustomDomainConf: %v", err)
+		}
+		confPath := filepath.Join(workdir, "nginx", "conf.d", "custom-future-example-com.conf")
+		raw, err := os.ReadFile(confPath) //nolint:gosec // path built from t.TempDir
+		if err != nil {
+			t.Fatalf("conf not written: %v", err)
+		}
+		conf := string(raw)
+		if strings.Contains(conf, "limit_req") {
+			t.Errorf("placeholder (no --upstream) conf should not proxy anywhere and should carry no rate limits\n--- conf ---\n%s", conf)
+		}
+	})
+}
+
 // TestDomainToFilesafe_ReplacesDotsAndColons table-tests the domainToFilesafe
 // helper directly, including an IPv6-with-port-style edge case (colons),
 // since the function replaces both dots and colons.

@@ -103,6 +103,45 @@ Rate limiting zones are defined in `nginx/includes/rate-limits.conf` and referen
 
 To adjust limits for a specific service, override its route in `nginx/conf.d/` with your own `limit_req_zone` and `limit_req` directives.
 
+There is no `NGINX_RATE_LIMIT` variable — it does not exist anywhere in
+this codebase, is not declared in any env template, and no generator reads
+it. Each zone above is configured via its own dedicated var instead:
+`RATE_LIMIT_API_RPS`, `RATE_LIMIT_AUTH_RPS`, `RATE_LIMIT_AI_RPS`
+(`internal/nginx/ratelimit.go`) and `AUTH_RATE_LIMIT` for the whole-server
+Auth zone.
+
+### Path-Scoped Rate Limits (SEC-HARDENING-06)
+
+On top of the one server-wide zone above, every generated service conf
+(`nginx/sites/*.conf`) and every proxying `nself ssl add <domain>
+--upstream ...` custom-domain conf (`nginx/conf.d/custom-*.conf`) also
+carries two path-scoped `location` blocks, applied unconditionally
+regardless of which zone the server-wide one uses:
+
+| Path | Match | Zone | Rate | Burst |
+|---|---|---|---|---|
+| `/auth/login` | exact (`location =`) | `auth_strict` | `RATE_LIMIT_AUTH_RPS` (default 5r/s) | 5 |
+| `/api/` | prefix | `api` | `RATE_LIMIT_API_RPS` (default 30r/s) | 20 |
+
+nginx resolves the longest-matching prefix `location` regardless of
+declaration order in the file, so a request to either path always hits the
+stricter zone even on a server otherwise routed through a looser one (for
+example a `CS_N` custom service on the `Custom services` zone above) — a
+request that never touches those paths is unaffected. Applied
+unconditionally because the generator has no reliable way to know whether
+a given `CS_N` or internal-route service's upstream actually serves either
+path; the blocks are harmless when it doesn't. The custom-domain
+placeholder conf (`nself ssl add <domain>` with no `--upstream`) never
+proxies anywhere, so it carries neither block.
+
+Source: `internal/nginx/generator.go`'s `defaultSecurityPathZones()`
+(default set) and `ServiceRouteData.PathZones` (template field), rendered
+by `internal/nginx/templates/service.conf.tmpl`; custom-domain equivalent
+in `cmd/commands/ssl_install.go`'s `writeCustomDomainConf()`. Verified by
+`nself doctor --deep`'s `SEC-HARDENING-06` check
+(`internal/doctor/hardening_check_nginx_zones.go`), which scans generated
+confs for both paths each co-occurring with `limit_req`.
+
 ---
 
 ## Plugin Route Injection

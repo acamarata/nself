@@ -8,6 +8,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/nginx"
 )
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -241,6 +244,49 @@ func TestCheckHardeningNginxRateZones_NonePresent(t *testing.T) {
 	// Without Docker running the fallback will also return nothing.
 	if res.Status != "fail" && res.Status != "warn" {
 		t.Errorf("no zones: status=%q, want fail or warn", res.Status)
+	}
+}
+
+// TestCheckHardeningNginxRateZones_RealGeneratorOutputPasses is the closed-
+// loop regression for P6-E2-W2-S3-T20: before this ticket, `nself build`'s
+// nginx generator emitted only server-wide RateZone locations (no
+// path-scoped /auth/login or /api/ locations at all), so this check would
+// have failed against real generator output even though the two synthetic
+// fixture tests above pass with hand-written confs. This test writes the
+// REAL internal/nginx.Generate() output to disk (the exact files/paths
+// `nself build` writes) and asserts checkHardeningNginxRateZones passes
+// against them — proving the generator and the doctor check actually agree,
+// not just that each independently does what its own author expected.
+func TestCheckHardeningNginxRateZones_RealGeneratorOutputPasses(t *testing.T) {
+	dir := t.TempDir()
+
+	cfg := &config.Config{BaseDomain: "example.com"}
+	cfg, err := config.ApplyDefaults(cfg)
+	if err != nil {
+		t.Fatalf("ApplyDefaults() error: %v", err)
+	}
+	gen := nginx.NewGenerator(cfg, dir)
+	files, err := gen.Generate()
+	if err != nil {
+		t.Fatalf("nginx.Generate() error: %v", err)
+	}
+	for relPath, content := range files {
+		abs := filepath.Join(dir, relPath)
+		if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
+			t.Fatalf("mkdir for %s: %v", relPath, err)
+		}
+		if err := os.WriteFile(abs, []byte(content), 0o644); err != nil {
+			t.Fatalf("write %s: %v", relPath, err)
+		}
+	}
+
+	// checkHardeningNginxRateZones only scans nginx/conf.d and nginx/sites
+	// (plus nginx/nginx.conf) — the generator writes site confs under
+	// nginx/sites/, which the sites-dir branch already covers.
+	ctx := context.Background()
+	res := checkHardeningNginxRateZones(ctx, dir)
+	if res.Status != "pass" {
+		t.Errorf("real nginx.Generate() output: status=%q, want pass; msg=%s", res.Status, res.Message)
 	}
 }
 
