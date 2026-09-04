@@ -21,6 +21,7 @@ package doctor
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -36,6 +37,22 @@ location /auth/login { limit_req zone=auth_login; }
 limit_req_zone $binary_remote_addr zone=api:10m rate=30r/s;
 location /api/ { limit_req zone=api; }
 `
+
+// messageNamesPath reports whether msg names path as evidence, tolerating
+// both a literal embed (fmt %s, used by the pass/fail/warn messages) and a
+// Go-quoted embed (fmt %q, used by the skip message). %q escapes backslash
+// as a literal two-character sequence, so on Windows — where path itself
+// contains single backslashes — a raw strings.Contains(msg, path) can never
+// match a %q-embedded copy of the same path; only its escaped form appears
+// in msg. This does not depend on which verb the source code happens to
+// use today, so it stays correct if that changes.
+func messageNamesPath(msg, path string) bool {
+	if strings.Contains(msg, path) {
+		return true
+	}
+	quoted := strings.Trim(fmt.Sprintf("%q", path), `"`)
+	return strings.Contains(msg, quoted)
+}
 
 // writeNginxConf writes a single conf.d file containing content under
 // <dir>/nginx/conf.d/ratelimit.conf, creating directories as needed.
@@ -193,7 +210,7 @@ func TestCheckHardeningNginxRateZones_FrontedTopology(t *testing.T) {
 			// check that can't produce this evidence is how the wrong-
 			// directory bug stayed hidden through cli#380 and cli#371.
 			for _, substr := range tt.wantMsgSubstrs(projectDir) {
-				if !strings.Contains(res.Message, substr) {
+				if !messageNamesPath(res.Message, substr) {
 					t.Errorf("message does not name expected evidence %q: %s", substr, res.Message)
 				}
 			}
