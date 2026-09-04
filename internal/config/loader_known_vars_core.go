@@ -133,6 +133,11 @@ var knownEnvVarsCore = []string{
 	"NGINX_SSL_PORT",
 	"NGINX_CLIENT_MAX_BODY_SIZE",
 	"NGINX_BIND_IP",
+	// Names the stack whose nginx fronts this project's domains, when
+	// this project has no ingress nginx of its own — see
+	// NginxConfig.FrontedBy. Listed here so setting it does not emit a
+	// false "unknown env var" warning on every build.
+	"NGINX_FRONTED_BY",
 	// Per-zone rate limit overrides — read by parseEnvToConfig into
 	// NginxConfig.RateLimitAPI/RateLimitAuth/RateLimitAI but were missing from
 	// this schema list (pre-existing gap, fixed alongside gap #1).

@@ -89,6 +89,32 @@ type NginxConfig struct {
 	RateLimitAPI  string `env:"RATE_LIMIT_API_RPS"`         // 30
 	RateLimitAuth string `env:"RATE_LIMIT_AUTH_RPS"`        // 5
 	RateLimitAI   string `env:"RATE_LIMIT_AI_RPS"`          // 10
+
+	// FrontedBy names the stack whose nginx fronts this project's domains
+	// (e.g. "nself-web"), when this project has no ingress nginx of its own.
+	// Empty (the default) means this stack runs its own nginx, unchanged
+	// from every prior release.
+	//
+	// When set, `nself build` omits the nginx service from
+	// docker-compose.yml entirely and excludes it from the service counts
+	// `nself status`/`nself start` expect. Without this, a stack meant to
+	// sit behind another stack's nginx still generates and tries to start
+	// its own nginx container, which fails to bind 80/443 (already held by
+	// the fronting stack's nginx via docker-proxy) and then sits forever as
+	// one unhealthy service nself status can never clear ("6/7" on ntask's
+	// staging deploy, 2026-09-03, fronted by nself-web).
+	//
+	// This flag only removes the container that can never run. It does NOT
+	// wire this project's containers onto the fronting stack's Docker
+	// network — the fronting nginx's `resolver 127.0.0.11` can only reach
+	// container names on a network it is attached to, so making
+	// auth.task.staging.nself.org resolve ntask_auth still requires the
+	// operator to attach the two projects' networks (or declare one as
+	// external in both compose files) by hand. That is a bigger, riskier
+	// change — automatically rewriting a Docker network topology from a
+	// per-project flag — and belongs in a follow-up once the desired shape
+	// of that wiring is decided.
+	FrontedBy string `env:"NGINX_FRONTED_BY"`
 }
 
 // RedisConfig holds Redis cache/queue configuration.

@@ -147,7 +147,12 @@ func (g *Generator) buildDockerCompose() (*DockerCompose, error) {
 	}
 
 	// Nginx — profile-gated (always last — depends on other services).
-	if p.Nginx {
+	// Skipped entirely when NGINX_FRONTED_BY names another stack's nginx as
+	// this project's ingress: this project's own nginx container could never
+	// bind 80/443 (the fronting stack's nginx already holds them) and would
+	// sit forever as an unhealthy container `nself status` can never clear.
+	// See NginxConfig.FrontedBy.
+	if p.Nginx && g.cfg.Nginx.FrontedBy == "" {
 		dc.AddService("nginx", g.buildNginxService(dc))
 	}
 
