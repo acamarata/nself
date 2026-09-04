@@ -14,7 +14,9 @@ import (
 	"strings"
 )
 
-// adminRoute builds the admin route entry with lazy resolver and dev mode support.
+// adminRoute builds the admin route entry with dev mode support. The
+// route it returns is resolved at request time by the generated template
+// (see service.conf.tmpl) like every other service route.
 func (g *Generator) adminRoute(baseDomain, sslDir string) routeEntry {
 	adminRoute := g.cfg.Admin.Route
 	if adminRoute == "" {
@@ -44,19 +46,20 @@ func (g *Generator) adminRoute(baseDomain, sslDir string) routeEntry {
 	return routeEntry{
 		filename: "admin.conf",
 		data: ServiceRouteData{
-			Route:       adminRoute,
-			BaseDomain:  baseDomain,
-			Upstream:    upstream,
-			SSLDir:      sslDir,
-			RateZone:    "general",
-			Burst:       10,
-			LazyResolve: true,
+			Route:      adminRoute,
+			BaseDomain: baseDomain,
+			Upstream:   upstream,
+			SSLDir:     sslDir,
+			RateZone:   "general",
+			Burst:      10,
 		},
 	}
 }
 
 // customServiceRoutes returns routes for CS_1..CS_10 custom services.
-// All custom services use lazy resolver since they are optional.
+// All custom services resolve their upstream at request time (see
+// service.conf.tmpl) since they may be started, stopped, or recreated
+// independently of nginx.
 func (g *Generator) customServiceRoutes(baseDomain, sslDir string) []routeEntry {
 	var entries []routeEntry
 
@@ -71,13 +74,12 @@ func (g *Generator) customServiceRoutes(baseDomain, sslDir string) []routeEntry 
 		entries = append(entries, routeEntry{
 			filename: fmt.Sprintf("cs-%s.conf", cs.Name),
 			data: ServiceRouteData{
-				Route:       cs.Route,
-				BaseDomain:  baseDomain,
-				Upstream:    fmt.Sprintf("%s:%d", cs.Name, cs.Port),
-				SSLDir:      sslDir,
-				RateZone:    "general",
-				Burst:       10,
-				LazyResolve: true,
+				Route:      cs.Route,
+				BaseDomain: baseDomain,
+				Upstream:   fmt.Sprintf("%s:%d", cs.Name, cs.Port),
+				SSLDir:     sslDir,
+				RateZone:   "general",
+				Burst:      10,
 			},
 		})
 	}
@@ -99,14 +101,13 @@ func (g *Generator) frontendRoutes(baseDomain, sslDir string) []routeEntry {
 		entries = append(entries, routeEntry{
 			filename: fmt.Sprintf("frontend-%s.conf", fe.SystemName),
 			data: ServiceRouteData{
-				Route:       fe.Route,
-				BaseDomain:  baseDomain,
-				Upstream:    fmt.Sprintf("host.docker.internal:%d", fe.Port),
-				SSLDir:      sslDir,
-				RateZone:    "static",
-				Burst:       10,
-				WebSocket:   true, // HMR needs WebSocket
-				LazyResolve: true,
+				Route:      fe.Route,
+				BaseDomain: baseDomain,
+				Upstream:   fmt.Sprintf("host.docker.internal:%d", fe.Port),
+				SSLDir:     sslDir,
+				RateZone:   "static",
+				Burst:      10,
+				WebSocket:  true, // HMR needs WebSocket
 			},
 		})
 	}
@@ -137,7 +138,9 @@ func validateInternalRouteTarget(target string) error {
 }
 
 // internalRoutes returns routes for INTERNAL_ROUTE_1..INTERNAL_ROUTE_20.
-// These use lazy resolver since they are optional.
+// These resolve their upstream at request time (see service.conf.tmpl)
+// since the target may live in another stack entirely and be recreated
+// independently of this nginx.
 func (g *Generator) internalRoutes(baseDomain, sslDir string) ([]routeEntry, error) {
 	var entries []routeEntry
 
@@ -157,15 +160,14 @@ func (g *Generator) internalRoutes(baseDomain, sslDir string) ([]routeEntry, err
 		entries = append(entries, routeEntry{
 			filename: fmt.Sprintf("ir-%s.conf", ir.Name),
 			data: ServiceRouteData{
-				Route:       ir.Subdomain,
-				BaseDomain:  baseDomain,
-				Upstream:    ir.Target,
-				SSLDir:      sslDir,
-				RateZone:    rateZone,
-				Burst:       10,
-				ConnLimit:   10,
-				WebSocket:   ir.WebSocket,
-				LazyResolve: true,
+				Route:      ir.Subdomain,
+				BaseDomain: baseDomain,
+				Upstream:   ir.Target,
+				SSLDir:     sslDir,
+				RateZone:   rateZone,
+				Burst:      10,
+				ConnLimit:  10,
+				WebSocket:  ir.WebSocket,
 			},
 		})
 	}
