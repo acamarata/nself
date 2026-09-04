@@ -73,7 +73,20 @@ func assertControllerEnabled(cmd *cobra.Command) bool {
 	return true
 }
 
+// CreateProjectRequest is the typed body for POST /projects/create, replacing
+// the untyped map[string]string literal previously built inline at the call
+// site (P4 deferred-backlog row 2 — no generic [T any] request-builder
+// pattern exists elsewhere in this CLI to mirror, so each doControllerRequest
+// call site gets its own typed struct instead).
+type CreateProjectRequest struct {
+	Slug   string
+	Domain string
+}
+
 // doControllerRequest performs an authenticated HTTP request to the controller daemon.
+// body is intentionally interface{}: it is marshalled straight to JSON, and
+// every call site now passes either nil or a typed *Request struct (see
+// CreateProjectRequest) rather than an ad hoc map literal.
 func doControllerRequest(method, path string, body interface{}) ([]byte, int, error) {
 	var reqBody io.Reader
 	if body != nil {

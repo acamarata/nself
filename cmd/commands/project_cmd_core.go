@@ -46,9 +46,9 @@ var projectCreateCmd = &cobra.Command{
 		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Creating project %q at %s...\n",
 			projectCreateFlags.Slug, projectCreateFlags.Domain)
 
-		body, code, err := doControllerRequest("POST", "/projects/create", map[string]string{
-			"Slug":   projectCreateFlags.Slug,
-			"Domain": projectCreateFlags.Domain,
+		body, code, err := doControllerRequest("POST", "/projects/create", CreateProjectRequest{
+			Slug:   projectCreateFlags.Slug,
+			Domain: projectCreateFlags.Domain,
 		})
 		if err != nil {
 			return fmt.Errorf("controller error: %w", err)

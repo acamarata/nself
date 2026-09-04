@@ -24,6 +24,7 @@ All ɳSelf project configuration lives in `.env` (and optionally `.env.local` fo
 - [AI (Zero-Config AI Pool)](#ai-zero-config-ai-pool)
 - [Optional Service Toggles](#optional-service-toggles)
 - [Custom Services (CS\_N)](#custom-services-cs_n)
+- [Observability / Profiling](#observability--profiling)
 - [Computed Variables](#computed-variables)
 
 ---
@@ -285,6 +286,19 @@ This registers a Node.js service named `ping_api` accessible at `ping.{BASE_DOMA
 |---|---|---|---|---|
 | `NSELF_EMBEDDED_PG` | bool | `false` | No | When `true`, uses embedded PostgreSQL via pglite/wasmtime instead of a Docker Postgres container. Hasura connects via a Unix-domain socket bridge. Requires a `CGO_ENABLED=1` build of the CLI. Pass `--embedded-pg` to `nself start` as well. |
 | `NSELF_POSTGRES_MODE` | string | `docker` | No | Selects the Postgres runtime. `docker` runs the standard Postgres container (default, fully supported). `wasm` runs the experimental embedded pglite/wasmtime lane. The `wasm` mode is gated behind the Emscripten ABI shim and is not yet production ready. |
+
+---
+
+## Observability / Profiling
+
+| Variable | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `NSELF_PROFILING_TOKEN` | string | *(empty)* | No | Bearer token required in the `X-Profile-Token` header to reach any `/debug/pprof/*` endpoint (`internal/observability`). Empty means no token is configured — see `NSELF_PPROF_DEV` below for the only way to still reach pprof in that case. |
+| `NSELF_PPROF_BIND` | string | `127.0.0.1:6060` | No | Bind address for the standalone pprof HTTP server started by `ServeProfiling`. Keep this loopback-only; it is never exposed publicly via nginx. |
+| `NSELF_PPROF_DEV` | bool (`"1"`) | unset | No | Local-dev escape hatch for pprof when `NSELF_PROFILING_TOKEN` is unset. Pprof normally fails closed (403) with no token configured — set `NSELF_PPROF_DEV=1` to allow unauthenticated access, but **only** when the pprof handler's bind address is loopback (`127.0.0.1`, `::1`, or `localhost`). On any non-loopback bind this variable has no effect and pprof stays closed. Every request served through this escape hatch logs a `slog.Warn` line so it is never silently active. |
+| `PYROSCOPE_ENABLED` | bool | `false` | No | Enables continuous profiling push to a Pyroscope server. |
+| `PYROSCOPE_SERVER_URL` | string | *(empty)* | No | Pyroscope server address; required when `PYROSCOPE_ENABLED=true`. |
+| `PYROSCOPE_APPLICATION_NAME` | string | `OTEL_SERVICE_NAME`, else *(empty)* | No | Application name reported to Pyroscope. Falls back to `OTEL_SERVICE_NAME` when unset. |
 
 ---
 

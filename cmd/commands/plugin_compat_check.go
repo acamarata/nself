@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -52,7 +51,7 @@ func runPluginCompatCheck(cmd *cobra.Command, args []string) error {
 	pluginDir := resolvePluginDir()
 	cliVer := version.GetVersion()
 
-	ctx := context.Background()
+	ctx := cmd.Context()
 	cacheDir := plugin.DefaultCacheDir()
 	reg, regErr := plugin.FetchRegistry(ctx, "", cacheDir)
 	if regErr != nil {
