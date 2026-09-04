@@ -104,7 +104,7 @@ Run `make cmd-inventory` to refresh. **Total top-level commands: 50**
 | `nself backup` | Backup operations: create, list, restore, verify, prune, config, status, init-key | data | config, create, drill, init-key, list, pitr, prune, restore, restore-remote, resume, schedule, status, stream, verify |
 | `nself build` | Compose your infrastructure from .env | core | — |
 | `nself bundle` | Manage and inspect nSelf plugin bundles | extend | info, install, list, remove |
-| `nself ci` | Run the nself-ci gate suite and post a GitHub commit status | deploy | eval, forgejo, serve |
+| `nself ci` | Run the nself-ci gate suite and post a GitHub commit status | deploy | build, eval, forgejo, serve |
 | `nself clean` | Remove generated artifacts (docker-compose.yml, nginx configs, build cache) | core | — |
 | `nself completion` | Generate shell completion scripts | account | — |
 | `nself config` | Manage project configuration | config | export, features, get, import, list, set, show, validate |
