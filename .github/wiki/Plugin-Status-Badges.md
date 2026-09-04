@@ -58,6 +58,40 @@ claw                [installed]
 nfamily             [planned]
 ```
 
+## Checksum and Signature Verification
+
+`nself plugin install` always verifies a registry-supplied checksum and Ed25519
+signature against the downloaded tarball, and always refuses the install if a
+present checksum or signature does not match, for every status. This does not
+depend on any setting.
+
+What is configurable is what happens when the registry entry has no checksum
+or signature at all. By default the CLI warns and proceeds, for every status
+including `stable` and an omitted status field (an omitted status defaults to
+`stable`, so the two are treated identically):
+
+```
+$ nself plugin install storage
+warning: no checksum in registry for plugin "storage", skipping verification
+Downloading storage v1.0.0...
+Plugin storage installed.
+```
+
+Set `NSELF_PLUGIN_REQUIRE_CHECKSUM=1` to refuse installing a stable (or
+status-omitted) plugin that has no checksum/signature in the registry,
+instead of warning:
+
+```
+$ NSELF_PLUGIN_REQUIRE_CHECKSUM=1 nself plugin install storage
+Error: plugin "storage" is missing required checksum for stable publishStatus — install refused
+```
+
+This is off by default because most of the registry has not been backfilled
+with checksums yet; it exists so a self-hosted deployment can opt into strict
+supply-chain verification once it only installs from a fully-checksummed
+registry. `beta`/`deprecated`/other non-stable plugins are never affected by
+this setting — a missing checksum on those always warns and proceeds.
+
 ## Upgrading from Beta to Stable
 
 When a plugin graduates from beta to stable, the registry update is automatic. Run `nself plugin refresh` to pull the latest registry before upgrading:

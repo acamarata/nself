@@ -138,12 +138,11 @@ func TestRegistryCacheRoundTripIsDrivenByTheManifest(t *testing.T) {
 // Registry.MarshalJSON did not copy AuthorPublicKey, Signature or
 // PublishStatus. The registry cache is read on every run after the first, so
 // from the second install onward verifyPluginSignature received three empty
-// strings. That takes the "no signature supplied" branch, which refuses only
-// when publishStatus is "stable" — and publishStatus was empty too, so it
-// returned nil.
-//
-// The result: a signed, stable plugin installed without its signature being
-// checked, on every cache-warm run, with nothing printed.
+// strings. That takes the "no signature supplied" branch. Whether that
+// branch refuses depends on NSELF_PLUGIN_REQUIRE_CHECKSUM (FIX-CLI-6,
+// default off pending full registry checksum/signature coverage) — this test
+// asserts the material itself (AuthorPublicKey/Signature/PublishStatus)
+// survives the round-trip, and that hard mode refuses when opted in.
 func TestCacheKeepsSignatureMaterial(t *testing.T) {
 	original := &Registry{Plugins: []PluginManifest{{
 		Name:            "signed-plugin",
@@ -175,10 +174,12 @@ func TestCacheKeepsSignatureMaterial(t *testing.T) {
 			"refused unsigned install into an allowed one", got.PublishStatus)
 	}
 
-	// The behaviour that matters, asserted directly: a stable plugin arriving
-	// with no signature must be refused, and this is the path the cache used to
-	// send every stable plugin down.
+	// The behaviour that matters, asserted directly: under hard mode
+	// (NSELF_PLUGIN_REQUIRE_CHECKSUM=1), a stable plugin arriving with no
+	// signature must be refused — this is the path the cache used to send
+	// every stable plugin down, silently, regardless of the switch.
+	t.Setenv(pluginRequireChecksumEnv, "1")
 	if err := verifyPluginSignature("/nonexistent", "", "", got.PublishStatus); err == nil {
-		t.Error("a stable plugin with no signature was accepted")
+		t.Error("a stable plugin with no signature was accepted even in hard mode")
 	}
 }

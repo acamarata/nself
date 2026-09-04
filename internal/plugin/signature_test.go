@@ -94,10 +94,34 @@ func TestVerifyPluginSignature_WrongKey(t *testing.T) {
 	}
 }
 
-// TestVerifyPluginSignature_EmptyInputsStableHardFail verifies that stable
-// plugins with a missing key or signature are refused with ErrPluginUnsigned.
-// V06-F2: stable publishStatus + missing signature = hard error.
-func TestVerifyPluginSignature_EmptyInputsStableHardFail(t *testing.T) {
+// TestVerifyPluginSignature_MismatchAlwaysRefusesRegardlessOfStatus verifies
+// that a PRESENT-but-wrong signature always refuses the install, for every
+// publishStatus (including "beta"/"deprecated") — a present-but-wrong
+// signature is never acceptable regardless of lifecycle stage, and this
+// check does not depend on NSELF_PLUGIN_REQUIRE_CHECKSUM.
+func TestVerifyPluginSignature_MismatchAlwaysRefusesRegardlessOfStatus(t *testing.T) {
+	pubKeyHexA, _, _, _ := generateTestKeyPair(t)
+	_, _, _, privB := generateTestKeyPair(t)
+	content := []byte("plugin content")
+	archivePath := writeTempFile(t, content)
+	wrongSigHex := signFileContent(t, content, privB) // signed with B, verified against A
+
+	for _, status := range []string{"", "stable", "beta", "deprecated"} {
+		t.Run("status="+status, func(t *testing.T) {
+			err := verifyPluginSignature(archivePath, pubKeyHexA, wrongSigHex, status)
+			if err == nil {
+				t.Fatalf("present-but-wrong signature must refuse for status %q, got nil", status)
+			}
+		})
+	}
+}
+
+// TestVerifyPluginSignature_EmptyInputsDefaultWarnOnly verifies that, by
+// default (NSELF_PLUGIN_REQUIRE_CHECKSUM unset), a missing key or signature
+// is permitted — never refused — for every status, including an explicit
+// "stable" and an absent ("") one. FIX-CLI-6: registry coverage is 47/177 as
+// of 2026-09-04, so refusing by default would refuse the other 130 installs.
+func TestVerifyPluginSignature_EmptyInputsDefaultWarnOnly(t *testing.T) {
 	content := []byte("plugin content")
 	archivePath := writeTempFile(t, content)
 
@@ -110,11 +134,34 @@ func TestVerifyPluginSignature_EmptyInputsStableHardFail(t *testing.T) {
 		{"empty signature", "aabbcc", ""},
 		{"both empty", "", ""},
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			err := verifyPluginSignature(archivePath, tc.pubKey, tc.sigHex, "stable")
+	for _, status := range []string{"stable", "", "beta", "deprecated"} {
+		for _, tc := range cases {
+			t.Run("status="+status+"/"+tc.name, func(t *testing.T) {
+				err := verifyPluginSignature(archivePath, tc.pubKey, tc.sigHex, status)
+				if err != nil {
+					t.Errorf("default mode: missing signature should warn and proceed (nil), got: %v", err)
+				}
+			})
+		}
+	}
+}
+
+// TestVerifyPluginSignature_EmptyInputsHardModeRefusesEffectivelyStable
+// verifies that with NSELF_PLUGIN_REQUIRE_CHECKSUM=1 set, a missing key or
+// signature is refused with ErrPluginUnsigned for both an explicit "stable"
+// status and an absent ("") one (EffectiveStatus treats them the same —
+// this is the actual FIX-CLI-6 defect: before this fix "" never hit the
+// hard-fail branch even in hard mode).
+func TestVerifyPluginSignature_EmptyInputsHardModeRefusesEffectivelyStable(t *testing.T) {
+	t.Setenv(pluginRequireChecksumEnv, "1")
+	content := []byte("plugin content")
+	archivePath := writeTempFile(t, content)
+
+	for _, status := range []string{"stable", ""} {
+		t.Run("status="+status, func(t *testing.T) {
+			err := verifyPluginSignature(archivePath, "", "", status)
 			if err == nil {
-				t.Errorf("stable plugin with empty inputs should return ErrPluginUnsigned, got nil")
+				t.Fatalf("hard mode: effectively-stable plugin with empty inputs should return ErrPluginUnsigned, got nil")
 			}
 			if !errors.Is(err, errs.ErrPluginUnsigned) {
 				t.Errorf("expected ErrPluginUnsigned, got: %v", err)
@@ -123,17 +170,19 @@ func TestVerifyPluginSignature_EmptyInputsStableHardFail(t *testing.T) {
 	}
 }
 
-// TestVerifyPluginSignature_EmptyInputsNonStableSkip verifies that alpha/beta
-// plugins with missing signature skip verification (permissive dev workflow).
-// V06-F2: non-stable publishStatus + missing signature = warning, not error.
-func TestVerifyPluginSignature_EmptyInputsNonStableSkip(t *testing.T) {
+// TestVerifyPluginSignature_EmptyInputsHardModeNonStableSkip verifies that,
+// even in hard mode, beta/deprecated plugins with missing signature still
+// skip verification — the hard-mode requirement only applies to
+// EffectiveStatus == "stable".
+func TestVerifyPluginSignature_EmptyInputsHardModeNonStableSkip(t *testing.T) {
+	t.Setenv(pluginRequireChecksumEnv, "1")
 	content := []byte("plugin content")
 	archivePath := writeTempFile(t, content)
 
-	for _, status := range []string{"alpha", "beta", "experimental", ""} {
+	for _, status := range []string{"alpha", "beta", "deprecated", "experimental"} {
 		t.Run("status="+status, func(t *testing.T) {
 			if err := verifyPluginSignature(archivePath, "", "", status); err != nil {
-				t.Errorf("non-stable plugin with empty signature should skip (return nil), got: %v", err)
+				t.Errorf("non-stable plugin with empty signature should skip (return nil) even in hard mode, got: %v", err)
 			}
 		})
 	}
@@ -198,32 +247,61 @@ func TestVerifyPluginSignature_LargeFile(t *testing.T) {
 	}
 }
 
-// TestVerifyChecksum_StableMissingChecksumHardFail verifies that a stable plugin
-// with an empty checksum is refused with ErrPluginMissingChecksum.
-// V06-F2: stable publishStatus + missing checksum = hard error.
-func TestVerifyChecksum_StableMissingChecksumHardFail(t *testing.T) {
+// TestVerifyChecksum_MissingChecksumDefaultWarnOnly verifies that, by
+// default (NSELF_PLUGIN_REQUIRE_CHECKSUM unset), a missing checksum is
+// permitted — never refused — for every status, including an explicit
+// "stable" and an absent ("") one. FIX-CLI-6: registry coverage is 47/177 as
+// of 2026-09-04, so refusing by default would refuse the other 130 installs.
+func TestVerifyChecksum_MissingChecksumDefaultWarnOnly(t *testing.T) {
 	content := []byte("plugin archive content")
 	archivePath := writeTempFile(t, content)
 
-	err := verifyChecksum(archivePath, "", "stable")
-	if err == nil {
-		t.Fatal("stable plugin with empty checksum should return ErrPluginMissingChecksum, got nil")
-	}
-	if !errors.Is(err, errs.ErrPluginMissingChecksum) {
-		t.Errorf("expected ErrPluginMissingChecksum, got: %v", err)
+	for _, status := range []string{"stable", "", "alpha", "beta", "deprecated", "experimental"} {
+		t.Run("status="+status, func(t *testing.T) {
+			if err := verifyChecksum(archivePath, "", status); err != nil {
+				t.Errorf("default mode: missing checksum should warn and proceed (nil), got: %v", err)
+			}
+		})
 	}
 }
 
-// TestVerifyChecksum_NonStableMissingChecksumPermissive verifies that alpha/beta
-// plugins with a missing checksum return nil (permissive dev workflow).
-func TestVerifyChecksum_NonStableMissingChecksumPermissive(t *testing.T) {
+// TestVerifyChecksum_MissingChecksumHardModeRefusesEffectivelyStable verifies
+// that with NSELF_PLUGIN_REQUIRE_CHECKSUM=1 set, a missing checksum is
+// refused with ErrPluginMissingChecksum for both an explicit "stable" status
+// and an absent ("") one (EffectiveStatus treats them the same — this is the
+// actual FIX-CLI-6 defect: before this fix "" never hit the hard-fail branch
+// even in hard mode).
+func TestVerifyChecksum_MissingChecksumHardModeRefusesEffectivelyStable(t *testing.T) {
+	t.Setenv(pluginRequireChecksumEnv, "1")
 	content := []byte("plugin archive content")
 	archivePath := writeTempFile(t, content)
 
-	for _, status := range []string{"alpha", "beta", "experimental", ""} {
+	for _, status := range []string{"stable", ""} {
+		t.Run("status="+status, func(t *testing.T) {
+			err := verifyChecksum(archivePath, "", status)
+			if err == nil {
+				t.Fatal("hard mode: effectively-stable plugin with empty checksum should return ErrPluginMissingChecksum, got nil")
+			}
+			if !errors.Is(err, errs.ErrPluginMissingChecksum) {
+				t.Errorf("expected ErrPluginMissingChecksum, got: %v", err)
+			}
+		})
+	}
+}
+
+// TestVerifyChecksum_MissingChecksumHardModeNonStableSkip verifies that,
+// even in hard mode, beta/deprecated plugins with a missing checksum still
+// skip verification — the hard-mode requirement only applies to
+// EffectiveStatus == "stable".
+func TestVerifyChecksum_MissingChecksumHardModeNonStableSkip(t *testing.T) {
+	t.Setenv(pluginRequireChecksumEnv, "1")
+	content := []byte("plugin archive content")
+	archivePath := writeTempFile(t, content)
+
+	for _, status := range []string{"alpha", "beta", "deprecated", "experimental"} {
 		t.Run("status="+status, func(t *testing.T) {
 			if err := verifyChecksum(archivePath, "", status); err != nil {
-				t.Errorf("non-stable plugin with empty checksum should return nil, got: %v", err)
+				t.Errorf("non-stable plugin with empty checksum should return nil even in hard mode, got: %v", err)
 			}
 		})
 	}
@@ -240,5 +318,25 @@ func TestVerifyChecksum_ValidChecksum(t *testing.T) {
 
 	if err := verifyChecksum(archivePath, expectedHex, "stable"); err != nil {
 		t.Fatalf("valid checksum should pass: %v", err)
+	}
+}
+
+// TestVerifyChecksum_MismatchAlwaysRefusesRegardlessOfStatus verifies that a
+// PRESENT-but-wrong checksum always refuses the install, for every
+// publishStatus (including "beta"/"deprecated") — a present-but-wrong
+// checksum is never acceptable regardless of lifecycle stage, and this check
+// does not depend on NSELF_PLUGIN_REQUIRE_CHECKSUM.
+func TestVerifyChecksum_MismatchAlwaysRefusesRegardlessOfStatus(t *testing.T) {
+	content := []byte("plugin archive content for mismatch test")
+	archivePath := writeTempFile(t, content)
+	wrongHex := hex.EncodeToString(make([]byte, sha256.Size)) // all-zero, guaranteed wrong
+
+	for _, status := range []string{"", "stable", "beta", "deprecated"} {
+		t.Run("status="+status, func(t *testing.T) {
+			err := verifyChecksum(archivePath, wrongHex, status)
+			if err == nil {
+				t.Fatalf("present-but-wrong checksum must refuse for status %q, got nil", status)
+			}
+		})
 	}
 }

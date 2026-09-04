@@ -52,8 +52,9 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	}
 
 	// Status check: lifecycle policy enforcement (S58-T01, S58-T02, S58-T03).
-	// "stable" and "" (legacy, no status field) proceed silently.
-	switch manifest.PublishStatus {
+	// "stable" and "" (legacy, no status field) proceed silently — compared
+	// via EffectiveStatus so both are handled by the same code path (FIX-CLI-6).
+	switch EffectiveStatus(manifest.PublishStatus) {
 	case "planned":
 		return fmt.Errorf(
 			"plugin %q is not yet available — coming soon\nsee https://nself.org/plugins/%s for the release timeline\nrun 'nself plugin list' to see available plugins",
@@ -172,8 +173,11 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	defer func() { _ = os.Remove(archivePath) }()
 
 	// Step 5: Verify checksum before extraction.
-	// For stable plugins a missing checksum is a hard error (V06-F2).
-	// For non-stable plugins an absent checksum emits a warning and continues.
+	// A checksum that IS present and wrong always refuses the install. A
+	// MISSING checksum only refuses when NSELF_PLUGIN_REQUIRE_CHECKSUM=1 is
+	// set (default: warn and proceed, for every publishStatus including an
+	// effectively-stable one — registry coverage is 47/177 as of 2026-09-04,
+	// see verifyChecksum's doc comment; FIX-CLI-6).
 	if manifest.Checksum != "" {
 		if err := verifyChecksum(archivePath, manifest.Checksum, manifest.PublishStatus); err != nil {
 			_ = os.Remove(archivePath)
@@ -181,7 +185,7 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 		}
 	} else {
 		if err := verifyChecksum(archivePath, "", manifest.PublishStatus); err != nil {
-			// stable plugin — hard fail returned by verifyChecksum
+			// NSELF_PLUGIN_REQUIRE_CHECKSUM=1 hard-refusal path.
 			_ = os.Remove(archivePath)
 			return fmt.Errorf("checksum verification for plugin %q: %w", name, err)
 		}
@@ -191,7 +195,8 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 	// Step 5b: Verify Ed25519 signature (T09 — Security-Always-Free).
 	// The signature is computed over the raw SHA-256 digest of the tarball.
 	// Public key is pinned in the registry; never fetched at verify time (TOCTOU).
-	// For stable plugins a missing signature is a hard error (V06-F2).
+	// A missing signature only refuses when NSELF_PLUGIN_REQUIRE_CHECKSUM=1 is
+	// set (default: warn and proceed — see verifyPluginSignature; FIX-CLI-6).
 	// Skip requires BOTH NSELF_LICENSE_SKIP_VERIFY=1 AND NSELF_LICENSE_SKIP_VERIFY_FORCE=1.
 	// Either var alone is insufficient — standalone skip is not permitted (matches license/validate.go).
 	// In prod/staging these bypass vars are fatal — dev-only escapes must never reach production.
