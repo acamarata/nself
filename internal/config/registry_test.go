@@ -4,11 +4,12 @@ import (
 	"testing"
 )
 
-// TestRegistryLength asserts that at least 7 validators are registered.
+// TestRegistryLength asserts that at least 8 validators are registered.
 // This test acts as a regression guard: if a validator is accidentally
 // removed from an init() call, the count drops and this test fails.
 //
-// Current expected registrations (all from validator.go init()):
+// Current expected registrations (all from validator.go init(), plus
+// placeholder-secrets from validator_placeholder_secrets.go):
 //   - env
 //   - passwords
 //   - cors
@@ -16,7 +17,8 @@ import (
 //   - port-conflicts
 //   - duplicate-routes
 //   - minio-credentials
-const minValidatorCount = 7
+//   - placeholder-secrets
+const minValidatorCount = 8
 
 func TestRegistryLength(t *testing.T) {
 	if len(registry) < minValidatorCount {
@@ -36,6 +38,7 @@ func TestRegistryNames(t *testing.T) {
 		"port-conflicts",
 		"duplicate-routes",
 		"minio-credentials",
+		"placeholder-secrets",
 	}
 
 	registered := make(map[string]bool, len(registry))
