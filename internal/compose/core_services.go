@@ -140,18 +140,30 @@ func (g *Generator) buildHasuraService() (ServiceConfig, error) {
 		env[k] = v
 	}
 
-	// Passthrough: forward REMOTE_SCHEMA_* and HASURA_EXTRA_* from .env to the container.
-	// Hasura's url_from_env feature reads Remote Schema URLs directly from the container
-	// environment, so these vars must be present at runtime.
+	// Passthrough: forward REMOTE_SCHEMA_*, HASURA_EXTRA_*, and the rest of
+	// Hasura's own HASURA_GRAPHQL_* namespace from .env to the container.
+	// Hasura's url_from_env feature reads Remote Schema URLs directly from the
+	// container environment, so REMOTE_SCHEMA_*/HASURA_EXTRA_* must be
+	// present at runtime. The HASURA_GRAPHQL_* forward closes a gap where
+	// engine tuning vars declared in .env (HASURA_GRAPHQL_ENABLE_ALLOWLIST,
+	// _NODE_LIMIT, _DEPTH_LIMIT, _BATCH_SIZE, _LIVE_QUERIES_*, etc.) were
+	// recognized by the loader (loader_known_vars_core.go, to suppress
+	// unknown-var warnings) but never actually written into the generated
+	// compose file — additive only, so the curated values set above (admin
+	// secret, JWT secret, console/dev-mode substitution strings, ...) always
+	// win and are never clobbered by a raw .env echo of the same key.
 	if cfg.Passthrough != nil {
 		keys := make([]string, 0, len(cfg.Passthrough))
 		for k := range cfg.Passthrough {
-			if strings.HasPrefix(k, "REMOTE_SCHEMA_") || strings.HasPrefix(k, "HASURA_EXTRA_") {
+			if strings.HasPrefix(k, "REMOTE_SCHEMA_") || strings.HasPrefix(k, "HASURA_EXTRA_") || strings.HasPrefix(k, "HASURA_GRAPHQL_") {
 				keys = append(keys, k)
 			}
 		}
 		sort.Strings(keys)
 		for _, k := range keys {
+			if _, exists := env[k]; exists {
+				continue
+			}
 			env[k] = cfg.Passthrough[k]
 		}
 	}

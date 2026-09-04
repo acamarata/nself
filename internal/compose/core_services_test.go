@@ -207,6 +207,133 @@ func TestHasuraRemoteSchemaPassthrough(t *testing.T) {
 	}
 }
 
+// TestHasuraGraphqlNamespacePassthrough is a table-driven regression test for
+// a live defect (P6 FIX-CLI-2, found 2026-09-03): HASURA_GRAPHQL_* engine
+// tuning vars declared in .env (e.g. HASURA_GRAPHQL_ENABLE_ALLOWLIST) were
+// recognized by the loader as known vars (loader_known_vars_core.go, to
+// suppress unknown-var warnings) but never actually forwarded into the
+// generated docker-compose Hasura service env — silently dropped at `nself
+// build` time. Verifies both the specific reported var and an arbitrary
+// HASURA_GRAPHQL_* var land in the rendered compose, and that curated values
+// (admin secret) are never clobbered by a same-named passthrough entry.
+func TestHasuraGraphqlNamespacePassthrough(t *testing.T) {
+	tests := []struct {
+		name      string
+		key       string
+		value     string
+		wantValue string // "" means: must equal the passthrough value verbatim
+	}{
+		{
+			name:      "reported defect: HASURA_GRAPHQL_ENABLE_ALLOWLIST",
+			key:       "HASURA_GRAPHQL_ENABLE_ALLOWLIST",
+			value:     "true",
+			wantValue: "true",
+		},
+		{
+			name:      "arbitrary HASURA_GRAPHQL_FOO tuning var",
+			key:       "HASURA_GRAPHQL_FOO",
+			value:     "bar",
+			wantValue: "bar",
+		},
+		{
+			name:      "engine limit var HASURA_GRAPHQL_NODE_LIMIT",
+			key:       "HASURA_GRAPHQL_NODE_LIMIT",
+			value:     "5000",
+			wantValue: "5000",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := minimalConfig()
+			cfg.Passthrough = map[string]string{tt.key: tt.value}
+
+			g := NewGenerator(cfg)
+			svc, err := g.buildHasuraService()
+			if err != nil {
+				t.Fatalf("buildHasuraService() error: %v", err)
+			}
+
+			got, ok := svc.Environment[tt.key]
+			if !ok {
+				t.Fatalf("expected %q in Hasura environment, not found (dropped)", tt.key)
+			}
+			if got != tt.wantValue {
+				t.Errorf("%s = %q, want %q", tt.key, got, tt.wantValue)
+			}
+		})
+	}
+
+	// Curated values must never be clobbered by a same-named passthrough entry.
+	t.Run("curated ADMIN_SECRET wins over passthrough echo", func(t *testing.T) {
+		cfg := minimalConfig()
+		cfg.Passthrough = map[string]string{
+			"HASURA_GRAPHQL_ADMIN_SECRET": "raw-env-file-value-should-not-win",
+		}
+
+		g := NewGenerator(cfg)
+		svc, err := g.buildHasuraService()
+		if err != nil {
+			t.Fatalf("buildHasuraService() error: %v", err)
+		}
+		if got := svc.Environment["HASURA_GRAPHQL_ADMIN_SECRET"]; got != "secret" {
+			t.Errorf("HASURA_GRAPHQL_ADMIN_SECRET = %q, want curated %q (must not be clobbered by passthrough)", got, "secret")
+		}
+	})
+}
+
+// TestAuthNamespacePassthrough mirrors TestHasuraGraphqlNamespacePassthrough
+// for buildAuthService: hasura-auth's own AUTH_*/HASURA_AUTH_* env vars
+// (e.g. AUTH_ANONYMOUS_USERS_ENABLED) had the same curated-list gap as Hasura
+// — recognized by the loader, never forwarded into the generated compose env.
+func TestAuthNamespacePassthrough(t *testing.T) {
+	tests := []struct {
+		key   string
+		value string
+	}{
+		{"AUTH_ANONYMOUS_USERS_ENABLED", "true"},
+		{"AUTH_REQUIRE_EMAIL_VERIFICATION", "false"},
+		{"HASURA_AUTH_SMTP_HOST", "smtp.example.com"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.key, func(t *testing.T) {
+			cfg := minimalConfig()
+			cfg.Passthrough = map[string]string{tt.key: tt.value}
+
+			g := NewGenerator(cfg)
+			svc, err := g.buildAuthService()
+			if err != nil {
+				t.Fatalf("buildAuthService() error: %v", err)
+			}
+
+			got, ok := svc.Environment[tt.key]
+			if !ok {
+				t.Fatalf("expected %q in Auth environment, not found (dropped)", tt.key)
+			}
+			if got != tt.value {
+				t.Errorf("%s = %q, want %q", tt.key, got, tt.value)
+			}
+		})
+	}
+
+	t.Run("curated AUTH_JWT_SECRET wins over passthrough echo", func(t *testing.T) {
+		cfg := minimalConfig()
+		cfg.Passthrough = map[string]string{
+			"AUTH_JWT_SECRET": "raw-env-file-value-should-not-win",
+		}
+
+		g := NewGenerator(cfg)
+		svc, err := g.buildAuthService()
+		if err != nil {
+			t.Fatalf("buildAuthService() error: %v", err)
+		}
+		if got := svc.Environment["AUTH_JWT_SECRET"]; got != "testsecretkey12345678901234567890" {
+			t.Errorf("AUTH_JWT_SECRET = %q, want curated cfg.Hasura.JWTKey value (must not be clobbered by passthrough)", got)
+		}
+	})
+}
+
 // TestAuthPortFromConfig verifies T04: cfg.Auth.Port controls both host and container ports.
 // nhost/hasura-auth binds on the port set by AUTH_PORT env var (= cfg.Auth.Port).
 // Setting Auth.Port = 4001 must produce "127.0.0.1:4001:4001".

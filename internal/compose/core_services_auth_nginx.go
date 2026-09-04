@@ -67,16 +67,26 @@ func (g *Generator) buildAuthService() (ServiceConfig, error) {
 	// T07: Inject AUTH_ALLOWED_REDIRECT_URLS for OAuth and magic link support.
 	env["AUTH_ALLOWED_REDIRECT_URLS"] = computeAllowedRedirectURLs(cfg)
 
-	// Passthrough: iterate for AUTH_PROVIDER_* keys
+	// Passthrough: forward AUTH_PROVIDER_* (OAuth provider config) plus the
+	// rest of hasura-auth's own AUTH_*/HASURA_AUTH_* namespace from .env.
+	// Same curated-list gap as Hasura (see buildHasuraService): vars like
+	// AUTH_ANONYMOUS_USERS_ENABLED, AUTH_REQUIRE_EMAIL_VERIFICATION,
+	// AUTH_MODE, HASURA_AUTH_SMTP_*, etc. are recognized by the loader
+	// (loader_known_vars_core.go) but were never written into the generated
+	// compose env. Additive only — the curated values above (JWT secret,
+	// SMTP config, allowed redirect URLs, ...) always win.
 	if cfg.Passthrough != nil {
 		keys := make([]string, 0, len(cfg.Passthrough))
 		for k := range cfg.Passthrough {
-			if strings.HasPrefix(k, "AUTH_PROVIDER_") {
+			if strings.HasPrefix(k, "AUTH_") || strings.HasPrefix(k, "HASURA_AUTH_") {
 				keys = append(keys, k)
 			}
 		}
 		sort.Strings(keys)
 		for _, k := range keys {
+			if _, exists := env[k]; exists {
+				continue
+			}
 			env[k] = cfg.Passthrough[k]
 		}
 	}
