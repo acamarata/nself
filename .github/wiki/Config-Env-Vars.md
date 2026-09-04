@@ -255,6 +255,8 @@ These boolean flags enable optional bundled services. Each defaults to `false`. 
 | `CS_N_CPU` | string | `0.5` | No | Docker CPU core limit. |
 | `CS_N_PUBLIC` | bool | `false` | No | When `true`, the service is reachable from outside the Docker network via Nginx. |
 | `CS_N_REPLICAS` | int | `1` | No | Number of container instances to run. |
+| `CS_N_HEALTHCHECK` | string | `/health` | No | Healthcheck override: a path, a full `CMD ...`/`CMD-SHELL ...` command, or `disabled`/`none`/`false` to omit it. See [[Config-Custom-Services]]. |
+| `CS_N_ENV_PASSTHROUGH` | string | *(empty)* | No | Comma-separated allowlist of project `.env` var names to forward into this service. `CS_N_ENV` wins on conflict. See [[Config-Custom-Services]]. |
 
 **Example** (from `web/`, `nself.org` infrastructure):
 

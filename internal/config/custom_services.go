@@ -14,7 +14,8 @@ import (
 //
 // If port is omitted or zero, it auto-assigns 8000+N.
 // Per-service overrides are read from CS_N_PUBLIC, CS_N_MEMORY, CS_N_CPU,
-// CS_N_PORT, and CS_N_ROUTE environment variables.
+// CS_N_PORT, CS_N_ROUTE, CS_N_HEALTHCHECK, and CS_N_ENV_PASSTHROUGH
+// environment variables.
 func parseCustomServices() ([]CustomService, error) {
 	var services []CustomService
 	for i := 1; i <= 10; i++ {
@@ -67,6 +68,8 @@ func parseCustomServices() ([]CustomService, error) {
 		cs.CPU = getEnvOr(fmt.Sprintf("CS_%d_CPU", i), "0.5")
 		cs.TablePrefix = os.Getenv(fmt.Sprintf("CS_%d_TABLE_PREFIX", i))
 		cs.ExtraEnv = os.Getenv(fmt.Sprintf("CS_%d_ENV", i))
+		cs.HealthCheck = os.Getenv(fmt.Sprintf("CS_%d_HEALTHCHECK", i))
+		cs.EnvPassthrough = os.Getenv(fmt.Sprintf("CS_%d_ENV_PASSTHROUGH", i))
 
 		// Optional build context path override. Rejects absolute paths and
 		// path traversal so a misconfigured env can't escape the project root.

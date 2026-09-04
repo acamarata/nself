@@ -79,9 +79,10 @@ All variables use the pattern `CS_N_*` where `N` is the slot number (1–10). Va
 | `CS_N_MEMORY` | string | `256m` | Docker memory limit |
 | `CS_N_CPU` | string | `0.5` | Docker CPU limit (fractional cores) |
 | `CS_N_REPLICAS` | int | `1` | Number of container instances to run |
-| `CS_N_HEALTHCHECK` | string | `/health` | Health endpoint path , used by Docker healthcheck and `nself status` |
+| `CS_N_HEALTHCHECK` | string | `/health` | Healthcheck override. A path (e.g. `/auth/health`) probes that path instead of `/health` on the service's own port. A full `CMD ...` / `CMD-SHELL ...` command is passed through verbatim (split on whitespace) for services that need curl, a non-HTTP probe, or a different port. `disabled` / `none` / `false` omits the healthcheck entirely. |
 | `CS_N_TABLE_PREFIX` | string | *(empty)* | Database table prefix for this service's migrations |
-| `CS_N_ENV` | string | *(empty)* | Additional env vars to inject, in `KEY=VALUE,KEY=VALUE` format |
+| `CS_N_ENV_PASSTHROUGH` | string | *(empty)* | Comma-separated allowlist of project `.env` var names to forward into this container in addition to the fixed core set. `CS_N_ENV` still wins on a name conflict. |
+| `CS_N_ENV` | string | *(empty)* | Additional env vars to inject, in `KEY=VALUE,KEY=VALUE` format. Always applied last — overrides both the fixed core set and `CS_N_ENV_PASSTHROUGH`. |
 
 All `CS_*` variables are automatically exempt from "unknown env var" warnings.
 
@@ -100,19 +101,38 @@ When a custom service container starts, ɳSelf automatically injects the followi
 | `ENV` | from project `.env` | `dev`, `staging`, or `prod` |
 | `CS_N_ENV` values | parsed from `CS_N_ENV` | Any additional vars you define for this slot |
 
-All variables from the project's `.env` that do not conflict with injected vars are also forwarded into the container. This means your service can read any project-level config it needs without extra wiring.
+**By design, that fixed set above is all a custom service receives from the
+project's `.env` — nothing is forwarded implicitly.** Each service's surface
+area is explicit and auditable rather than silently coupled to whatever
+another part of the stack happens to define. To pull in a specific project
+`.env` var, name it in `CS_N_ENV_PASSTHROUGH`; to define a new one outright,
+use `CS_N_ENV`.
 
 **Example, reading injected vars in a Go service:**
 
 ```go
 dbURL := os.Getenv("DATABASE_URL")            // injected by nSelf
 adminSecret := os.Getenv("HASURA_GRAPHQL_ADMIN_SECRET") // injected by nSelf
-apiKey := os.Getenv("MY_API_KEY")             // forwarded from .env
+apiKey := os.Getenv("MY_API_KEY")             // forwarded via CS_N_ENV_PASSTHROUGH
+```
+
+### Forwarding Project Vars
+
+Use `CS_N_ENV_PASSTHROUGH` to forward specific vars that already exist in the
+project's `.env` (a comma-separated allowlist of names, values are not
+repeated):
+
+```bash
+# .env
+MY_API_KEY=sk_live_...
+CS_2_ENV_PASSTHROUGH=MY_API_KEY,STRIPE_WEBHOOK_SECRET
 ```
 
 ### Adding Extra Vars
 
-Use `CS_N_ENV` to pass service-specific variables that aren't in the main `.env`:
+Use `CS_N_ENV` to pass service-specific variables that aren't in the main `.env`,
+or to override a value that was forwarded via `CS_N_ENV_PASSTHROUGH`
+(`CS_N_ENV` always wins on a name conflict):
 
 ```bash
 # .env
@@ -233,6 +253,7 @@ CS_2_REPLICAS=3
 
 - Custom service images are built from the scaffolded Dockerfile in `./services/{name}/`. To use a pre-built image instead, set `CS_N_IMAGE` directly (advanced usage, see [[Guide-Custom-Services]]).
 - The `CS_N_TABLE_PREFIX` variable is used by `nself migrate` to scope migrations to a subdirectory, keeping custom service migrations separate from core schema changes.
+- If a service's health endpoint isn't `/health` on its own port (e.g. an auth service serving `/auth/health`), set `CS_N_HEALTHCHECK=/auth/health` — otherwise Docker probes the wrong path and reports the service unhealthy forever regardless of its actual state.
 - Custom services participate in `nself backup`, the backup bundle includes a dump of any tables matching the `CS_N_TABLE_PREFIX`.
 - Logs from all custom service slots are included in `nself logs --all`.
 
