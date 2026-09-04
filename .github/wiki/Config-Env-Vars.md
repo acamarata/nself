@@ -175,6 +175,7 @@ All OAuth provider vars are optional. Set client ID and secret for each provider
 | `NGINX_HTTPS_PORT` | int | `443` | No | Host port for HTTPS traffic. |
 | `NGINX_BIND_IP` | string | `127.0.0.1` (dev) / `0.0.0.0` (prod) | No | IP address Nginx binds on. Set to `0.0.0.0` to accept external connections. |
 | `NGINX_CLIENT_MAX_BODY_SIZE` | string | `100M` | No | Maximum allowed size for client request bodies (controls upload limits). |
+| `NGINX_FRONTED_BY` | string | *(empty)* | No | Names the stack whose Nginx already serves this project's domains. When set, `nself build` generates no Nginx service for this project and `nself status` stops expecting one. See [[Config-Nginx]]. |
 | `SSL_MODE` | enum | `local` | No | SSL certificate strategy. Accepted values: `local` (self-signed), `letsencrypt`, `custom`, `none`. |
 | `EXTRA_SSL_DOMAINS` | string | *(empty)* | No | Additional domains to include in the certificate SAN (comma-separated). |
 

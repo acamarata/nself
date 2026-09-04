@@ -102,7 +102,10 @@ func satisfiedByCoreService(name string, serviceSet map[string]bool) bool {
 // core service satisfies — the compose YAML is generated after plugin
 // resolution, so the names are derived rather than parsed.
 func expectedCoreServices(cfg *config.Config) []string {
-	services := []string{"postgres", "hasura", "auth", "nginx"}
+	services := []string{"postgres", "hasura", "auth"}
+	if cfg.Nginx.FrontedBy == "" {
+		services = append(services, "nginx")
+	}
 	if cfg.Minio.Enabled {
 		services = append(services, "minio")
 	}

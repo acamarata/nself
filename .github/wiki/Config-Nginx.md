@@ -18,6 +18,7 @@ This page covers every `NGINX_*` and `SSL_*` environment variable, how `BASE_DOM
 | `NGINX_GZIP_ENABLED` | `true` | Enables gzip compression on responses. Set to `false` if a CDN or upstream proxy is handling compression. |
 | `NGINX_MODE` | *(empty)* | Set to `shared` to enable multi-project mode, where a single Nginx instance routes traffic for multiple ɳSelf projects on the same host. Leave empty for standard single-project operation. |
 | `NGINX_MEM_LIMIT` | `256m` | Docker memory limit for the Nginx container. |
+| `NGINX_FRONTED_BY` | *(empty)* | Names another stack whose Nginx already fronts this project's domains, for a project that has no ingress Nginx of its own. See [Fronted by another stack](#fronted-by-another-stack) below. |
 | `SSL_MODE` | `local` | SSL mode to use. One of `local`, `letsencrypt`, `custom`, or `none`. See SSL Modes below. |
 | `EXTRA_SSL_DOMAINS` | *(empty)* | Additional domains to include in the SSL certificate as Subject Alternative Names (SANs). Comma-separated. Useful when your project is also reachable under an alias domain. |
 | `BASE_DOMAIN` | `local.nself.org` | Root domain for your project. Nginx generates all service subdomains from this value automatically. See Domain Configuration below. |
@@ -178,6 +179,25 @@ INTERNAL_ROUTE_1_TARGET=http://grafana:3000
 After running `nself build`, Nginx will proxy all traffic for `metrics.{BASE_DOMAIN}` to the `grafana` container on port 3000. SSL is applied automatically based on the configured `SSL_MODE`.
 
 Internal routes are generated into `nginx/sites/` and follow the same "do not hand-edit" rule as all other generated files. To modify a route, change its `INTERNAL_ROUTE_N_*` variables and rebuild.
+
+---
+
+## Fronted by Another Stack
+
+Some hosts run more than one ɳSelf project, with a single project's Nginx serving the domains of the others. Ports 80 and 443 can only be held once, so every other project on that host must not generate an Nginx of its own.
+
+Set `NGINX_FRONTED_BY` to the name of the stack that fronts this one:
+
+```bash
+# .env — this project is served by the nself-web stack's Nginx
+NGINX_FRONTED_BY=nself-web
+```
+
+With this set, `nself build` omits the Nginx service from the generated `docker-compose.yml` entirely, and `nself status` stops counting an Nginx container for this project. Leaving it unset is the default and changes nothing for a normal single-project stack.
+
+Without it, a fronted project still generates an Nginx that can never start: `nself start` fails its port check with 80/443 held by the fronting stack's `docker-proxy`, and `nself status` reports one permanently unhealthy service that nothing can clear.
+
+**This flag removes the container that cannot run. It does not wire the two projects' networks together.** The fronting Nginx resolves upstreams through Docker's embedded DNS at `127.0.0.11`, which only answers for container names on a network that Nginx is attached to. Routing `auth.task.example.com` to this project's `auth` container still requires the two projects to share a Docker network — declared as `external` in both compose files, or attached by hand. Automatically rewriting a project's network topology from a single flag is a larger change and is deliberately not part of this one.
 
 ---
 
