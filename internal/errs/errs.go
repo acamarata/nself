@@ -41,6 +41,7 @@ var (
 	ErrInsecurePassword   = errors.New("password matches insecure pattern")
 	ErrInvalidProjectName = errors.New("invalid project name format")
 	ErrInvalidCORS        = errors.New("CORS wildcards not allowed in production")
+	ErrPlaceholderSecret  = errors.New("secret is empty or matches a known placeholder value")
 
 	// Health
 	ErrServiceUnhealthy = errors.New("service health check failed")

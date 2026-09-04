@@ -22,6 +22,7 @@ func TestSentinelErrors_NonNil(t *testing.T) {
 		{"ErrInsecurePassword", ErrInsecurePassword},
 		{"ErrInvalidProjectName", ErrInvalidProjectName},
 		{"ErrInvalidCORS", ErrInvalidCORS},
+		{"ErrPlaceholderSecret", ErrPlaceholderSecret},
 		// Health
 		{"ErrServiceUnhealthy", ErrServiceUnhealthy},
 		{"ErrHealthTimeout", ErrHealthTimeout},
