@@ -85,10 +85,17 @@ func PprofHandler(token string) http.Handler {
 }
 
 // tokenAuth middleware checks X-Profile-Token header. If token is empty,
-// auth is disabled (dev mode).
+// pprof is disabled entirely (fail-closed) rather than left open — profiling
+// requires an explicit NSELF_PROFILING_TOKEN opt-in (P4 deferred-backlog
+// row 20; the prior "empty token = open" behavior was a default-deny gap
+// for whenever this handler is wired into a server's mux).
 func tokenAuth(token string, next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if token != "" && r.Header.Get("X-Profile-Token") != token {
+		if token == "" {
+			http.Error(w, "Forbidden: profiling disabled (set NSELF_PROFILING_TOKEN to enable)", http.StatusForbidden)
+			return
+		}
+		if r.Header.Get("X-Profile-Token") != token {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}

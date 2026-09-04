@@ -162,8 +162,18 @@ func findDevWatchScript() (string, error) {
 	}
 
 	for _, c := range candidates {
-		if _, err := os.Stat(c); err == nil {
-			return c, nil
+		// A candidate may carry an unexpanded glob segment (e.g. the
+		// GOPATH module-cache path, which embeds the SDK's version suffix
+		// as `plugin-sdk-go*`). os.Stat never matches a literal glob
+		// pattern, so expand it explicitly and use the first match; a
+		// plain path with no glob metacharacters passes through Glob
+		// unchanged and behaves exactly like the old os.Stat check.
+		matches, err := filepath.Glob(c)
+		if err != nil || len(matches) == 0 {
+			continue
+		}
+		if _, err := os.Stat(matches[0]); err == nil {
+			return matches[0], nil
 		}
 	}
 
