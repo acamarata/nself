@@ -84,10 +84,15 @@ nself oauth refresh --all
 ## Examples
 
 <!-- BEGIN PROSE:examples -->
-<!-- TODO(docs): needs human prose -->
-
 ```bash
-nself oauth
+# Refresh Google OAuth tokens now, outside the cron schedule
+nself oauth refresh google
+
+# Refresh just one account
+nself oauth refresh google --account-id user@example.com
+
+# Refresh every configured provider in parallel
+nself oauth refresh --all
 ```
 <!-- END PROSE:examples -->
 

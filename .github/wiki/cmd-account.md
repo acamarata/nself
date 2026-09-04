@@ -216,10 +216,21 @@ nself account licenses list
 ## Examples
 
 <!-- BEGIN PROSE:examples -->
-<!-- TODO(docs): needs human prose -->
-
 ```bash
+# With no subcommand, show current account status
 nself account
+
+# Same thing, explicit
+nself account status
+
+# List devices registered to this account
+nself account devices
+
+# List active licenses linked to this account
+nself account licenses
+
+# Move a license to another account
+nself account transfer
 ```
 <!-- END PROSE:examples -->
 

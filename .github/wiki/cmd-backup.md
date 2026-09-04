@@ -313,10 +313,18 @@ Outputs the public key to add to `.env` as `BACKUP_AGE_RECIPIENTS`.
 ## Examples
 
 <!-- BEGIN PROSE:examples -->
-<!-- TODO(docs): needs human prose -->
-
 ```bash
-nself backup
+# Create a local backup
+nself backup create
+
+# List available backups
+nself backup list
+
+# Stream an encrypted backup straight to S3, no temp files
+nself backup stream --to s3:mybucket/backups --recipient age1abc123
+
+# Check backup subsystem status: last run, next scheduled, retention
+nself backup status
 ```
 <!-- END PROSE:examples -->
 
