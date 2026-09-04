@@ -88,3 +88,44 @@ func HasuraReloadMetadata(ctx context.Context, cfg *config.Config) error {
 
 	return nil
 }
+
+// hasuraInconsistentObject is the shape of one entry in get_inconsistent_metadata's
+// "inconsistent_objects" response array. Hasura includes several other fields
+// (reason, type) that callers of HasuraGetInconsistentMetadata don't need.
+type hasuraInconsistentObject struct {
+	Name string `json:"name"`
+}
+
+// hasuraInconsistentMetadataResponse is the get_inconsistent_metadata response body.
+type hasuraInconsistentMetadataResponse struct {
+	IsConsistent        bool                       `json:"is_consistent"`
+	InconsistentObjects []hasuraInconsistentObject `json:"inconsistent_objects"`
+}
+
+// HasuraGetInconsistentMetadata calls Hasura's get_inconsistent_metadata and
+// returns the names of any inconsistent metadata objects (empty when
+// consistent). Used after an apply to surface drift the apply itself can't
+// detect (e.g. a tracked table whose underlying column was renamed).
+func HasuraGetInconsistentMetadata(ctx context.Context, cfg *config.Config) ([]string, error) {
+	respBody, err := postMetadata(ctx, cfg, metadataRequest{
+		Type: "get_inconsistent_metadata",
+		Args: struct{}{},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get_inconsistent_metadata: %w", err)
+	}
+
+	var parsed hasuraInconsistentMetadataResponse
+	if err := json.Unmarshal(respBody, &parsed); err != nil {
+		return nil, fmt.Errorf("parse get_inconsistent_metadata response: %w", err)
+	}
+	if parsed.IsConsistent {
+		return nil, nil
+	}
+
+	names := make([]string, 0, len(parsed.InconsistentObjects))
+	for _, obj := range parsed.InconsistentObjects {
+		names = append(names, obj.Name)
+	}
+	return names, nil
+}

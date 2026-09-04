@@ -148,6 +148,9 @@ func applyViaIncludeResolver(ctx context.Context, cfg *config.Config, metadataDi
 	if err := yaml.Unmarshal(resolved, &doc); err != nil {
 		return fmt.Errorf("parse resolved metadata YAML: %w", err)
 	}
+	if err := validateNoListWrappedEntries(doc); err != nil {
+		return err
+	}
 	jsonBytes, err := json.Marshal(convertYAMLToJSON(doc))
 	if err != nil {
 		return fmt.Errorf("encode metadata as JSON: %w", err)
@@ -184,20 +187,39 @@ func resolveIncludes(baseDir, filePath string) ([]byte, error) {
 			// Preserve the leading indent from the original line, but replace
 			// the !include token with the inlined content (indented to match).
 			leadingSpaces := len(line) - len(strings.TrimLeft(line, " \t"))
-			indent := line[:leadingSpaces]
-			// If line starts with "- !include", emit list item prefix + first
-			// line of included content, then indent remaining lines.
-			prefix := ""
-			if strings.HasPrefix(trimmed, "- !include") {
-				prefix = "- "
-				indent += "  "
-			}
+			baseIndent := line[:leadingSpaces]
 			includedLines := strings.Split(strings.TrimRight(string(includedData), "\n"), "\n")
-			for i, il := range includedLines {
-				if i == 0 {
-					out.WriteString(line[:leadingSpaces] + prefix + il + "\n")
-				} else {
-					out.WriteString(indent + il + "\n")
+
+			switch {
+			case strings.HasPrefix(trimmed, "- !include"):
+				// List item ("- !include foo.yaml"): "- " prefix on the first
+				// inlined line, remaining lines indented one level under it.
+				itemIndent := baseIndent + "  "
+				for i, il := range includedLines {
+					if i == 0 {
+						out.WriteString(baseIndent + "- " + il + "\n")
+					} else {
+						out.WriteString(itemIndent + il + "\n")
+					}
+				}
+			case len(includedLines) == 1:
+				// "key: !include foo.yaml" where foo.yaml is a one-line
+				// scalar: inline it on the same line as the key.
+				out.WriteString(baseIndent + trimmed[:idx] + includedLines[0] + "\n")
+			default:
+				// "key: !include foo.yaml" where foo.yaml is a multi-line
+				// block (mapping/list): emit "key:" on its own line, then the
+				// block indented one level under it — otherwise the included
+				// block's own lines would land at the SAME indent as the key,
+				// which is not valid YAML nesting (this was the bug behind
+				// TestResolveIncludes_NestedConfigTree: "tables: !include
+				// tables.yaml" previously dropped the "tables:" key entirely
+				// and emitted the included list at column 0).
+				keyPart := strings.TrimRight(trimmed[:idx], " ")
+				blockIndent := baseIndent + "  "
+				out.WriteString(baseIndent + keyPart + "\n")
+				for _, il := range includedLines {
+					out.WriteString(blockIndent + il + "\n")
 				}
 			}
 		} else {
