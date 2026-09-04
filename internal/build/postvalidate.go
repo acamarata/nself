@@ -53,6 +53,12 @@ func PostValidate(composePath, nginxConfDir string) PostValidateResult {
 	// ── Service name uniqueness ──────────────────────────────────────
 	checkNameUniqueness(services, &result)
 
+	// ── Nginx server_name uniqueness ─────────────────────────────────
+	// Must run before the syntax check: `nginx -t` reports "syntax is ok"
+	// for a duplicate server_name and only logs that it ignored one of the
+	// blocks, so it cannot catch this.
+	checkServerNameUniqueness(nginxConfDir, &result)
+
 	// ── Nginx syntax check ───────────────────────────────────────────
 	checkNginxSyntax(nginxConfDir, &result)
 
