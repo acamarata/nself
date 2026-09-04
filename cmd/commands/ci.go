@@ -55,6 +55,9 @@ func init() {
 	evalCmd.AddCommand(nscicmd.NewEvalGateCmd())
 	ciCmd.AddCommand(evalCmd)
 
+	initCIBuildCmd()
+	ciCmd.AddCommand(ciBuildCmd)
+
 	RootCmd.AddCommand(ciCmd)
 }
 

@@ -443,6 +443,21 @@
     ],
     "subcommands": [
       {
+        "name": "build",
+        "path": "nself ci build",
+        "short": "Build a signed release artifact locally (Android only)",
+        "hidden": false,
+        "flags": [
+          "--artifact",
+          "--owner",
+          "--repo",
+          "--tag",
+          "--timeout",
+          "--upload",
+          "--verbose"
+        ]
+      },
+      {
         "name": "eval",
         "path": "nself ci eval",
         "short": "Run eval-gate suite or validate an eval-set YAML",
