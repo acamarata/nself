@@ -188,20 +188,16 @@ type ServiceRouteData struct {
 	// of Upstream via the Docker embedded DNS resolver. Set automatically
 	// by the generator; callers do not populate it.
 	UpstreamName string
-	// ProxyTarget is Upstream rendered as a proxy_pass URL carrying exactly
-	// one scheme. Upstream arrives in two shapes: bare "host:port" for
-	// compose services, and a full "http://host:port" URL for internal
-	// routes (INTERNAL_ROUTE_N_TARGET, whose validator requires a scheme).
-	// The template used to prepend "http://" unconditionally, so an
-	// internal route rendered as "http://http://ntask_auth:4001" — a
-	// proxy_pass nginx resolves to the host "http" at request time.
-	// Set automatically by the generator; callers do not populate it.
+	// ProxyTarget is Upstream as a proxy_pass URL with exactly one scheme
+	// (bare "host:port" gets "http://"; an already-schemed internal-route
+	// target passes through). Set by the generator; see proxyTarget below.
 	ProxyTarget string
 	SSLDir      string
 	RateZone    string
 	Burst       int
 	ConnLimit   int
 	WebSocket   bool
+	PathZones   []PathZone // SEC-HARDENING-06, defaulted when nil — see pathzones.go
 	// HasSSL controls whether ssl_certificate directives and the listen 443
 	// directives are emitted. Set to false for letsencrypt/custom/none modes.
 	HasSSL bool
@@ -234,6 +230,9 @@ func (g *Generator) RenderServiceRoute(data ServiceRouteData) (string, error) {
 	data.HasTrustedChain = g.hasTrustedChain(data.SSLDir)
 	data.UpstreamName = upstreamName(data.Route)
 	data.ProxyTarget = proxyTarget(data.Upstream)
+	if data.PathZones == nil {
+		data.PathZones = defaultSecurityPathZones()
+	}
 	return g.render("service.conf.tmpl", data)
 }
 

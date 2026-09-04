@@ -100,6 +100,13 @@ func (g *Generator) generateAllRoutes() (map[string]string, error) {
 		allEntries[i].data.HasTrustedChain = g.hasTrustedChain(allEntries[i].data.SSLDir)
 		allEntries[i].data.UpstreamName = upstreamName(allEntries[i].data.Route)
 		allEntries[i].data.ProxyTarget = proxyTarget(allEntries[i].data.Upstream)
+		// SEC-HARDENING-06: every generated service conf gets the
+		// path-scoped /auth/login + /api/ rate-limit locations unless the
+		// route entry already set its own (none currently do). See
+		// defaultSecurityPathZones in generator.go for rationale.
+		if allEntries[i].data.PathZones == nil {
+			allEntries[i].data.PathZones = defaultSecurityPathZones()
+		}
 	}
 
 	for _, entry := range allEntries {

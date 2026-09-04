@@ -71,8 +71,36 @@ func writeCustomDomainConf(workdir, domain, upstream string) error {
 
 	var locationBlock string
 	if upstream != "" {
-		locationBlock = fmt.Sprintf(`    location / {
-        proxy_pass http://%s;
+		// SEC-HARDENING-06: path-scoped rate limits ahead of the catch-all
+		// `location /`, same zones/bursts as service.conf.tmpl's
+		// defaultSecurityPathZones (internal/nginx/generator.go). Applied
+		// unconditionally like the generator does — writeCustomDomainConf
+		// has no signal for whether this custom domain's upstream serves
+		// auth/API paths, and the blocks are harmless when it doesn't (they
+		// just proxy through with a stricter limit on paths the upstream
+		// never receives). Only rendered in the proxying branch: the
+		// placeholder branch below never proxies to a backend, so there is
+		// nothing on those paths to rate-limit.
+		locationBlock = fmt.Sprintf(`    location = /auth/login {
+        limit_req zone=auth_strict burst=5 nodelay;
+        proxy_pass http://%[1]s;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /api/ {
+        limit_req zone=api burst=20 nodelay;
+        proxy_pass http://%[1]s;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        proxy_pass http://%[1]s;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
