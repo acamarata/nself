@@ -182,15 +182,25 @@ func scanNginxContentForRateZones(content string) (authZone, apiZone bool) {
 // directives covering the auth and API surfaces, first by scanning local
 // config files, then by grepping inside the running nginx container as a
 // fallback. See the file-level doc comment for the two detection signals.
+//
+// Fronted deployments (cli#380/cli#371) need a different directory than
+// <projectDir>/nginx/** — see planNginxAudit (hardening_check_nginx_fronted_dir.go).
 func checkHardeningNginxRateZones(ctx context.Context, projectDir string) CheckResult {
 	const checkID = "SEC-HARDENING-06"
 
-	// Search nginx/conf.d/ and nginx/sites/ for limit_req_zone + limit_req directives
-	// covering the auth and API surfaces.
+	plan := planNginxAudit(projectDir)
+	if plan.skip != nil {
+		return *plan.skip
+	}
+	auditDir := plan.auditDir
+
+	// Search <auditDir>/nginx/conf.d/, /sites/ and /nginx.conf for
+	// limit_req_zone + limit_req directives covering the auth and API
+	// surfaces.
 	nginxDirs := []string{
-		filepath.Join(projectDir, "nginx", "conf.d"),
-		filepath.Join(projectDir, "nginx", "sites"),
-		filepath.Join(projectDir, "nginx", "nginx.conf"),
+		filepath.Join(auditDir, "nginx", "conf.d"),
+		filepath.Join(auditDir, "nginx", "sites"),
+		filepath.Join(auditDir, "nginx", "nginx.conf"),
 	}
 
 	hasAuthZone := false
@@ -233,7 +243,10 @@ func checkHardeningNginxRateZones(ctx context.Context, projectDir string) CheckR
 	}
 
 	// Fallback: inspect nginx container config if local files not found.
-	if !hasAuthZone || !hasAPIZone {
+	// Skipped for fronted projects — they generate no nginx container of
+	// their own to exec into (internal/build/detection.go), so this would
+	// only ever exec into a nonexistent or unrelated container.
+	if !plan.skipDockerFallback && (!hasAuthZone || !hasAPIZone) {
 		nginxContainer := health.ContainerName(resolveProjectName(projectDir), "nginx")
 		cmd := exec.CommandContext(ctx, "docker", "exec", nginxContainer,
 			"sh", "-c", "cat /etc/nginx/nginx.conf /etc/nginx/conf.d/* /etc/nginx/sites/* 2>/dev/null")
@@ -249,20 +262,25 @@ func checkHardeningNginxRateZones(ctx context.Context, projectDir string) CheckR
 		}
 	}
 
+	// auditedNginxDir names the directory this run actually read, so the
+	// result is falsifiable — a pass/fail/warn that cannot say what it
+	// looked at is how this check stayed hollow on a fronted deployment.
+	auditedNginxDir := filepath.Join(auditDir, "nginx")
+
 	switch {
 	case hasAuthZone && hasAPIZone:
 		return CheckResult{
 			Section: hardeningSection,
 			Name:    checkID,
 			Status:  "pass",
-			Message: "SEC-HARDENING-06: nginx rate-limit zones set for the auth and API services",
+			Message: fmt.Sprintf("SEC-HARDENING-06: nginx rate-limit zones set for the auth and API services (audited %s)", auditedNginxDir),
 		}
 	case !hasAuthZone && !hasAPIZone:
 		return CheckResult{
 			Section: hardeningSection,
 			Name:    checkID,
 			Status:  "fail",
-			Message: "SEC-HARDENING-06: nginx missing rate-limit zones for the auth and API services — add limit_req_zone directives",
+			Message: fmt.Sprintf("SEC-HARDENING-06: nginx missing rate-limit zones for the auth and API services (audited %s) — add limit_req_zone directives", auditedNginxDir),
 			FixCmd:  "See nself.org/docs/security/nginx-rate-limiting",
 		}
 	default:
@@ -274,7 +292,7 @@ func checkHardeningNginxRateZones(ctx context.Context, projectDir string) CheckR
 			Section: hardeningSection,
 			Name:    checkID,
 			Status:  "warn",
-			Message: fmt.Sprintf("SEC-HARDENING-06: nginx rate-limit zone missing for %s — add a limit_req directive", missing),
+			Message: fmt.Sprintf("SEC-HARDENING-06: nginx rate-limit zone missing for %s (audited %s) — add a limit_req directive", missing, auditedNginxDir),
 			FixCmd:  "See nself.org/docs/security/nginx-rate-limiting",
 		}
 	}
