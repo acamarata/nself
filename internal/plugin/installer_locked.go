@@ -17,7 +17,6 @@ import (
 
 	"github.com/nself-org/cli/internal/audit"
 	"github.com/nself-org/cli/internal/config"
-	"github.com/nself-org/cli/internal/errs"
 	"github.com/nself-org/cli/internal/plugin/verify"
 	"github.com/nself-org/cli/internal/version"
 )
@@ -40,9 +39,16 @@ func installLocked(ctx context.Context, cfg *config.Config, name string, pluginD
 		return fmt.Errorf("fetching registry: %w", err)
 	}
 
-	manifest, found := findPlugin(reg, name)
-	if !found {
-		return errs.ErrPluginNotFound
+	// Tier resolution (OWNER-ACTIONS.md item 15): a slug served twice (a
+	// genuine free/pro pair) no longer silently first-matches to free.
+	// --tier is threaded down as an env var by the cmd layer, matching the
+	// existing NSELF_SKIP_SBOM_CHECK / NSELF_PLUGIN_LICENSE_KEY convention so
+	// every recursive installLocked call (dependencies) and every caller of
+	// plugin.Install (including bundle/installer.go, which never sets this
+	// var and so always gets the entitlement-based default) shares one path.
+	manifest, err := ResolvePlugin(ctx, reg, name, os.Getenv("NSELF_PLUGIN_INSTALL_TIER"), nil)
+	if err != nil {
+		return err
 	}
 
 	// Status check: lifecycle policy enforcement (S58-T01, S58-T02, S58-T03).

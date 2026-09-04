@@ -1651,6 +1651,7 @@
           "--preview",
           "--show-graph",
           "--skip-sbom-check",
+          "--tier",
           "--version",
           "--with-optional",
           "--yes"
@@ -1678,6 +1679,7 @@
         "short": "List available and installed plugins",
         "hidden": false,
         "flags": [
+          "--available",
           "--category",
           "--detailed",
           "--installed",

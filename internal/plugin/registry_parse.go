@@ -82,6 +82,11 @@ type pluginEntry struct {
 	Tags            []string `json:"tags"`
 	Tables          []string `json:"tables,omitempty"`
 	Port            int      `json:"port,omitempty"`
+	// TierPair and Bundles support install-time tier resolution for a slug
+	// served twice (free + pro) as one product — see PluginManifest's doc
+	// comments (interfaces.go) and tier_resolve.go.
+	TierPair bool     `json:"tier_pair,omitempty"`
+	Bundles  []string `json:"bundles,omitempty"`
 	// Dependencies is raw JSON because the registry format is not stable.
 	// Accepted shapes:
 	//   ["redis","auth"]                            (legacy string array)

@@ -183,6 +183,21 @@ type PluginManifest struct {
 	Tier     string `json:"tier,omitempty"`
 	Checksum string `json:"checksum,omitempty"`
 
+	// TierPair marks a genuine free/pro pair of the SAME product sharing one
+	// slug (e.g. cron, notify) — set true in BOTH the free and pro registry
+	// entries by the plugins/plugins-pro registry authors. Install-time
+	// resolution (tier_resolve.go) uses this to tell a real tier pair from an
+	// unrelated registry-data collision, which is a hard error instead
+	// (OWNER-ACTIONS.md item 15).
+	TierPair bool `json:"tier_pair,omitempty"`
+
+	// Bundles lists the bundles.json slugs this specific registry entry
+	// belongs to (e.g. cron's pro entry: ["claw"]). Used by tier_resolve.go
+	// to decide entitlement for a TierPair's pro entry via
+	// license.BundleEntitled. Empty for free entries and for pro plugins sold
+	// standalone rather than through a bundle.
+	Bundles []string `json:"bundles,omitempty"`
+
 	// PublishStatus is the plugin's lifecycle status from the registry (S58-T01).
 	// Valid values: "experimental" | "planned" | "beta" | "stable" | "deprecated" | "eol"
 	// Missing status defaults to "stable" for backwards compatibility (CR-A).
