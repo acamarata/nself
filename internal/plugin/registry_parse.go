@@ -153,6 +153,25 @@ type pluginEntry struct {
 	UpdatedAt string `json:"updated_at,omitempty"`
 }
 
+// EffectiveStatus normalises a plugin's raw registry `status` value for every
+// status-driven decision: an absent (empty) status defaults to "stable" — see
+// pluginEntry.PublishStatus / PluginManifest.PublishStatus's doc comment
+// ("Missing status defaults to stable for backwards compatibility"). Before
+// FIX-CLI-6 every status gate compared the raw field directly against the
+// literal string "stable", so "" and "stable" were treated inconsistently:
+// the lifecycle switch in installLocked already special-cased both the same
+// way, but verifyChecksum/verifyPluginSignature's "missing value" branch did
+// not, leaving all 130 (of 177, as of 2026-09-04) registry entries without an
+// explicit status effectively unable to ever hit the "stable" hard-fail path.
+// Every status-driven gate must compare against EffectiveStatus(status), not
+// the raw field, so "" and an explicit "stable" are never inconsistent again.
+func EffectiveStatus(status string) string {
+	if status == "" {
+		return "stable"
+	}
+	return status
+}
+
 // parseAPIEndpoints converts the raw apiEndpoints JSON value from either the
 // string-array format (["path1","path2"]) or the object-array format
 // ([{"method":"GET","path":"/v1/foo"},...]) into a normalised []string.

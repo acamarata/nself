@@ -6,7 +6,12 @@ package plugin
 // Inputs:  archive file paths, hex-encoded keys/sigs, context with timeout.
 // Outputs: error on any policy violation; nil on pass or when non-fatal
 //          (network offline, non-stable status, or author not found in CRL).
-// Constraints: Stable plugins MUST have checksum + signature (errs.ErrPlugin*).
+// Constraints: A present-but-wrong checksum/signature always refuses the
+//              install, for every publishStatus. A MISSING checksum/signature
+//              on an effectively-stable plugin (EffectiveStatus == "stable",
+//              which includes an absent status) only refuses when
+//              NSELF_PLUGIN_REQUIRE_CHECKSUM=1 is set — default is warn and
+//              proceed (see pluginRequireChecksumEnv doc comment; FIX-CLI-6).
 //              License check tries all keys; first valid entitlement match wins.
 //              CRL fetch errors are non-fatal — warns to stderr, never blocks.
 //              postInstallEvent always runs in a goroutine; errors are silent.
@@ -56,17 +61,37 @@ func postInstallEvent(pluginName string) {
 	_ = resp.Body.Close()
 }
 
+// pluginRequireChecksumEnv opts a machine into hard-refusing installs of any
+// effectively-stable plugin (EffectiveStatus == "stable", which includes an
+// absent status) that is missing a checksum or signature, instead of the
+// default warn-and-proceed. Default off: as of 2026-09-04 the live registry
+// carries a checksum on only 47 of 177 plugins, so refusing by default would
+// refuse the other 130 installs outright (FIX-CLI-6, plugins#83 follow-up).
+// Flip this default once registry coverage reaches 177/177.
+const pluginRequireChecksumEnv = "NSELF_PLUGIN_REQUIRE_CHECKSUM"
+
+// pluginChecksumRequired reports whether the hard-refusal mode above is on.
+func pluginChecksumRequired() bool {
+	return os.Getenv(pluginRequireChecksumEnv) == "1"
+}
+
 // verifyChecksum computes the SHA256 hash of the file at filePath and compares
-// it to expectedHash (hex-encoded). Returns an error if the hashes differ.
+// it to expectedHash (hex-encoded). Returns an error if the hashes differ —
+// this mismatch check is unconditional: it applies to every publishStatus
+// (including "beta"/"deprecated"), since a checksum that IS present and
+// wrong is never acceptable regardless of lifecycle stage.
 //
-// publishStatus is the plugin's lifecycle status from the registry
-// ("stable", "beta", "alpha", "experimental", etc.). When publishStatus is
-// "stable" and expectedHash is empty, the function returns
-// errs.ErrPluginMissingChecksum — install is refused. For non-stable plugins
-// an empty expectedHash is permitted (a warning is emitted to stderr).
+// publishStatus is the plugin's raw lifecycle status from the registry
+// ("stable", "beta", "alpha", "experimental", "" for absent, etc.) — compared
+// via EffectiveStatus so an absent status is treated exactly like an explicit
+// "stable" one. When expectedHash is empty (no checksum in the registry) the
+// default behavior is to warn and proceed for every status, including
+// effectively-stable ones — see pluginRequireChecksumEnv. Only when that env
+// var opts in does a missing checksum on an effectively-stable plugin return
+// errs.ErrPluginMissingChecksum and refuse the install.
 func verifyChecksum(filePath string, expectedHash string, publishStatus string) error {
 	if expectedHash == "" {
-		if publishStatus == "stable" {
+		if pluginChecksumRequired() && EffectiveStatus(publishStatus) == "stable" {
 			return fmt.Errorf("plugin %q is missing required checksum for stable publishStatus — install refused: %w",
 				filePath, errs.ErrPluginMissingChecksum)
 		}
@@ -96,15 +121,20 @@ func verifyChecksum(filePath string, expectedHash string, publishStatus string) 
 // tarball. The public key is pinned in the registry (never fetched at verify
 // time, preventing TOCTOU attacks).
 //
-// publishStatus is the plugin's lifecycle status from the registry
-// ("stable", "beta", "alpha", "experimental", etc.). When publishStatus is
-// "stable" and either authorPublicKeyHex or signatureHex is empty, the
-// function returns errs.ErrPluginUnsigned — install is refused. For
-// non-stable plugins an empty key or signature skips verification with a
-// warning (development workflow).
+// publishStatus is the plugin's raw lifecycle status from the registry
+// ("stable", "beta", "alpha", "experimental", "" for absent, etc.) —
+// compared via EffectiveStatus so an absent status is treated exactly like
+// an explicit "stable" one. When authorPublicKeyHex or signatureHex is empty
+// (no signature in the registry) the default behavior is to skip
+// verification with a warning for every status, including
+// effectively-stable ones — see pluginRequireChecksumEnv, which also governs
+// this gate. Only when that env var opts in does a missing signature on an
+// effectively-stable plugin return errs.ErrPluginUnsigned and refuse the
+// install. A signature that IS present and does not verify always refuses,
+// regardless of status — see the ed25519.Verify check below.
 func verifyPluginSignature(archivePath, authorPublicKeyHex, signatureHex, publishStatus string) error {
 	if authorPublicKeyHex == "" || signatureHex == "" {
-		if publishStatus == "stable" {
+		if pluginChecksumRequired() && EffectiveStatus(publishStatus) == "stable" {
 			return fmt.Errorf("plugin is missing required signature for stable publishStatus — install refused: %w",
 				errs.ErrPluginUnsigned)
 		}
