@@ -185,13 +185,12 @@ func TestFrontendAppServerNameSafe(t *testing.T) {
 
 	safeRoute := "myapp"
 	data := ServiceRouteData{
-		Route:       safeRoute,
-		BaseDomain:  "example.com",
-		Upstream:    "host.docker.internal:3000",
-		SSLDir:      "example-com",
-		RateZone:    "static",
-		WebSocket:   true,
-		LazyResolve: true,
+		Route:      safeRoute,
+		BaseDomain: "example.com",
+		Upstream:   "host.docker.internal:3000",
+		SSLDir:     "example-com",
+		RateZone:   "static",
+		WebSocket:  true,
 	}
 
 	out, err := gen.RenderServiceRoute(data)

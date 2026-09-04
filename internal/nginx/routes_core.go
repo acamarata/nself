@@ -34,15 +34,14 @@ func (g *Generator) coreRoutes(baseDomain, sslDir string) []routeEntry {
 	entries = append(entries, routeEntry{
 		filename: "hasura.conf",
 		data: ServiceRouteData{
-			Route:       hasuraRoute,
-			BaseDomain:  baseDomain,
-			Upstream:    fmt.Sprintf("hasura:%d", hasuraContainerPort),
-			SSLDir:      sslDir,
-			RateZone:    "graphql_api",
-			Burst:       20,
-			ConnLimit:   10,
-			WebSocket:   true,
-			LazyResolve: true,
+			Route:      hasuraRoute,
+			BaseDomain: baseDomain,
+			Upstream:   fmt.Sprintf("hasura:%d", hasuraContainerPort),
+			SSLDir:     sslDir,
+			RateZone:   "graphql_api",
+			Burst:      20,
+			ConnLimit:  10,
+			WebSocket:  true,
 		},
 	})
 
@@ -59,14 +58,13 @@ func (g *Generator) coreRoutes(baseDomain, sslDir string) []routeEntry {
 	entries = append(entries, routeEntry{
 		filename: "auth.conf",
 		data: ServiceRouteData{
-			Route:       authRoute,
-			BaseDomain:  baseDomain,
-			Upstream:    fmt.Sprintf("auth:%d", authPort),
-			SSLDir:      sslDir,
-			RateZone:    "auth",
-			Burst:       5,
-			ConnLimit:   5,
-			LazyResolve: true,
+			Route:      authRoute,
+			BaseDomain: baseDomain,
+			Upstream:   fmt.Sprintf("auth:%d", authPort),
+			SSLDir:     sslDir,
+			RateZone:   "auth",
+			Burst:      5,
+			ConnLimit:  5,
 		},
 	})
 
@@ -80,14 +78,13 @@ func (g *Generator) coreRoutes(baseDomain, sslDir string) []routeEntry {
 		entries = append(entries, routeEntry{
 			filename: "storage.conf",
 			data: ServiceRouteData{
-				Route:       storageRoute,
-				BaseDomain:  baseDomain,
-				Upstream:    fmt.Sprintf("minio:%d", g.cfg.Minio.Port),
-				LazyResolve: true,
-				SSLDir:      sslDir,
-				RateZone:    "uploads",
-				Burst:       2,
-				ConnLimit:   5,
+				Route:      storageRoute,
+				BaseDomain: baseDomain,
+				Upstream:   fmt.Sprintf("minio:%d", g.cfg.Minio.Port),
+				SSLDir:     sslDir,
+				RateZone:   "uploads",
+				Burst:      2,
+				ConnLimit:  5,
 			},
 		})
 
@@ -100,11 +97,10 @@ func (g *Generator) coreRoutes(baseDomain, sslDir string) []routeEntry {
 		entries = append(entries, routeEntry{
 			filename: "storage-console.conf",
 			data: ServiceRouteData{
-				Route:       consoleRoute,
-				BaseDomain:  baseDomain,
-				Upstream:    fmt.Sprintf("minio:%d", minioConsolePort(g.cfg)),
-				SSLDir:      sslDir,
-				LazyResolve: true,
+				Route:      consoleRoute,
+				BaseDomain: baseDomain,
+				Upstream:   fmt.Sprintf("minio:%d", minioConsolePort(g.cfg)),
+				SSLDir:     sslDir,
 			},
 		})
 	}
@@ -116,7 +112,7 @@ func (g *Generator) coreRoutes(baseDomain, sslDir string) []routeEntry {
 func (g *Generator) optionalRoutes(baseDomain, sslDir string) []routeEntry {
 	var entries []routeEntry
 
-	// Admin (lazy resolver — may not be running)
+	// Admin (may not be running)
 	if g.cfg.Admin.Enabled {
 		entries = append(entries, g.adminRoute(baseDomain, sslDir))
 	}
@@ -139,13 +135,12 @@ func (g *Generator) optionalRoutes(baseDomain, sslDir string) []routeEntry {
 		entries = append(entries, routeEntry{
 			filename: "search.conf",
 			data: ServiceRouteData{
-				Route:       searchRoute,
-				BaseDomain:  baseDomain,
-				Upstream:    fmt.Sprintf("%s:%d", searchUpstream, searchPort),
-				SSLDir:      sslDir,
-				RateZone:    "general",
-				Burst:       10,
-				LazyResolve: true, // Search service may not be running
+				Route:      searchRoute,
+				BaseDomain: baseDomain,
+				Upstream:   fmt.Sprintf("%s:%d", searchUpstream, searchPort),
+				SSLDir:     sslDir,
+				RateZone:   "general",
+				Burst:      10,
 			},
 		})
 	}
