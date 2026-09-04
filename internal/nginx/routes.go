@@ -99,6 +99,7 @@ func (g *Generator) generateAllRoutes() (map[string]string, error) {
 		allEntries[i].data.HasSSL = g.hasSSL
 		allEntries[i].data.HasTrustedChain = g.hasTrustedChain(allEntries[i].data.SSLDir)
 		allEntries[i].data.UpstreamName = upstreamName(allEntries[i].data.Route)
+		allEntries[i].data.ProxyTarget = proxyTarget(allEntries[i].data.Upstream)
 	}
 
 	for _, entry := range allEntries {

@@ -183,15 +183,25 @@ type ServiceRouteData struct {
 	Route      string
 	BaseDomain string
 	Upstream   string
-	// UpstreamName is the sanitized name of the generated `upstream {}` block.
-	// Set automatically by the generator; callers do not populate it.
+	// UpstreamName is the sanitized name used for the nginx proxy_pass
+	// variable ($up_<UpstreamName>) that forces per-request re-resolution
+	// of Upstream via the Docker embedded DNS resolver. Set automatically
+	// by the generator; callers do not populate it.
 	UpstreamName string
-	SSLDir       string
-	RateZone     string
-	Burst        int
-	ConnLimit    int
-	WebSocket    bool
-	LazyResolve  bool
+	// ProxyTarget is Upstream rendered as a proxy_pass URL carrying exactly
+	// one scheme. Upstream arrives in two shapes: bare "host:port" for
+	// compose services, and a full "http://host:port" URL for internal
+	// routes (INTERNAL_ROUTE_N_TARGET, whose validator requires a scheme).
+	// The template used to prepend "http://" unconditionally, so an
+	// internal route rendered as "http://http://ntask_auth:4001" — a
+	// proxy_pass nginx resolves to the host "http" at request time.
+	// Set automatically by the generator; callers do not populate it.
+	ProxyTarget string
+	SSLDir      string
+	RateZone    string
+	Burst       int
+	ConnLimit   int
+	WebSocket   bool
 	// HasSSL controls whether ssl_certificate directives and the listen 443
 	// directives are emitted. Set to false for letsencrypt/custom/none modes.
 	HasSSL bool
@@ -223,6 +233,7 @@ func (g *Generator) RenderServiceRoute(data ServiceRouteData) (string, error) {
 	data.HasSSL = g.hasSSL
 	data.HasTrustedChain = g.hasTrustedChain(data.SSLDir)
 	data.UpstreamName = upstreamName(data.Route)
+	data.ProxyTarget = proxyTarget(data.Upstream)
 	return g.render("service.conf.tmpl", data)
 }
 
@@ -240,7 +251,19 @@ func (g *Generator) hasTrustedChain(sslDir string) bool {
 	return true
 }
 
-// upstreamName derives a unique, nginx-safe upstream block name from a route.
+// proxyTarget normalizes an upstream address into a proxy_pass URL with
+// exactly one scheme. Compose-service upstreams are bare "host:port" and get
+// "http://" prepended; internal-route targets already carry their own scheme
+// (validateInternalRouteTarget rejects a target without one) and are passed
+// through unchanged, including "https://".
+func proxyTarget(upstream string) string {
+	if strings.HasPrefix(upstream, "http://") || strings.HasPrefix(upstream, "https://") {
+		return upstream
+	}
+	return "http://" + upstream
+}
+
+// upstreamName derives a unique, nginx-safe proxy_pass variable name suffix from a route.
 // nginx upstream names allow [A-Za-z0-9_], so non-conforming chars become '_'.
 func upstreamName(route string) string {
 	var b strings.Builder
