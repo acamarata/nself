@@ -139,8 +139,26 @@ Source: `internal/nginx/generator.go`'s `defaultSecurityPathZones()`
 by `internal/nginx/templates/service.conf.tmpl`; custom-domain equivalent
 in `cmd/commands/ssl_install.go`'s `writeCustomDomainConf()`. Verified by
 `nself doctor --deep`'s `SEC-HARDENING-06` check
-(`internal/doctor/hardening_check_nginx_zones.go`), which scans generated
-confs for both paths each co-occurring with `limit_req`.
+(`internal/doctor/hardening_check_nginx_zones.go`), which accepts either of
+two signals per generated conf file — it does not require both:
+
+1. **Service identity** (cli#379): the file is split into its `server {}`
+   blocks, and a block whose `server_name` first label is a known
+   auth/API hostname (`auth` for the auth service; `api`, `hasura`,
+   `graphql`, `ping`, or `ping-api` for the API/Hasura/ping-api surface —
+   see `nginx.Route` defaults in `internal/nginx/routes_core.go` and the
+   shipped `CS_1_ROUTE=ping` example in
+   `internal/setup/setup_env_files.go`) contains a `limit_req` directive
+   anywhere in its body, including the server-wide `location /` zone from
+   the table above — not only the path-scoped blocks.
+2. **Literal path fallback** (original behavior): the file contains
+   `limit_req` co-occurring with the literal string `/auth/login` or
+   `/api/`, for hand-written gateway configs that route by path instead
+   of by `server_name`.
+
+A conf with no `limit_req` anywhere fails both signals, and a `limit_req`
+confined to an unrelated service's block (e.g. only a frontend app's
+`location /`) satisfies neither.
 
 ---
 
