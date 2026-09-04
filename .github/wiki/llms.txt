@@ -14,7 +14,7 @@ nself build   # generate docker-compose + nginx
 nself start   # boot the stack
 ```
 
-## Commands (51)
+## Commands (50)
 
 ### nself access
 
@@ -420,21 +420,6 @@ Flags:
 - `--watch` (default false) — Re-run on schema change (polls every 30s)
 
 Full page: [[cmd-generate]]
-
-### nself hasura
-
-Hasura metadata operations (alias for 'nself db hasura')
-
-```
-nself hasura <subcommand> [flags]
-```
-
-Subcommands:
-
-- `diff` — Compare live Hasura metadata against on-disk files (alias for 'nself db hasura diff')
-- `metadata` — Manage Hasura metadata
-
-Full page: [[cmd-hasura]]
 
 ### nself health
 

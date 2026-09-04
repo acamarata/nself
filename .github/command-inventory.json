@@ -1074,26 +1074,6 @@
     ]
   },
   {
-    "name": "hasura",
-    "path": "nself hasura",
-    "short": "Hasura metadata operations (alias for 'nself db hasura')",
-    "hidden": false,
-    "subcommands": [
-      {
-        "name": "diff",
-        "path": "nself hasura diff",
-        "short": "Compare live Hasura metadata against on-disk files (alias for 'nself db hasura diff')",
-        "hidden": false
-      },
-      {
-        "name": "metadata",
-        "path": "nself hasura metadata",
-        "short": "Manage Hasura metadata",
-        "hidden": false
-      }
-    ]
-  },
-  {
     "name": "health",
     "path": "nself health",
     "short": "Health check management with continuous monitoring",

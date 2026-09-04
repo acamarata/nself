@@ -187,20 +187,39 @@ func resolveIncludes(baseDir, filePath string) ([]byte, error) {
 			// Preserve the leading indent from the original line, but replace
 			// the !include token with the inlined content (indented to match).
 			leadingSpaces := len(line) - len(strings.TrimLeft(line, " \t"))
-			indent := line[:leadingSpaces]
-			// If line starts with "- !include", emit list item prefix + first
-			// line of included content, then indent remaining lines.
-			prefix := ""
-			if strings.HasPrefix(trimmed, "- !include") {
-				prefix = "- "
-				indent += "  "
-			}
+			baseIndent := line[:leadingSpaces]
 			includedLines := strings.Split(strings.TrimRight(string(includedData), "\n"), "\n")
-			for i, il := range includedLines {
-				if i == 0 {
-					out.WriteString(line[:leadingSpaces] + prefix + il + "\n")
-				} else {
-					out.WriteString(indent + il + "\n")
+
+			switch {
+			case strings.HasPrefix(trimmed, "- !include"):
+				// List item ("- !include foo.yaml"): "- " prefix on the first
+				// inlined line, remaining lines indented one level under it.
+				itemIndent := baseIndent + "  "
+				for i, il := range includedLines {
+					if i == 0 {
+						out.WriteString(baseIndent + "- " + il + "\n")
+					} else {
+						out.WriteString(itemIndent + il + "\n")
+					}
+				}
+			case len(includedLines) == 1:
+				// "key: !include foo.yaml" where foo.yaml is a one-line
+				// scalar: inline it on the same line as the key.
+				out.WriteString(baseIndent + trimmed[:idx] + includedLines[0] + "\n")
+			default:
+				// "key: !include foo.yaml" where foo.yaml is a multi-line
+				// block (mapping/list): emit "key:" on its own line, then the
+				// block indented one level under it — otherwise the included
+				// block's own lines would land at the SAME indent as the key,
+				// which is not valid YAML nesting (this was the bug behind
+				// TestResolveIncludes_NestedConfigTree: "tables: !include
+				// tables.yaml" previously dropped the "tables:" key entirely
+				// and emitted the included list at column 0).
+				keyPart := strings.TrimRight(trimmed[:idx], " ")
+				blockIndent := baseIndent + "  "
+				out.WriteString(baseIndent + keyPart + "\n")
+				for _, il := range includedLines {
+					out.WriteString(blockIndent + il + "\n")
 				}
 			}
 		} else {
@@ -209,40 +228,6 @@ func resolveIncludes(baseDir, filePath string) ([]byte, error) {
 	}
 
 	return []byte(out.String()), nil
-}
-
-// hasuraArraySections are the top-level metadata.yaml/tables.yaml keys whose
-// value must be an array of single-object mappings, one per !include'd file.
-// This is the exact shape the historical incident (43/48 !include'd table
-// files list-wrapped since a9eb61bf, found 2026-09-03) violated: each
-// included file was itself `- table: ...` (a one-element list) instead of a
-// bare `table: ...` mapping, silently nesting a list inside the array.
-var hasuraArraySections = []string{"tables", "actions", "remote_schemas", "cron_triggers", "query_collections", "rest_endpoints"}
-
-// validateNoListWrappedEntries walks the known metadata array sections and
-// returns a clear, actionable error the first time an entry is itself a list
-// rather than a single mapping — instead of letting the malformed shape
-// reach the Hasura API as an opaque 400.
-func validateNoListWrappedEntries(doc interface{}) error {
-	root, ok := doc.(map[string]interface{})
-	if !ok {
-		return nil
-	}
-	for _, section := range hasuraArraySections {
-		items, ok := root[section].([]interface{})
-		if !ok {
-			continue
-		}
-		for i, item := range items {
-			if _, isList := item.([]interface{}); isList {
-				return fmt.Errorf(
-					"hasura metadata: %s[%d] is a YAML list, not an object — the !include'd file is "+
-						"list-wrapped (starts with \"- \" instead of a bare mapping); unwrap it to a single object",
-					section, i)
-			}
-		}
-	}
-	return nil
 }
 
 // convertYAMLToJSON recursively converts a yaml.v3-decoded value (which uses

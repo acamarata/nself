@@ -279,7 +279,7 @@
 
 <!-- BEGIN GENERATED:command-list -->
 
-**All commands (51)**
+**All commands (50)**
 
 - _A:_ [[cmd-access]] · [[cmd-account]] · [[cmd-admin]]
 - _B:_ [[cmd-backup]] · [[cmd-build]] · [[cmd-bundle]]
@@ -288,7 +288,7 @@
 - _E:_ [[cmd-env]] · [[cmd-exec]]
 - _F:_ [[cmd-functions]]
 - _G:_ [[cmd-generate]]
-- _H:_ [[cmd-hasura]] · [[cmd-health]] · [[cmd-help-topics]]
+- _H:_ [[cmd-health]] · [[cmd-help-topics]]
 - _I:_ [[cmd-init]] · [[cmd-install]]
 - _L:_ [[cmd-license]] · [[cmd-login]] · [[cmd-logout]] · [[cmd-logs]]
 - _M:_ [[cmd-man]] · [[cmd-mcp]] · [[cmd-migrate]]

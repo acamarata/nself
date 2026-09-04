@@ -19,19 +19,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/nself-org/cli/internal/config"
 	"github.com/nself-org/cli/internal/database"
 	"github.com/nself-org/cli/internal/ui"
 )
 
-// applyFn/inconsistentFn are indirected for unit testing (no live Hasura
-// required to exercise the strict/warn/skip decision tree).
+// applyFn/inconsistentFn/reachableFn are indirected for unit testing (no
+// live Hasura required to exercise the strict/warn/skip decision tree).
 type applyFn func(ctx context.Context, cfg *config.Config, projectDir string) error
 type inconsistentFn func(ctx context.Context, cfg *config.Config) ([]string, error)
+type reachableFn func(ctx context.Context, cfg *config.Config) bool
 
 // ApplyIfPresent applies `<projectDir>/hasura/metadata/` to the running
 // Hasura instance if that directory exists; otherwise it is a clean no-op.
@@ -45,7 +48,33 @@ type inconsistentFn func(ctx context.Context, cfg *config.Config) ([]string, err
 // dev (cfg.Env). In warn mode a failed apply or inconsistency report prints
 // but never fails the caller; in strict mode both fail it.
 func ApplyIfPresent(ctx context.Context, cfg *config.Config, projectDir string) error {
-	return applyIfPresent(ctx, cfg, projectDir, database.HasuraApplyMetadata, database.HasuraGetInconsistentMetadata)
+	return applyIfPresent(ctx, cfg, projectDir, isHasuraReachable, database.HasuraApplyMetadata, database.HasuraGetInconsistentMetadata)
+}
+
+// isHasuraReachable reports whether *something* is listening on Hasura's
+// configured port, distinguishing "Hasura isn't part of this stack / this
+// run" (connection refused/timeout — skip cleanly, no warning) from "Hasura
+// is part of the stack but returned an unhealthy status" (any HTTP response
+// at all, including a 503 from HasuraHealthzHandler's degraded/down states —
+// still worth attempting the apply, since a real instance may just be slow
+// to come up). A short timeout keeps this cheap on every start/deploy.
+func isHasuraReachable(ctx context.Context, cfg *config.Config) bool {
+	port := cfg.Hasura.Port
+	if port == 0 {
+		port = 8080
+	}
+	reqCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, fmt.Sprintf("http://localhost:%d/healthz", port), nil)
+	if err != nil {
+		return false
+	}
+	resp, err := (&http.Client{Timeout: 3 * time.Second}).Do(req)
+	if err != nil {
+		return false
+	}
+	_ = resp.Body.Close()
+	return true
 }
 
 // IsStrict reports whether metadata-apply failures should fail the caller,
@@ -63,13 +92,22 @@ func IsStrict(cfg *config.Config) bool {
 	return cfg.Env == "staging" || cfg.IsProduction()
 }
 
-func applyIfPresent(ctx context.Context, cfg *config.Config, projectDir string, apply applyFn, inconsistent inconsistentFn) error {
+func applyIfPresent(ctx context.Context, cfg *config.Config, projectDir string, reachable reachableFn, apply applyFn, inconsistent inconsistentFn) error {
 	metadataDir := filepath.Join(projectDir, "hasura", "metadata")
 	metadataFile := filepath.Join(projectDir, "hasura", "metadata.json")
 	if _, err := os.Stat(metadataDir); errors.Is(err, os.ErrNotExist) {
 		if _, err := os.Stat(metadataFile); errors.Is(err, os.ErrNotExist) {
 			return nil // No metadata tracked in this project — clean skip.
 		}
+	}
+
+	if !reachable(ctx, cfg) {
+		// Hasura isn't part of this run (e.g. a stack/profile that omits it,
+		// or this call landing before the container is even scheduled) —
+		// nothing to apply to. Never fails, strict mode included: this is not
+		// a metadata problem, it's "there is no Hasura here right now."
+		ui.Dimmed("  (hasura not reachable — skipping metadata apply)")
+		return nil
 	}
 
 	strict := IsStrict(cfg)
