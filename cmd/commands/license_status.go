@@ -215,11 +215,11 @@ Use --json for machine-readable output.`,
 			}
 		}
 
-		// Bundles from product prefix.
-		var bundles []string
-		if pp != nil {
-			bundles = []string{pp.DisplayName}
-		}
+		// Bundles unlocked — computed from bundles.json (ADR-P6-03) as the
+		// union of every paid bundle this key entitles, never a single
+		// hand-picked product name. See resolveBundlesUnlocked's doc
+		// comment for the plus/single-bundle/degrade-on-load-failure rules.
+		bundles := resolveBundlesUnlocked(cmd.Context(), pp)
 
 		// Plugins from cache.
 		var pluginsCount int
