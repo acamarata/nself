@@ -16,39 +16,23 @@ package doctor
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/nself-org/cli/internal/config"
+	"github.com/nself-org/cli/internal/nginxtopo"
 )
 
 // resolveNginxFrontedDir resolves the on-disk nginx directory for a project
 // fronted by another stack (NGINX_FRONTED_BY — see config.NginxConfig.FrontedBy).
 //
-// FrontedBy carries only a stack NAME (e.g. "nself-web"), never a path, and
-// none of the codebase's other three consumers of it
-// (internal/build/detection.go, internal/build/manifest_resolve.go,
-// internal/compose/generator.go) resolve that name to a filesystem
-// location — all three only test it for emptiness, to decide whether to
-// generate this project's own nginx service. There is no config-driven
-// convention anywhere in this CLI for turning a stack name into a directory
-// in the general case, so this function does not attempt one.
-//
-// The one topology it trusts is the one that caused the regression this
-// check exists to catch (cli#380/cli#371 on staging): this project living
-// as a subdirectory (conventionally "backend") directly under the fronting
-// stack's own directory, whose basename equals FrontedBy — e.g. projectDir
-// ".../nself-web/backend" with FrontedBy "nself-web" resolves to
-// ".../nself-web/nginx". That is a structural inference from the directory
-// layout the operator already chose, not a second FrontedBy-to-path
-// convention grafted onto config. When the parent directory's name does
-// not match, this function returns ok=false — the caller must not guess
-// further and silently audit the wrong directory.
+// FrontedBy carries only a stack NAME (e.g. "nself-web"), never a path.
+// Turning it into a filesystem location is internal/nginxtopo.
+// ResolveFrontingDir's job — this wrapper exists only so this file's
+// existing callers (planNginxAudit) keep their local name. See that
+// package for the structural convention this delegates to (cli#380/cli#371
+// on staging; reused as-is by the nginx generator for cli#385 rather than
+// inventing a second convention).
 func resolveNginxFrontedDir(projectDir, frontedBy string) (dir string, ok bool) {
-	parent := filepath.Dir(projectDir)
-	if parent == projectDir || filepath.Base(parent) != frontedBy {
-		return "", false
-	}
-	return parent, true
+	return nginxtopo.ResolveFrontingDir(projectDir, frontedBy)
 }
 
 // nginxAuditPlan is the outcome of deciding which directory

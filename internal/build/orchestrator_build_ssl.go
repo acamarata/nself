@@ -19,6 +19,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/nself-org/cli/internal/nginx"
 	"github.com/nself-org/cli/internal/postgres"
@@ -48,25 +49,51 @@ func (st *buildState) generateSSLAndNginx() error {
 	st.filesGenerated += sslResult.Count * 2 // fullchain.pem + privkey.pem per cert set
 
 	// ── Step 7: Generate nginx configuration ────────────────────────
-	// Clear nginx/sites/ before regenerating so stale configs from a previous
-	// BASE_DOMAIN value don't persist. conf.d/ is hand-managed and is NOT cleared.
-	nginxSitesClearDir := filepath.Join(st.workdir, "nginx", "sites")
-	if entries, readErr := os.ReadDir(nginxSitesClearDir); readErr == nil {
-		for _, e := range entries {
-			if !e.IsDir() {
-				_ = os.Remove(filepath.Join(nginxSitesClearDir, e.Name()))
+	// sitesDir is normally <workdir>/nginx/sites. When NGINX_FRONTED_BY is
+	// set this project generates no nginx container of its own, so that
+	// directory is never read by any running nginx — resolveNginxSitesDir
+	// (cli#385) targets the fronting stack's own nginx/sites/ instead, or
+	// refuses the build when that stack's directory cannot be confirmed.
+	// See nginx_sites_dir.go.
+	sitesDir, err := resolveNginxSitesDir(st.workdir, st.cfg.Nginx.FrontedBy)
+	if err != nil {
+		return err
+	}
+
+	// Clear stale *.conf files from a previous BASE_DOMAIN before
+	// regenerating — but only in sitesDir's own (unfronted) case. When
+	// fronted, sitesDir belongs to another project's stack, which writes
+	// its own per-service confs into the same directory; blanket-clearing
+	// it would delete that stack's own routes. conf.d/ is hand-managed and
+	// is NOT cleared either way.
+	if sitesDir == filepath.Join(st.workdir, "nginx", "sites") {
+		if entries, readErr := os.ReadDir(sitesDir); readErr == nil {
+			for _, e := range entries {
+				if !e.IsDir() {
+					_ = os.Remove(filepath.Join(sitesDir, e.Name()))
+				}
 			}
 		}
 	}
+
 	nginxGen := nginx.NewGenerator(st.cfg, st.workdir)
 	nginxFiles, err := nginxGen.Generate()
 	if err != nil {
 		return fmt.Errorf("generating nginx config: %w", err)
 	}
 
-	// Write each nginx config file.
+	// Write each nginx config file. Per-service site route confs
+	// ("nginx/sites/...") are redirected to sitesDir; everything else
+	// (nginx.conf, conf.d/default.conf, includes/rate-limits.conf) stays
+	// under this project's own workdir/nginx regardless of FrontedBy.
+	const sitesPrefix = "nginx/sites/"
 	for relPath, content := range nginxFiles {
-		absPath := filepath.Join(st.workdir, relPath)
+		var absPath string
+		if strings.HasPrefix(relPath, sitesPrefix) {
+			absPath = filepath.Join(sitesDir, strings.TrimPrefix(relPath, sitesPrefix))
+		} else {
+			absPath = filepath.Join(st.workdir, relPath)
+		}
 		dir := filepath.Dir(absPath)
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("creating directory for %s: %w", relPath, err)
