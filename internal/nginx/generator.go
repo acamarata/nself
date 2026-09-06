@@ -55,21 +55,22 @@ type Generator struct {
 	tmpl       *template.Template
 	seenRoutes map[string]bool // tracks server names seen in the current generation batch
 	workdir    string          // project root directory for conf.d/ conflict scanning
-	hasSSL     bool            // true when local SSL certs are expected on disk (SSL_MODE=local)
+	hasSSL     bool            // true when a cert pair for BaseDomain is expected/present on disk — see sslShouldEmit
 }
 
 // NewGenerator creates an nginx Generator from the given config.
 // When SSL_MODE is "local" (or empty, which defaults to "local" in dev),
 // nginx server blocks are generated with ssl_certificate directives pointing
-// to the locally generated cert files. For other modes (letsencrypt, custom,
-// none), the HTTPS server blocks are omitted so nginx can start without
-// requiring cert files that do not yet exist.
+// to the locally generated cert files. For "letsencrypt"/"custom" modes the
+// HTTPS server blocks are emitted only once a certificate pair already
+// exists on disk for the domain — see sslShouldEmit. "none" always omits
+// them, regardless of what cert files happen to be present.
 func NewGenerator(cfg *config.Config, workdir string) *Generator {
 	mode := cfg.SSLMode
 	if mode == "" {
 		mode = "local"
 	}
-	return &Generator{cfg: cfg, workdir: workdir, hasSSL: mode == "local"}
+	return &Generator{cfg: cfg, workdir: workdir, hasSSL: sslShouldEmit(cfg, workdir, mode)}
 }
 
 // Generate produces all nginx config files.
