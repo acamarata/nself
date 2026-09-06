@@ -53,16 +53,23 @@ func resolveNginxSitesDir(workdir, frontedBy string) (string, error) {
 
 	frontingDir, ok := nginxtopo.ResolveFrontingDir(workdir, frontedBy)
 	if !ok {
+		// Paths are interpolated with %s, not %q: on Windows %q doubles
+		// each backslash in the path separator, which breaks any caller
+		// (including tests) that looks for the literal path inside this
+		// message via strings.Contains — the same class of bug documented
+		// in internal/doctor/hardening_check_nginx_fronted_test.go's
+		// messageNamesPath helper. Using %s here avoids needing that
+		// tolerance at all.
 		parent := filepath.Dir(workdir)
 		return "", fmt.Errorf(
 			"refusing to generate nginx site configs: NGINX_FRONTED_BY=%q names another "+
-				"stack's nginx as this project's ingress, so %q is never read by any running "+
-				"nginx (a fronted project generates no nginx container of its own) — and %q "+
-				"could not be confirmed as %q's own directory (its basename must equal "+
+				"stack's nginx as this project's ingress, so %s is never read by any running "+
+				"nginx (a fronted project generates no nginx container of its own) — and %s "+
+				"could not be confirmed as %[1]q's own directory (its basename must equal "+
 				"NGINX_FRONTED_BY); lay this project out as \"backend\" directly under "+
-				"%[4]s's own directory, or unset NGINX_FRONTED_BY if this project fronts "+
+				"%[1]s's own directory, or unset NGINX_FRONTED_BY if this project fronts "+
 				"itself",
-			frontedBy, ownDir, parent, frontedBy)
+			frontedBy, ownDir, parent)
 	}
 	return filepath.Join(frontingDir, "nginx", "sites"), nil
 }
