@@ -77,13 +77,14 @@ These vars control the top-level identity and behavior of a project.
 | Variable | Type | Default | Required | Description |
 |---|---|---|---|---|
 | `POSTGRES_VERSION` | string | `16-alpine` | No | Docker image tag for the Postgres container. |
+| `POSTGRES_IMAGE` | string | *(unset)* | No | Explicit image override for the Postgres container (e.g. `pgvector/pgvector:pg16`). Wins over every other resolution, including the `POSTGRES_EXTENSIONS` pgvector inference below. Set this to pin a running image across `nself build` regens. |
 | `BACKUP_CRITICAL_TABLES` | string | `np_users,np_licenses,np_audit_log,np_plugins,np_billing` | No | Comma-separated tables `nself backup drill` looks for after restoring into its scratch database. The check is presence-only and advisory: an empty table counts as present, and missing tables are reported without failing the drill. Set this when your schema does not use the `np_` prefix, or the defaults will all read as missing. See [[cmd-backup]]. |
 | `POSTGRES_HOST` | string | `postgres` | No | Internal container hostname. Change only if running Postgres externally. |
 | `POSTGRES_PORT` | int | `5432` | No | Port exposed to the host machine. |
 | `POSTGRES_DB` | string | derived from the project name | No | Database created on first start. `nself init` writes a name derived from the project directory, lowercased with hyphens, dots and spaces folded to underscores, since a database name must be a valid SQL identifier and a directory name often is not. `my-app` becomes `my_app`. Only if nothing sets it at all does it fall back to `nself`. Set it explicitly to control the name. |
 | `POSTGRES_USER` | string | `postgres` | No | Superuser account name. |
 | `POSTGRES_PASSWORD` | string | *(none)* | **Yes** | Superuser password. Minimum 16 characters. |
-| `POSTGRES_EXTENSIONS` | string | `uuid-ossp` | No | Comma-separated list of extensions to install automatically. |
+| `POSTGRES_EXTENSIONS` | string | `uuid-ossp` | No | Comma-separated list of extensions to install automatically. When this list contains `pgvector` and `POSTGRES_IMAGE` is unset, `nself build` selects the `pgvector/pgvector:pg<major>` image instead of plain `postgres:<POSTGRES_VERSION>`. |
 | `POSTGRES_EXPOSE_PORT` | enum | `auto` | No | Controls host-port binding. `auto` exposes in dev and hides in prod. Accepted values: `auto`, `true`, `false`. |
 | `POSTGRES_MEM_LIMIT` | string | `2g` | No | Docker memory limit for the Postgres container. |
 | `POSTGRES_CPU_LIMIT` | string | `2.0` | No | Docker CPU core limit for the Postgres container. |

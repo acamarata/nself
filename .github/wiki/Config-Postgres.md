@@ -11,13 +11,14 @@ All Postgres variables are optional except `POSTGRES_PASSWORD`, which must be se
 | Variable | Default | Required | Description |
 |----------|---------|----------|-------------|
 | `POSTGRES_VERSION` | `16-alpine` | No | Docker image tag for the Postgres container. Change this to pin a specific version, e.g. `15-alpine` or `16.2-alpine`. |
+| `POSTGRES_IMAGE` | *(unset)* | No | Explicit image override for the Postgres container (e.g. `pgvector/pgvector:pg16`). When set, wins over both `POSTGRES_VERSION` and the `POSTGRES_EXTENSIONS` pgvector inference below — use it to pin a running image across `nself build` regens. |
 | `POSTGRES_HOST` | `postgres` | No | Internal hostname used by other containers (Hasura, Auth, Functions) to reach Postgres. This is a Docker network name and should almost never be changed. |
 | `POSTGRES_INTERNAL_PORT` | `5432` | No | Port Postgres listens on inside the container. Always `5432`. Do not change this , it is the standard Postgres port expected by all dependent services. |
 | `POSTGRES_PORT` | `5432` | No | Port exposed to the host machine. Change this if you have a port conflict with another local Postgres instance (e.g., set to `5433`). |
 | `POSTGRES_DB` | `nself` | No | Name of the default database created on first start. |
 | `POSTGRES_USER` | `postgres` | No | Superuser account name for the database. |
 | `POSTGRES_PASSWORD` | *(none)* | **Yes** | Superuser password. Must be at least 16 characters. ɳSelf enforces a minimum length and rejects common insecure patterns (e.g., `postgres`, `password`, `changeme`). |
-| `POSTGRES_EXTENSIONS` | `uuid-ossp` | No | Comma-separated list of extensions to install automatically at startup. The extensions `uuid-ossp`, `pgcrypto`, and `pg_trgm` are always installed regardless of this value. Add additional extensions here as needed. |
+| `POSTGRES_EXTENSIONS` | `uuid-ossp` | No | Comma-separated list of extensions to install automatically at startup. The extensions `uuid-ossp`, `pgcrypto`, and `pg_trgm` are always installed regardless of this value. Add additional extensions here as needed. When this list contains `pgvector` and `POSTGRES_IMAGE` is unset, `nself build` selects the `pgvector/pgvector:pg<major>` image instead of plain `postgres:<POSTGRES_VERSION>`. |
 | `POSTGRES_EXPOSE_PORT` | `auto` | No | Controls whether `POSTGRES_PORT` is bound on the host. `auto` exposes the port in dev and hides it in prod. Set to `true` to always expose, or `false` to always hide. |
 | `POSTGRES_MEM_LIMIT` | `2g` | No | Docker memory limit for the Postgres container. Uses Docker format: `512m`, `1g`, `4g`, etc. |
 | `POSTGRES_CPU_LIMIT` | `2.0` | No | CPU core limit for the Postgres container. A value of `2.0` means the container can use up to two full cores. |
