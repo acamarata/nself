@@ -26,7 +26,7 @@ func remoteSchemaEnvVars(schemas []config.RemoteSchema) map[string]string {
 // buildPostgresService returns the PostgreSQL service configuration.
 func (g *Generator) buildPostgresService() ServiceConfig {
 	cfg := g.cfg
-	image := ResolveImage("postgres", fmt.Sprintf("postgres:%s", cfg.Postgres.Version))
+	image := ResolveImage("postgres", ResolvePostgresImage(cfg.Postgres))
 	// Image-aware runtime identity: alpine postgres images run as uid 70 and
 	// existing alpine volumes are initialized directly at /var/lib/postgresql/data.
 	// Debian-family images (incl. pgvector/pgvector) run as uid 999 with a pgdata

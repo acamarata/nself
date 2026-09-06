@@ -27,6 +27,7 @@ var knownEnvVarsCore = []string{
 
 	// PostgreSQL
 	"POSTGRES_VERSION",
+	"POSTGRES_IMAGE",
 	"POSTGRES_HOST",
 	"POSTGRES_PORT",
 	"POSTGRES_DB",
