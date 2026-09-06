@@ -101,12 +101,17 @@ func runDBMigrateStatus(cmd *cobra.Command, _ []string) error {
 	if f := cmd.Flags().Lookup("migration-dir"); f != nil {
 		migrationDir = f.Value.String()
 	}
+	detect, _ := cmd.Flags().GetBool("detect")
 
-	// Forward --migration-dir to the remote CLI: the pre-flight version-drift
-	// check (#162) guarantees the remote binary understands the flag.
+	// Forward --migration-dir/--detect to the remote CLI: the pre-flight
+	// version-drift check (#162) guarantees the remote binary understands
+	// the flags.
 	remoteArgs := []string{"db", "migrate", "status"}
 	if migrationDir != "" {
 		remoteArgs = append(remoteArgs, "--migration-dir", migrationDir)
+	}
+	if detect {
+		remoteArgs = append(remoteArgs, "--detect")
 	}
 	if handled, err := dispatchRemoteIfNeeded(cmd, remoteArgs...); handled {
 		return err
@@ -116,6 +121,14 @@ func runDBMigrateStatus(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+
+	// --detect classifies each pending migration against the live schema
+	// (BASELINE/APPLY/CONFLICT) instead of only checking the ledger — see
+	// db_migrate_detect.go. It never writes anything.
+	if detect {
+		return runDBMigrateStatusDetect(cmd, cfg, migrationDir)
+	}
+
 	statuses, err := database.MigrateStatus(cmd.Context(), cfg, migrationDir)
 	if err != nil {
 		return fmt.Errorf("migrate status: %w", err)

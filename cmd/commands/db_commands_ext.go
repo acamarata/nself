@@ -172,6 +172,9 @@ func init() {
 	// --migration-dir flag on migrate status (G-008): repos with non-standard
 	// layouts (e.g. ntask postgres/migrations) otherwise report "No migrations found"
 	dbMigrateStatusCmd.Flags().String("migration-dir", "", "Report status for migrations in this directory instead of the auto-detected one")
+	// --detect flag on migrate status (cli#386): classify each pending
+	// migration against the live schema instead of only checking the ledger.
+	dbMigrateStatusCmd.Flags().Bool("detect", false, "Classify pending migrations against the live schema (BASELINE/APPLY/CONFLICT)")
 	// --env/--server: remote targeting (gap #9) — default local, opt-in remote.
 	addDBRemoteFlags(dbMigrateUpCmd)
 	addDBRemoteFlags(dbMigrateStatusCmd)
