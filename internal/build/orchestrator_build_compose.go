@@ -39,6 +39,15 @@ func (st *buildState) generateCompose() error {
 		return fmt.Errorf("generating docker-compose.yml: %w", err)
 	}
 
+	// ── Step 8.1: Warn if this regen would swap a running postgres image ──
+	// (cli#384 — advisory only, never blocks the build; see
+	// PostgresImageChangeWarning for the data-loss scenario this guards.)
+	postgresContainer := fmt.Sprintf("%s_postgres", st.cfg.ProjectName)
+	generatedPostgresImage := compose.ResolveImage("postgres", compose.ResolvePostgresImage(st.cfg.Postgres))
+	if warning := PostgresImageChangeWarning(postgresContainer, generatedPostgresImage); warning != "" {
+		slog.Warn(warning)
+	}
+
 	// ── Step 8.5: Merge Ollama sidecar when AI_OLLAMA_ENABLED=true ──
 	ollamaEnv := collectOllamaEnv()
 	mergedYAML, ollamaInjected, err := MergeOllamaSidecar(composeYAML, ollamaEnv)

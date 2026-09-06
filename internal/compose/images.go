@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
+
+	"github.com/nself-org/cli/internal/config"
 )
 
 // AdminImagePath is the Docker Hub image name for the nSelf Admin GUI service.
@@ -29,6 +33,64 @@ var DefaultImageVersions = map[string]string{
 	"mlflow":      "ghcr.io/mlflow/mlflow:v2.10.0",
 }
 
+// pgvectorMajorVersionRE extracts the leading numeric major version from a
+// POSTGRES_VERSION string such as "16-alpine" or "16.4" so the pgvector image
+// tag tracks the configured Postgres major version rather than being
+// hardcoded to whatever DefaultImageVersions currently pins.
+var pgvectorMajorVersionRE = regexp.MustCompile(`^(\d+)`)
+
+// ResolvePostgresImage decides which Postgres image `nself build` emits.
+//
+// Purpose: fix cli#384 — nself build previously ignored the pgvector pin
+// entirely and always emitted postgres:<POSTGRES_VERSION>, silently swapping
+// a running pgvector/pgvector container (uid 999, PGDATA subdir) for a plain
+// alpine postgres image (uid 70, no PGDATA) on every regen. Restarting
+// postgres under the swapped image on a populated database is a data-loss
+// event (P1 EOP staging incident 2026-06-10).
+// Inputs: pg — the resolved PostgresConfig (Image, Version, Extensions).
+// Outputs: the image reference the postgres service should run.
+// Constraints: precedence is fixed and MUST NOT be reordered:
+//  1. pg.Image (POSTGRES_IMAGE), when set, always wins — an explicit
+//     operator pin overrides every inference below it.
+//  2. pg.Extensions containing "pgvector" (POSTGRES_EXTENSIONS) selects the
+//     pgvector image matching the configured Postgres major version.
+//  3. Otherwise, postgres:<POSTGRES_VERSION> (unchanged default behavior).
+//
+// buildPostgresService derives PGDATA and the container uid from the
+// resulting image name (alpine vs. debian-family), so getting this
+// precedence right also fixes PGDATA/uid preservation: a pgvector or other
+// debian-family image always resolves to uid 999 + PGDATA, matching what the
+// upstream image actually requires.
+func ResolvePostgresImage(pg config.PostgresConfig) string {
+	if img := strings.TrimSpace(pg.Image); img != "" {
+		return img
+	}
+	if hasExtension(pg.Extensions, "pgvector") {
+		return pgvectorImageForVersion(pg.Version)
+	}
+	return fmt.Sprintf("postgres:%s", pg.Version)
+}
+
+// hasExtension reports whether extensions contains name, case-insensitively.
+func hasExtension(extensions []string, name string) bool {
+	for _, e := range extensions {
+		if strings.EqualFold(strings.TrimSpace(e), name) {
+			return true
+		}
+	}
+	return false
+}
+
+// pgvectorImageForVersion maps a POSTGRES_VERSION like "16-alpine" or "16.4"
+// to the matching pgvector/pgvector image tag. Falls back to the
+// DefaultImageVersions pin when no leading major-version digit is found.
+func pgvectorImageForVersion(version string) string {
+	if major := pgvectorMajorVersionRE.FindString(version); major != "" {
+		return fmt.Sprintf("pgvector/pgvector:pg%s", major)
+	}
+	return DefaultImageVersions["postgres"]
+}
+
 // ImageDigests maps service name to sha256 digest for image pinning.
 // When a digest is available, ResolveImage appends @sha256:... to the tag.
 // Populated by LoadImageDigests from the project config directory.
@@ -41,10 +103,12 @@ const DigestConfigFile = ".nself-image-digests.json"
 // digest suffix when available.
 //
 // Precedence: a non-empty caller-supplied image (built from env/config such as
-// POSTGRES_VERSION / HASURA_VERSION) ALWAYS wins. The DefaultImageVersions pin
-// applies only when the caller supplies no image. Pins overriding configured
-// versions force-migrated existing deployments on upgrade (P1 EOP staging
-// incident 2026-06-10: postgres:16-alpine volume recreated as pgvector pg16).
+// POSTGRES_VERSION / HASURA_VERSION, or ResolvePostgresImage for postgres)
+// ALWAYS wins. The DefaultImageVersions pin applies only when the caller
+// supplies no image — for postgres specifically that image is always
+// resolved via ResolvePostgresImage before reaching here, so this pin is a
+// fallback for other services (or an unparseable POSTGRES_VERSION), not the
+// live postgres selection path.
 func ResolveImage(service, image string) string {
 	resolved := image
 	if resolved == "" {

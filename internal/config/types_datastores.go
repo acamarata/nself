@@ -9,11 +9,16 @@ package config
 
 // PostgresConfig holds PostgreSQL database configuration.
 type PostgresConfig struct {
-	Version    string   `env:"POSTGRES_VERSION"` // 16-alpine
-	Host       string   `env:"POSTGRES_HOST"`    // postgres (container name)
-	Port       int      `env:"POSTGRES_PORT"`    // 5432
-	DB         string   `env:"POSTGRES_DB"`      // nself
-	User       string   `env:"POSTGRES_USER"`    // postgres
+	Version string `env:"POSTGRES_VERSION"` // 16-alpine
+	// Image, when set, is the exact postgres image nself build emits and wins
+	// over every other resolution (see compose.ResolvePostgresImage). Set this
+	// to pin a running image (e.g. pgvector/pgvector:pg16) across regens
+	// without relying on POSTGRES_EXTENSIONS inference (cli#384).
+	Image      string   `env:"POSTGRES_IMAGE"`
+	Host       string   `env:"POSTGRES_HOST"` // postgres (container name)
+	Port       int      `env:"POSTGRES_PORT"` // 5432
+	DB         string   `env:"POSTGRES_DB"`   // nself
+	User       string   `env:"POSTGRES_USER"` // postgres
 	Password   string   `env:"POSTGRES_PASSWORD"`
 	Extensions []string `env:"POSTGRES_EXTENSIONS"`  // comma-separated list
 	ExposePort string   `env:"POSTGRES_EXPOSE_PORT"` // auto, true, false
