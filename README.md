@@ -13,9 +13,9 @@
 
 **Self-hosted backend in 5 minutes**
 
-Complete, production-ready backend stack — PostgreSQL, GraphQL API, Authentication, and Nginx — launched from a single command. Extend with 155 plugins (31 free, 124 paid). MIT licensed core, forever.
+Complete, production-ready backend stack — PostgreSQL, GraphQL API, Authentication, and Nginx — launched from a single command. Extend with 256 plugins (129 free, 127 paid). MIT licensed core, forever.
 
-**v1.1.9 is out.** `nself ci` built-in CI command, security hardening (shell-injection guards, CF Access JWT, mux allowlist), GraphQL codegen from live Hasura introspection, tenant isolation across all pro plugins, AI gateway trio canonicalized. [Release notes](https://github.com/nself-org/cli/releases/tag/v1.1.9)
+**v1.3.5 is out.** See the [changelog](.github/wiki/Changelog.md) for what shipped. [Release notes](https://github.com/nself-org/cli/releases/tag/v1.3.5)
 
 ```bash
 brew install nself-org/nself/nself
@@ -29,9 +29,9 @@ brew install nself-org/nself/nself
 
 ## What is ɳSelf?
 
-ɳSelf is a self-hosted backend platform that gives you the equivalent of a commercial Backend-as-a-Service on your own infrastructure. Run it locally, on a VPS, in Kubernetes, or on any cloud provider.
+ɳSelf is a self-hosted backend platform that gives you the equivalent of a commercial Backend-as-a-Service on your own infrastructure. Run it locally, on a VPS, or on any cloud provider (Kubernetes: planned — see the [k8s plugin](https://nself.org/plugins)).
 
-You get Postgres, Hasura GraphQL, nHost Auth, and Nginx as the always-on core. Add optional services like Redis, MinIO, and Search when you need them. Extend everything with plugins — 31 free MIT plugins and 124 paid plugins covering AI, messaging, media processing, billing, and more.
+You get Postgres, Hasura GraphQL, nHost Auth, and Nginx as the always-on core. Add optional services like Redis, MinIO, and Search when you need them. Extend everything with plugins — 129 free MIT plugins and 127 paid plugins covering AI, messaging, media processing, billing, and more.
 
 The nself CLI is a single Go binary. No runtime dependencies beyond Docker.
 
@@ -104,8 +104,8 @@ nself build && nself restart
 
 Plugins are the extension layer — install what you need, remove what you don't.
 
-- **31 free MIT plugins** — no license key required
-- **124 paid plugins** — require a membership key (starting at $0.99/mo)
+- **129 free MIT plugins** — no license key required
+- **127 paid plugins** — require a membership key (starting at $0.99/mo)
 
 ```bash
 nself plugin install monitoring    # free: Prometheus + Grafana + Loki
@@ -125,10 +125,10 @@ See [Plugins](#plugins) for the full inventory.
 ## Key Features
 
 - Complete backend in under 5 minutes on any machine with Docker
-- 84 CLI commands — full control from the terminal over every service and operation
+- 50 CLI commands — full control from the terminal over every service and operation
 - Built-in CI gate (`nself ci`) — replaces external CI for merge enforcement
 - Core services always-on; optional services enable with one line in `.env`
-- 155 plugins extend the stack without touching core config
+- 256 plugins extend the stack without touching core config
 - Multi-tenancy, row-level security, and org management built in
 - Stripe/Paddle billing integration included
 - White-label support — custom domains, branding, email templates
@@ -187,10 +187,10 @@ For the most paranoid setups, pin the expected SHA-256 in your shell or CI confi
 
 ```bash
 # Obtain the expected checksum for a specific release:
-curl -fsSL https://github.com/nself-org/cli/releases/download/v1.1.9/checksums.txt
+curl -fsSL https://github.com/nself-org/cli/releases/download/v1.3.5/checksums.txt
 
 # Install with a pinned version and pinned SHA-256:
-NSELF_VERSION=v1.1.9 \
+NSELF_VERSION=v1.3.5 \
 NSELF_INSTALL_PIN_SHA256=<sha256-from-checksums.txt> \
 curl -fsSL https://install.nself.org | bash
 ```
@@ -334,7 +334,7 @@ Run `nself help <command>` for subcommand details.
 | Built-in billing integration | Yes | No | No | No | No |
 | White-label support | Yes | No | No | No | No |
 | Setup time | ~5 min | 30+ min | 30+ min | 15+ min | N/A |
-| Plugin ecosystem | 155 total (31 free + 124 pro) | Limited | Limited | App templates | No |
+| Plugin ecosystem | 256 total (129 free + 127 pro) | Limited | Limited | App templates | No |
 | Deploy anywhere | Yes | Cloud-first | Cloud-first | Yes | No |
 | Data ownership | Full | Shared | Shared | Full | No |
 
@@ -342,12 +342,12 @@ Run `nself help <command>` for subcommand details.
 
 ## Pricing
 
-The nself CLI and 31 free MIT plugins are fully FOSS. Free forever, including commercial use. Pro plugins require a membership key.
+The nself CLI and 129 free MIT plugins are fully FOSS. Free forever, including commercial use. Pro plugins require a membership key.
 
 | Tier | Monthly | Annual | What's included |
 |------|---------|--------|-----------------|
-| Free | $0 | $0 | Core CLI + 31 free MIT plugins |
-| Bundle | $0.99/mo | $9.99/yr | All 109 pro plugins (ɳChat, ɳClaw, ɳSentry, ɳTV, ɳFamily, or ClawDE) |
+| Free | $0 | $0 | Core CLI + 129 free MIT plugins |
+| Bundle | $0.99/mo | $9.99/yr | All 127 pro plugins (ɳChat, ɳClaw, ɳSentry, ɳTV, ɳFamily, or ClawDE) |
 | ɳSelf+ | $3.99/mo | $39.99/yr | All 6 bundles + all apps + priority support |
 | ɳCloud | custom | custom | Managed hosting + ɳSelf+ license + cloud-exclusive features |
 
@@ -382,7 +382,7 @@ Install any free plugin with `nself plugin install <name>`:
 
 Full inventory: [nself.org/plugins](https://nself.org/plugins)
 
-### Pro plugins (109 — license-gated, starting at $0.99/mo)
+### Pro plugins (127 — license-gated, starting at $0.99/mo)
 
 ```bash
 nself license set nself_pro_xxxxxx
@@ -416,7 +416,7 @@ Pro plugins are source-available. License validated server-side via `ping.nself.
 | [ɳClaw](https://github.com/nself-org/nclaw) | ɳClaw | $0.99/mo | AI personal assistant with self-organizing memory |
 | [nTV](https://github.com/nself-org/ntv) | nTV | $0.99/mo | Media server and player (6 platforms) |
 | [nFamily](https://github.com/nself-org/nfamily) | nFamily | $0.99/mo | Private family social hub (planned) |
-| [ClawDE](https://github.com/nself-org/clawde) | ClawDE+ | $1.99/mo | AI development environment (desktop + mobile) |
+| [ClawDE](https://github.com/nself-org/clawde) | ClawDE | $0.99/mo | AI development environment (desktop + mobile) |
 
 Each app's backend is powered by the nself CLI + the matching plugin bundle.
 
@@ -514,13 +514,13 @@ Tests live in `internal/` alongside the packages they test. Coverage target: 70%
 
 MIT, free for personal and commercial use. See [LICENSE](LICENSE).
 
-The 109 pro plugins are source-available under a separate commercial license. Compiled binaries are distributed through `ping.nself.org` after license validation.
+The 127 pro plugins are source-available under a separate commercial license. Compiled binaries are distributed through `ping.nself.org` after license validation.
 
 ---
 
 <div align="center">
 
-**ɳSelf CLI v1.1.2** · [nself.org](https://nself.org) · [GitHub](https://github.com/nself-org/cli)
+**ɳSelf CLI v1.3.5** · [nself.org](https://nself.org) · [GitHub](https://github.com/nself-org/cli)
 
 [Get Started](#quick-start) · [Documentation](https://nself.org/docs) · [Pricing](#pricing)
 
