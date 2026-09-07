@@ -347,7 +347,7 @@ The nself CLI and 129 free MIT plugins are fully FOSS. Free forever, including c
 | Tier | Monthly | Annual | What's included |
 |------|---------|--------|-----------------|
 | Free | $0 | $0 | Core CLI + 129 free MIT plugins |
-| Bundle | $0.99/mo | $9.99/yr | All 127 pro plugins (ɳChat, ɳClaw, ɳSentry, ɳTV, ɳFamily, or ClawDE) |
+| Bundle | $0.99/mo | $9.99/yr | Every pro plugin in one bundle (ɳTask, ɳChat, ɳClaw, ɳFamily, ɳSentry, or ClawDE) |
 | ɳSelf+ | $3.99/mo | $39.99/yr | All 6 bundles + all apps + priority support |
 | ɳCloud | custom | custom | Managed hosting + ɳSelf+ license + cloud-exclusive features |
 
@@ -407,15 +407,15 @@ Pro plugins are source-available. License validated server-side via `ping.nself.
 
 ## Companion Products
 
-ɳSelf powers six open-source apps. Each is an MIT Flutter app you self-host:
+ɳSelf powers six open-source apps. Each is an MIT app you self-host:
 
 | App | Bundle | Price | What it does |
 |-----|--------|-------|-------------|
 | [ɳTasks](https://github.com/nself-org/ntask) | Free | $0 | Task management — free, no paid plugins ever |
-| [nChat](https://github.com/nself-org/nchat) | nChat | $0.99/mo | Messaging with live video, bots, and moderation |
+| [ɳChat](https://github.com/nself-org/nchat) | ɳChat | $0.99/mo | Messaging with live video, bots, and moderation |
 | [ɳClaw](https://github.com/nself-org/nclaw) | ɳClaw | $0.99/mo | AI personal assistant with self-organizing memory |
-| [nTV](https://github.com/nself-org/ntv) | nTV | $0.99/mo | Media server and player (6 platforms) |
-| [nFamily](https://github.com/nself-org/nfamily) | nFamily | $0.99/mo | Private family social hub (planned) |
+| [ɳFamily](https://github.com/nself-org/nfamily) | ɳFamily | $0.99/mo | Private family social hub (planned) |
+| [ɳSentry](https://github.com/nself-org/nsentry) | ɳSentry | $0.99/mo | Monitoring, status pages, and error tracking |
 | [ClawDE](https://github.com/nself-org/clawde) | ClawDE | $0.99/mo | AI development environment (desktop + mobile) |
 
 Each app's backend is powered by the nself CLI + the matching plugin bundle.
