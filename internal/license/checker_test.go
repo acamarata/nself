@@ -6,9 +6,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"strings"
 	"testing"
+	"time"
 )
 
 // ---- helpers ----------------------------------------------------------------
@@ -435,5 +439,223 @@ func TestBundleEntitled_BundleParamInURL(t *testing.T) {
 	_, _ = BundleEntitled(context.Background(), "nself_pro_abcdefghijklmnopqrstuvwxyz123456", "ntv")
 	if gotBundle != "ntv" {
 		t.Errorf("expected bundle=ntv in URL, got %q", gotBundle)
+	}
+}
+
+// ---- bundleEntitledFromGrace (default network-failure grace path) ----------
+//
+// These cover the 2026-09-06 licensing-panel decision: a network error must
+// no longer fail closed outright. It consults the grace.go ladder instead,
+// bounded by GraceHardThreshold (7d) and never overridden by revocation.
+
+// graceCacheEntry builds a CacheEntry fetched fetchedAgoHours ago, expiring
+// far in the future, keyed by an actual license key (hashed) rather than a
+// raw hash so callers can pass it straight to bundleEntitledFromGrace.
+func graceCacheEntry(key, tier string, fetchedAgoHours float64) *CacheEntry {
+	now := time.Now()
+	return &CacheEntry{
+		KeyHash:   HashKey(key),
+		Tier:      tier,
+		FetchedAt: now.Add(-time.Duration(fetchedAgoHours * float64(time.Hour))).Unix(),
+		ExpiresAt: now.Add(9000 * time.Hour).Unix(),
+	}
+}
+
+// captureStderr redirects os.Stderr for the duration of fn and returns what
+// was written to it. Not safe for tests using t.Parallel() — none in this
+// file do.
+func captureStderr(t *testing.T, fn func()) string {
+	t.Helper()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
+	orig := os.Stderr
+	os.Stderr = w
+	defer func() { os.Stderr = orig }()
+
+	fn()
+
+	_ = w.Close()
+	buf, _ := io.ReadAll(r)
+	return string(buf)
+}
+
+func TestBundleEntitledFromGrace_WithinWindow_GrantsAndWarns(t *testing.T) {
+	checkerCacheDir(t)
+	withTempCachePath(t)
+	const key = "nself_pro_abcdefghijklmnopqrstuvwxyz123456"
+	if err := WriteCache(graceCacheEntry(key, "plus", 2)); err != nil { // 2h old, well within 24h
+		t.Fatalf("seeding cache: %v", err)
+	}
+
+	var ok bool
+	var callErr error
+	out := captureStderr(t, func() {
+		ok, callErr = bundleEntitledFromGrace(key, "nclaw")
+	})
+	if callErr != nil {
+		t.Fatalf("unexpected error within grace window: %v", callErr)
+	}
+	if !ok {
+		t.Error("expected true within grace window, got false")
+	}
+	if !strings.Contains(out, "unreachable") || !strings.Contains(out, "grace period") {
+		t.Errorf("expected a grace warning naming the outage and the grace period on stderr, got: %q", out)
+	}
+}
+
+func TestBundleEntitledFromGrace_BeyondWindow_Denies(t *testing.T) {
+	checkerCacheDir(t)
+	withTempCachePath(t)
+	const key = "nself_pro_abcdefghijklmnopqrstuvwxyz123456"
+	// 8 days old: past GraceHardThreshold (7d) -> WriteAllowed=false -> deny.
+	if err := WriteCache(graceCacheEntry(key, "plus", 8*24)); err != nil {
+		t.Fatalf("seeding cache: %v", err)
+	}
+
+	ok, err := bundleEntitledFromGrace(key, "nclaw")
+	if ok {
+		t.Error("expected false beyond the grace window, got true")
+	}
+	if err == nil {
+		t.Error("expected an error beyond the grace window, got nil")
+	}
+}
+
+func TestBundleEntitledFromGrace_RevokedCache_Denies(t *testing.T) {
+	checkerCacheDir(t)
+	withTempCachePath(t)
+	const key = "nself_pro_abcdefghijklmnopqrstuvwxyz123456"
+	hash := HashKey(key)
+	// Fresh cache — well within the grace window on its own.
+	if err := WriteCache(graceCacheEntry(key, "plus", 1)); err != nil {
+		t.Fatalf("seeding cache: %v", err)
+	}
+	if err := WriteRevocationCache(&RevocationCache{
+		FetchedAt: time.Now().Unix(),
+		List: RevocationList{
+			Revoked: []RevocationEntry{{Type: "key_hash", ID: hash, Reason: "test"}},
+		},
+	}); err != nil {
+		t.Fatalf("seeding revocation cache: %v", err)
+	}
+
+	ok, err := bundleEntitledFromGrace(key, "nclaw")
+	if ok {
+		t.Error("expected false for a revoked licence even within the grace window, got true")
+	}
+	if err == nil || !strings.Contains(err.Error(), "revoked") {
+		t.Fatalf("expected a revocation refusal, got: %v", err)
+	}
+}
+
+func TestBundleEntitledFromGrace_NoCache_Denies(t *testing.T) {
+	checkerCacheDir(t)
+	withTempCachePath(t)
+	const key = "nself_pro_abcdefghijklmnopqrstuvwxyz123456"
+
+	ok, err := bundleEntitledFromGrace(key, "nclaw")
+	if ok {
+		t.Error("expected false with no cache at all, got true")
+	}
+	if err == nil {
+		t.Error("expected an error with no cache at all, got nil")
+	}
+}
+
+// TestBundleEntitled_NetworkErrorDefaultsToGrace verifies the wiring end to
+// end: WITHOUT NSELF_LICENSE_FAIL_OPEN set, a network error now grants
+// entitlement from a fresh cache instead of failing closed outright. This is
+// the behaviour change: previously this exact setup returned false+error.
+func TestBundleEntitled_NetworkErrorDefaultsToGrace(t *testing.T) {
+	checkerCacheDir(t)
+	withTempCachePath(t)
+	const key = "nself_pro_abcdefghijklmnopqrstuvwxyz123456"
+	if err := WriteCache(graceCacheEntry(key, "plus", 1)); err != nil {
+		t.Fatalf("seeding cache: %v", err)
+	}
+
+	refuseSrv := newRefusingServer(t)
+	t.Setenv("LICENSE_PING_URL", refuseSrv.URL)
+	t.Setenv("NSELF_LICENSE_FAIL_OPEN", "")
+
+	ok, err := BundleEntitled(context.Background(), key, "nclaw")
+	if err != nil {
+		t.Fatalf("expected grace to grant access on network error, got error: %v", err)
+	}
+	if !ok {
+		t.Error("expected true via default grace path on network error, got false")
+	}
+}
+
+// TestBundleEntitled_NetworkErrorDefaultsToGrace_BeyondWindowStillDenies
+// confirms the default path is bounded, not a second unconditional fail-open:
+// a stale-beyond-7d cache on an unreachable server still fails closed.
+func TestBundleEntitled_NetworkErrorDefaultsToGrace_BeyondWindowStillDenies(t *testing.T) {
+	checkerCacheDir(t)
+	withTempCachePath(t)
+	const key = "nself_pro_abcdefghijklmnopqrstuvwxyz123456"
+	if err := WriteCache(graceCacheEntry(key, "plus", 8*24)); err != nil {
+		t.Fatalf("seeding cache: %v", err)
+	}
+
+	refuseSrv := newRefusingServer(t)
+	t.Setenv("LICENSE_PING_URL", refuseSrv.URL)
+	t.Setenv("NSELF_LICENSE_FAIL_OPEN", "")
+
+	ok, err := BundleEntitled(context.Background(), key, "nclaw")
+	if ok {
+		t.Error("expected false with a stale-beyond-window cache, got true")
+	}
+	if err == nil {
+		t.Error("expected an error with a stale-beyond-window cache, got nil")
+	}
+}
+
+// TestBundleEntitled_ServerRejection_NeverGetsGrace confirms an authoritative
+// "no" from the server (valid:false) is never softened by a cache that would
+// otherwise have granted grace — grace applies only when the server could
+// not be reached at all, never when it answered.
+func TestBundleEntitled_ServerRejection_NeverGetsGrace(t *testing.T) {
+	checkerCacheDir(t)
+	withTempCachePath(t)
+	const key = "nself_pro_abcdefghijklmnopqrstuvwxyz123456"
+	// A fresh, otherwise-valid cache that bundleEntitledFromGrace would grant.
+	if err := WriteCache(graceCacheEntry(key, "plus", 1)); err != nil {
+		t.Fatalf("seeding cache: %v", err)
+	}
+	newBundleServer(t, http.StatusOK, bundleValidateResponse{
+		Valid:  false,
+		Tier:   "free",
+		Reason: "not entitled to this bundle",
+	})
+
+	ok, err := BundleEntitled(context.Background(), key, "nclaw")
+	if ok {
+		t.Error("expected false for an authoritative server rejection, got true")
+	}
+	if err == nil {
+		t.Error("expected an error for the rejection, got nil")
+	}
+}
+
+// TestBundleEntitled_ServerAuthRejection_NeverGetsGrace is the 401/403 sibling
+// of the above: a rejected key must fail closed even with a cache on hand.
+func TestBundleEntitled_ServerAuthRejection_NeverGetsGrace(t *testing.T) {
+	checkerCacheDir(t)
+	withTempCachePath(t)
+	const key = "nself_pro_abcdefghijklmnopqrstuvwxyz123456"
+	if err := WriteCache(graceCacheEntry(key, "plus", 1)); err != nil {
+		t.Fatalf("seeding cache: %v", err)
+	}
+	newBundleServer(t, http.StatusUnauthorized, bundleValidateResponse{})
+
+	ok, err := BundleEntitled(context.Background(), key, "nclaw")
+	if ok {
+		t.Error("expected false for a 401 rejection, got true")
+	}
+	if err == nil {
+		t.Error("expected an error for the 401 rejection, got nil")
 	}
 }

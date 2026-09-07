@@ -32,12 +32,30 @@ type bundleValidateResponse struct {
 
 // BundleEntitled reports whether the operator's license key grants access to
 // the named bundle. It calls ping_api /license/validate?bundle=<bundleName>
-// with the key. Returns false on any error (network, auth, invalid key) so
-// the installer can surface a precise message rather than silently proceeding.
+// with the key.
+//
+// An AUTHORITATIVE server answer always wins: a 401/403 (key rejected) or a
+// 200 with valid:false (server says no) fails CLOSED, full stop — no grace
+// applies to those. Grace exists only for the case the server never answered
+// at all.
+//
+// On a NETWORK error (server unreachable), BundleEntitled no longer fails
+// closed outright. Per the two-panel licensing review (2026-09-06), punishing
+// a paying customer for our own outage is the wrong default, so it consults
+// the documented grace-period ladder (grace.go) against the local cache:
+//   - cache < GraceSoftThreshold (24h) old: proceed silently.
+//   - cache < GraceHardThreshold (7d) old: proceed, warn loudly.
+//   - cache >= GraceHardThreshold old, absent, key-mismatched, or the licence
+//     is on the revocation list: fail closed — a network outage buys at most
+//     7 days, never indefinite access, and revocation is never overridden by
+//     grace at any cache age.
 //
 // FAIL-OPEN exception: when NSELF_LICENSE_FAIL_OPEN=1 is set (CI / air-gap
-// environments) and the network is unreachable, falls back to the local cache
-// to check tier coverage. Production deployments MUST NOT set this var.
+// environments), the network-unreachable branch instead uses the unbounded
+// bundleEntitledFromCache path (tier/sentinel only, no time window) for
+// environments that are permanently offline by design. This is now one of
+// two grace paths, not the only one — production deployments that leave it
+// unset still get the bounded grace ladder above instead of a hard fail.
 func BundleEntitled(ctx context.Context, key, bundleName string) (bool, error) {
 	if key == "" {
 		return false, fmt.Errorf("no license key configured; run 'nself license set <key>' or visit nself.org/pricing")
@@ -56,11 +74,17 @@ func BundleEntitled(ctx context.Context, key, bundleName string) (bool, error) {
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		// Network unreachable — attempt FAIL-OPEN via cache if explicitly enabled.
+		// Network unreachable — this is NOT an authoritative rejection, so it
+		// gets a grace path rather than an immediate fail-closed.
+		//
+		// NSELF_LICENSE_FAIL_OPEN=1 keeps its pre-existing unbounded behaviour
+		// for deliberately offline CI/air-gap builds. Everyone else falls
+		// through to the bounded, revocation-aware grace ladder, which is the
+		// default grace path now (see BundleEntitled doc comment).
 		if os.Getenv("NSELF_LICENSE_FAIL_OPEN") == "1" {
 			return bundleEntitledFromCache(key, bundleName)
 		}
-		return false, fmt.Errorf("license validation network error (bundle=%q): %w", bundleName, err)
+		return bundleEntitledFromGrace(key, bundleName)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -120,24 +144,90 @@ func bundleEntitledFromCache(key, bundleName string) (bool, error) {
 		return false, fmt.Errorf("license has been revoked (bundle=%q); contact support if this is unexpected", bundleName)
 	}
 
-	tier := strings.ToLower(entry.Tier)
+	if !cacheCoversBundle(entry, bundleName) {
+		return false, fmt.Errorf("bundle %q not found in cached license (tier=%q); connect to validate", bundleName, strings.ToLower(entry.Tier))
+	}
+	return true, nil
+}
+
+// bundleEntitledFromGrace is the DEFAULT network-failure fallback — used
+// whenever NSELF_LICENSE_FAIL_OPEN is not set to "1". Unlike
+// bundleEntitledFromCache (unbounded in time, reserved for deliberately
+// offline CI/air-gap builds), this path is bounded by the documented
+// grace-period ladder in grace.go: a cache under GraceSoftThreshold old is
+// honoured silently, one under GraceHardThreshold old is honoured with a
+// warning, and anything staler — or with WriteAllowed=false, which for a
+// bundle *install* (a write against a paid plugin) means the same thing as a
+// denial — is refused.
+//
+// Revocation is checked before the grace window is even consulted: a
+// revoked licence gets no grace at any cache age. This reuses
+// IsRecordRevoked (internal/license/revocation_refresh_check.go), the same
+// revocation-aware check bundleEntitledFromCache already relies on, so both
+// grace paths share one revocation rule instead of two.
+func bundleEntitledFromGrace(key, bundleName string) (bool, error) {
+	entry, err := ReadCache()
+	if err != nil || entry == nil {
+		return false, fmt.Errorf("license server unreachable and no local license cache available (bundle=%q); connect to the internet or run 'nself license validate'", bundleName)
+	}
+	if entry.KeyHash != HashKey(key) {
+		return false, fmt.Errorf("license server unreachable and cached license does not match current key (bundle=%q)", bundleName)
+	}
+
+	// Revocation is never overridden by grace, regardless of cache freshness.
+	if IsRecordRevoked(LicenseRecord{KeyHash: entry.KeyHash}) {
+		return false, fmt.Errorf("license has been revoked (bundle=%q); contact support if this is unexpected", bundleName)
+	}
+
+	grace := DetermineGraceState(entry)
+	if !grace.CanProceed || !grace.WriteAllowed {
+		return false, fmt.Errorf(
+			"license server unreachable (bundle=%q) and the offline grace period has expired: %s",
+			bundleName, grace.Message,
+		)
+	}
+
+	if !cacheCoversBundle(entry, bundleName) {
+		return false, fmt.Errorf("license server unreachable; cached license does not cover bundle %q (tier=%q)", bundleName, strings.ToLower(entry.Tier))
+	}
+
+	emitGraceWarning(bundleName, grace)
+	return true, nil
+}
+
+// cacheCoversBundle reports whether a cache entry's tier or explicit
+// "bundle:<name>" sentinel covers the named bundle. Shared by the unbounded
+// fail-open cache check and the time-bounded grace fallback so the
+// entitlement rule has exactly one definition instead of two that can drift.
+func cacheCoversBundle(entry *CacheEntry, bundleName string) bool {
 	// ɳSelf+ / owner / enterprise cover all bundles. Delegated to IsAllAccessTier
 	// so this rule has one definition; the plugin installer needs the same one.
-	if IsAllAccessTier(tier) {
-		return true, nil
+	if IsAllAccessTier(strings.ToLower(entry.Tier)) {
+		return true
 	}
-
-	// Heuristic: check if every plugin in a typical bundle is in PluginsAllowed.
+	// Heuristic: "bundle:<name>" sentinel written by a previous live validation.
 	// This is approximate — the authoritative check is the live server call.
-	// If the cache says at least one bundle plugin is allowed, proceed with a warning.
 	for _, allowed := range entry.PluginsAllowed {
-		// "bundle:<name>" sentinel written by a previous live validation.
 		if strings.EqualFold(allowed, "bundle:"+bundleName) {
-			return true, nil
+			return true
 		}
 	}
+	return false
+}
 
-	return false, fmt.Errorf("bundle %q not found in cached license (tier=%q); connect to validate", bundleName, tier)
+// emitGraceWarning prints a one-line warning to stderr stating that the
+// license server was unreachable, that access is continuing on cached
+// entitlement, and when the offline grace period runs out. Every grant made
+// on the grace path must be announced — never silent.
+func emitGraceWarning(bundleName string, grace GraceCheckResult) {
+	remaining := GraceHardThreshold - grace.CacheAge
+	if remaining < 0 {
+		remaining = 0
+	}
+	fmt.Fprintf(os.Stderr,
+		"warning: license server unreachable; continuing bundle %q install on cached entitlement (last validated %s ago). Offline grace period expires in %s.\n",
+		bundleName, formatDuration(grace.CacheAge), formatDuration(remaining),
+	)
 }
 
 // CollectLicenseKey returns the first available license key from env vars or
