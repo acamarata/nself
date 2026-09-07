@@ -50,6 +50,86 @@ detect_arch() {
 }
 
 # ── Version Resolution ─────────────────────────────────────────────
+
+# Performs a GET against the GitHub API, writing the response body to
+# $2 and capturing the HTTP status separately (unlike `curl -f`, which
+# discards the body on any non-2xx and makes rate-limit / error detail
+# unrecoverable). Sends GITHUB_TOKEN or GH_TOKEN as a Bearer token when
+# set, which raises the GitHub API rate limit from 60/hr (per-IP) to
+# 5000/hr — this alone fixes the common CI failure mode. The token is
+# never echoed or logged.
+#
+# Args: $1 = URL, $2 = path to write the response body to.
+# Prints one line on stdout: "<status> <curl_exit> <ratelimit_reset>"
+#   status          three-digit HTTP status, or "000" on transport failure
+#   curl_exit       curl's exit code (0 on a completed HTTP exchange)
+#   ratelimit_reset unix epoch from x-ratelimit-reset, or "-" if absent
+# (Values come back via stdout, not global variables, because this is
+# always invoked as `result=$(github_api_get ...)` — a command
+# substitution runs in a subshell, so variables set inside it never
+# reach the caller.)
+github_api_get() {
+  local url="$1"
+  local body_file="$2"
+  local token="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
+  local tmp_headers
+  tmp_headers=$(mktemp /tmp/nself-install-headers-XXXXXX)
+
+  local status curl_exit reset
+  curl_exit=0
+  if [ -n "$token" ]; then
+    status=$(curl -sS -L -H "Authorization: Bearer ${token}" -D "$tmp_headers" -o "$body_file" -w '%{http_code}' "$url" 2>/dev/null) || curl_exit=$?
+  else
+    status=$(curl -sS -L -D "$tmp_headers" -o "$body_file" -w '%{http_code}' "$url" 2>/dev/null) || curl_exit=$?
+  fi
+  [ -n "$status" ] || status="000"
+
+  reset=$(grep -i '^x-ratelimit-reset:' "$tmp_headers" 2>/dev/null | tail -1 | tr -d '\r' | awk '{print $2}')
+  [ -n "$reset" ] || reset="-"
+
+  rm -f "$tmp_headers"
+  printf '%s %s %s\n' "$status" "$curl_exit" "$reset"
+}
+
+# Turns a failed version lookup into a specific, actionable message instead
+# of the old one-size-fits-all "could not determine latest version" — that
+# message was identical for a rate limit, a DNS failure, a blocking proxy,
+# and a dead repo, which made the real 2026-09 CI failure (a plain 403 from
+# an exhausted per-IP quota) indistinguishable from a network outage.
+explain_version_lookup_failure() {
+  local status="$1"
+  local curl_exit="$2"
+  local reset="$3"
+
+  case "$status" in
+    403|429)
+      local reset_msg=""
+      if [ "$reset" != "-" ] && [ "$reset" -eq "$reset" ] 2>/dev/null; then
+        local now mins
+        now=$(date +%s)
+        mins=$(( (reset - now + 59) / 60 ))
+        [ "$mins" -lt 0 ] && mins=0
+        reset_msg=" It resets in ~${mins} minute(s)."
+      fi
+      error "GitHub API rate limit exceeded (HTTP ${status}) while resolving the latest version.
+  This limit is per-IP and shared by everyone behind your NAT/VPN/CI runner — 60 requests/hour unauthenticated.${reset_msg}
+  Fix: set NSELF_VERSION=x.y.z to skip the lookup entirely, or set GITHUB_TOKEN (or GH_TOKEN) to a GitHub token to raise the limit to 5000/hour."
+      ;;
+    000)
+      case "$curl_exit" in
+        6)  error "Could not resolve api.github.com (DNS lookup failed). Check your network/DNS, or set NSELF_VERSION=x.y.z to skip the lookup." ;;
+        7)  error "Could not connect to api.github.com (connection refused or unreachable). If you're behind a proxy or firewall, allow api.github.com — or set NSELF_VERSION=x.y.z to skip the lookup." ;;
+        28) error "Timed out connecting to api.github.com. Check your network or proxy, or set NSELF_VERSION=x.y.z to skip the lookup." ;;
+        35|60) error "TLS error contacting api.github.com — a proxy or TLS-intercepting firewall may be involved. Set NSELF_VERSION=x.y.z to skip the lookup." ;;
+        *)  error "Could not reach api.github.com (curl exit code ${curl_exit}). Check your network, DNS, or proxy, or set NSELF_VERSION=x.y.z to skip the lookup." ;;
+      esac
+      ;;
+    *)
+      error "GitHub API returned HTTP ${status} while resolving the latest version. Set NSELF_VERSION=x.y.z to skip the lookup, or check https://github.com/${REPO}/releases"
+      ;;
+  esac
+}
+
 get_latest_version() {
   if [ -n "${NSELF_VERSION:-}" ]; then
     echo "$NSELF_VERSION"
@@ -66,26 +146,56 @@ get_latest_version() {
   # That broke installs on 2026-08-18 with v1.2.7. The SDK workflow now passes
   # --latest=false, and this check means a future mistake degrades to picking
   # the previous good release instead of failing outright.
-  local latest
-  latest=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=20" 2>/dev/null \
-    | tr ',{' '\n\n' \
-    | grep -E '"(tag_name|name)": *"' \
-    | sed -E 's/.*: *"([^"]*)".*/\1/' \
-    | grep -E '^(v?[0-9]+\.[0-9]+\.[0-9]+|nself-[0-9].*\.tar\.gz)$' \
-    | awk '/^nself-.*linux-amd64\.tar\.gz$/ {if (tag != "") {print tag; exit}} /^v?[0-9]+\.[0-9]+\.[0-9]+$/ {tag=$0}' \
-    | sed 's/^v//' | head -1)
+  local latest="" body1_file result1 status1 exit1 reset1
+
+  body1_file=$(mktemp /tmp/nself-install-body-XXXXXX)
+  result1=$(github_api_get "https://api.github.com/repos/${REPO}/releases?per_page=20" "$body1_file")
+  status1=$(printf '%s' "$result1" | awk '{print $1}')
+  exit1=$(printf '%s' "$result1" | awk '{print $2}')
+  reset1=$(printf '%s' "$result1" | awk '{print $3}')
+
+  if [ "$status1" = "200" ]; then
+    latest=$(tr ',{' '\n\n' < "$body1_file" \
+      | grep -E '"(tag_name|name)": *"' \
+      | sed -E 's/.*: *"([^"]*)".*/\1/' \
+      | grep -E '^(v?[0-9]+\.[0-9]+\.[0-9]+|nself-[0-9].*\.tar\.gz)$' \
+      | awk '/^nself-.*linux-amd64\.tar\.gz$/ {if (tag != "") {print tag; exit}} /^v?[0-9]+\.[0-9]+\.[0-9]+$/ {tag=$0}' \
+      | sed 's/^v//' | head -1)
+  fi
+  rm -f "$body1_file"
 
   # Fall back to releases/latest if the asset scan found nothing (e.g. the API
-  # shape changed); better to try than to hard-fail here.
+  # shape changed, or the first call failed); better to try than to hard-fail
+  # here.
+  local status2="" exit2="" reset2=""
   if [ -z "$latest" ]; then
-    latest=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null \
-      | grep '"tag_name"' \
-      | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/' \
-      | sed 's/^v//')
+    local body2_file result2
+    body2_file=$(mktemp /tmp/nself-install-body-XXXXXX)
+    result2=$(github_api_get "https://api.github.com/repos/${REPO}/releases/latest" "$body2_file")
+    status2=$(printf '%s' "$result2" | awk '{print $1}')
+    exit2=$(printf '%s' "$result2" | awk '{print $2}')
+    reset2=$(printf '%s' "$result2" | awk '{print $3}')
+
+    if [ "$status2" = "200" ]; then
+      latest=$(grep '"tag_name"' "$body2_file" \
+        | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/' \
+        | sed 's/^v//')
+    fi
+    rm -f "$body2_file"
   fi
 
   if [ -z "$latest" ]; then
-    error "Could not determine latest version. Set NSELF_VERSION=x.y.z or check https://github.com/${REPO}/releases"
+    # A rate limit / auth error on either call is the most actionable
+    # diagnosis and always wins over a generic empty-body failure.
+    if [ "$status1" = "403" ] || [ "$status1" = "429" ]; then
+      explain_version_lookup_failure "$status1" "$exit1" "$reset1"
+    elif [ "$status2" = "403" ] || [ "$status2" = "429" ]; then
+      explain_version_lookup_failure "$status2" "$exit2" "$reset2"
+    elif [ -n "$status2" ]; then
+      explain_version_lookup_failure "$status2" "$exit2" "$reset2"
+    else
+      explain_version_lookup_failure "$status1" "$exit1" "$reset1"
+    fi
   fi
 
   echo "$latest"
