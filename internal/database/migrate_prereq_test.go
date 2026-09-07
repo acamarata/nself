@@ -145,9 +145,15 @@ func TestHasuraMigrationsDirIfPresent_NestedLayout(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join("hasura", "migrations", "default"), 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
+	// hasuraMigrationsDirIfPresent returns its candidate list's literal
+	// forward-slash form (matching migrationsDir's own candidates in
+	// migrate_ledger.go), not a filepath.Join result — os.Stat accepts "/"
+	// on Windows too, but filepath.Join there would produce "\"-separated
+	// segments that never equal the literal the function actually returns.
+	const want = "hasura/migrations/default"
 	got, ok := hasuraMigrationsDirIfPresent()
-	if !ok || got != filepath.Join("hasura", "migrations", "default") {
-		t.Fatalf("hasuraMigrationsDirIfPresent() = (%q, %v), want the nested default dir", got, ok)
+	if !ok || got != want {
+		t.Fatalf("hasuraMigrationsDirIfPresent() = (%q, %v), want (%q, true)", got, ok, want)
 	}
 }
 
