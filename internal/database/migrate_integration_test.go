@@ -70,9 +70,17 @@ func startTestPostgres(t *testing.T) *config.Config {
 		_ = exec.Command("docker", "rm", "-f", container).Run()
 	})
 
+	// Probe with a real query against the target database, not pg_isready:
+	// the official postgres image restarts once internally after its first
+	// initdb-driven boot, and pg_isready can report "accepting connections"
+	// against that transient first instance moments before it cycles —
+	// a window callers that query the "nself" database immediately
+	// (bypassing MigrateUp's own warm-up round trips) can lose the race
+	// with. SELECT 1 against the actual database is the same probe every
+	// real caller in this package makes, so it never gives a false ready.
 	deadline := time.Now().Add(30 * time.Second)
 	for {
-		if err := exec.Command("docker", "exec", container, "pg_isready", "-U", "postgres").Run(); err == nil {
+		if err := exec.Command("docker", "exec", container, "psql", "-U", "postgres", "-d", "nself", "-c", "SELECT 1").Run(); err == nil {
 			break
 		}
 		if time.Now().After(deadline) {

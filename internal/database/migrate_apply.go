@@ -165,6 +165,22 @@ func MigrateUpDir(ctx context.Context, cfg *config.Config, dir string) (int, err
 		return 0, err
 	}
 
+	// Same refusal MigrateUp applies (migrate_prereq.go), scoped to this
+	// directory's still-pending files: this is the entry point a numbered
+	// chain like backend/migrations/ actually runs through (via
+	// --migration-dir), so it needs the same guard against ALTERing a table
+	// only a separate migration system (e.g. Hasura's) creates.
+	applied, err := appliedMigrations(ctx, cfg)
+	if err != nil {
+		return 0, fmt.Errorf("check applied migrations: %w", err)
+	}
+	pending := pendingMigrationFiles(files, applied)
+	if missing, prereqErr := checkAlterPrerequisites(ctx, cfg, pending); prereqErr != nil {
+		return 0, fmt.Errorf("check migration prerequisites: %w", prereqErr)
+	} else if len(missing) > 0 {
+		return 0, prerequisiteError(missing)
+	}
+
 	count := 0
 	for _, f := range files {
 		skipped, applyErr := ApplyFile(ctx, cfg, f)

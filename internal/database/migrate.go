@@ -52,8 +52,21 @@ func MigrateUp(ctx context.Context, cfg *config.Config, plugin string) (int, err
 		return 0, fmt.Errorf("check applied migrations: %w", err)
 	}
 
+	pending := pendingMigrationFiles(files, applied)
+
+	// Refuse before applying anything if a pending migration's ALTER TABLE
+	// target won't exist by the time it runs (see migrate_prereq.go): a
+	// clear, actionable refusal beats a mid-batch "relation does not exist"
+	// on a fresh database. Skipped entirely when nothing is pending, so a
+	// fully-applied batch never re-evaluates this on every run.
+	if missing, prereqErr := checkAlterPrerequisites(ctx, cfg, pending); prereqErr != nil {
+		return 0, fmt.Errorf("check migration prerequisites: %w", prereqErr)
+	} else if len(missing) > 0 {
+		return 0, prerequisiteError(missing)
+	}
+
 	count := 0
-	for _, f := range pendingMigrationFiles(files, applied) {
+	for _, f := range pending {
 		name := migrationKey(f)
 		if err := validateMigrationName(name); err != nil {
 			return count, err
