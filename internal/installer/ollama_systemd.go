@@ -61,11 +61,55 @@ func downloadAndRunInstaller(ctx context.Context, log func(string, string, map[s
 	// Execute the verified script via sh. The script lives in a private 0700
 	// directory; the path cannot be replaced by a same-uid process between the
 	// checksum verification above and this exec call.
+	//
+	// install.sh itself shells out further — it curls the ollama release
+	// tarball and unpacks it through zstd. Two things must hold or a
+	// cancelled/short-lived ctx (as in any test that runs this via `nself
+	// start`'s AI auto-install) leaves curl/zstd running as orphans that hang
+	// the whole test binary:
+	//
+	//  1. Process-group isolation (setProcGroupAttr + the Cancel hook below):
+	//     without it, ctx cancellation only kills the immediate `sh` process
+	//     via SIGKILL — curl/zstd are reparented and keep running.
+	//  2. Pipe-based I/O forwarding instead of direct `cmd.Stdout = os.Stdout`
+	//     fd inheritance: if curl/zstd inherit the raw fd of this process's
+	//     real stdout, any surviving orphan keeps that fd open even after
+	//     this function returns, and `go test` reports "Test I/O incomplete
+	//     Ns after exiting" for the entire package. Piping means only our own
+	//     io.Copy goroutines below ever touch os.Stdout/os.Stderr directly.
+	//
+	// Same failure mode, same fix, as internal/docker/compose_exec.go's Run.
 	cmd := exec.CommandContext(ctx, "sh", tmpPath)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return errf(ErrOllamaInstallFailed, "install.sh exec", err)
+	cmd.WaitDelay = 5 * time.Second
+	setProcGroupAttr(cmd)
+	cmd.Cancel = func() error {
+		killProcessGroup(cmd)
+		return cmd.Process.Kill()
+	}
+
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return errf(ErrOllamaInstallFailed, "install.sh stdout pipe", err)
+	}
+	stderrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return errf(ErrOllamaInstallFailed, "install.sh stderr pipe", err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		return errf(ErrOllamaInstallFailed, "install.sh start", err)
+	}
+
+	done := make(chan struct{}, 2)
+	go func() { io.Copy(os.Stdout, stdoutPipe); done <- struct{}{} }() //nolint:errcheck
+	go func() { io.Copy(os.Stderr, stderrPipe); done <- struct{}{} }() //nolint:errcheck
+
+	waitErr := cmd.Wait()
+	<-done
+	<-done
+
+	if waitErr != nil {
+		return errf(ErrOllamaInstallFailed, "install.sh exec", waitErr)
 	}
 	return nil
 }

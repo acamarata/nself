@@ -42,6 +42,23 @@ func TestMain(m *testing.M) {
 	if err := bundle.LoadBytes([]byte(fixtureBundlesJSON)); err != nil {
 		panic("seeding bundle fixture: " + err.Error())
 	}
+
+	// AI_AUTO_INSTALL=false for the whole package's test binary. start.go's
+	// runStart calls autoInstallAIIfNeeded on every invocation, which fires a
+	// real `curl | zstd` Ollama install whenever AI_AUTO_INSTALL is unset
+	// (default enabled) and NSELF_MASTER_SECRET is non-empty in the process
+	// environment. config.Load calls godotenv.Overload for every .env file
+	// it reads, which sets real os.Environ values with no cleanup — so any
+	// start_test.go test can observe a NSELF_MASTER_SECRET left behind by an
+	// unrelated earlier test in this same binary. On CI's Linux runners that
+	// silently downloads a real binary via curl/zstd instead of erroring out
+	// (installer.Install only short-circuits on non-linux GOOS), and an
+	// orphaned curl/zstd surviving a cancelled test context is what produced
+	// the intermittent "Test I/O incomplete" / WaitDelay failures in
+	// cmd/commands on ubuntu-24.04-arm. No test in this package should ever
+	// make a real network install; this is the package-wide guard against it.
+	_ = os.Setenv("AI_AUTO_INSTALL", "false")
+
 	os.Exit(m.Run())
 }
 
