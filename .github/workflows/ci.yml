@@ -91,6 +91,11 @@ jobs:
 
     env:
       CGO_ENABLED: 0
+      # Defense-in-depth alongside the cmd/commands TestMain guard: `nself
+      # start`'s zero-config AI auto-install must never fire a real network
+      # install during CI's unit-test run. Same guard already used by
+      # e2e-golden-path.yml and rls-pentest-smoke.yml for the same reason.
+      AI_AUTO_INSTALL: 'false'
 
     steps:
       - name: Checkout
